@@ -87,18 +87,19 @@ class AddMealViewModel(
             val meal = MealEntity(
                 id = mealId,
                 userId = userId,
-                description = null,
+                description = uiState.value.description,
                 createdAtUtc = Instant.now().toEpochMilli(),
-                mealTimeUtc = Instant.now().toEpochMilli(),
+                mealTimeUtc = uiState.value.mealTime?.let { parseIsoToEpoch(it) } ?: Instant.now().toEpochMilli(),
                 calories = null,
-                carbohydrates = 0,
-                proteins = null,
-                fats = null,
+                carbohydrates = uiState.value.carbohydrates ?: 0,
+                proteins = uiState.value.proteins,
+                fats = uiState.value.fats,
                 isValid = true,
                 imageId = mealId,
                 recommendation = null,
                 reasoning = null
             )
+
 
             val result = mealRepository.createMeal(meal)
             _uiState.update {
@@ -112,4 +113,36 @@ class AddMealViewModel(
             }
         }
     }
+
+    fun onDescriptionChanged(newDescription: String) {
+        _uiState.update { it.copy(description = newDescription) }
+    }
+
+    fun onMealTimeChanged(newMealTime: String) {
+        _uiState.update { it.copy(mealTime = newMealTime) }
+    }
+
+    fun onCarbsChanged(newCarbs: String) {
+        val carbsInt = newCarbs.toIntOrNull()
+        _uiState.update { it.copy(carbohydrates = carbsInt) }
+    }
+
+    fun onProteinChanged(newProtein: String) {
+        val proteinInt = newProtein.toIntOrNull()
+        _uiState.update { it.copy(proteins = proteinInt) }
+    }
+
+    fun onFatChanged(newFat: String) {
+        val fatInt = newFat.toIntOrNull()
+        _uiState.update { it.copy(fats = fatInt) }
+    }
+
+    fun parseIsoToEpoch(isoString: String): Long {
+        return try {
+            Instant.parse(isoString).toEpochMilli()
+        } catch (e: Exception) {
+            Instant.now().toEpochMilli()
+        }
+    }
+
 }
