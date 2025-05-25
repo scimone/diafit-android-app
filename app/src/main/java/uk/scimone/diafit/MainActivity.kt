@@ -46,8 +46,7 @@ class MainActivity : ComponentActivity() {
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(userId = userId)
                             3 -> Greeting("History")
-                            4 -> AddMealScreen(mealRepository = mealRepository, userId = userId)
-                        }
+                            4 -> AddMealScreen()
                     }
                 }
             }

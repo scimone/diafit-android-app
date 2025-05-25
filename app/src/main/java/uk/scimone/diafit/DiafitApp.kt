@@ -4,6 +4,7 @@ import android.app.Application
 import org.koin.core.context.startKoin
 import org.koin.android.ext.koin.androidContext
 import uk.scimone.diafit.core.di.coreModule
+import uk.scimone.diafit.di.addmealModule
 import uk.scimone.diafit.di.journalModule
 
 class DiafitApp : Application() {
@@ -15,7 +16,8 @@ class DiafitApp : Application() {
             modules(
                 listOf(
                     coreModule,
-                    journalModule
+                    journalModule,
+                    addmealModule,
                 )
             )
         }

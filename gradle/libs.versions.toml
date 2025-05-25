@@ -1,6 +1,7 @@
 [versions]
 agp = "8.10.0"
 coilCompose = "2.4.0"
+insertKoinKoinAndroidxCompose = "3.4.0"
 koinAndroid = "3.5.6"
 koinAndroidxCompose = "3.5.6"
 koinCore = "3.5.6"
@@ -39,6 +40,7 @@ androidx-room-common-jvm = { group = "androidx.room", name = "room-common-jvm", 
 androidx-room-runtime-android = { group = "androidx.room", name = "room-runtime-android", version.ref = "roomRuntimeAndroid" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinAndroid" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koinAndroidxCompose" }
+koin-androidx-compose-v340 = { module = "io.insert-koin:koin-androidx-compose", version.ref = "insertKoinKoinAndroidxCompose" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koinCore" }
 
 [plugins]
