@@ -17,13 +17,20 @@ import java.util.*
 
 class AddMealViewModel(
     private val mealRepository: MealRepository,
-    private val userId: String, application: Application
+    private val userId: String,
+    application: Application
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AddMealState())
     val uiState = _uiState.asStateFlow()
 
     private var mealId: String = UUID.randomUUID().toString()
+
+    // Call this to start a new meal process, resets state and mealId
+    fun startNewMeal() {
+        mealId = UUID.randomUUID().toString()
+        _uiState.value = AddMealState() // reset UI state to empty
+    }
 
     fun resetSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
@@ -96,7 +103,9 @@ class AddMealViewModel(
             val result = mealRepository.createMeal(meal)
             _uiState.update {
                 if (result.isSuccess) {
-                    AddMealState(snackbarMessage = "Meal added successfully") // clear state
+                    // Meal saved successfully: reset state and generate new mealId for next meal
+                    startNewMeal()
+                    it.copy(snackbarMessage = "Meal added successfully", isLoading = false)
                 } else {
                     it.copy(isLoading = false, snackbarMessage = "Failed to add meal")
                 }

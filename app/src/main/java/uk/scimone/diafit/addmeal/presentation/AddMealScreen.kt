@@ -1,5 +1,6 @@
 package uk.scimone.diafit.addmeal.presentation.screens
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.compose.foundation.Image
@@ -15,7 +16,6 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.AddMealViewModel
 import org.koin.androidx.compose.koinViewModel
 
-
 @Composable
 fun AddMealScreen(
     userId: String,
@@ -25,17 +25,27 @@ fun AddMealScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Start a new meal process when screen enters composition
+    LaunchedEffect(Unit) {
+        viewModel.startNewMeal()
+    }
+
     val takePictureLauncher = rememberLauncherForActivityResult(TakePicture()) { success ->
         if (success) {
-            viewModel.onImageSelected(viewModel.uiState.value.imageUri!!)
+            currentPhotoUri?.let { uri ->
+                viewModel.onImageSelected(uri)
+            }
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(GetContent()) { uri ->
-        uri?.let { viewModel.copyGalleryImageToPrivateStorage(context, it) }
+        uri?.let {
+            viewModel.copyGalleryImageToPrivateStorage(context, it)
+        }
     }
 
-    // Handle Snackbar
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -58,7 +68,7 @@ fun AddMealScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(onClick = {
                     val uri = viewModel.createCameraImageUri()
-                    viewModel.onImageSelected(uri)
+                    currentPhotoUri = uri
                     takePictureLauncher.launch(uri)
                 }) {
                     Text("Take Photo")
