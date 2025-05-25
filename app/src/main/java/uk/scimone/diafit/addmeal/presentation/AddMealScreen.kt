@@ -1,7 +1,10 @@
 package uk.scimone.diafit.addmeal.presentation.screens
 
 import android.Manifest
+import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.compose.foundation.Image
@@ -12,16 +15,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.Instant
 import java.util.*
-import android.content.ContentValues
-import android.content.Context
-import android.os.Environment
-import android.provider.MediaStore
 
 @Composable
 fun AddMealScreen(mealRepository: MealRepository, userId: String) {
@@ -32,19 +38,15 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
     var isLoading by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Launcher to pick image from gallery
-    val pickImageLauncher = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
-        uri?.let {
-            selectedImageUri = it
-        }
-    }
+    // Generate mealId early to keep consistent across image and meal
+    val mealId = remember { UUID.randomUUID().toString() }
 
-    // Launcher to request camera permission
+    // Camera permission launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(RequestPermission()) { granted ->
-        // No direct action here, handled in button click
+        // No direct action needed here
     }
 
-    // Launcher to take photo (requires Uri)
+    // Temp Uri for photo capture
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val takePictureLauncher = rememberLauncherForActivityResult(TakePicture()) { success ->
         if (success) {
@@ -52,9 +54,22 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+    // Launcher to pick image from gallery
+    val pickImageLauncher = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
+        uri?.let { galleryUri ->
+            // Copy selected gallery image to app private folder under mealId filename
+            scope.launch {
+                val copiedUri = copyGalleryImageToPrivateStorage(context, galleryUri, mealId)
+                if (copiedUri != null) {
+                    selectedImageUri = copiedUri
+                } else {
+                    snackbarHostState.showSnackbar("Failed to copy image")
+                }
+            }
+        }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -63,7 +78,6 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            // Header text instead of TopAppBar
             Text(
                 text = "Add Meal",
                 style = MaterialTheme.typography.headlineMedium,
@@ -72,18 +86,14 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
                     .padding(bottom = 24.dp)
             )
 
-            // Buttons for photo selection
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(onClick = {
-                    val permission = androidx.core.content.ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.CAMERA
-                    )
+                    val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                     if (permission == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        tempPhotoUri = createImageUri(context)
-                        tempPhotoUri?.let { takePictureLauncher.launch(it) }
+                        // Create file Uri with FileProvider for camera
+                        val photoUri = createImageUri(context, mealId)
+                        tempPhotoUri = photoUri
+                        photoUri?.let { takePictureLauncher.launch(it) }
                     } else {
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
@@ -119,7 +129,6 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
                         isLoading = true
                         scope.launch {
                             try {
-                                val mealId = UUID.randomUUID().toString()
                                 val storedImageUriResult = mealRepository.storeImage(mealId, uri)
                                 if (storedImageUriResult.isFailure) {
                                     snackbarHostState.showSnackbar("Failed to store image")
@@ -167,15 +176,45 @@ fun AddMealScreen(mealRepository: MealRepository, userId: String) {
 }
 
 /**
- * Helper: Create temporary Uri for camera capture.
+ * Create a private Uri for camera capture using FileProvider and app-specific storage.
  */
-fun createImageUri(context: Context): Uri? {
-    val contentValues = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, "meal_photo_${System.currentTimeMillis()}.jpg")
-        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-        // Save to Pictures/DiaFit folder (visible to user gallery)
-        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/DiaFit")
-    }
+fun createImageUri(context: Context, mealId: String): Uri? {
+    val picturesDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "DiaFit")
+    if (!picturesDir.exists()) picturesDir.mkdirs()
 
-    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+    val imageFile = File(picturesDir, "meal_$mealId.jpg")
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider", // Make sure to setup FileProvider in manifest
+        imageFile
+    )
+}
+
+/**
+ * Copy an image selected from gallery to the app-specific private storage.
+ */
+suspend fun copyGalleryImageToPrivateStorage(context: Context, sourceUri: Uri, mealId: String): Uri? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val picturesDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "DiaFit")
+            if (!picturesDir.exists()) picturesDir.mkdirs()
+
+            val destFile = File(picturesDir, "meal_$mealId.jpg")
+
+            context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+                destFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                destFile
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }
