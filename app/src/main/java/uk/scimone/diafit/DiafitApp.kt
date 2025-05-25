@@ -4,6 +4,7 @@ import android.app.Application
 import org.koin.core.context.startKoin
 import org.koin.android.ext.koin.androidContext
 import uk.scimone.diafit.core.di.coreModule
+import uk.scimone.diafit.di.journalModule
 
 class DiafitApp : Application() {
     override fun onCreate() {
@@ -11,7 +12,12 @@ class DiafitApp : Application() {
 
         startKoin {
             androidContext(this@DiafitApp)
-            modules(coreModule)
+            modules(
+                listOf(
+                    coreModule,
+                    journalModule
+                )
+            )
         }
     }
 }

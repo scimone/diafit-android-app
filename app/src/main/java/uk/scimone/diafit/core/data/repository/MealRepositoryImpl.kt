@@ -7,6 +7,7 @@ import uk.scimone.diafit.core.data.local.MealDao
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
@@ -35,6 +36,19 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun getMealsByUserId(userId: String): Result<List<MealEntity>> {
+        return try {
+            val meals = mealDao.getMealsByUserId(userId)
+            Result.success(meals)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun observeMealsByUserId(userId: String): Flow<List<MealEntity>> {
+        return mealDao.observeMealsByUserId(userId)
+    }
+
     private fun saveImageToLocalFolder(mealId: String, sourceUri: Uri): Uri {
         val resolver: ContentResolver = context.contentResolver
 
@@ -56,6 +70,7 @@ class MealRepositoryImpl(
         // Return Uri to the saved image file
         return Uri.fromFile(destFile)
     }
+
 
     private fun copyStream(input: InputStream?, output: OutputStream) {
         if (input == null) throw IllegalArgumentException("InputStream cannot be null")

@@ -15,7 +15,7 @@ import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.navigation.BottomNavigationBar
 import org.koin.android.ext.android.inject
 import androidx.compose.ui.unit.dp
-
+import uk.scimone.diafit.journal.presentation.JournalScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -43,9 +43,9 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when (selectedTab) {
                             0 -> Greeting("Home")
-                            1 -> Greeting("Favorites")
-                            2 -> Greeting("Search")
-                            3 -> Greeting("Profile")
+                            1 -> Greeting("Summary")
+                            2 -> JournalScreen(userId = userId)
+                            3 -> Greeting("History")
                             4 -> AddMealScreen(mealRepository = mealRepository, userId = userId)
                         }
                     }

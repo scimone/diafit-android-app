@@ -26,5 +26,7 @@ val coreModule = module {
 
     // Provide repository implementation
     single<MealRepository> { MealRepositoryImpl(get(), get()) }  // Provide MealRepositoryImpl
-    single { CreateMealUseCase(get()) }                          // Provide CreateMealUseCase
+    single { CreateMealUseCase(get()) }
+
+    // Provide CreateMealUseCase
 }

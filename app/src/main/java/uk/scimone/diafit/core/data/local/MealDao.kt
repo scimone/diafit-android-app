@@ -22,4 +22,11 @@ interface MealDao {
 
     @Query("SELECT * FROM MealEntity ORDER BY mealTimeUtc DESC")
     fun getAllMeals(): Flow<List<MealEntity>>
+
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
+    suspend fun getMealsByUserId(userId: String): List<MealEntity>
+
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
+    fun observeMealsByUserId(userId: String): Flow<List<MealEntity>>
+
 }
