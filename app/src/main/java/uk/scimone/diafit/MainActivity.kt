@@ -37,16 +37,18 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 ) { innerPadding ->
-                    Box(modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
+                    Box(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .fillMaxSize()
                     ) {
                         when (selectedTab) {
                             0 -> Greeting("Home")
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(userId = userId)
                             3 -> Greeting("History")
-                            4 -> AddMealScreen()
+                            4 -> AddMealScreen(userId = userId)
+                        }
                     }
                 }
             }
