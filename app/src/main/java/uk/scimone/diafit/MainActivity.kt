@@ -9,11 +9,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import uk.scimone.diafit.addmeal.presentation.screens.AddMealScreen
+import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.navigation.BottomNavigationBar
+import org.koin.android.ext.android.inject
+import androidx.compose.ui.unit.dp
+
+
 
 class MainActivity : ComponentActivity() {
+    private val mealRepository: MealRepository by inject()
+    private val userId = "anna" // replace with real user ID from your auth system
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,7 +46,7 @@ class MainActivity : ComponentActivity() {
                             1 -> Greeting("Favorites")
                             2 -> Greeting("Search")
                             3 -> Greeting("Profile")
-                            4 -> Greeting("+ Action")
+                            4 -> AddMealScreen(mealRepository = mealRepository, userId = userId)
                         }
                     }
                 }
