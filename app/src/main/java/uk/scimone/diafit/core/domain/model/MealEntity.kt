@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class MealEntity(
-    @PrimaryKey val id: String,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userId: String,
     val description: String?,
     val createdAtUtc: Long,
@@ -15,7 +15,7 @@ data class MealEntity(
     val proteins: Int? = 0,
     val fats: Int? = 0,
     val isValid: Boolean = true,
-    val imageId: String,                  // Usually equal to meal id, but separate for flexibility
+    val imageId: String,
     val recommendation: String?,       // AI recommendation text
     val reasoning: String?              // AI reasoning text
 )

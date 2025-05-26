@@ -20,7 +20,9 @@ val coreModule = module {
             androidContext(),
             AppDatabase::class.java,
             "diafit_database"
-        ).build()
+        )
+        .fallbackToDestructiveMigration(false)
+        .build()
     }
 
     // Provide DAO from database

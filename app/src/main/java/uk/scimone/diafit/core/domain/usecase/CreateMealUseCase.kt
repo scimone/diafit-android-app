@@ -2,7 +2,6 @@ package uk.scimone.diafit.core.domain.usecase
 
 import android.net.Uri
 import uk.scimone.diafit.core.domain.model.MealEntity
-import uk.scimone.diafit.core.domain.model.Nutrients
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import java.time.Instant
 import java.util.UUID
@@ -34,13 +33,12 @@ class CreateMealUseCase constructor(
         proteins: Int? = null,
         fats: Int? = null
     ): MealEntity {
-        val mealId = UUID.randomUUID().toString()
+        val imageId = UUID.randomUUID().toString()
 
         // Save image locally and get stored Uri/path from repository
-        val storedImageUri = mealRepository.storeImage(mealId, imageUri)
+        val storedImageUri = mealRepository.storeImage(imageId, imageUri)
 
         val meal = MealEntity(
-            id = mealId,
             userId = userId,
             description = description,
             createdAtUtc = Instant.now().toEpochMilli(),
@@ -50,7 +48,7 @@ class CreateMealUseCase constructor(
             proteins = proteins,
             fats = fats,
             isValid = true,
-            imageId = mealId,
+            imageId = imageId,
             recommendation = null,
             reasoning = null
         )

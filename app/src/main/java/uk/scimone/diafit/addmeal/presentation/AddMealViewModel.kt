@@ -26,11 +26,11 @@ class AddMealViewModel(
     private val _uiState = MutableStateFlow(AddMealState())
     val uiState = _uiState.asStateFlow()
 
-    private var mealId: String = UUID.randomUUID().toString()
+    private var imageId: String = UUID.randomUUID().toString()
 
     // Call this to start a new meal process, resets state and mealId
     fun startNewMeal() {
-        mealId = UUID.randomUUID().toString()
+        imageId = UUID.randomUUID().toString()
         _uiState.value = AddMealState() // reset UI state to empty
     }
 
@@ -43,12 +43,12 @@ class AddMealViewModel(
     }
 
     fun createCameraImageUri(): Uri {
-        return fileStorageRepository.createImageUri(mealId)
+        return fileStorageRepository.createImageUri(imageId)
     }
 
     fun copyGalleryImageToPrivateStorage(sourceUri: Uri) {
         viewModelScope.launch {
-            fileStorageRepository.copyGalleryImageToPrivateStorage(sourceUri, mealId)
+            fileStorageRepository.copyGalleryImageToPrivateStorage(sourceUri, imageId)
                 .onSuccess { uri -> _uiState.update { it.copy(imageUri = uri) } }
                 .onFailure { _uiState.update { it.copy(snackbarMessage = "Failed to copy image") } }
         }
@@ -59,14 +59,13 @@ class AddMealViewModel(
             val uri = uiState.value.imageUri ?: return@launch
             _uiState.update { it.copy(isLoading = true) }
 
-            val storedResult = mealRepository.storeImage(mealId, uri)
+            val storedResult = mealRepository.storeImage(imageId, uri)
             if (storedResult.isFailure) {
                 _uiState.update { it.copy(isLoading = false, snackbarMessage = "Failed to store image") }
                 return@launch
             }
 
             val meal = MealEntity(
-                id = mealId,
                 userId = userId,
                 description = uiState.value.description,
                 createdAtUtc = Instant.now().toEpochMilli(),
@@ -76,7 +75,7 @@ class AddMealViewModel(
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
                 isValid = true,
-                imageId = mealId,
+                imageId = imageId,
                 recommendation = null,
                 reasoning = null
             )
