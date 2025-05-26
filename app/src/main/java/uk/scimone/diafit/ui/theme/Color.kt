@@ -59,3 +59,16 @@ val DarkError = Color(0xFFEF5350)
 val DarkOnError = Color(0xFF601410)
 val DarkErrorContainer = Color(0xFFB71C1C)
 val DarkOnErrorContainer = Color(0xFFF9DEDC)
+
+// Diabetes Specific Colors
+val InRange = Color(0xFF3DBC40) // Green
+val BelowRange = Color(0xFFED4D4D) // Red
+val AboveRange = Color(0xFFA56CB9) // Purple
+val Carbs = Color(0xFFFFC107) // Yellow
+val Bolus = Color(0xFF2196F3) // Blue
+val Basal = Color(0xFFFF5722) // Deep Orange
+val Activity = Color(0xFF9C27B0) // Purple
+
+// Additional Colors
+val Black = Color(0xFF000000)
+val White = Color(0xFFFFFFFF)

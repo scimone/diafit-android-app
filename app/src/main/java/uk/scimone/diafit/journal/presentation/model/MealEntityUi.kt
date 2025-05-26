@@ -10,15 +10,23 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 data class MealEntityUi(
+    val carbohydrates: Int = 0,
+    val proteins: Int? = null,
+    val fats: Int? = null,
+    val calories: Int? = null,
     val timeFormatted: String,
     val description: String,
     val imageUri: Uri?,
-    val macrosSummary: String
+    val macrosSummary: String,
+    val timeInRange: Double = 0.7,
+    val timeAboveRange: Double = 0.28,
+    val timeBelowRange: Double = 0.02
 )
 
 fun MealEntity.toUi(context: Context): MealEntityUi {
-    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    val formattedDate = formatter.format(Date(mealTimeUtc))
+
+    val timeFormatted = SimpleDateFormat("HH:mm", Locale.getDefault())
+        .format(Date(mealTimeUtc))
 
     val descriptionText = description ?: "No description"
 
@@ -29,10 +37,14 @@ fun MealEntity.toUi(context: Context): MealEntityUi {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)
     }
 
-    val macrosSummary = "Carbs: $carbohydrates, Proteins: ${proteins ?: 0}, Fats: ${fats ?: 0}, Calories: ${calories ?: 0}"
+    val macrosSummary = "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g, Calories: ${calories ?: 0} kcal"
 
     return MealEntityUi(
-        timeFormatted = formattedDate,
+        carbohydrates = carbohydrates,
+        proteins = proteins,
+        fats = fats,
+        calories = calories,
+        timeFormatted = timeFormatted,
         description = descriptionText,
         imageUri = imageUri,
         macrosSummary = macrosSummary
