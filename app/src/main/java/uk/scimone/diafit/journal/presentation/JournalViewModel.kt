@@ -9,7 +9,7 @@ import uk.scimone.diafit.core.domain.repository.MealRepository
 
 class JournalViewModel(
     private val mealRepository: MealRepository,
-    private val userId: String
+    private val userId: Int
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JournalUiState(isLoading = true))

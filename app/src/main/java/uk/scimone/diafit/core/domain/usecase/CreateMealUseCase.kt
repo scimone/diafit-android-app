@@ -26,7 +26,7 @@ class CreateMealUseCase constructor(
     suspend operator fun invoke(
         imageUri: Uri,
         description: String?,
-        userId: String,
+        userId: Int,
         mealTimeUtc: Long = Instant.now().toEpochMilli(),
         calories: Int? = null,
         carbohydrates: Int = 0,

@@ -19,7 +19,7 @@ import java.util.*
 
 @Composable
 fun JournalScreen(
-    userId: String,
+    userId: Int,
     viewModel: JournalViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()

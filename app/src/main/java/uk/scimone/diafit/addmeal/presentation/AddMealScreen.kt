@@ -28,7 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 
 @Composable
 fun AddMealScreen(
-    userId: String,
+    userId: Int,
     viewModel: AddMealViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()

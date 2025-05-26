@@ -24,9 +24,9 @@ interface MealDao {
     fun getAllMeals(): Flow<List<MealEntity>>
 
     @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
-    suspend fun getMealsByUserId(userId: String): List<MealEntity>
+    suspend fun getMealsByUserId(userId: Int): List<MealEntity>
 
     @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
-    fun observeMealsByUserId(userId: String): Flow<List<MealEntity>>
+    fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
 
 }

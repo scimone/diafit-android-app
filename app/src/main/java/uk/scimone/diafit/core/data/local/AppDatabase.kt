@@ -6,7 +6,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 
 @Database(
     entities = [MealEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

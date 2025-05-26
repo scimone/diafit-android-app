@@ -20,7 +20,7 @@ import uk.scimone.diafit.journal.presentation.JournalScreen
 
 class MainActivity : ComponentActivity() {
     private val mealRepository: MealRepository by inject()
-    private val userId = "anna" // replace with real user ID from your auth system
+    private val userId = 1 // replace with real user ID from your auth system
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

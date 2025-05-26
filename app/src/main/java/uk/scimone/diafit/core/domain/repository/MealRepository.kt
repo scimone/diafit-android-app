@@ -18,9 +18,9 @@ interface MealRepository {
 
     suspend fun storeImage(mealId: String, sourceUri: Uri): Result<Uri>
 
-    suspend fun getMealsByUserId(userId: String): Result<List<MealEntity>>
+    suspend fun getMealsByUserId(userId: Int): Result<List<MealEntity>>
 
-    fun observeMealsByUserId(userId: String): Flow<List<MealEntity>>
+    fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
 
 
 }

@@ -5,7 +5,7 @@ import org.koin.dsl.module
 import uk.scimone.diafit.journal.presentation.JournalViewModel
 
 val journalModule = module {
-    viewModel { (userId: String) ->
+    viewModel { (userId: Int) ->
         JournalViewModel(get(), userId)
     }
 }

@@ -19,7 +19,7 @@ import java.util.*
 class AddMealViewModel(
     private val mealRepository: MealRepository,
     private val fileStorageRepository: FileStorageRepository,
-    private val userId: String,
+    private val userId: Int,
     application: Application
 ) : AndroidViewModel(application) {
 

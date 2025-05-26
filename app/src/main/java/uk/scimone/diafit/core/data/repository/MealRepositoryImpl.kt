@@ -36,7 +36,7 @@ class MealRepositoryImpl(
         }
     }
 
-    override suspend fun getMealsByUserId(userId: String): Result<List<MealEntity>> {
+    override suspend fun getMealsByUserId(userId: Int): Result<List<MealEntity>> {
         return try {
             val meals = mealDao.getMealsByUserId(userId)
             Result.success(meals)
@@ -45,7 +45,7 @@ class MealRepositoryImpl(
         }
     }
 
-    override fun observeMealsByUserId(userId: String): Flow<List<MealEntity>> {
+    override fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>> {
         return mealDao.observeMealsByUserId(userId)
     }
 
