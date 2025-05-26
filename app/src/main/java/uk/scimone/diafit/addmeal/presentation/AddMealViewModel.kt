@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import java.io.File
 import java.time.Instant
@@ -17,6 +18,7 @@ import java.util.*
 
 class AddMealViewModel(
     private val mealRepository: MealRepository,
+    private val fileStorageRepository: FileStorageRepository,
     private val userId: String,
     application: Application
 ) : AndroidViewModel(application) {
@@ -41,35 +43,14 @@ class AddMealViewModel(
     }
 
     fun createCameraImageUri(): Uri {
-        val context = getApplication<Application>()
-        val picturesDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "DiaFit")
-        if (!picturesDir.exists()) picturesDir.mkdirs()
-
-        val file = File(picturesDir, "meal_$mealId.jpg")
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
+        return fileStorageRepository.createImageUri(mealId)
     }
 
-    fun copyGalleryImageToPrivateStorage(context: Context, sourceUri: Uri) {
+    fun copyGalleryImageToPrivateStorage(sourceUri: Uri) {
         viewModelScope.launch {
-            runCatching {
-                val picturesDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "DiaFit")
-                if (!picturesDir.exists()) picturesDir.mkdirs()
-
-                val destFile = File(picturesDir, "meal_$mealId.jpg")
-                context.contentResolver.openInputStream(sourceUri)?.use { input ->
-                    destFile.outputStream().use { output -> input.copyTo(output) }
-                }
-
-                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", destFile)
-            }.onSuccess { destUri ->
-                _uiState.update { it.copy(imageUri = destUri) }
-            }.onFailure {
-                _uiState.update { it.copy(snackbarMessage = "Failed to copy image") }
-            }
+            fileStorageRepository.copyGalleryImageToPrivateStorage(sourceUri, mealId)
+                .onSuccess { uri -> _uiState.update { it.copy(imageUri = uri) } }
+                .onFailure { _uiState.update { it.copy(snackbarMessage = "Failed to copy image") } }
         }
     }
 

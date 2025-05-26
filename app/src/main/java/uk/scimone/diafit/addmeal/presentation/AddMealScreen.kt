@@ -60,9 +60,10 @@ fun AddMealScreen(
 
     val galleryLauncher = rememberLauncherForActivityResult(GetContent()) { uri ->
         uri?.let {
-            viewModel.copyGalleryImageToPrivateStorage(context, it)
+            viewModel.copyGalleryImageToPrivateStorage(it)
         }
     }
+
 
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let {

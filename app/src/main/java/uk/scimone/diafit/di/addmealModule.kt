@@ -6,5 +6,12 @@ import org.koin.dsl.module
 import uk.scimone.diafit.addmeal.presentation.AddMealViewModel
 
 val addmealModule = module {
-    viewModel { (userId: String) -> AddMealViewModel(get(), userId, androidApplication()) }
+    viewModel { (userId: String) ->
+        AddMealViewModel(
+            mealRepository = get(),
+            fileStorageRepository = get(),
+            userId = userId,
+            application = get()
+        )
+    }
 }
