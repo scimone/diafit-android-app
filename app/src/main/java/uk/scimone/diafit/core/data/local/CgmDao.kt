@@ -10,8 +10,8 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 @Dao
 interface CgmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertCGM(cgmValue: CgmEntity)
+    fun insertCgm(cgm: CgmEntity)
 
-    @Query("SELECT * FROM CGMEntity ORDER BY timestamp DESC LIMIT 1")
-    fun getLatestCGM(): Flow<CgmEntity>
+    @Query("SELECT * FROM CgmEntity ORDER BY timestamp DESC LIMIT 1")
+    fun getLatestCgmValue(): Flow<CgmEntity>
 }

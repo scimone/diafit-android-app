@@ -9,11 +9,11 @@ class CgmRepositoryImpl(
     private val cgmDao: CgmDao
 ) : CgmRepository {
 
-    override fun getLatestCGM(): Flow<CgmEntity> {
-        return cgmDao.getLatestCGM()
+    override fun getLatestCgmValue(): Flow<CgmEntity> {
+        return cgmDao.getLatestCgmValue()
     }
 
-    override suspend fun insertCGMValue(cgmValue: CgmEntity) {
-        cgmDao.insertCGM(cgmValue)
+    override suspend fun insertCgm(cgm: CgmEntity) {
+        cgmDao.insertCgm(cgm)
     }
 }
