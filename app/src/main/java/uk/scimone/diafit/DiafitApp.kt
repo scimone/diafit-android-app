@@ -6,6 +6,7 @@ import org.koin.android.ext.koin.androidContext
 import uk.scimone.diafit.di.coreModule
 import uk.scimone.diafit.di.addmealModule
 import uk.scimone.diafit.di.journalModule
+import uk.scimone.diafit.sync.di.syncModule
 
 class DiafitApp : Application() {
     override fun onCreate() {
@@ -18,6 +19,7 @@ class DiafitApp : Application() {
                     coreModule,
                     journalModule,
                     addmealModule,
+                    syncModule
                 )
             )
         }

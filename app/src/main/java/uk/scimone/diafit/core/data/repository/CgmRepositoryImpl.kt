@@ -34,24 +34,5 @@ class CgmRepositoryImpl(
         cgmDao.insertAll(cgmList)
     }
 
-    override suspend fun syncCgmFromNightscout() {
-        val oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS).toEpochMilli()
-        val latest = cgmDao.getLatestCgm().firstOrNull()
-        val fromDate = latest?.timestamp?.let { formatTimestamp(it) }
-            ?: formatTimestamp(oneHourAgo)
-        val result: Result<List<NightscoutEntryDto>, NetworkError> = nightscoutApi.getCgmEntries(fromDate)
-
-        when (result) {
-            is Result.Success -> {
-                val entries = result.data.map { it.toCgmEntity(userId=1) }
-                cgmDao.insertAll(entries)
-            }
-            is Result.Error -> {
-                Log.e("NightscoutSync", "Error syncing: ${result.error}")
-            }
-        }
-
-    }
-
 
 }

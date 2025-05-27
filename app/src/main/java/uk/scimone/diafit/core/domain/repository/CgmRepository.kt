@@ -11,5 +11,4 @@ interface CgmRepository {
 
     suspend fun insertAll(cgmList: List<CgmEntity>)
 
-    suspend fun syncCgmFromNightscout()
 }
