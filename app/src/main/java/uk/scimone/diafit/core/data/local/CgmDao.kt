@@ -12,6 +12,9 @@ interface CgmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertCgm(cgm: CgmEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(cgmList: List<CgmEntity>)
+
     @Query("SELECT * FROM CgmEntity ORDER BY timestamp DESC LIMIT 1")
-    fun getLatestCgmValue(): Flow<CgmEntity>
+    fun getLatestCgm(): Flow<CgmEntity>
 }

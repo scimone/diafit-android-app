@@ -12,6 +12,8 @@ data class CgmEntity(
     val userId: Int,
     val timestamp: Long,
     val valueMgdl: Int,
+    val fiveMinuteRateMgdl: Float,
+    val direction: String = "Flat",
     val device: String = "Unknown",
     val source: String = "Unknown",
 )

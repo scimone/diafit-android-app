@@ -5,7 +5,11 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 
 interface CgmRepository {
 
-    fun getLatestCgmValue(): Flow<CgmEntity>
+    fun getLatestCgm(): Flow<CgmEntity>
 
     suspend fun insertCgm(cgm: CgmEntity)
+
+    suspend fun insertAll(cgmList: List<CgmEntity>)
+
+    suspend fun syncCgmFromNightscout()
 }

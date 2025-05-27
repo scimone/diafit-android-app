@@ -2,12 +2,15 @@ package uk.scimone.diafit.di
 
 import androidx.room.Room
 import org.koin.android.ext.koin.androidContext
+import io.ktor.client.engine.android.Android
 import org.koin.dsl.module
 import uk.scimone.diafit.core.data.file.FileStorageRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealRepositoryImpl
 import uk.scimone.diafit.core.data.local.AppDatabase
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
+import uk.scimone.diafit.core.data.networking.HttpClientFactory
+import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
@@ -36,8 +39,10 @@ val coreModule = module {
 
     // Provide repository implementation
     single<MealRepository> { MealRepositoryImpl(get(), get()) }
-    single<CgmRepository> { CgmRepositoryImpl(get()) }
+    single<CgmRepository> { CgmRepositoryImpl(get(), get()) }
     single { CreateMealUseCase(get()) }
 
-    // Provide CreateMealUseCase
+    // Provide Nightscout API
+    single { HttpClientFactory.create(Android.create()) }
+    single { NightscoutApi(get()) }
 }

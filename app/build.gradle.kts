@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -17,6 +18,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "API_KEY", "\"\"")
+        buildConfigField("String", "BASE_URL", "\"https://gluco.mooo.com\"")
     }
 
     buildTypes {
@@ -37,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -73,4 +78,7 @@ dependencies {
     kapt("androidx.room:room-compiler:2.7.1")
     // if using Kotlin coroutines or RxJava with Room
     implementation(libs.androidx.room.ktx)
+
+    implementation(libs.bundles.ktor)
+
 }
