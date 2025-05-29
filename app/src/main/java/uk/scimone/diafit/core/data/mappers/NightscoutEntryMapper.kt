@@ -12,5 +12,6 @@ fun NightscoutEntryDto.toCgmEntity(userId: Int = 1): CgmEntity {
         direction = this.direction ?: "Flat",
         device = this.device,
         source = "Nightscout",
+        sourceId = this.id
     )
 }

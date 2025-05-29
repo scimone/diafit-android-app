@@ -5,12 +5,12 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 data class CgmEntityUi(
-    val value: Int,
-    val rate: Float,
-    val direction: String,
-    val device: String,
-    val source: String,
-    val timeSince: String
+    val value: Int?,
+    val rate: Float?,
+    val direction: String?,
+    val device: String?,
+    val source: String?,
+    val timeSince: String?
 )
 
 // Extension to convert domain model to UI model

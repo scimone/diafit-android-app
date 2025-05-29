@@ -16,4 +16,5 @@ data class CgmEntity(
     val direction: String = "Flat",
     val device: String = "Unknown",
     val source: String = "Unknown",
+    val sourceId: String? = null,
 )
