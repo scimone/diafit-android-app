@@ -25,6 +25,10 @@ class CgmRepositoryImpl(
         return cgmDao.getLatestCgm()
     }
 
+    override fun getAllCgmSince(startOfDay: Long, userId: Int): Flow<List<CgmEntity>> {
+        return cgmDao.getAllCgmSince(startOfDay, userId)
+    }
+
     override suspend fun insertCgm(cgm: CgmEntity) {
         cgmDao.insertCgm(cgm)
     }

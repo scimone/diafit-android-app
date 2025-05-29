@@ -82,4 +82,18 @@ dependencies {
 
     implementation(libs.bundles.ktor)
 
+    // Vico Charts
+    val vicoVersion = "2.0.0-alpha.27"
+    // For Jetpack Compose.
+    implementation("com.patrykandpatrick.vico:compose:$vicoVersion")
+
+    // For `compose`. Creates a `ChartStyle` based on an M2 Material Theme.
+    implementation("com.patrykandpatrick.vico:compose-m2:$vicoVersion")
+
+    // For `compose`. Creates a `ChartStyle` based on an M3 Material Theme.
+    implementation("com.patrykandpatrick.vico:compose-m3:$vicoVersion")
+
+    // Houses the core logic for charts and other elements. Included in all other modules.
+    implementation("com.patrykandpatrick.vico:core:$vicoVersion")
+
 }

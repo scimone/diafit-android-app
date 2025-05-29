@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import uk.scimone.diafit.home.presentation.components.ComponentCgmChart
 import uk.scimone.diafit.home.presentation.components.ComponentRotatingArrowIcon
+import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -29,7 +31,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        contentAlignment = Alignment.Center
+//        contentAlignment = Alignment.Center
     ) {
         when {
             state.isLoading -> {
@@ -42,7 +44,7 @@ fun HomeScreen(
                 )
             }
             state.cgmUi != null -> {
-                CgmDisplay(cgm = state.cgmUi!!)
+                CgmDisplay(cgm = state.cgmUi!!, history = state.cgmHistory)
             }
             else -> {
                 Text("No CGM data available")
@@ -52,7 +54,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun CgmDisplay(cgm: CgmEntityUi) {
+fun CgmDisplay(cgm: CgmEntityUi, history: List<CgmChartData>) {
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -73,5 +75,14 @@ fun CgmDisplay(cgm: CgmEntityUi) {
             ComponentRotatingArrowIcon(inputValue = cgm.rate)
         }
         Text(text = "${cgm.timeSince} ago")
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(170.dp)
+        ) {
+            ComponentCgmChart(history)
+        }
+
     }
 }

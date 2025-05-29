@@ -7,6 +7,8 @@ interface CgmRepository {
 
     fun getLatestCgm(): Flow<CgmEntity>
 
+    fun getAllCgmSince(startOfDay: Long, userId: Int): Flow<List<CgmEntity>>
+
     suspend fun insertCgm(cgm: CgmEntity)
 
     suspend fun insertAll(cgmList: List<CgmEntity>)
