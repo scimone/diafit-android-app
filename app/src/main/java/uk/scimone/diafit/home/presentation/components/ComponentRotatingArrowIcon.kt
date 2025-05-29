@@ -2,6 +2,7 @@ package uk.scimone.diafit.home.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -22,13 +23,14 @@ import androidx.compose.ui.unit.dp
 fun ComponentRotatingArrowIcon(inputValue: Float?) {
     if (inputValue != null) {
         val rotationAngle = (-inputValue * 180f) // Scale inputValue to [0, 180] range
+        val color = MaterialTheme.colorScheme.onSurface
 
         Canvas(
             modifier = Modifier
                 .size(50.dp)
                 .rotate(rotationAngle)
         ) {
-            drawArrow(color = Color.White)
+            drawArrow(color = color)
         }
     }
 }

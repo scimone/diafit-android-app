@@ -67,7 +67,7 @@ fun CgmDisplay(cgm: CgmEntityUi, history: List<CgmChartData>) {
                 color = when {
                     (cgm.value ?: 0) <= 70 -> BelowRange
                     (cgm.value ?: 0) >= 180 -> AboveRange
-                    else -> White
+                    else -> MaterialTheme.colorScheme.onBackground
                 },
                 textDecoration = if (cgm.isStale) TextDecoration.LineThrough else TextDecoration.None
 
