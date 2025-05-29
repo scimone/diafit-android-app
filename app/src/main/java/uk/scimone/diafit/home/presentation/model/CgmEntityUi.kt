@@ -17,12 +17,17 @@ data class CgmEntityUi(
 fun CgmEntity.toCgmEntityUi(): CgmEntityUi {
     return CgmEntityUi(
         value = valueMgdl,
-        rate = fiveMinuteRateMgdl,
+        rate = fiveMinuteRateMgdl.toNormalizedRate(),
         direction = direction,
         device = device,
         source = source,
         timeSince = timestamp.toTimeSince()
     )
+}
+
+// Clamp the rate to [-3, 3] and normalize to [0, 1]
+fun Float.toNormalizedRate(): Float {
+    return ((this.coerceIn(-3f, 3f) + 3) / 6)
 }
 
 // Extension to format timestamp into "xh ym zs"
