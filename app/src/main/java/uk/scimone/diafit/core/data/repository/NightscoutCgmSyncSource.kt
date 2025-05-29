@@ -17,18 +17,26 @@ class NightscoutCgmSyncSource(
 ) : CgmSyncSource {
 
     override suspend fun sync() {
+        Log.d("NightscoutSync", "Starting Nightscout sync...")
+
         val oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS).toEpochMilli()
         val latest = cgmDao.getLatestCgm().firstOrNull()
         val fromDate = latest?.timestamp?.let { formatTimestamp(it) } ?: formatTimestamp(oneHourAgo)
+        // log the date from which we are fetching CGM entries
+        Log.d("NightscoutSync", "fetching from: $fromDate")
+
+        Log.d("NightscoutSync", "Fetching CGM entries from: $fromDate")
 
         when (val result = nightscoutApi.getCgmEntries(fromDate)) {
             is Result.Success -> {
                 val entries = result.data.map { it.toCgmEntity(userId = 1) }
                 cgmDao.insertAll(entries)
+                Log.d("NightscoutSync", "Synced ${entries.size} entries")
             }
             is Result.Error -> {
                 Log.e("NightscoutSync", "Error syncing: ${result.error}")
             }
         }
     }
+
 }

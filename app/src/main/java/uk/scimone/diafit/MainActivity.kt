@@ -1,5 +1,8 @@
 package uk.scimone.diafit
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,7 +18,10 @@ import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.navigation.BottomNavigationBar
 import org.koin.android.ext.android.inject
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import uk.scimone.diafit.journal.presentation.JournalScreen
+import uk.scimone.diafit.core.data.service.CgmSyncService
 
 
 class MainActivity : ComponentActivity() {
@@ -23,6 +29,27 @@ class MainActivity : ComponentActivity() {
     private val userId = 1 // replace with real user ID from your auth system
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val REQUEST_CODE_DATA_SYNC = 1001
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC),
+                    REQUEST_CODE_DATA_SYNC
+                )
+            }
+        }
+
+
+        ContextCompat.startForegroundService(this, Intent(this, CgmSyncService::class.java))
+
+
         enableEdgeToEdge()
         setContent {
             DiafitTheme {

@@ -12,10 +12,12 @@ import uk.scimone.diafit.core.data.local.MealDao
 import uk.scimone.diafit.core.data.networking.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
+import uk.scimone.diafit.core.data.worker.CgmPoller
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
+import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
 
 val coreModule = module {
 
@@ -41,6 +43,7 @@ val coreModule = module {
     single<MealRepository> { MealRepositoryImpl(get(), get()) }
     single<CgmRepository> { CgmRepositoryImpl(get(), get()) }
     single { CreateMealUseCase(get()) }
+    single { SyncCgmDataUseCase(get()) }
 
     // Provide Nightscout API
     single { HttpClientFactory.create(Android.create()) }
