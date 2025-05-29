@@ -10,18 +10,24 @@ data class CgmEntityUi(
     val direction: String?,
     val device: String?,
     val source: String?,
-    val timeSince: String?
+    val timeSince: String?,
+    val isStale: Boolean = false
 )
 
 // Extension to convert domain model to UI model
 fun CgmEntity.toCgmEntityUi(): CgmEntityUi {
+    val now = Instant.now()
+    val last = Instant.ofEpochMilli(timestamp)
+    val durationMinutes = ChronoUnit.MINUTES.between(last, now)
+
     return CgmEntityUi(
         value = valueMgdl,
         rate = fiveMinuteRateMgdl.toNormalizedRate(),
         direction = direction,
         device = device,
         source = source,
-        timeSince = timestamp.toTimeSince()
+        timeSince = timestamp.toTimeSince(),
+        isStale = durationMinutes > 10
     )
 }
 

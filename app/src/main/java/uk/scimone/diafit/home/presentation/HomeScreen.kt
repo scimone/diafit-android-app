@@ -67,7 +67,7 @@ fun CgmDisplay(cgm: CgmEntityUi) {
                     (cgm.value ?: 0) >= 180 -> AboveRange
                     else -> White
                 },
-//                textDecoration = if (state.staleCGM) TextDecoration.LineThrough else TextDecoration.None
+                textDecoration = if (cgm.isStale) TextDecoration.LineThrough else TextDecoration.None
 
             )
             ComponentRotatingArrowIcon(inputValue = cgm.rate)
