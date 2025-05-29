@@ -1,0 +1,10 @@
+package uk.scimone.diafit.home.presentation
+
+import uk.scimone.diafit.home.presentation.model.CgmEntityUi
+
+
+data class HomeState(
+    val cgmUi: CgmEntityUi? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)

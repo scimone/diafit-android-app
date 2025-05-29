@@ -19,7 +19,6 @@ import java.time.Instant
 
 class CgmRepositoryImpl(
     private val cgmDao: CgmDao,
-    private val nightscoutApi: NightscoutApi,
 ) : CgmRepository {
 
     override fun getLatestCgm(): Flow<CgmEntity> {

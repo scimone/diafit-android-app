@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import uk.scimone.diafit.journal.presentation.JournalScreen
+import uk.scimone.diafit.home.presentation.HomeScreen
 import uk.scimone.diafit.core.data.service.CgmSyncService
 
 
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         when (selectedTab) {
-                            0 -> Greeting("Home")
+                            0 -> HomeScreen(userId = userId)
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(userId = userId)
                             3 -> Greeting("History")
