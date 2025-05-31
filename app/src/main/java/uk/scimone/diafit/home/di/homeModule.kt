@@ -5,7 +5,12 @@ import org.koin.dsl.module
 import uk.scimone.diafit.home.presentation.HomeViewModel
 
 val homeModule = module {
+
     viewModel { (userId: Int) ->
-        HomeViewModel(get(), userId)
+        HomeViewModel(
+            getLatestCgmUseCase = get(),
+            getAllCgmSinceUseCase = get(),
+            userId = userId
+        )
     }
 }

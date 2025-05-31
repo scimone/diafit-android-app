@@ -5,14 +5,16 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.home.presentation.model.toCgmEntityUi
 import uk.scimone.diafit.core.domain.model.CgmEntity
+import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
+import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
 import uk.scimone.diafit.core.domain.util.nowMinusXMinutes
 import uk.scimone.diafit.home.presentation.model.toChartData
 
 class HomeViewModel(
-    private val cgmRepository: CgmRepository,
+    private val getLatestCgmUseCase: GetLatestCgmUseCase,
+    private val getAllCgmSinceUseCase: GetAllCgmSinceUseCase,
     private val userId: Int,
 ) : ViewModel() {
 
@@ -29,7 +31,7 @@ class HomeViewModel(
 
     private fun observeLatestCgm() {
         viewModelScope.launch {
-            cgmRepository.getLatestCgm()
+            getLatestCgmUseCase()
                 .catch { e ->
                     _state.value = HomeState(
                         error = e.message,
@@ -46,7 +48,7 @@ class HomeViewModel(
         nowMinus24h: Long = nowMinusXMinutes(24 * 60)
     ) {
         viewModelScope.launch {
-            cgmRepository.getAllCgmSince(nowMinus24h, userId)
+            getAllCgmSinceUseCase(nowMinus24h, userId)
                 .catch { e ->
                     _state.value = HomeState(
                         error = e.message,

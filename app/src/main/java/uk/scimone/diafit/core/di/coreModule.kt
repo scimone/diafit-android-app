@@ -17,6 +17,8 @@ import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
+import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
+import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
 import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
 
 val coreModule = module {
@@ -39,10 +41,16 @@ val coreModule = module {
     // Provide file storage
     single<FileStorageRepository> { FileStorageRepositoryImpl(get()) }
 
-    // Provide repository implementation
+    // Provide meal repository and use cases
     single<MealRepository> { MealRepositoryImpl(get(), get()) }
-    single<CgmRepository> { CgmRepositoryImpl(get()) }
     single { CreateMealUseCase(get()) }
+
+    // Provide CGM repository and use cases
+    single<CgmRepository> { CgmRepositoryImpl(get()) }
+    single { GetLatestCgmUseCase(get()) }
+    single { GetAllCgmSinceUseCase(get()) }
+
+    // Provide sync use cases
     single {
         SyncCgmDataUseCase(
             getCgmSourceUseCase = get(),
@@ -52,7 +60,6 @@ val coreModule = module {
             mockSource = get(named("MOCK"))
         )
     }
-
 
     // Provide Nightscout API
     single { HttpClientFactory.create(Android.create()) }

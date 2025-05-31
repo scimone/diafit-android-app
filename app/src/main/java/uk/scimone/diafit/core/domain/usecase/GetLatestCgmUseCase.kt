@@ -4,11 +4,10 @@ import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 
-
-class GetAllCgmSinceUseCase (
+class GetLatestCgmUseCase(
     private val repository: CgmRepository
 ) {
-    operator fun invoke(startTime: Long, userId: Int): Flow<List<CgmEntity>> {
-        return repository.getAllCgmSince(startTime, userId)
+    operator fun invoke(): Flow<CgmEntity?> {
+        return repository.getLatestCgm()
     }
 }
