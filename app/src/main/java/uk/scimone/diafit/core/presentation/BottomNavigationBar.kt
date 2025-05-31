@@ -1,4 +1,4 @@
-package uk.scimone.diafit.core.navigation
+package uk.scimone.diafit.core.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

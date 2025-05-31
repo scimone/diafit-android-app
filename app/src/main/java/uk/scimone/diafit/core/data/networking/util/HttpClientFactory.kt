@@ -1,4 +1,4 @@
-package uk.scimone.diafit.core.data.networking
+package uk.scimone.diafit.core.data.networking.util
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine

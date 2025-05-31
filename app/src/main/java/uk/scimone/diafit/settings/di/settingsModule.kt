@@ -1,4 +1,4 @@
-package uk.scimone.diafit.di
+package uk.scimone.diafit.settings.di
 
 import org.koin.dsl.module
 import uk.scimone.diafit.settings.data.repository.SettingsRepositoryImpl

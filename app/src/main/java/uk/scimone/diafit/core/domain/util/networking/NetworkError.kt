@@ -1,4 +1,4 @@
-package uk.scimone.diafit.core.domain.util
+package uk.scimone.diafit.core.domain.util.networking
 
 enum class NetworkError: Error {
     REQUEST_TIMEOUT,

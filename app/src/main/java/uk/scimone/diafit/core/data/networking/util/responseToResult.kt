@@ -1,7 +1,7 @@
-package uk.scimone.diafit.core.data.networking
+package uk.scimone.diafit.core.data.networking.util
 
-import uk.scimone.diafit.core.domain.util.NetworkError
-import uk.scimone.diafit.core.domain.util.Result
+import uk.scimone.diafit.core.domain.util.networking.NetworkError
+import uk.scimone.diafit.core.domain.util.networking.Result
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse

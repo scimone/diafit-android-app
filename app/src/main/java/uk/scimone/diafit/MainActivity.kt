@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import uk.scimone.diafit.addmeal.presentation.screens.AddMealScreen
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.ui.theme.DiafitTheme
-import uk.scimone.diafit.core.navigation.BottomNavigationBar
+import uk.scimone.diafit.core.presentation.BottomNavigationBar
 import org.koin.android.ext.android.inject
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat

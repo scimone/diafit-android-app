@@ -3,9 +3,11 @@ package uk.scimone.diafit.core.data.networking
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import uk.scimone.diafit.core.domain.util.NetworkError
-import uk.scimone.diafit.core.domain.util.Result
+import uk.scimone.diafit.core.domain.util.networking.NetworkError
+import uk.scimone.diafit.core.domain.util.networking.Result
 import uk.scimone.diafit.core.data.networking.dto.NightscoutEntryDto
+import uk.scimone.diafit.core.data.networking.util.constructUrl
+import uk.scimone.diafit.core.data.networking.util.safeCall
 import java.time.Instant
 
 class NightscoutApi(private val client: HttpClient) {

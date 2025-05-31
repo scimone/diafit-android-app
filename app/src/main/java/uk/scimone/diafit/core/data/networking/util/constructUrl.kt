@@ -1,4 +1,4 @@
-package uk.scimone.diafit.core.data.networking
+package uk.scimone.diafit.core.data.networking.util
 
 import uk.scimone.diafit.BuildConfig
 

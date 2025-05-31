@@ -1,4 +1,4 @@
-package uk.scimone.diafit.di
+package uk.scimone.diafit.addmeal.di
 
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module

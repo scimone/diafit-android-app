@@ -1,4 +1,4 @@
-package uk.scimone.diafit.core.domain.util
+package uk.scimone.diafit.core.domain.util.networking
 
 typealias DomainError = Error
 

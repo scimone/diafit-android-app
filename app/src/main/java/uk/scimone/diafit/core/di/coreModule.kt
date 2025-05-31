@@ -1,4 +1,4 @@
-package uk.scimone.diafit.di
+package uk.scimone.diafit.core.di
 
 import androidx.room.Room
 import org.koin.android.ext.koin.androidContext
@@ -10,11 +10,9 @@ import uk.scimone.diafit.core.data.repository.MealRepositoryImpl
 import uk.scimone.diafit.core.data.local.AppDatabase
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
-import uk.scimone.diafit.core.data.networking.HttpClientFactory
+import uk.scimone.diafit.core.data.networking.util.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
-import uk.scimone.diafit.core.data.repository.NightscoutCgmSyncSource
-import uk.scimone.diafit.core.data.worker.CgmPoller
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
