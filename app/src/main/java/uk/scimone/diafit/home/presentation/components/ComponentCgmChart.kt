@@ -43,7 +43,11 @@ import java.text.DecimalFormat
 import java.util.Calendar
 
 @Composable
-fun ComponentCgmChart(values: List<CgmChartData>) {
+fun ComponentCgmChart(
+    values: List<CgmChartData>,
+    lowerBound: Int,
+    upperBound: Int
+) {
     val minY = 40f
     val maxY = 250f
     val modelProducer = remember { CartesianChartModelProducer.build() }
@@ -55,19 +59,19 @@ fun ComponentCgmChart(values: List<CgmChartData>) {
     val lineColors = mutableListOf<Color>()
     val lineData = mutableListOf<Pair<List<Float>, List<Int>>>()
 
-    val below = filteredValues.filter { it.value < 70 }
+    val below = filteredValues.filter { it.value < lowerBound }
     if (below.isNotEmpty()) {
         lineData.add(Pair(below.map { it.timeFloat }, below.map { it.value }))
         lineColors.add(BelowRange)
     }
 
-    val inRange = filteredValues.filter { it.value in 70..180 }
+    val inRange = filteredValues.filter { it.value in lowerBound .. upperBound }
     if (inRange.isNotEmpty()) {
         lineData.add(Pair(inRange.map { it.timeFloat }, inRange.map { it.value }))
         lineColors.add(InRange)
     }
 
-    val above = filteredValues.filter { it.value > 180 }
+    val above = filteredValues.filter { it.value > upperBound }
     if (above.isNotEmpty()) {
         lineData.add(Pair(above.map { it.timeFloat }, above.map { it.value }))
         lineColors.add(AboveRange)
@@ -119,7 +123,7 @@ fun ComponentCgmChart(values: List<CgmChartData>) {
                     color = MaterialTheme.colorScheme.onSurface.toArgb(),
                     thicknessDp = .1f
                 ),
-                itemPlacer = remember { CustomAxisItemPlacer() }
+                itemPlacer = remember { CustomAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) }
             ),
             bottomAxis = rememberBottomAxis(
                 guideline = LineComponent(

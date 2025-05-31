@@ -10,6 +10,7 @@ val homeModule = module {
         HomeViewModel(
             getLatestCgmUseCase = get(),
             getAllCgmSinceUseCase = get(),
+            getTargetRangeUseCase = get(),
             userId = userId
         )
     }

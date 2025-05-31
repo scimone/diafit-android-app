@@ -80,12 +80,3 @@ fun JournalScreen(
         }
     }
 }
-
-fun formatHeaderDate(rawDate: String): String {
-    return try {
-        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(rawDate)
-        SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(parsed ?: Date())
-    } catch (e: Exception) {
-        rawDate // fallback
-    }
-}

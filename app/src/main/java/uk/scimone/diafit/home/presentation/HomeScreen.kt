@@ -18,7 +18,6 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
-import uk.scimone.diafit.ui.theme.White
 
 @Composable
 fun HomeScreen(
@@ -31,21 +30,31 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-//        contentAlignment = Alignment.Center
     ) {
         when {
             state.isLoading -> {
                 CircularProgressIndicator()
             }
+
             state.error != null -> {
                 Text(
                     text = "Error: ${state.error}",
                     color = MaterialTheme.colorScheme.error
                 )
             }
+
             state.cgmUi != null -> {
-                CgmDisplay(cgm = state.cgmUi!!, history = state.cgmHistory)
+                Column {
+                    CgmDisplay(cgm = state.cgmUi!!)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CgmChartDisplay(
+                        history = state.cgmHistory,
+                        lower = state.targetRangeLower,
+                        upper = state.targetRangeUpper
+                    )
+                }
             }
+
             else -> {
                 Text("No CGM data available")
             }
@@ -54,12 +63,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun CgmDisplay(cgm: CgmEntityUi, history: List<CgmChartData>) {
+fun CgmDisplay(cgm: CgmEntityUi) {
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-        )
-        {
+        ) {
             Text(
                 text = "${cgm.value}",
                 fontSize = 32.sp,
@@ -70,19 +78,28 @@ fun CgmDisplay(cgm: CgmEntityUi, history: List<CgmChartData>) {
                     else -> MaterialTheme.colorScheme.onBackground
                 },
                 textDecoration = if (cgm.isStale) TextDecoration.LineThrough else TextDecoration.None
-
             )
             ComponentRotatingArrowIcon(inputValue = cgm.rate)
         }
         Text(text = "${cgm.timeSince} ago")
+    }
+}
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(170.dp)
-        ) {
-            ComponentCgmChart(history)
-        }
-
+@Composable
+fun CgmChartDisplay(
+    history: List<CgmChartData>,
+    lower: Int,
+    upper: Int
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(170.dp)
+    ) {
+        ComponentCgmChart(
+            values = history,
+            lowerBound = lower,
+            upperBound = upper
+        )
     }
 }
