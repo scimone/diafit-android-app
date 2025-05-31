@@ -48,6 +48,7 @@ class SettingsViewModel(
             val newRange = SettingsGlucoseTargetRange(lower, upper)
             setGlucoseTargetRange(newRange)
             state = state.copy(glucoseTargetRange = newRange)
+            SettingsChangeBus.notifyChange()
         }
     }
 }
