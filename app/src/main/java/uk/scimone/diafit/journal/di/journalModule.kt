@@ -6,6 +6,6 @@ import uk.scimone.diafit.journal.presentation.JournalViewModel
 
 val journalModule = module {
     viewModel { (userId: Int) ->
-        JournalViewModel(get(), userId)
+        JournalViewModel(get(), get(), get(), userId)
     }
 }

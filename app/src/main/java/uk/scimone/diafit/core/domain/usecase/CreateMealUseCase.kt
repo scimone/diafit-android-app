@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.domain.usecase
 
 import android.net.Uri
+import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
@@ -19,7 +20,8 @@ class CreateMealUseCase(
         calories: Int? = null,
         carbohydrates: Int = 0,
         proteins: Int? = null,
-        fats: Int? = null
+        fats: Int? = null,
+        impactType: ImpactType? = null
     ): Result<Pair<MealEntity, Uri>> {
         val storedFileUriResult = fileStorageRepository.storeImage(imageId, imageUri)
         if (storedFileUriResult.isFailure) return Result.failure(storedFileUriResult.exceptionOrNull()!!)
@@ -27,6 +29,19 @@ class CreateMealUseCase(
         val storedFileUri = storedFileUriResult.getOrThrow()
 
         val storedContentUri = fileStorageRepository.getFileProviderUri(imageId) ?: storedFileUri
+
+        val resolvedImpactType = impactType ?: run {
+            if (proteins != null && fats != null) {
+                when {
+                    carbohydrates >= 60 && proteins >= 30 && fats >= 20 -> ImpactType.LONG
+                    carbohydrates >= 40 -> ImpactType.MEDIUM
+                    else -> ImpactType.SHORT
+                }
+            } else {
+                ImpactType.MEDIUM
+            }
+        }
+
 
         val meal = MealEntity(
             userId = userId,
@@ -37,6 +52,7 @@ class CreateMealUseCase(
             carbohydrates = carbohydrates,
             proteins = proteins,
             fats = fats,
+            impactType = resolvedImpactType,
             isValid = true,
             imageId = imageId,
             recommendation = null,

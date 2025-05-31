@@ -9,6 +9,8 @@ interface CgmRepository {
 
     fun getAllCgmSince(startOfDay: Long, userId: Int): Flow<List<CgmEntity>>
 
+    suspend fun getEntriesBetween(start: Long, end: Long, userId: Int): List<CgmEntity>
+
     suspend fun insertCgm(cgm: CgmEntity)
 
     suspend fun insertAll(cgmList: List<CgmEntity>)

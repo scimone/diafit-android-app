@@ -16,6 +16,7 @@ import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
@@ -44,6 +45,7 @@ val coreModule = module {
     // Provide meal repository and use cases
     single<MealRepository> { MealRepositoryImpl(get(), get()) }
     single { CreateMealUseCase(get(), get()) }
+    single { CalculateMealGlucoseImpactUseCase(get(), get()) }
 
     // Provide CGM repository and use cases
     single<CgmRepository> { CgmRepositoryImpl(get()) }

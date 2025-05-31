@@ -130,19 +130,19 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Meal time input (just plain text, customize with date picker later)
                 MealDateTimePicker(
-                    initial = uiState.mealTime?.let {
+                    value = uiState.mealTime?.let {
                         try {
                             LocalDateTime.parse(it)
                         } catch (e: Exception) {
                             null
                         }
                     },
-                    onDateTimeSelected = {
-                        viewModel.onMealTimeChanged(it.toString())
+                    onValueChange = {
+                        viewModel.onMealTimeChanged(it)
                     }
                 )
+
 
                 Spacer(Modifier.height(12.dp))
 

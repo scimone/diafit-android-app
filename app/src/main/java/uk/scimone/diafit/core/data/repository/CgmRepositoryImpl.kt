@@ -18,6 +18,10 @@ class CgmRepositoryImpl(
         return cgmDao.getAllCgmSince(startOfDay, userId)
     }
 
+    override suspend fun getEntriesBetween(start: Long, end: Long, userId: Int): List<CgmEntity> {
+        return cgmDao.getEntriesBetween(start, end, userId)
+    }
+
     override suspend fun insertCgm(cgm: CgmEntity) {
         cgmDao.insertCgm(cgm)
     }

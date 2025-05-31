@@ -17,6 +17,7 @@ import coil.compose.rememberAsyncImagePainter
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.journal.presentation.model.toUi
 import androidx.compose.ui.layout.ContentScale
+import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Carbs
@@ -24,9 +25,9 @@ import uk.scimone.diafit.ui.theme.InRange
 
 
 @Composable
-fun JournalItem(meal: MealEntity) {
+fun JournalItem(mealUi: MealEntityUi) {
     val context = LocalContext.current
-    val mealUi = meal.toUi(context)
+//    val mealUi = meal.toUi(context)
 
     Row(
         modifier = Modifier

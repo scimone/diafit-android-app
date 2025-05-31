@@ -30,23 +30,29 @@ fun TimeInRangeHorizontalBar(
             .padding(start = 5.dp, end = 5.dp, bottom = 2.dp)
             .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(timeBelowRange)
-                .background(BelowRange)
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(timeInRange)
-                .background(InRange)
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(timeAboveRange)
-                .background(AboveRange)
-        )
+        if (timeBelowRange > 0.0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(timeBelowRange)
+                    .background(BelowRange)
+            )
+        }
+        if (timeInRange > 0.0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(timeInRange)
+                    .background(InRange)
+            )
+        }
+        if (timeAboveRange > 0.0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(timeAboveRange)
+                    .background(AboveRange)
+            )
+        }
     }
 }

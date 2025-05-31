@@ -5,26 +5,20 @@ import android.app.TimePickerDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import java.time.LocalDateTime
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
 @Composable
 fun MealDateTimePicker(
-    initial: LocalDateTime?,
-    onDateTimeSelected: (LocalDateTime) -> Unit
+    value: LocalDateTime?,
+    onValueChange: (LocalDateTime) -> Unit
 ) {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-    val current = initial ?: LocalDateTime.now()
-    var displayText by remember { mutableStateOf(current.format(formatter)) }
+
+    val current = value ?: LocalDateTime.now()
 
     Button(onClick = {
         val now = Calendar.getInstance()
@@ -35,8 +29,7 @@ fun MealDateTimePicker(
                     context,
                     { _, hour, minute ->
                         val selected = LocalDateTime.of(year, month + 1, day, hour, minute)
-                        displayText = selected.format(formatter)
-                        onDateTimeSelected(selected)
+                        onValueChange(selected)
                     },
                     now.get(Calendar.HOUR_OF_DAY),
                     now.get(Calendar.MINUTE),
@@ -48,6 +41,6 @@ fun MealDateTimePicker(
             now.get(Calendar.DAY_OF_MONTH)
         ).show()
     }) {
-        Text("Pick Meal Time: $displayText")
+        Text("Pick Meal Time: ${current.format(formatter)}")
     }
 }

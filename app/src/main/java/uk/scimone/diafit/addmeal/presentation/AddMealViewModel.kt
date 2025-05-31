@@ -15,6 +15,8 @@ import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import java.io.File
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.*
 
 class AddMealViewModel(
@@ -71,7 +73,7 @@ class AddMealViewModel(
                 carbohydrates = uiState.value.carbohydrates ?: 0,
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
-                imageId = imageId // <-- ADD THIS!
+                imageId = imageId
             )
 
 
@@ -93,9 +95,11 @@ class AddMealViewModel(
         _uiState.update { it.copy(description = newDescription) }
     }
 
-    fun onMealTimeChanged(newMealTime: String) {
-        _uiState.update { it.copy(mealTime = newMealTime) }
+    fun onMealTimeChanged(newMealTime: LocalDateTime) {
+        val instant = newMealTime.atZone(ZoneId.systemDefault()).toInstant()
+        _uiState.update { it.copy(mealTime = instant.toString()) } // Proper ISO-8601 string with Z
     }
+
 
     fun onCarbsChanged(newCarbs: String) {
         val carbsInt = newCarbs.toIntOrNull()
