@@ -43,7 +43,7 @@ val coreModule = module {
 
     // Provide meal repository and use cases
     single<MealRepository> { MealRepositoryImpl(get(), get()) }
-    single { CreateMealUseCase(get()) }
+    single { CreateMealUseCase(get(), get()) }
 
     // Provide CGM repository and use cases
     single<CgmRepository> { CgmRepositoryImpl(get()) }
