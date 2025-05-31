@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.domain.usecase
 
 import uk.scimone.diafit.core.domain.model.CgmEntity
+import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 
@@ -15,7 +16,7 @@ class CalculateMealGlucoseImpactUseCase(
         val timeBelowRange: Double
     )
 
-    suspend operator fun invoke(meal: MealEntity): Result {
+    suspend operator fun invoke(meal: MealEntity, targetRange: GlucoseTargetRange): Result {
         val impactDurationMinutes = meal.impactType.durationMinutes
         val start = meal.mealTimeUtc
         val end = start + impactDurationMinutes * 60 * 1000 // convert minutes to millis
@@ -24,9 +25,10 @@ class CalculateMealGlucoseImpactUseCase(
         if (entries.isEmpty()) return Result(0.0, 0.0, 0.0)
 
         val totalCount = entries.size.toDouble()
-        val timeInRange = entries.count { it.isInRange() } / totalCount * 100
-        val timeAboveRange = entries.count { it.isAboveRange() } / totalCount * 100
-        val timeBelowRange = entries.count { it.isBelowRange() } / totalCount * 100
+
+        val timeInRange = entries.count { it.isInRange(targetRange) } / totalCount * 100
+        val timeAboveRange = entries.count { it.isAboveRange(targetRange) } / totalCount * 100
+        val timeBelowRange = entries.count { it.isBelowRange(targetRange) } / totalCount * 100
 
         return Result(
             timeInRange = timeInRange,
@@ -35,8 +37,14 @@ class CalculateMealGlucoseImpactUseCase(
         )
     }
 
-    // Helper extensions, define these based on your CGM target ranges
-    private fun CgmEntity.isInRange(): Boolean = valueMgdl in 70..180
-    private fun CgmEntity.isAboveRange(): Boolean = valueMgdl > 180
-    private fun CgmEntity.isBelowRange(): Boolean = valueMgdl < 70
+    // Helper extensions now take targetRange as parameter
+    private fun CgmEntity.isInRange(targetRange: GlucoseTargetRange): Boolean =
+        valueMgdl in targetRange.lowerBound..targetRange.upperBound
+
+    private fun CgmEntity.isAboveRange(targetRange: GlucoseTargetRange): Boolean =
+        valueMgdl > targetRange.upperBound
+
+    private fun CgmEntity.isBelowRange(targetRange: GlucoseTargetRange): Boolean =
+        valueMgdl < targetRange.lowerBound
 }
+

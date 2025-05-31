@@ -12,15 +12,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.toUi
+import uk.scimone.diafit.settings.domain.model.toCore
+import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 
 class JournalViewModel(
     private val mealRepository: MealRepository,
     private val calculateMealGlucoseImpactUseCase: CalculateMealGlucoseImpactUseCase,
+    private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,   // Inject or provide from UI layer
     private val userId: Int
 ) : ViewModel() {
@@ -48,7 +52,7 @@ class JournalViewModel(
                     val mealUiList = meals.map { meal ->
                         viewModelScope.async(Dispatchers.IO) {
                             val impact = try {
-                                val result = calculateMealGlucoseImpactUseCase(meal)
+                                val result = calculateMealGlucoseImpactUseCase(meal, getTargetRangeUseCase().toCore())
                                 GlucoseImpact(
                                     timeInRange = result.timeInRange,
                                     timeAboveRange = result.timeAboveRange,
