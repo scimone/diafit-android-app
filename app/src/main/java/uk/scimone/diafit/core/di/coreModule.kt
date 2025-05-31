@@ -20,7 +20,7 @@ import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
-import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
+import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
 
 val coreModule = module {
 
@@ -31,8 +31,8 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-        .fallbackToDestructiveMigration(false)
-        .build()
+            .fallbackToDestructiveMigration(false)
+            .build()
     }
 
     // Provide DAO from database
@@ -51,19 +51,9 @@ val coreModule = module {
     single<CgmRepository> { CgmRepositoryImpl(get()) }
     single { GetLatestCgmUseCase(get()) }
     single { GetAllCgmSinceUseCase(get()) }
+    single { InsertCgmUseCase(get()) }
 
-    // Provide sync use cases
-    single {
-        SyncCgmDataUseCase(
-            getCgmSourceUseCase = get(),
-            nightscoutSource = get(named("NIGHTSCOUT")),
-            xdripSource = get(named("XDRIP")),
-            jugglucoSource = get(named("JUGGLUCO")),
-            mockSource = get(named("MOCK"))
-        )
-    }
-
-    // Provide Nightscout API
+    // Nightscout HTTP API
     single { HttpClientFactory.create(Android.create()) }
     single { NightscoutApi(get()) }
 }

@@ -36,6 +36,20 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name="uk.scimone.diafit.core.presentation.receivers.CgmReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <!-- Juggluco Intent -->
+                <action android:name="glucodata.Minute" />
+
+                <!-- xDrip Intent (placeholder) -->
+                <action android:name="com.eveningoutpost.dexdrip.BgEstimate" />
+
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

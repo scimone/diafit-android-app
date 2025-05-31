@@ -33,7 +33,7 @@ fun CgmEntity.toCgmEntityUi(): CgmEntityUi {
 
 // Clamp the rate to [-3, 3] and normalize to [0, 1]
 fun Float.toNormalizedRate(): Float {
-    return ((this.coerceIn(-3f, 3f) + 3) / 6)
+    return ((this.coerceIn(-15f, 15f) + 15) / 30)
 }
 
 // Extension to format timestamp into "xh ym zs"
