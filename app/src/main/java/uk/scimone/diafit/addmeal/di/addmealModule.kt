@@ -7,7 +7,7 @@ import uk.scimone.diafit.addmeal.presentation.AddMealViewModel
 val addmealModule = module {
     viewModel { (userId: Int) ->
         AddMealViewModel(
-            mealRepository = get(),
+            createMealUseCase = get(),
             fileStorageRepository = get(),
             userId = userId,
             application = get()

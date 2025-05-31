@@ -12,12 +12,13 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import java.io.File
 import java.time.Instant
 import java.util.*
 
 class AddMealViewModel(
-    private val mealRepository: MealRepository,
+    private val createMealUseCase: CreateMealUseCase,
     private val fileStorageRepository: FileStorageRepository,
     private val userId: Int,
     application: Application
@@ -54,45 +55,39 @@ class AddMealViewModel(
         }
     }
 
+
     fun saveMeal() {
         viewModelScope.launch {
             val uri = uiState.value.imageUri ?: return@launch
             _uiState.update { it.copy(isLoading = true) }
 
-            val storedResult = mealRepository.storeImage(imageId, uri)
-            if (storedResult.isFailure) {
-                _uiState.update { it.copy(isLoading = false, snackbarMessage = "Failed to store image") }
-                return@launch
-            }
+            val imageId = UUID.randomUUID().toString()
 
-            val meal = MealEntity(
-                userId = userId,
+            val result = createMealUseCase(
+                imageUri = uri,
                 description = uiState.value.description,
-                createdAtUtc = Instant.now().toEpochMilli(),
+                userId = userId,
                 mealTimeUtc = uiState.value.mealTime?.let { parseIsoToEpoch(it) } ?: Instant.now().toEpochMilli(),
-                calories = null,
                 carbohydrates = uiState.value.carbohydrates ?: 0,
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
-                isValid = true,
-                imageId = imageId,
-                recommendation = null,
-                reasoning = null
+                imageId = imageId // <-- ADD THIS!
             )
 
 
-            val result = mealRepository.createMeal(meal)
             _uiState.update {
                 if (result.isSuccess) {
-                    // Meal saved successfully: reset state and generate new mealId for next meal
+                    val (meal, storedImageUri) = result.getOrThrow()
+                    // Update UI state with new imageUri so image displays correctly
                     startNewMeal()
-                    it.copy(snackbarMessage = "Meal added successfully", isLoading = false)
+                    it.copy(imageUri = storedImageUri, snackbarMessage = "Meal added successfully", isLoading = false)
                 } else {
                     it.copy(isLoading = false, snackbarMessage = "Failed to add meal")
                 }
             }
         }
     }
+
 
     fun onDescriptionChanged(newDescription: String) {
         _uiState.update { it.copy(description = newDescription) }

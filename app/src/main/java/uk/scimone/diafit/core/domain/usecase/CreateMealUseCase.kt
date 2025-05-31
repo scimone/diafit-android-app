@@ -1,42 +1,30 @@
 package uk.scimone.diafit.core.domain.usecase
 
 import android.net.Uri
+import android.util.Log
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import java.time.Instant
 import java.util.UUID
 
-class CreateMealUseCase constructor(
+class CreateMealUseCase(
     private val mealRepository: MealRepository
 ) {
-    /**
-     * Creates and saves a new meal with image and metadata.
-     *
-     * @param imageUri Uri pointing to the selected or captured image.
-     * @param description Optional description of the meal.
-     * @param userId String ID of the user.
-     * @param mealTimeUtc When the meal was eaten, defaults to now.
-     * @param calories Optional calorie count for the meal.
-     * @param carbohydrates Carbohydrate content in grams, defaults to 0.
-     * @param proteins Optional protein content in grams.
-     * @param fats Optional fat content in grams.
-     *
-     * @return The saved MealEntity
-     */
     suspend operator fun invoke(
         imageUri: Uri,
         description: String?,
         userId: Int,
+        imageId: String, // <-- ADD THIS!
         mealTimeUtc: Long = Instant.now().toEpochMilli(),
         calories: Int? = null,
         carbohydrates: Int = 0,
         proteins: Int? = null,
         fats: Int? = null
-    ): MealEntity {
-        val imageId = UUID.randomUUID().toString()
+    ): Result<Pair<MealEntity, Uri>> {
+        val storedImageUriResult = mealRepository.storeImage(imageId, imageUri)
+        if (storedImageUriResult.isFailure) return Result.failure(storedImageUriResult.exceptionOrNull()!!)
 
-        // Save image locally and get stored Uri/path from repository
-        val storedImageUri = mealRepository.storeImage(imageId, imageUri)
+        val storedUri = storedImageUriResult.getOrThrow()
 
         val meal = MealEntity(
             userId = userId,
@@ -53,8 +41,10 @@ class CreateMealUseCase constructor(
             reasoning = null
         )
 
-        mealRepository.createMeal(meal)
+        val createResult = mealRepository.createMeal(meal)
+        if (createResult.isFailure) return Result.failure(createResult.exceptionOrNull()!!)
 
-        return meal
+        return Result.success(Pair(meal, storedUri))
+
     }
 }

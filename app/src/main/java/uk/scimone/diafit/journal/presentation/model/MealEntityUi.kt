@@ -29,12 +29,10 @@ fun MealEntity.toUi(context: Context): MealEntityUi {
         .format(Date(mealTimeUtc))
 
     val descriptionText = description ?: "No description"
-
-    val imageFile: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        ?.resolve("DiaFit/meal_${imageId}.jpg")
-
-    val imageUri = imageFile?.takeIf { it.exists() }?.let {
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)
+    
+    val imageUri = imageId.let {
+        val file = File(context.filesDir, "meal_images/$it.jpg")
+        if (file.exists()) Uri.fromFile(file) else null
     }
 
     val macrosSummary = "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g, Calories: ${calories ?: 0} kcal"
