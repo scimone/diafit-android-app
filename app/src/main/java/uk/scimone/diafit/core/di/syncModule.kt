@@ -16,9 +16,13 @@ import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 
 val syncModule = module {
     single<CgmSyncSource>(named("NIGHTSCOUT")) { CgmSyncSourceNightscout(get(), get()) }
-    single<CgmSyncSource>(named("XDRIP")) { CgmSyncSourceXdrip() }
     single<CgmSyncSource>(named("MOCK")) { CgmSyncSourceMockData() }
-    factory<IntentCgmSyncSource>(named("JUGGLUCO")) { CgmSyncSourceJuggluco(get()) }
+    factory<CgmSyncSource>(named("JUGGLUCO")) { CgmSyncSourceJuggluco(get()) }
+    factory<IntentCgmSyncSource>(named("JUGGLUCO")) { get<CgmSyncSource>(named("JUGGLUCO")) as IntentCgmSyncSource }
+
+    factory<CgmSyncSource>(named("XDRIP")) { CgmSyncSourceXdrip(get()) }
+    factory<IntentCgmSyncSource>(named("XDRIP")) { get<CgmSyncSource>(named("XDRIP")) as IntentCgmSyncSource }
+
 
     // Single SyncCgmDataUseCase with all sources
     single {
@@ -26,8 +30,9 @@ val syncModule = module {
             getCgmSourceUseCase = get(),
             sources = mapOf(
                 CgmSource.NIGHTSCOUT to get(named("NIGHTSCOUT")),
+                CgmSource.MOCK to get(named("MOCK")),
                 CgmSource.XDRIP to get(named("XDRIP")),
-                CgmSource.MOCK to get(named("MOCK"))
+                CgmSource.JUGGLUCO to get(named("JUGGLUCO"))
             )
         )
     }

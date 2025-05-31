@@ -6,7 +6,6 @@ interface CgmSyncSource {
     suspend fun sync()
 }
 
-interface IntentCgmSyncSource {
+interface IntentCgmSyncSource : CgmSyncSource {
     fun handleIntent(intent: Intent): Boolean
-    suspend fun sync()
 }
