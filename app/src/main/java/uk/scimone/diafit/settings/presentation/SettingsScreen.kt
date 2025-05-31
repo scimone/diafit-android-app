@@ -1,0 +1,39 @@
+package uk.scimone.diafit.settings.presentation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.koin.androidx.compose.koinViewModel
+import uk.scimone.diafit.settings.domain.model.CgmSource
+
+@Composable
+fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
+    val state = viewModel.state
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("CGM Data Source", style = MaterialTheme.typography.titleMedium)
+
+        CgmSource.values().forEach { source ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.onSourceSelected(source) }
+                    .padding(vertical = 8.dp)
+            ) {
+                RadioButton(
+                    selected = source == state.selectedSource,
+                    onClick = { viewModel.onSourceSelected(source) }
+                )
+                Text(
+                    text = source.name,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+    }
+}

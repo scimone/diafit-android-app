@@ -62,7 +62,7 @@ fun BottomNavigationBar(
             icon = {
                 Icon(
                     imageVector = Icons.Default.DateRange,
-                    contentDescription = "History",
+                    contentDescription = "Settings",
                     tint = if (selectedItem == 3) colors.primary else colors.onSurfaceVariant
                 )
             },

@@ -96,4 +96,9 @@ dependencies {
     // Houses the core logic for charts and other elements. Included in all other modules.
     implementation("com.patrykandpatrick.vico:core:$vicoVersion")
 
+    dependencies {
+        implementation(libs.androidx.preference.ktx)
+    }
+
+
 }

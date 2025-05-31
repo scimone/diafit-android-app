@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import uk.scimone.diafit.journal.presentation.JournalScreen
 import uk.scimone.diafit.home.presentation.HomeScreen
 import uk.scimone.diafit.core.data.service.CgmSyncService
+import uk.scimone.diafit.settings.presentation.SettingsScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -74,7 +75,7 @@ class MainActivity : ComponentActivity() {
                             0 -> HomeScreen(userId = userId)
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(userId = userId)
-                            3 -> Greeting("History")
+                            3 -> SettingsScreen()
                             4 -> AddMealScreen(userId = userId)
                         }
                     }
