@@ -8,12 +8,13 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
 import uk.scimone.diafit.core.domain.util.nowMinusXMinutes
-import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.home.presentation.model.toCgmEntityUi
 import uk.scimone.diafit.home.presentation.model.toChartData
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
+
+import kotlinx.coroutines.delay
 
 class HomeViewModel(
     private val getLatestCgmUseCase: GetLatestCgmUseCase,
@@ -25,6 +26,9 @@ class HomeViewModel(
     private val _state = MutableStateFlow(HomeState(isLoading = true))
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
+    // Store latest CgmEntity separately to update timeSince
+    private var latestCgmEntity: CgmEntity? = null
+
     init {
         loadAllData()
 
@@ -33,6 +37,8 @@ class HomeViewModel(
                 loadAllData()
             }
         }
+
+        startCountdownUpdater()
     }
 
     private fun loadAllData() {
@@ -51,6 +57,7 @@ class HomeViewModel(
                     )
                 }
                 .collect { cgm ->
+                    latestCgmEntity = cgm
                     _state.update {
                         it.copy(
                             cgmUi = cgm?.toCgmEntityUi(),
@@ -101,6 +108,22 @@ class HomeViewModel(
                         targetRangeUpper = 180
                     )
                 }
+            }
+        }
+    }
+
+    private fun startCountdownUpdater() {
+        viewModelScope.launch {
+            while (true) {
+                latestCgmEntity?.let { cgm ->
+                    _state.update {
+                        it.copy(
+                            cgmUi = cgm.toCgmEntityUi(), // this recalculates "timeSince"
+                            isLoading = false
+                        )
+                    }
+                }
+                delay(1000L)  // update every second (adjust if needed)
             }
         }
     }
