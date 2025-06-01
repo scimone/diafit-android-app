@@ -9,14 +9,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import uk.scimone.diafit.settings.domain.model.CgmSource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.collectAsState
+
+
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
-    val state = viewModel.state
+fun SettingsScreen(
+    viewModel: SettingsViewModel = koinViewModel(),
+    onRequestIgnoreBatteryOptimizations: () -> Unit = {}
+) {
+    val state by viewModel.state.collectAsState()
 
-    Column(modifier = Modifier
-        .padding(16.dp)
-        .fillMaxSize()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.checkBatteryOptimization()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Battery warning dialog
+    if (!state.isBatteryOptimizationIgnored) {
+        BatteryOptimizationWarningDialog(
+            onDismiss = { /* optional: set flag in ViewModel if you want to suppress it */ },
+            onRequestIgnore = onRequestIgnoreBatteryOptimizations
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize()
     ) {
         Text("CGM Data Source", style = MaterialTheme.typography.titleMedium)
 
@@ -25,12 +56,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.onSourceSelected(source) }
+                    .clickable { viewModel.onCgmSourceSelected(source) }
                     .padding(vertical = 8.dp)
             ) {
                 RadioButton(
                     selected = source == state.selectedCgmSource,
-                    onClick = { viewModel.onSourceSelected(source) }
+                    onClick = { viewModel.onCgmSourceSelected(source) }
                 )
                 Text(
                     text = source.name,
@@ -38,6 +69,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
                 )
             }
         }
+
+        Text("Battery Optimization ignored: ${state.isBatteryOptimizationIgnored}", modifier = Modifier.padding(vertical = 8.dp))
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -51,6 +84,31 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
             onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
         )
     }
+}
+
+@Composable
+fun BatteryOptimizationWarningDialog(
+    onDismiss: () -> Unit,
+    onRequestIgnore: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Battery Optimization") },
+        text = { Text("Battery optimizations may prevent background CGM syncing. Please exclude the app from battery optimization to ensure proper functionality.") },
+        confirmButton = {
+            TextButton(onClick = {
+                onRequestIgnore()
+                onDismiss()
+            }) {
+                Text("Go to Settings")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
+        }
+    )
 }
 
 @Composable

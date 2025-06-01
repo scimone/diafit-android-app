@@ -6,5 +6,6 @@ import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 data class SettingsState(
     val selectedCgmSource: CgmSource = CgmSource.MOCK,
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
+    val isBatteryOptimizationIgnored: Boolean = false,
     val isLoading: Boolean = false
 )

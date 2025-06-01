@@ -4,7 +4,7 @@ import kotlinx.coroutines.*
 import kotlin.time.Duration.Companion.seconds
 import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
 
-class CgmPoller(
+class RemoteCgmPoller(
     private val syncCgmDataUseCase: SyncCgmDataUseCase
 ) {
     private var job: Job? = null

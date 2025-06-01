@@ -11,8 +11,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-
-
     <application
         android:name=".DiafitApp"
         android:allowBackup="true"
@@ -61,9 +59,15 @@
         </provider>
 
         <service
-            android:name=".core.data.service.CgmSyncService"
+            android:name=".core.data.service.RemoteCgmSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".core.data.service.BroadcastIntentCgmSyncService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
 
 
 

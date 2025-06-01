@@ -28,7 +28,8 @@ val settingsModule = module {
             getCgmSource = get(),
             setCgmSource = get(),
             getGlucoseTargetRange = get(),
-            setGlucoseTargetRange = get()
+            setGlucoseTargetRange = get(),
+            appContext = get()
         )
     }
 }
