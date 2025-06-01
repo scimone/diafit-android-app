@@ -27,8 +27,7 @@ fun TimeInRangeHorizontalBar(
         modifier = Modifier
             .width(90.dp)
             .height(20.dp)
-            .padding(start = 5.dp, end = 5.dp, bottom = 2.dp)
-            .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
+            .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp, topStart = 6.dp, topEnd = 6.dp))
     ) {
         if (timeBelowRange > 0.0f) {
             Box(

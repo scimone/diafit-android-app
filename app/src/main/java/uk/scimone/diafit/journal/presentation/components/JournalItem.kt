@@ -1,7 +1,6 @@
 package uk.scimone.diafit.journal.presentation.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -10,25 +9,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import uk.scimone.diafit.core.domain.model.MealEntity
-import uk.scimone.diafit.journal.presentation.model.toUi
 import androidx.compose.ui.layout.ContentScale
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.ui.theme.AboveRange
-import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Carbs
-import uk.scimone.diafit.ui.theme.InRange
 
 
 @Composable
 fun JournalItem(mealUi: MealEntityUi) {
-    val context = LocalContext.current
-//    val mealUi = meal.toUi(context)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -39,7 +28,7 @@ fun JournalItem(mealUi: MealEntityUi) {
         Box(
             modifier = Modifier
                 .width(60.dp)
-                .padding(end = 8.dp),
+                .padding(end = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -58,31 +47,31 @@ fun JournalItem(mealUi: MealEntityUi) {
                     contentDescription = "Meal Image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(90.dp)
-                        .height(65.dp)
-//                        .aspectRatio(1f)
-                        .padding(top = 2.dp, start = 5.dp, end = 5.dp, bottom = 5.dp)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .width(70.dp)
+                        .height(60.dp)
+                        .padding(end = 5.dp)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 6.dp))
                 )
             }
-
-            TimeInRangeHorizontalBar(
-                mealUi.timeBelowRange.toFloat(),
-                mealUi.timeInRange.toFloat(),
-                mealUi.timeAboveRange.toFloat(),
-            )
-
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(text = mealUi.description, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = mealUi.macrosSummary, style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(modifier = Modifier.width(8.dp))
+
+        Column() {
+            TimeInRangeCard(
+                mealUi.timeBelowRange.toFloat(),
+                mealUi.timeInRange.toFloat(),
+                mealUi.timeAboveRange.toFloat(),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
 
         Column() {
             AmountInfoCard(

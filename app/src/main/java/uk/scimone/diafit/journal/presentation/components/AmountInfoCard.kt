@@ -22,8 +22,9 @@ fun AmountInfoCard(
 ) {
     Box(
         modifier = Modifier
-            .size(50.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .width(50.dp)
+            .height(30.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(color ?: MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
@@ -33,7 +34,7 @@ fun AmountInfoCard(
         ) {
             Text(
                 text = amount,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
                 color = Black
             )
             if (unit != null) {

@@ -44,7 +44,7 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
     } else null
 
     val macrosSummary =
-        "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g, ImpactType: ${impactType}, ImpactDuration: ${impactType.durationMinutes}"
+        "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g"
 
     return MealEntityUi(
         mealTimeUtc = mealTimeUtc,
