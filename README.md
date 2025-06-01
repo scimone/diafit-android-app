@@ -2,7 +2,6 @@
 Diafit is an Android application designed for people with diabetes. It brings together all relevant health data in one place, applying advanced visual analytics and artificial intelligence to support better glucose management.
 
 ## 📊 Data Tracked
-The app includes all data that could potentially have an impact on glucose:
 Diafit collects and visualizes data that can influence glucose levels, including:
 - **Continuous Glucose Monitoring (CGM)** data
 - **Nutrition**: carbohydrates, proteins, fats, and calories
