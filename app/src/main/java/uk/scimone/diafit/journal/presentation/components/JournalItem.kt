@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.Carbs
 
@@ -37,7 +38,7 @@ fun JournalItem(mealUi: MealEntityUi) {
             )
         }
 
-        // Image + green bar
+        // Image
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -57,28 +58,41 @@ fun JournalItem(mealUi: MealEntityUi) {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = mealUi.description, style = MaterialTheme.typography.bodyLarge)
-        }
+        Column(
+            modifier = Modifier.weight(1f),
+//            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = mealUi.description, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            }
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column() {
+                    TimeInRangeCard(
+                        mealUi.timeBelowRange.toFloat(),
+                        mealUi.timeInRange.toFloat(),
+                        mealUi.timeAboveRange.toFloat(),
+                    )
+                }
 
-        Column() {
-            TimeInRangeCard(
-                mealUi.timeBelowRange.toFloat(),
-                mealUi.timeInRange.toFloat(),
-                mealUi.timeAboveRange.toFloat(),
-            )
-        }
+                Spacer(modifier = Modifier.width(4.dp))
 
-        Spacer(modifier = Modifier.width(4.dp))
+                Column() {
+                    AmountInfoCard(
+                        amount=mealUi.carbohydrates.toString(),
+                        unit="g",
+                        color=Carbs
+                    )
+                }
+            }
 
-        Column() {
-            AmountInfoCard(
-                amount=mealUi.carbohydrates.toString(),
-                unit="g",
-                color=Carbs
-            )
         }
     }
 }

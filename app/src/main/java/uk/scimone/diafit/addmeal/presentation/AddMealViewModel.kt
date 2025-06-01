@@ -21,7 +21,7 @@ import java.util.*
 
 class AddMealViewModel(
     private val createMealUseCase: CreateMealUseCase,
-    private val fileStorageRepository: FileStorageRepository,
+    private val fileStorageRepository: FileStorageRepository,  // TODO: Use usecase instead of repository
     private val userId: Int,
     application: Application
 ) : AndroidViewModel(application) {
@@ -117,6 +117,7 @@ class AddMealViewModel(
     }
 
     fun parseIsoToEpoch(isoString: String): Long {
+        // TODO: Move to utils
         return try {
             Instant.parse(isoString).toEpochMilli()
         } catch (e: Exception) {
