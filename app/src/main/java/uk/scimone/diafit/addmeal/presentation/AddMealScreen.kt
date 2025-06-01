@@ -1,4 +1,4 @@
-package uk.scimone.diafit.addmeal.presentation.screens
+package uk.scimone.diafit.addmeal.presentation
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,13 +18,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import org.koin.core.parameter.parametersOf
-import uk.scimone.diafit.addmeal.presentation.AddMealViewModel
 import org.koin.androidx.compose.koinViewModel
 import uk.scimone.diafit.addmeal.presentation.components.MealDateTimePicker
 import java.time.LocalDateTime
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
-
+import uk.scimone.diafit.addmeal.presentation.components.ImpactTypeSelector
+import uk.scimone.diafit.addmeal.presentation.components.MealTypeSelector
+import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.MealType
 
 @Composable
 fun AddMealScreen(
@@ -32,19 +34,21 @@ fun AddMealScreen(
     viewModel: AddMealViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
 
-
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Local states for inputs (could also be moved to ViewModel if preferred)
     var description by remember { mutableStateOf(uiState.description ?: "") }
-    var mealTime by remember { mutableStateOf(uiState.mealTime ?: "") }
     var carbs by remember { mutableStateOf(uiState.carbohydrates?.toString() ?: "") }
     var protein by remember { mutableStateOf(uiState.proteins?.toString() ?: "") }
     var fat by remember { mutableStateOf(uiState.fats?.toString() ?: "") }
+
+    // New states for calories, impactType and mealType
+    var calories by remember { mutableStateOf(uiState.calories?.toString() ?: "") }
+    var selectedImpactType by remember { mutableStateOf(uiState.impactType ?: ImpactType.MEDIUM) }
+
+    var selectedMealType by remember { mutableStateOf(uiState.mealType ?: MealType.BREAKFAST) }
 
     LaunchedEffect(Unit) {
         viewModel.startNewMeal()
@@ -52,18 +56,13 @@ fun AddMealScreen(
 
     val takePictureLauncher = rememberLauncherForActivityResult(TakePicture()) { success ->
         if (success) {
-            currentPhotoUri?.let { uri ->
-                viewModel.onImageSelected(uri)
-            }
+            currentPhotoUri?.let { uri -> viewModel.onImageSelected(uri) }
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(GetContent()) { uri ->
-        uri?.let {
-            viewModel.copyGalleryImageToPrivateStorage(it)
-        }
+        uri?.let { viewModel.copyGalleryImageToPrivateStorage(it) }
     }
-
 
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let {
@@ -94,9 +93,7 @@ fun AddMealScreen(
                     Text("Take Photo")
                 }
 
-                Button(onClick = {
-                    galleryLauncher.launch("image/*")
-                }) {
+                Button(onClick = { galleryLauncher.launch("image/*") }) {
                     Text("Pick from Gallery")
                 }
             }
@@ -138,15 +135,12 @@ fun AddMealScreen(
                             null
                         }
                     },
-                    onValueChange = {
-                        viewModel.onMealTimeChanged(it)
-                    }
+                    onValueChange = { viewModel.onMealTimeChanged(it) }
                 )
-
 
                 Spacer(Modifier.height(12.dp))
 
-                // Row for macros inputs
+                // Macros inputs row
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = carbs,
@@ -182,6 +176,41 @@ fun AddMealScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Calories input
+                OutlinedTextField(
+                    value = calories,
+                    onValueChange = {
+                        calories = it.filter { ch -> ch.isDigit() }
+                        viewModel.onCaloriesChanged(calories)
+                    },
+                    label = { Text("Calories") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                ImpactTypeSelector(
+                    selectedImpactType = selectedImpactType,
+                    onImpactTypeSelected = {
+                        selectedImpactType = it
+                        viewModel.onImpactTypeChanged(it)
+                    }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                MealTypeSelector(
+                    selectedMealType = selectedMealType,
+                    onMealTypeSelected = {
+                        selectedMealType = it
+                        viewModel.onMealTypeChanged(it)
+                    }
+                )
 
                 Spacer(Modifier.height(16.dp))
 

@@ -16,7 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import uk.scimone.diafit.addmeal.presentation.screens.AddMealScreen
+import uk.scimone.diafit.addmeal.presentation.AddMealScreen
 import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.presentation.BottomNavigationBar
 import org.koin.android.ext.android.inject

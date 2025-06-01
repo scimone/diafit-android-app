@@ -9,7 +9,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
@@ -114,6 +116,19 @@ class AddMealViewModel(
     fun onFatChanged(newFat: String) {
         val fatInt = newFat.toIntOrNull()
         _uiState.update { it.copy(fats = fatInt) }
+    }
+
+    fun onCaloriesChanged(value: String) {
+        val caloriesInt = value.toIntOrNull()
+        _uiState.update { it.copy(calories = caloriesInt) }
+    }
+
+    fun onImpactTypeChanged(impactType: ImpactType) {
+        _uiState.update { it.copy(impactType = impactType) }
+    }
+
+    fun onMealTypeChanged(mealType: MealType) {
+        _uiState.update { it.copy(mealType = mealType) }
     }
 
     fun parseIsoToEpoch(isoString: String): Long {
