@@ -22,14 +22,15 @@ fun JournalItem(mealUi: MealEntityUi) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .height(IntrinsicSize.Min), // Let height be min needed to fit content
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Time on the left, centered vertically
+        // Time box aligned center vertically with image height (60dp)
         Box(
             modifier = Modifier
-                .width(60.dp)
-                .padding(end = 4.dp),
+                .padding(end = 8.dp)
+                .height(60.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -38,61 +39,52 @@ fun JournalItem(mealUi: MealEntityUi) {
             )
         }
 
-        // Image
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            mealUi.imageUri?.let {
-                Image(
-                    painter = rememberAsyncImagePainter(it),
-                    contentDescription = "Meal Image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(70.dp)
-                        .height(60.dp)
-                        .padding(end = 5.dp)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 6.dp))
-                )
-            }
+        // Image centered vertically by Row
+        mealUi.imageUri?.let {
+            Image(
+                painter = rememberAsyncImagePainter(it),
+                contentDescription = "Meal Image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 70.dp, height = 70.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        // Column fills remaining width, no fixed height here
         Column(
             modifier = Modifier.weight(1f),
-//            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = mealUi.description, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            }
+            // Heading aligned at top
+            Text(
+                text = mealUi.description,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.weight(1f)) // Push cards to bottom
 
             Row(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column() {
-                    TimeInRangeCard(
-                        mealUi.timeBelowRange.toFloat(),
-                        mealUi.timeInRange.toFloat(),
-                        mealUi.timeAboveRange.toFloat(),
-                    )
-                }
+                TimeInRangeCard(
+                    mealUi.timeBelowRange.toFloat(),
+                    mealUi.timeInRange.toFloat(),
+                    mealUi.timeAboveRange.toFloat(),
+                )
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                Column() {
-                    AmountInfoCard(
-                        amount=mealUi.carbohydrates.toString(),
-                        unit="g",
-                        color=Carbs
-                    )
-                }
+                AmountInfoCard(
+                    amount = mealUi.carbohydrates.toString(),
+                    unit = "g",
+                    color = Carbs
+                )
             }
-
         }
     }
 }
