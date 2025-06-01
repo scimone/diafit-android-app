@@ -15,6 +15,7 @@ Diafit collects and visualizes data that can influence glucose levels, including
 - 🧠 **AI-Based Clustering** of similar glucose curves (e.g., meals, activities, sleep periods) to uncover trends
 
 ## 🔍 Preview
+![App Mockup](assets/diafit_mockup.jpg)
 
 ## 🔌 Supported Data Integrations
 ### Remote Sources
