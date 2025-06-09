@@ -23,7 +23,8 @@ data class MealEntityUi(
     val macrosSummary: String,
     val timeInRange: Double,
     val timeAboveRange: Double,
-    val timeBelowRange: Double
+    val timeBelowRange: Double,
+    val impactDuration: String
 )
 
 data class GlucoseImpact(
@@ -46,6 +47,10 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
     val macrosSummary =
         "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g"
 
+    val hours = impactType.durationMinutes / 60
+    val minutes = impactType.durationMinutes % 60
+    val impactDuration = "$hours:${minutes.toString().padStart(2, '0')}"
+
     return MealEntityUi(
         mealTimeUtc = mealTimeUtc,
         carbohydrates = carbohydrates,
@@ -59,6 +64,7 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         macrosSummary = macrosSummary,
         timeInRange = impact.timeInRange,
         timeAboveRange = impact.timeAboveRange,
-        timeBelowRange = impact.timeBelowRange
+        timeBelowRange = impact.timeBelowRange,
+        impactDuration = impactDuration
     )
 }

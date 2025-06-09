@@ -2,17 +2,14 @@ package uk.scimone.diafit.journal.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.journal.presentation.components.JournalItem
-import uk.scimone.diafit.journal.presentation.JournalViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -67,9 +64,7 @@ fun JournalScreen(
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
                                 meals.forEach { meal ->
-                                    HorizontalDivider()
                                     JournalItem(meal)
-                                    HorizontalDivider()
                                 }
                             }
                         }

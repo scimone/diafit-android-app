@@ -19,11 +19,13 @@ fun AmountInfoCard(
     amount: String,
     unit: String? = null,
     color: Color? = null,
+    width: Int = 50,
+    height: Int = 40
 ) {
     Box(
         modifier = Modifier
-            .width(50.dp)
-            .height(40.dp)
+            .width(width.dp)
+            .height(height.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(color ?: MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center

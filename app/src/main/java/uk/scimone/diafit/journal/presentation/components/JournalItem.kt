@@ -35,7 +35,7 @@ fun JournalItem(mealUi: MealEntityUi) {
         ) {
             Text(
                 text = mealUi.timeFormatted.substringAfter(" "),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -57,6 +57,8 @@ fun JournalItem(mealUi: MealEntityUi) {
             mealUi.timeBelowRange.toFloat(),
             mealUi.timeInRange.toFloat(),
             mealUi.timeAboveRange.toFloat(),
+            width = 60,
+            height = 30
         )
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -65,11 +67,25 @@ fun JournalItem(mealUi: MealEntityUi) {
         AmountInfoCard(
             amount = mealUi.carbohydrates.toString(),
             unit = "g",
-            color = Carbs
+            color = Carbs,
+            width = 50,
+            height = 30
         )
 
         Spacer(modifier = Modifier.width(4.dp))
 
-
+        // Duration info card
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            AmountInfoCard(
+                amount = mealUi.impactDuration,
+                unit = "",
+                color = MaterialTheme.colorScheme.primary,
+                width = 50,
+                height = 30
+            )
+        }
     }
 }

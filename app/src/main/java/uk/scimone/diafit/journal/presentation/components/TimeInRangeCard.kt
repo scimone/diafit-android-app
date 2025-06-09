@@ -22,11 +22,13 @@ fun TimeInRangeCard(
     timeBelowRange: Float,
     timeInRange: Float,
     timeAboveRange: Float,
+    width: Int = 60,
+    height: Int = 40,
 ) {
     Box(
         modifier = Modifier
-            .width(60.dp)
-            .height(40.dp)
+            .width(width.dp)
+            .height(height.dp)
             .clip(RoundedCornerShape(8.dp))
     ) {
         Row(
