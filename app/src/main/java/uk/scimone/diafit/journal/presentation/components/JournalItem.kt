@@ -30,7 +30,7 @@ fun JournalItem(mealUi: MealEntityUi) {
         Box(
             modifier = Modifier
                 .padding(end = 8.dp)
-                .height(60.dp),
+                .height(50.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -46,7 +46,7 @@ fun JournalItem(mealUi: MealEntityUi) {
                 contentDescription = "Meal Image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(width = 60.dp, height = 60.dp)
+                    .size(width = 60.dp, height = 50.dp)
                     .clip(RoundedCornerShape(6.dp))
             )
         }
@@ -57,8 +57,8 @@ fun JournalItem(mealUi: MealEntityUi) {
             mealUi.timeBelowRange.toFloat(),
             mealUi.timeInRange.toFloat(),
             mealUi.timeAboveRange.toFloat(),
-            width = 60,
-            height = 30
+            width = 50,
+            height = 50
         )
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -69,7 +69,7 @@ fun JournalItem(mealUi: MealEntityUi) {
             unit = "g",
             color = Carbs,
             width = 50,
-            height = 30
+            height = 50
         )
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -84,7 +84,7 @@ fun JournalItem(mealUi: MealEntityUi) {
                 unit = "",
                 color = MaterialTheme.colorScheme.primary,
                 width = 50,
-                height = 30
+                height = 50
             )
         }
     }
