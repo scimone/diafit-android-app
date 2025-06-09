@@ -26,7 +26,7 @@ fun TimeInRangeCard(
     Box(
         modifier = Modifier
             .width(60.dp)
-            .height(30.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(8.dp))
     ) {
         Row(

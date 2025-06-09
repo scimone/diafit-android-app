@@ -23,7 +23,7 @@ fun AmountInfoCard(
     Box(
         modifier = Modifier
             .width(50.dp)
-            .height(30.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(color ?: MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center

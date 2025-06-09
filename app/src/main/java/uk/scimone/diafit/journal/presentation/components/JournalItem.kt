@@ -22,7 +22,7 @@ fun JournalItem(mealUi: MealEntityUi) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
             .height(IntrinsicSize.Min), // Let height be min needed to fit content
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -46,45 +46,30 @@ fun JournalItem(mealUi: MealEntityUi) {
                 contentDescription = "Meal Image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(width = 70.dp, height = 70.dp)
+                    .size(width = 60.dp, height = 60.dp)
                     .clip(RoundedCornerShape(6.dp))
             )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Column fills remaining width, no fixed height here
-        Column(
-            modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Heading aligned at top
-            Text(
-                text = mealUi.description,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
+        TimeInRangeCard(
+            mealUi.timeBelowRange.toFloat(),
+            mealUi.timeInRange.toFloat(),
+            mealUi.timeAboveRange.toFloat(),
+        )
 
-            Spacer(modifier = Modifier.weight(1f)) // Push cards to bottom
+        Spacer(modifier = Modifier.width(4.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TimeInRangeCard(
-                    mealUi.timeBelowRange.toFloat(),
-                    mealUi.timeInRange.toFloat(),
-                    mealUi.timeAboveRange.toFloat(),
-                )
+        // Carbohydrates info card
+        AmountInfoCard(
+            amount = mealUi.carbohydrates.toString(),
+            unit = "g",
+            color = Carbs
+        )
 
-                Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
-                AmountInfoCard(
-                    amount = mealUi.carbohydrates.toString(),
-                    unit = "g",
-                    color = Carbs
-                )
-            }
-        }
+
     }
 }
