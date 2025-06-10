@@ -83,6 +83,12 @@ class JournalViewModel(
                 }
         }
     }
+
+    fun refreshMeals() {
+        _uiState.update { it.copy(isLoading = true) }
+        observeMeals()
+    }
+
 }
 
 data class JournalUiState(
