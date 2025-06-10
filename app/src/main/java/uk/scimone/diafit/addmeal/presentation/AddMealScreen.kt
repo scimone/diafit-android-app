@@ -208,10 +208,17 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                MealTypeSelector(
-                    selectedMealType = uiState.mealType,
-                    onMealTypeSelected = { viewModel.onMealTypeChanged(it) }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Meal Type:", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.width(8.dp))
+                    MealTypeSelector(
+                        selectedMealType = uiState.mealType,
+                        onMealTypeSelected = { viewModel.onMealTypeChanged(it) }
+                    )
+                }
 
                 Spacer(Modifier.height(16.dp))
 
