@@ -33,11 +33,47 @@ class AddMealViewModel(
 
     private var imageId: String = UUID.randomUUID().toString()
 
+    private fun inferImpactType() {
+        val state = _uiState.value
+        val carbs = state.carbohydrates
+        val proteins = state.proteins
+        val fats = state.fats
+
+        if (carbs != null && proteins != null && fats != null) {
+            val newImpact = when {
+                carbs >= 60 && proteins >= 30 && fats >= 20 -> ImpactType.LONG
+                carbs >= 40 -> ImpactType.MEDIUM
+                else -> ImpactType.SHORT
+            }
+            _uiState.update { it.copy(impactType = newImpact) }
+        }
+    }
+
+    private fun inferMealType(hour: Int): MealType {
+        val inferredMealType = when (hour) {
+            in 5 until 10 -> MealType.BREAKFAST
+            in 11 until 15 -> MealType.LUNCH
+            in 18 until 21 -> MealType.DINNER
+            else -> MealType.SNACK
+        }
+        return inferredMealType
+    }
+
     // Call this to start a new meal process, resets state and mealId
     fun startNewMeal() {
         imageId = UUID.randomUUID().toString()
-        _uiState.value = AddMealState() // reset UI state to empty
+        val now = LocalDateTime.now()
+        val mealTimeIso = now.atZone(ZoneId.systemDefault()).toInstant().toString()
+
+        val hour = now.hour
+        val inferredMealType = inferMealType(hour)
+
+        _uiState.value = AddMealState(
+            mealTime = mealTimeIso,
+            mealType = inferredMealType
+        )
     }
+
 
     fun resetSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
@@ -99,23 +135,37 @@ class AddMealViewModel(
 
     fun onMealTimeChanged(newMealTime: LocalDateTime) {
         val instant = newMealTime.atZone(ZoneId.systemDefault()).toInstant()
-        _uiState.update { it.copy(mealTime = instant.toString()) } // Proper ISO-8601 string with Z
+        val isoString = instant.toString()
+
+        val hour = newMealTime.hour
+        val inferredMealType = inferMealType(hour)
+
+        _uiState.update {
+            it.copy(
+                mealTime = isoString,
+                mealType = inferredMealType
+            )
+        }
     }
+
 
 
     fun onCarbsChanged(newCarbs: String) {
         val carbsInt = newCarbs.toIntOrNull()
         _uiState.update { it.copy(carbohydrates = carbsInt) }
+        inferImpactType()
     }
 
     fun onProteinChanged(newProtein: String) {
         val proteinInt = newProtein.toIntOrNull()
         _uiState.update { it.copy(proteins = proteinInt) }
+        inferImpactType()
     }
 
     fun onFatChanged(newFat: String) {
         val fatInt = newFat.toIntOrNull()
         _uiState.update { it.copy(fats = fatInt) }
+        inferImpactType()
     }
 
     fun onCaloriesChanged(value: String) {

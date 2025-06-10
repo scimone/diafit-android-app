@@ -23,8 +23,8 @@ class CreateMealUseCase(
         carbohydrates: Int = 0,
         proteins: Int? = null,
         fats: Int? = null,
-        impactType: ImpactType? = null,
-        mealType: MealType? = null,
+        impactType: ImpactType = ImpactType.MEDIUM,
+        mealType: MealType = MealType.UNKNOWN,
     ): Result<Pair<MealEntity, Uri>> {
         val storedFileUriResult = fileStorageRepository.storeImage(imageId, imageUri)
         if (storedFileUriResult.isFailure) return Result.failure(storedFileUriResult.exceptionOrNull()!!)
@@ -32,31 +32,6 @@ class CreateMealUseCase(
         val storedFileUri = storedFileUriResult.getOrThrow()
 
         val storedContentUri = fileStorageRepository.getFileProviderUri(imageId) ?: storedFileUri
-
-        val resolvedImpactType = impactType ?: run {
-            if (proteins != null && fats != null) {
-                when {
-                    carbohydrates >= 60 && proteins >= 30 && fats >= 20 -> ImpactType.LONG
-                    carbohydrates >= 40 -> ImpactType.MEDIUM
-                    else -> ImpactType.SHORT
-                }
-            } else {
-                ImpactType.MEDIUM
-            }
-        }
-
-        // Infer mealType based on local time if not provided
-        val resolvedMealType = mealType ?: run {
-            val localDateTime = timestampToLocalDateTime(mealTimeUtc)
-            val hour = localDateTime.hour
-
-            when (hour) {
-                in 5 until 11 -> MealType.BREAKFAST
-                in 11 until 16 -> MealType.LUNCH
-                in 16 until 22 -> MealType.DINNER
-                else -> MealType.SNACK
-            }
-        }
 
         val meal = MealEntity(
             userId = userId,
@@ -67,8 +42,8 @@ class CreateMealUseCase(
             carbohydrates = carbohydrates,
             proteins = proteins,
             fats = fats,
-            impactType = resolvedImpactType,
-            mealType = resolvedMealType,
+            impactType = impactType,
+            mealType = mealType,
             isValid = true,
             imageId = imageId,
             recommendation = null,

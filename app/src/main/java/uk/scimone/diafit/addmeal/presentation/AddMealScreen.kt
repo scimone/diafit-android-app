@@ -46,9 +46,6 @@ fun AddMealScreen(
 
     // New states for calories, impactType and mealType
     var calories by remember { mutableStateOf(uiState.calories?.toString() ?: "") }
-    var selectedImpactType by remember { mutableStateOf(uiState.impactType ?: ImpactType.MEDIUM) }
-
-    var selectedMealType by remember { mutableStateOf(uiState.mealType ?: MealType.BREAKFAST) }
 
     LaunchedEffect(Unit) {
         viewModel.startNewMeal()
@@ -201,22 +198,16 @@ fun AddMealScreen(
                     Text("Impact Type:", style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.width(8.dp))
                     ImpactTypeSelector(
-                        selectedImpactType = selectedImpactType,
-                        onImpactTypeSelected = {
-                            selectedImpactType = it
-                            viewModel.onImpactTypeChanged(it)
-                        }
+                        selectedImpactType = uiState.impactType,
+                        onImpactTypeSelected = { viewModel.onImpactTypeChanged(it) }
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
                 MealTypeSelector(
-                    selectedMealType = selectedMealType,
-                    onMealTypeSelected = {
-                        selectedMealType = it
-                        viewModel.onMealTypeChanged(it)
-                    }
+                    selectedMealType = uiState.mealType,
+                    onMealTypeSelected = { viewModel.onMealTypeChanged(it) }
                 )
 
                 Spacer(Modifier.height(16.dp))
