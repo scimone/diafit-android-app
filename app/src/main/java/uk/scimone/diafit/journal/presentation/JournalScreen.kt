@@ -19,7 +19,7 @@ import java.util.*
 
 
 @Composable
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 fun JournalScreen(
     userId: Int,
     viewModel: JournalViewModel = koinViewModel(parameters = { parametersOf(userId) })

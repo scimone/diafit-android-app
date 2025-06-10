@@ -186,7 +186,7 @@ fun AddMealScreen(
                         calories = it.filter { ch -> ch.isDigit() }
                         viewModel.onCaloriesChanged(calories)
                     },
-                    label = { Text("Calories") },
+                    label = { Text("Calories (kcal)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -194,13 +194,20 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                ImpactTypeSelector(
-                    selectedImpactType = selectedImpactType,
-                    onImpactTypeSelected = {
-                        selectedImpactType = it
-                        viewModel.onImpactTypeChanged(it)
-                    }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Impact Type:", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.width(8.dp))
+                    ImpactTypeSelector(
+                        selectedImpactType = selectedImpactType,
+                        onImpactTypeSelected = {
+                            selectedImpactType = it
+                            viewModel.onImpactTypeChanged(it)
+                        }
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 

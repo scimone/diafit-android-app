@@ -7,22 +7,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.ImpactType
 
+
 // Mock icon mapping — replace with your real icons
-fun impactTypeIcon(impactType: ImpactType): ImageVector = when (impactType) {
-    ImpactType.SHORT -> Icons.Default.Face
-    ImpactType.MEDIUM -> Icons.Default.Face
-    ImpactType.LONG -> Icons.Default.Face
+@Composable
+fun impactTypeIcon(impactType: ImpactType): Painter = when (impactType) {
+    ImpactType.SHORT -> painterResource(R.drawable.ic_impact_type_short)
+    ImpactType.MEDIUM -> painterResource(R.drawable.ic_impact_type_medium)
+    ImpactType.LONG -> painterResource(R.drawable.ic_impact_type_long)
 }
 
 @Composable
@@ -42,7 +44,7 @@ fun ImpactTypeSelector(
                 tonalElevation = if (selected) 8.dp else 0.dp
             ) {
                 Icon(
-                    imageVector = impactTypeIcon(impact),
+                    painter = impactTypeIcon(impact),
                     contentDescription = impact.name,
                     tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(12.dp)
