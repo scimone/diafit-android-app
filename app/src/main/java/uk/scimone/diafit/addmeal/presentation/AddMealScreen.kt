@@ -27,6 +27,8 @@ import uk.scimone.diafit.addmeal.presentation.components.ImpactTypeSelector
 import uk.scimone.diafit.addmeal.presentation.components.MealTypeSelector
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealType
+import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun AddMealScreen(
@@ -127,7 +129,8 @@ fun AddMealScreen(
                 MealDateTimePicker(
                     value = uiState.mealTime?.let {
                         try {
-                            LocalDateTime.parse(it)
+                            val instant = Instant.parse(it)
+                            LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
                         } catch (e: Exception) {
                             null
                         }
