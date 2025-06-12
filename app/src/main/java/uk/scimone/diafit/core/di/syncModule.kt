@@ -7,7 +7,7 @@ import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSo
 import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceNightscout
 import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceXdrip
 import uk.scimone.diafit.core.data.service.CgmServiceManager
-import uk.scimone.diafit.core.data.worker.RemoteCgmPoller
+import uk.scimone.diafit.core.data.worker.CgmRemotePoller
 import uk.scimone.diafit.core.domain.repository.syncsource.CgmSyncSource
 import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
 import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
@@ -37,7 +37,7 @@ val syncModule = module {
     single { CgmServiceManager(androidContext()) }
 
     factory {
-        RemoteCgmPoller(get()) // no qualifier, gets unqualified SyncCgmDataUseCase
+        CgmRemotePoller(get()) // no qualifier, gets unqualified SyncCgmDataUseCase
     }
 }
 

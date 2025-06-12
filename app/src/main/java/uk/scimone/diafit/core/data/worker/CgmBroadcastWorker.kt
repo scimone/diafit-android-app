@@ -14,7 +14,7 @@ import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 
-class CgmInsertWorker(
+class CgmBroadcastWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params), KoinComponent {

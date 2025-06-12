@@ -1,24 +1,20 @@
 package uk.scimone.diafit.core.data.service
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.koin.android.ext.android.inject
 import uk.scimone.diafit.MainActivity
 import uk.scimone.diafit.R
-import uk.scimone.diafit.core.data.worker.RemoteCgmPoller
+import uk.scimone.diafit.core.data.worker.CgmRemotePoller
 
 class RemoteCgmSyncService : Service() {
 
-    private val poller: RemoteCgmPoller by inject()
+    private val poller: CgmRemotePoller by inject()
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"

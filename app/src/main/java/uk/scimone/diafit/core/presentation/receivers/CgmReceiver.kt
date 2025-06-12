@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.work.*
-import uk.scimone.diafit.core.data.worker.CgmInsertWorker
+import uk.scimone.diafit.core.data.worker.CgmBroadcastWorker
 import java.util.concurrent.TimeUnit
 
 class CgmReceiver : BroadcastReceiver() {
@@ -23,7 +23,7 @@ class CgmReceiver : BroadcastReceiver() {
             return
         }
 
-        val workRequest = OneTimeWorkRequestBuilder<CgmInsertWorker>()
+        val workRequest = OneTimeWorkRequestBuilder<CgmBroadcastWorker>()
             .setInputData(intent.toWorkData())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
             .build()
