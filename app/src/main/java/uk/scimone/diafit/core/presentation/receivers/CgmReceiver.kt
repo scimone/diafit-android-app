@@ -4,42 +4,45 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
-import org.koin.core.qualifier.named
-import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
-import uk.scimone.diafit.settings.domain.model.CgmSource
-import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
+import androidx.work.*
+import uk.scimone.diafit.core.data.worker.CgmInsertWorker
+import java.util.concurrent.TimeUnit
 
-class CgmReceiver : BroadcastReceiver(), KoinComponent {
-
+class CgmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "CgmReceiver"
     }
 
-    // Inject dependencies lazily via Koin
-    private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
-    private val jugglucoSource: IntentCgmSyncSource by inject(named("JUGGLUCO"))
-    private val xdripSource: IntentCgmSyncSource by inject(named("XDRIP"))
-
     override fun onReceive(context: Context, intent: Intent) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val currentSource = getCgmSourceUseCase()
-            val handled = when (currentSource) {
-                CgmSource.JUGGLUCO -> jugglucoSource.handleIntent(intent)
-                CgmSource.XDRIP -> xdripSource.handleIntent(intent)
-                else -> {
-                    Log.w(TAG, "Received intent for inactive or unsupported CGM source: $currentSource")
-                    false
-                }
-            }
+        val action = intent.action ?: return
+        Log.d(TAG, "Received intent with action: $action")
 
-            if (!handled) {
-                Log.w(TAG, "Intent was not handled: action=${intent.action}")
-            }
+        // Only handle Juggluco for now
+        if (action != Intents.JUGGLUCO_NEW_CGM) {
+            Log.w(TAG, "Unsupported action: $action")
+            return
         }
+
+        val cgmValue = intent.getIntExtra("$action.mgdl", 0)
+        val rate = intent.getFloatExtra("$action.Rate", 0f)
+        val timestamp = intent.getLongExtra("$action.Time", 0L)
+
+        if (timestamp == 0L) {
+            Log.w(TAG, "Invalid timestamp in broadcast intent")
+            return
+        }
+
+        val data = workDataOf(
+            "cgm_value" to cgmValue,
+            "rate" to rate,
+            "timestamp" to timestamp
+        )
+
+        val workRequest = OneTimeWorkRequestBuilder<CgmInsertWorker>()
+            .setInputData(data)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+            .build()
+
+        WorkManager.getInstance(context).enqueue(workRequest)
     }
 }
