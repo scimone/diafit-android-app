@@ -25,6 +25,7 @@ class AddMealViewModel(
     private val createMealUseCase: CreateMealUseCase,
     private val fileStorageRepository: FileStorageRepository,  // TODO: Use usecase instead of repository
     private val userId: Int,
+    private var hasStartedMeal: Boolean = false,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -61,6 +62,8 @@ class AddMealViewModel(
 
     // Call this to start a new meal process, resets state and mealId
     fun startNewMeal() {
+        if (hasStartedMeal) return
+        hasStartedMeal = true
         imageId = UUID.randomUUID().toString()
         val now = LocalDateTime.now()
         val mealTimeIso = now.atZone(ZoneId.systemDefault()).toInstant().toString()
@@ -111,6 +114,7 @@ class AddMealViewModel(
                 carbohydrates = uiState.value.carbohydrates ?: 0,
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
+                calories = uiState.value.calories,
                 imageId = imageId
             )
 
