@@ -36,14 +36,14 @@ fun AmountInfoCard(
         ) {
             Text(
                 text = amount,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp),
                 color = Black
             )
             if (unit != null) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = unit,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 18.sp),
                     color = Black
                 )
             }

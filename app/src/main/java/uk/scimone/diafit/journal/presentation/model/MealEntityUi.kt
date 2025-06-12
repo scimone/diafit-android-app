@@ -2,10 +2,10 @@ package uk.scimone.diafit.journal.presentation.model
 
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import androidx.core.content.FileProvider
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,6 +17,7 @@ data class MealEntityUi(
     val fats: Int? = null,
     val calories: Int? = null,
     val impactType: ImpactType,
+    val mealType: MealType,
     val timeFormatted: String,
     val description: String,
     val imageUri: Uri?,
@@ -25,7 +26,11 @@ data class MealEntityUi(
     val timeAboveRange: Double,
     val timeBelowRange: Double,
     val impactDuration: String
-)
+) {
+    val mealTypeDisplayName: String
+        get() = mealType.type.lowercase().replaceFirstChar { it.titlecase() }
+}
+
 
 data class GlucoseImpact(
     val timeInRange: Double,
@@ -65,6 +70,7 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         timeInRange = impact.timeInRange,
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,
-        impactDuration = impactDuration
+        impactDuration = impactDuration,
+        mealType = mealType
     )
 }

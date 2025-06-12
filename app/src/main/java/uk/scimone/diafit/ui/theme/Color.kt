@@ -2,7 +2,7 @@ package uk.scimone.diafit.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Colors - vibrant
+// Light Theme Colors
 val LightPrimary = Color(0xFF00BFA5)
 val LightOnPrimary = Color(0xFFFFFFFF)
 val LightPrimaryContainer = Color(0xFF64EAEA)
@@ -31,43 +31,49 @@ val LightOnError = Color(0xFFFFFFFF)
 val LightErrorContainer = Color(0xFFF9DEDC)
 val LightOnErrorContainer = Color(0xFF410E0B)
 
-// Dark Theme Colors - vibrant accents on dark base
-val DarkPrimary = Color(0xFF4DB6AC)
-val DarkOnPrimary = Color(0xFF003730)
-val DarkPrimaryContainer = Color(0xFF00675B)
-val DarkOnPrimaryContainer = Color(0xFF64EAEA)
+// Dark Theme Colors
 
-val DarkSecondary = Color(0xFFA1887F)
-val DarkOnSecondary = Color(0xFF3E2723)
-val DarkSecondaryContainer = Color(0xFF6D4C41)
-val DarkOnSecondaryContainer = Color(0xFFD7CCC8)
+// Core Neutrals
+val DarkBackground = Color(0xFF0c0d11)         // Deep charcoal background
+val DarkOnBackground = Color(0xFFE0E0E0)        // Light gray text
+val DarkSurface = Color(0xFF18191d)             // Slightly lighter surface
+val DarkOnSurface = Color(0xFFE0E0E0)           // Light gray text on surface
+val DarkSurfaceVariant = Color(0xFF2C2C2C)      // Muted gray for variant surfaces
+val DarkOnSurfaceVariant = Color(0xFFB0B0B0)    // Light gray text on variants
 
-val DarkTertiary = Color(0xFF4FC3F7)
-val DarkOnTertiary = Color(0xFF00363C)
-val DarkTertiaryContainer = Color(0xFF01579B)
-val DarkOnTertiaryContainer = Color(0xFF81D4FA)
+// Primary Palette
+val DarkPrimary = Color(0xFF4A90E2)             // Cool blue accent
+val DarkOnPrimary = Color(0xFFFFFFFF)           // White text on primary
+val DarkPrimaryContainer = Color(0xFF003366)    // Deep blue container
+val DarkOnPrimaryContainer = Color(0xFFFFFFFF)  // White text on container
 
-val DarkBackground = Color(0xFF121212)
-val DarkOnBackground = Color(0xFFE0E0E0)
+// Secondary Palette
+val DarkSecondary = Color(0xFF7F8C8D)           // Cool gray
+val DarkOnSecondary = Color(0xFFFFFFFF)         // White text on secondary
+val DarkSecondaryContainer = Color(0xFF2C3E50)  // Dark gray container
+val DarkOnSecondaryContainer = Color(0xFFFFFFFF) // White text on container
 
-val DarkSurface = Color(0xFF1E1E1E)
-val DarkOnSurface = Color(0xFFE0E0E0)
-val DarkSurfaceVariant = Color(0xFF616161)
-val DarkOnSurfaceVariant = Color(0xFFE0E0E0)
+// Tertiary Palette
+val DarkTertiary = Color(0xFF9B59B6)            // Soft purple
+val DarkOnTertiary = Color(0xFFFFFFFF)          // White text on tertiary
+val DarkTertiaryContainer = Color(0xFF8E44AD)   // Deep purple container
+val DarkOnTertiaryContainer = Color(0xFFFFFFFF) // White text on container
 
-val DarkError = Color(0xFFEF5350)
-val DarkOnError = Color(0xFF601410)
-val DarkErrorContainer = Color(0xFFB71C1C)
-val DarkOnErrorContainer = Color(0xFFF9DEDC)
+// Error Palette
+val DarkError = Color(0xFFE74C3C)               // Vivid red
+val DarkOnError = Color(0xFFFFFFFF)             // White text on error
+val DarkErrorContainer = Color(0xFF7F8C8D)      // Muted gray container
+val DarkOnErrorContainer = Color(0xFFFFFFFF)    // White text on error container
 
 // Diabetes Specific Colors
-val InRange = Color(0xFF4ed1b0) // Green
-val BelowRange = Color(0xFFf78c5b) // Red
-val AboveRange = Color(0xFFb89aff) // Purple
-val Carbs = Color(0xFFFFC107) // Yellow
-val Bolus = Color(0xFF2196F3) // Blue
-val Basal = Color(0xFFFF5722) // Deep Orange
-val Activity = Color(0xFF9C27B0) // Purple
+val InRange = Color(0xFF2ECC9B)      // Fresh, slightly cooler green (Teal-green)
+val BelowRange = Color(0xFFEF6C5B)   // Softer, slightly muted red-orange (less harsh)
+val AboveRange = Color(0xFF9C78D6)   // Modern purple with more blue undertones
+val Carbs = Color(0xFFFFD54F)        // Muted but warm yellow, less saturated
+val Bolus = Color(0xFF42A5F5)        // Clean bright blue, friendly and clear
+val Basal = Color(0xFF1976D2)        // Deep, calm blue (fits dark theme better)
+val Activity = Color(0xFFAB47BC)     // Softened vibrant pink-purple (modern magenta)
+
 
 // Additional Colors
 val Black = Color(0xFF000000)

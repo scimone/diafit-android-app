@@ -12,10 +12,8 @@ import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.journal.presentation.components.JournalItem
-import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import java.text.SimpleDateFormat
-import java.util.*
+import uk.scimone.diafit.core.domain.util.friendlyDateString
 
 
 @Composable
@@ -37,9 +35,9 @@ fun JournalScreen(
         val groupedMeals = uiState.meals
             .sortedByDescending { it.mealTimeUtc }
             .groupBy { meal ->
-                SimpleDateFormat("EEEE, MMMM dd, yyyy", Locale.getDefault())
-                    .format(Date(meal.mealTimeUtc))
+                friendlyDateString(meal.mealTimeUtc)
             }
+
 
         val isRefreshing = uiState.isLoading
         val refreshState = rememberPullToRefreshState()
@@ -69,7 +67,7 @@ fun JournalScreen(
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         groupedMeals.forEach { (date, meals) ->
                             item {
-                                Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                                Column(modifier = Modifier.padding(bottom = 12.dp)) {
                                     Text(
                                         text = date,
                                         style = MaterialTheme.typography.titleMedium,
