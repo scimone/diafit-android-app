@@ -3,15 +3,10 @@ package uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource
 import android.content.Intent
 import uk.scimone.diafit.core.presentation.receivers.Intents
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
-import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
 
 class CgmSyncSourceJuggluco(
-    private val insertCgmUseCase: InsertCgmUseCase
 ) : IntentCgmSyncSource {
 
     val name: String = "JUGGLUCO"
@@ -25,13 +20,13 @@ class CgmSyncSourceJuggluco(
     }
 
     override suspend fun sync() {
-        // Not applicable for intent sources, or leave empty
+        // Not applicable for intent sources, leave empty
     }
 
-    override fun handleIntent(intent: Intent): Boolean {
+    override fun handleIntent(intent: Intent): CgmEntity? {
         if (intent.action != ACTION) {
             Log.w(TAG, "Unexpected intent action: ${intent.action}")
-            return false
+            return null
         }
 
         val cgmValue = intent.getIntExtra(CGMVALUE, 0)
@@ -40,10 +35,10 @@ class CgmSyncSourceJuggluco(
 
         if (timestamp == 0L) {
             Log.w(TAG, "Invalid timestamp in intent")
-            return false
+            return null
         }
 
-        val cgmEntity = CgmEntity(
+        return CgmEntity(
             userId = 1,
             timestamp = timestamp,
             valueMgdl = cgmValue,
@@ -51,12 +46,5 @@ class CgmSyncSourceJuggluco(
             device = "Freestyle Libre",
             source = "Juggluco",
         )
-
-        CoroutineScope(Dispatchers.IO).launch {
-            insertCgmUseCase(cgmEntity)
-            Log.d(TAG, "Inserted CGM value: $cgmValue")
-        }
-
-        return true
     }
 }

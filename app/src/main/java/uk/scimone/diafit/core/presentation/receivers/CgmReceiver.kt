@@ -17,32 +17,33 @@ class CgmReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         Log.d(TAG, "Received intent with action: $action")
 
-        // Only handle Juggluco for now
-        if (action != Intents.JUGGLUCO_NEW_CGM) {
+        // Check if action matches one of the expected actions
+        if (action != Intents.JUGGLUCO_NEW_CGM && action != Intents.XDRIP_NEW_CGM) {
             Log.w(TAG, "Unsupported action: $action")
             return
         }
 
-        val cgmValue = intent.getIntExtra("$action.mgdl", 0)
-        val rate = intent.getFloatExtra("$action.Rate", 0f)
-        val timestamp = intent.getLongExtra("$action.Time", 0L)
-
-        if (timestamp == 0L) {
-            Log.w(TAG, "Invalid timestamp in broadcast intent")
-            return
-        }
-
-        val data = workDataOf(
-            "cgm_value" to cgmValue,
-            "rate" to rate,
-            "timestamp" to timestamp
-        )
-
         val workRequest = OneTimeWorkRequestBuilder<CgmInsertWorker>()
-            .setInputData(data)
+            .setInputData(intent.toWorkData())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueue(workRequest)
     }
+}
+
+// Helper extension
+fun Intent.toWorkData(): Data {
+    val builder = Data.Builder()
+    builder.putString("action", action)
+    extras?.keySet()?.forEach { key ->
+        when (val value = extras?.get(key)) {
+            is Int -> builder.putInt(key, value)
+            is Float -> builder.putFloat(key, value)
+            is Long -> builder.putLong(key, value)
+            is Double -> builder.putFloat(key, value.toFloat()) // ✅ FIX
+            is String -> builder.putString(key, value)
+        }
+    }
+    return builder.build()
 }

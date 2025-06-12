@@ -42,7 +42,7 @@
                 <!-- Juggluco Intent -->
                 <action android:name="glucodata.Minute" />
 
-                <!-- xDrip Intent (placeholder) -->
+                <!-- xDrip Intent -->
                 <action android:name="com.eveningoutpost.dexdrip.BgEstimate" />
 
             </intent-filter>

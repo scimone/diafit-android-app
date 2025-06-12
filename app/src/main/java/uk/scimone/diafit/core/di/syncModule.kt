@@ -15,10 +15,10 @@ import uk.scimone.diafit.settings.domain.model.CgmSource
 
 val syncModule = module {
     single<CgmSyncSource>(named("NIGHTSCOUT")) { CgmSyncSourceNightscout(get(), get()) }
-    factory<CgmSyncSource>(named("JUGGLUCO")) { CgmSyncSourceJuggluco(get()) }
+    factory<CgmSyncSource>(named("JUGGLUCO")) { CgmSyncSourceJuggluco() }
     factory<IntentCgmSyncSource>(named("JUGGLUCO")) { get<CgmSyncSource>(named("JUGGLUCO")) as IntentCgmSyncSource }
 
-    factory<CgmSyncSource>(named("XDRIP")) { CgmSyncSourceXdrip(get()) }
+    factory<CgmSyncSource>(named("XDRIP")) { CgmSyncSourceXdrip() }
     factory<IntentCgmSyncSource>(named("XDRIP")) { get<CgmSyncSource>(named("XDRIP")) as IntentCgmSyncSource }
 
 

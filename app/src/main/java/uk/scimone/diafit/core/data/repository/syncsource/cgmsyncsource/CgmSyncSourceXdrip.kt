@@ -1,20 +1,12 @@
 package uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource
 
 import android.content.Intent
-import uk.scimone.diafit.core.presentation.receivers.Intents
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
-import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
+import uk.scimone.diafit.core.presentation.receivers.Intents
 
-class CgmSyncSourceXdrip(
-    private val insertCgmUseCase: InsertCgmUseCase
-) : IntentCgmSyncSource {
-
-    val name: String = "XDRIP"
+class CgmSyncSourceXdrip : IntentCgmSyncSource {
 
     companion object {
         const val ACTION = Intents.XDRIP_NEW_CGM
@@ -28,60 +20,41 @@ class CgmSyncSourceXdrip(
     }
 
     override suspend fun sync() {
-        // Not applicable for intent sources, or leave empty
+        // No-op for intent-based sources
     }
 
-    override fun handleIntent(intent: Intent): Boolean {
+    override fun handleIntent(intent: Intent): CgmEntity? {
         if (intent.action != ACTION) {
             Log.w(TAG, "Unexpected intent action: ${intent.action}")
-            return false
+            return null
         }
-
-        // TODO("Query '$ACTION.Display.Units' to get the unit and convert to mgdl before inserting")
 
         // Log all extras for debugging
-        val extras = intent.extras
-        if (extras != null) {
-            val keys = extras.keySet()
-            for (key in keys) {
-                val value = extras.get(key)
-                Log.d(TAG, "Intent Extra - Key: $key, Value: $value")
-            }
-        } else {
-            Log.d(TAG, "Intent has no extras")
+        intent.extras?.keySet()?.forEach { key ->
+            val value = intent.extras?.get(key)
+            Log.d(TAG, "Intent Extra - Key: $key, Value: $value")
+        } ?: Log.d(TAG, "Intent has no extras")
+
+        val cgmValueFloat = intent.getFloatExtra(CGMVALUE, 0f)
+        val rateFloat = intent.getFloatExtra(RATE, 0f)
+        val timestamp = intent.getLongExtra(TIMESTAMP, 0L)
+
+        if (timestamp == 0L || cgmValueFloat == 0f) {
+            Log.w(TAG, "Invalid value in intent")
+            return null
         }
 
-        val cgmValueDouble = intent.getDoubleExtra(CGMVALUE, 0.0)
-        val cgmValue = cgmValueDouble.toFloat().toInt()
-
-        val rateDouble = intent.getDoubleExtra(RATE, 0.0)
-        val rate = rateDouble.toFloat()
-
-        val timestamp = intent.getLongExtra(TIMESTAMP, 0L)
         val direction = intent.getStringExtra(DIRECTION) ?: "Unknown"
         val device = intent.getStringExtra(DEVICE) ?: "Unknown"
 
-
-        if (timestamp == 0L) {
-            Log.w(TAG, "Invalid timestamp in intent")
-            return false
-        }
-
-        val cgmEntity = CgmEntity(
+        return CgmEntity(
             userId = 1,
             timestamp = timestamp,
-            valueMgdl = cgmValue,
-            fiveMinuteRateMgdl = rate,
+            valueMgdl = cgmValueFloat.toInt(),
+            fiveMinuteRateMgdl = rateFloat,
             device = device,
             direction = direction,
-            source = "xDrip",
+            source = "xDrip"
         )
-
-        CoroutineScope(Dispatchers.IO).launch {
-            insertCgmUseCase(cgmEntity)
-            Log.d(TAG, "Inserted CGM value: $cgmValue")
-        }
-
-        return true
     }
 }

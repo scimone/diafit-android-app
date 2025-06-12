@@ -1,61 +1,75 @@
 package uk.scimone.diafit.core.data.worker
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.WorkerParameters
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import uk.scimone.diafit.core.domain.model.CgmEntity
+import org.koin.core.qualifier.named
+import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
 import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
-import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 import uk.scimone.diafit.settings.domain.model.CgmSource
+import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 
 class CgmInsertWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
-) : CoroutineWorker(appContext, workerParams), KoinComponent {
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params), KoinComponent {
 
     private val insertCgmUseCase: InsertCgmUseCase by inject()
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
+
+    private val juggluco: IntentCgmSyncSource by inject(named("JUGGLUCO"))
+    private val xdrip: IntentCgmSyncSource by inject(named("XDRIP"))
 
     companion object {
         private const val TAG = "CgmInsertWorker"
     }
 
     override suspend fun doWork(): Result {
-        val cgmValue = inputData.getInt("cgm_value", -1)
-        val rate = inputData.getFloat("rate", 0f)
-        val timestamp = inputData.getLong("timestamp", 0L)
-
-        if (cgmValue < 0 || timestamp == 0L) {
-            Log.w(TAG, "Invalid input data")
-            return Result.failure()
-        }
-
         val selectedSource = getCgmSourceUseCase()
 
-        if (selectedSource != CgmSource.JUGGLUCO) {
-            Log.d(TAG, "Ignoring CGM insert for unselected source: $selectedSource")
-            return Result.success()
+        val intent = reconstructIntent(inputData)
+
+        val entity = when (selectedSource) {
+            CgmSource.JUGGLUCO -> juggluco.handleIntent(intent)
+            CgmSource.XDRIP -> xdrip.handleIntent(intent)
+            else -> {
+                Log.d(TAG, "CGM source $selectedSource doesn't support intent parsing.")
+                null
+            }
         }
 
-        val entity = CgmEntity(
-            userId = 1,
-            timestamp = timestamp,
-            valueMgdl = cgmValue,
-            fiveMinuteRateMgdl = rate * 5,
-            device = "Freestyle Libre",
-            source = "Juggluco"
-        )
-
-        return try {
-            insertCgmUseCase(entity)
-            Log.d(TAG, "Inserted CGM value: $cgmValue")
+        return if (entity != null) {
+            try {
+                insertCgmUseCase(entity)
+                Log.d(TAG, "Inserted CGM: $entity")
+                Result.success()
+            } catch (e: Exception) {
+                Log.e(TAG, "Insert failed", e)
+                Result.retry()
+            }
+        } else {
+            Log.w(TAG, "No CGM entity parsed or unsupported source.")
             Result.success()
-        } catch (e: Exception) {
-            Log.e(TAG, "Insert failed", e)
-            Result.retry()
         }
+    }
+
+    private fun reconstructIntent(data: Data): Intent {
+        val intent = Intent(data.getString("action"))
+        data.keyValueMap.forEach { (key, value) ->
+            if (key != "action") {
+                when (value) {
+                    is Int -> intent.putExtra(key, value)
+                    is Float -> intent.putExtra(key, value)
+                    is Long -> intent.putExtra(key, value)
+                    is String -> intent.putExtra(key, value)
+                }
+            }
+        }
+        return intent
     }
 }
