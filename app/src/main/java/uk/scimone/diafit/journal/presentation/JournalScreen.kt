@@ -64,7 +64,7 @@ fun JournalScreen(
                 }
 
                 else -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+                    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                         groupedMeals.forEach { (date, meals) ->
                             item {
                                 Column(modifier = Modifier.padding(bottom = 12.dp)) {

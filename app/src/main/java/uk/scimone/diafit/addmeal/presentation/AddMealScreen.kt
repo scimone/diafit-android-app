@@ -5,29 +5,26 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import org.koin.core.parameter.parametersOf
 import org.koin.androidx.compose.koinViewModel
-import uk.scimone.diafit.addmeal.presentation.components.MealDateTimePicker
-import java.time.LocalDateTime
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
+import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.components.ImpactTypeSelector
+import uk.scimone.diafit.addmeal.presentation.components.MealDateTimePicker
 import uk.scimone.diafit.addmeal.presentation.components.MealTypeSelector
-import uk.scimone.diafit.core.domain.model.ImpactType
-import uk.scimone.diafit.core.domain.model.MealType
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 @Composable
@@ -41,26 +38,34 @@ fun AddMealScreen(
 
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    var description by remember { mutableStateOf(uiState.description ?: "") }
-    var carbs by remember { mutableStateOf(uiState.carbohydrates?.toString() ?: "") }
-    var protein by remember { mutableStateOf(uiState.proteins?.toString() ?: "") }
-    var fat by remember { mutableStateOf(uiState.fats?.toString() ?: "") }
-
-    // New states for calories, impactType and mealType
-    var calories by remember { mutableStateOf(uiState.calories?.toString() ?: "") }
+    // Keep local states in sync with ViewModel
+    var description by remember { mutableStateOf("") }
+    var carbs by remember { mutableStateOf("") }
+    var protein by remember { mutableStateOf("") }
+    var fat by remember { mutableStateOf("") }
+    var calories by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.startNewMeal()
     }
 
+    // Keep local fields in sync when uiState updates
+    LaunchedEffect(uiState) {
+        description = uiState.description.orEmpty()
+        carbs = uiState.carbohydrates?.toString().orEmpty()
+        protein = uiState.proteins?.toString().orEmpty()
+        fat = uiState.fats?.toString().orEmpty()
+        calories = uiState.calories?.toString().orEmpty()
+    }
+
     val takePictureLauncher = rememberLauncherForActivityResult(TakePicture()) { success ->
         if (success) {
-            currentPhotoUri?.let { uri -> viewModel.onImageSelected(uri) }
+            currentPhotoUri?.let(viewModel::onImageSelected)
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(GetContent()) { uri ->
-        uri?.let { viewModel.copyGalleryImageToPrivateStorage(it) }
+        uri?.let(viewModel::copyGalleryImageToPrivateStorage)
     }
 
     LaunchedEffect(uiState.snackbarMessage) {
@@ -84,11 +89,13 @@ fun AddMealScreen(
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(onClick = {
-                    val uri = viewModel.createCameraImageUri()
-                    currentPhotoUri = uri
-                    takePictureLauncher.launch(uri)
-                }) {
+                Button(
+                    onClick = {
+                        val uri = viewModel.createCameraImageUri()
+                        currentPhotoUri = uri
+                        takePictureLauncher.launch(uri)
+                    }
+                ) {
                     Text("Take Photo")
                 }
 
@@ -113,7 +120,6 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Description input
                 OutlinedTextField(
                     value = description,
                     onValueChange = {
@@ -127,20 +133,14 @@ fun AddMealScreen(
                 Spacer(Modifier.height(12.dp))
 
                 MealDateTimePicker(
-                    value = uiState.mealTime?.let {
-                        try {
-                            val instant = Instant.parse(it)
-                            LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
-                        } catch (e: Exception) {
-                            null
-                        }
+                    value = uiState.mealTime?.let { millis ->
+                        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
                     },
-                    onValueChange = { viewModel.onMealTimeChanged(it) }
+                    onValueChange = viewModel::onMealTimeChanged
                 )
 
                 Spacer(Modifier.height(12.dp))
 
-                // Macros inputs row
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = carbs,
@@ -179,7 +179,6 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Calories input
                 OutlinedTextField(
                     value = calories,
                     onValueChange = {
@@ -202,7 +201,7 @@ fun AddMealScreen(
                     Spacer(Modifier.width(8.dp))
                     ImpactTypeSelector(
                         selectedImpactType = uiState.impactType,
-                        onImpactTypeSelected = { viewModel.onImpactTypeChanged(it) }
+                        onImpactTypeSelected = viewModel::onImpactTypeChanged
                     )
                 }
 
@@ -216,7 +215,7 @@ fun AddMealScreen(
                     Spacer(Modifier.width(8.dp))
                     MealTypeSelector(
                         selectedMealType = uiState.mealType,
-                        onMealTypeSelected = { viewModel.onMealTypeChanged(it) }
+                        onMealTypeSelected = viewModel::onMealTypeChanged
                     )
                 }
 

@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.domain.util
 
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -23,6 +24,14 @@ fun timestampToLocalDateTime(
 ): ZonedDateTime {
     val localZoneId = ZoneId.systemDefault()
     return Instant.ofEpochMilli(epochMillis).atZone(localZoneId)
+}
+
+fun localDateTimeToInstant(localDateTime: LocalDateTime): Instant {
+    return localDateTime.atZone(ZoneId.systemDefault()).toInstant()
+}
+
+fun instantToLocalDateTime(instant: Instant): LocalDateTime {
+    return LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
 }
 
 fun friendlyDateString(epochMillis: Long, nowEpochMillis: Long = System.currentTimeMillis()): String {
@@ -49,4 +58,12 @@ private fun isSameWeek(date1: java.time.LocalDate, date2: java.time.LocalDate): 
     val week1 = date1.get(weekFields.weekOfWeekBasedYear())
     val week2 = date2.get(weekFields.weekOfWeekBasedYear())
     return date1.year == date2.year && week1 == week2
+}
+
+fun parseIsoToEpoch(isoString: String): Long {
+    return try {
+        Instant.parse(isoString).toEpochMilli()
+    } catch (e: Exception) {
+        Instant.now().toEpochMilli()
+    }
 }

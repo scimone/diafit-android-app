@@ -20,7 +20,30 @@ data class MealEntity(
     val imageId: String,
     val recommendation: String?,       // AI recommendation text
     val reasoning: String?              // AI reasoning text
-)
+) {
+    companion object {
+        fun inferImpactType(carbs: Int?, proteins: Int?, fats: Int?): ImpactType {
+            return if (carbs == null || proteins == null || fats == null) {
+                ImpactType.MEDIUM
+            } else {
+                when {
+                    carbs >= 60 && proteins >= 30 && fats >= 20 -> ImpactType.LONG
+                    carbs >= 40 -> ImpactType.MEDIUM
+                    else -> ImpactType.SHORT
+                }
+            }
+        }
+
+        fun inferMealType(hour: Int): MealType {
+            return when (hour) {
+                in 5 until 10 -> MealType.BREAKFAST
+                in 11 until 15 -> MealType.LUNCH
+                in 18 until 21 -> MealType.DINNER
+                else -> MealType.SNACK
+            }
+        }
+    }
+}
 
 enum class ImpactType(val durationMinutes: Int) {
     SHORT(120),   // e.g. simple sugars
