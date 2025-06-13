@@ -73,16 +73,16 @@ fun TimeInRangeHorizontalBar(
                     Text(
                         text = timeInRange.toInt().toString(),
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            fontSize = 21.sp),
-                        color = Color.Black,
+                            fontSize = 20.sp, fontWeight = FontWeight.SemiBold ),
+                        color = MaterialTheme.colorScheme.surface,
                         modifier = Modifier.alignByBaseline()
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = "%",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 17.sp),
-                        color = Black,
+                            fontSize = 18.sp, fontWeight = FontWeight.SemiBold ),
+                        color = MaterialTheme.colorScheme.surface,
                         modifier = Modifier.alignByBaseline()
                     )
                 }

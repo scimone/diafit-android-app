@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.ui.theme.Black
 
 @Composable
@@ -36,15 +37,15 @@ fun AmountInfoCard(
         ) {
             Text(
                 text = amount,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp),
-                color = Black
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold ),
+                color = MaterialTheme.colorScheme.surface
             )
             if (unit != null) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = unit,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 18.sp),
-                    color = Black
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold ),
+                    color = MaterialTheme.colorScheme.surface
                 )
             }
         }
