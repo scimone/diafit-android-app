@@ -12,11 +12,9 @@ import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
-import uk.scimone.diafit.core.domain.util.parseIsoToEpoch
 import uk.scimone.diafit.core.domain.util.localDateTimeToInstant
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.*
 
 class AddMealViewModel(
@@ -33,7 +31,6 @@ class AddMealViewModel(
     private var imageId: String = UUID.randomUUID().toString()
 
     fun startNewMeal() {
-        if (hasStartedMeal) return
         hasStartedMeal = true
         imageId = UUID.randomUUID().toString()
         val now = LocalDateTime.now()
@@ -41,9 +38,18 @@ class AddMealViewModel(
         _uiState.value = AddMealState(
             mealTime = localDateTimeToInstant(now).toEpochMilli(),
             mealType = inferMealType(now.hour),
-            imageUri = null
+            imageUri = null,
+            description = "",
+            carbohydrates = null,
+            proteins = null,
+            fats = null,
+            calories = null,
+            impactType = ImpactType.MEDIUM,
+            snackbarMessage = null,
+            isLoading = false
         )
     }
+
 
     fun resetSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
@@ -80,20 +86,15 @@ class AddMealViewModel(
                 imageId = newImageId
             )
 
-            _uiState.update {
-                if (result.isSuccess) {
-                    val (_, storedImageUri) = result.getOrThrow()
-                    startNewMeal() // Reset state before updating snackbar
-                    it.copy(
-                        snackbarMessage = "Meal added successfully",
-                        isLoading = false
-                    )
-                } else {
-                    it.copy(isLoading = false, snackbarMessage = "Failed to add meal")
-                }
+            if (result.isSuccess) {
+                startNewMeal()
+                _uiState.update { it.copy(snackbarMessage = "Meal added successfully", isLoading = false) }
+            } else {
+                _uiState.update { it.copy(isLoading = false, snackbarMessage = "Failed to add meal") }
             }
         }
     }
+
 
     fun onImageSelected(uri: Uri) {
         _uiState.update { it.copy(imageUri = uri) }

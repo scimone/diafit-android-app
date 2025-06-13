@@ -23,9 +23,11 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.components.ImpactTypeSelector
 import uk.scimone.diafit.addmeal.presentation.components.MealDateTimePicker
 import uk.scimone.diafit.addmeal.presentation.components.MealTypeSelector
+import uk.scimone.diafit.addmeal.presentation.components.NumberInputField
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
+
+fun String.onlyDigits() = filter { it.isDigit() }
 
 @Composable
 fun AddMealScreen(
@@ -38,30 +40,12 @@ fun AddMealScreen(
 
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Keep local states in sync with ViewModel
-    var description by remember { mutableStateOf("") }
-    var carbs by remember { mutableStateOf("") }
-    var protein by remember { mutableStateOf("") }
-    var fat by remember { mutableStateOf("") }
-    var calories by remember { mutableStateOf("") }
-
     LaunchedEffect(Unit) {
         viewModel.startNewMeal()
     }
 
-    // Keep local fields in sync when uiState updates
-    LaunchedEffect(uiState) {
-        description = uiState.description.orEmpty()
-        carbs = uiState.carbohydrates?.toString().orEmpty()
-        protein = uiState.proteins?.toString().orEmpty()
-        fat = uiState.fats?.toString().orEmpty()
-        calories = uiState.calories?.toString().orEmpty()
-    }
-
     val takePictureLauncher = rememberLauncherForActivityResult(TakePicture()) { success ->
-        if (success) {
-            currentPhotoUri?.let(viewModel::onImageSelected)
-        }
+        if (success) currentPhotoUri?.let(viewModel::onImageSelected)
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(GetContent()) { uri ->
@@ -85,7 +69,6 @@ fun AddMealScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text("Add Meal", style = MaterialTheme.typography.headlineMedium)
-
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -98,7 +81,6 @@ fun AddMealScreen(
                 ) {
                     Text("Take Photo")
                 }
-
                 Button(onClick = { galleryLauncher.launch("image/*") }) {
                     Text("Pick from Gallery")
                 }
@@ -121,11 +103,8 @@ fun AddMealScreen(
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = description,
-                    onValueChange = {
-                        description = it
-                        viewModel.onDescriptionChanged(it)
-                    },
+                    value = uiState.description.orEmpty(),
+                    onValueChange = viewModel::onDescriptionChanged,
                     label = { Text("Description") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -142,53 +121,33 @@ fun AddMealScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = carbs,
-                        onValueChange = {
-                            carbs = it.filter { ch -> ch.isDigit() }
-                            viewModel.onCarbsChanged(carbs)
-                        },
-                        label = { Text("Carbs (g)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    NumberInputField(
+                        value = uiState.carbohydrates?.toString().orEmpty(),
+                        onValueChange = viewModel::onCarbsChanged,
+                        label = "Carbs (g)",
+                        modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
-                        value = protein,
-                        onValueChange = {
-                            protein = it.filter { ch -> ch.isDigit() }
-                            viewModel.onProteinChanged(protein)
-                        },
-                        label = { Text("Protein (g)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    NumberInputField(
+                        value = uiState.proteins?.toString().orEmpty(),
+                        onValueChange = viewModel::onProteinChanged,
+                        label = "Protein (g)",
+                        modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
-                        value = fat,
-                        onValueChange = {
-                            fat = it.filter { ch -> ch.isDigit() }
-                            viewModel.onFatChanged(fat)
-                        },
-                        label = { Text("Fat (g)") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    NumberInputField(
+                        value = uiState.fats?.toString().orEmpty(),
+                        onValueChange = viewModel::onFatChanged,
+                        label = "Fat (g)",
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = calories,
-                    onValueChange = {
-                        calories = it.filter { ch -> ch.isDigit() }
-                        viewModel.onCaloriesChanged(calories)
-                    },
-                    label = { Text("Calories (kcal)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                NumberInputField(
+                    value = uiState.calories?.toString().orEmpty(),
+                    onValueChange = viewModel::onCaloriesChanged,
+                    label = "Calories (kcal)",
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -226,7 +185,14 @@ fun AddMealScreen(
                     enabled = !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (uiState.isLoading) "Saving..." else "Save Meal")
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Save Meal")
+                    }
                 }
             }
         }
