@@ -24,7 +24,7 @@ class CreateMealUseCase(
         proteins: Int? = null,
         fats: Int? = null,
         impactType: ImpactType = ImpactType.MEDIUM,
-        mealType: MealType = MealType.UNKNOWN,
+        mealType: MealType = MealType.SNACK,
     ): Result<Pair<MealEntity, Uri>> {
         val storedFileUriResult = fileStorageRepository.storeImage(imageId, imageUri)
         if (storedFileUriResult.isFailure) return Result.failure(storedFileUriResult.exceptionOrNull()!!)

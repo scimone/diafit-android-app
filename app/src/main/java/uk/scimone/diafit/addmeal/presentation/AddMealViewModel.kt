@@ -83,7 +83,9 @@ class AddMealViewModel(
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
                 calories = uiState.value.calories,
-                imageId = newImageId
+                imageId = newImageId,
+                impactType = uiState.value.impactType,
+                mealType = uiState.value.mealType
             )
 
             if (result.isSuccess) {

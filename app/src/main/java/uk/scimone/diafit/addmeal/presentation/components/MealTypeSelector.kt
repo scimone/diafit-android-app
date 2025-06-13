@@ -27,7 +27,6 @@ fun mealTypeIcon(mealType: MealType): Painter = when (mealType) {
     MealType.LUNCH -> painterResource(R.drawable.ic_meal_type_lunch)
     MealType.DINNER -> painterResource(R.drawable.ic_meal_type_dinner)
     MealType.SNACK -> painterResource(R.drawable.ic_meal_type_snack)
-    MealType.UNKNOWN -> painterResource(R.drawable.ic_meal_type_unknown)
 }
 
 @Composable
