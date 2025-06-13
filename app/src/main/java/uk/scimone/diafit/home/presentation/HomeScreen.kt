@@ -19,15 +19,11 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.draw.clip
-import coil.compose.rememberAsyncImagePainter
-import androidx.compose.ui.layout.ContentScale
 import uk.scimone.diafit.home.presentation.components.ComponentMealImage
+import uk.scimone.diafit.home.presentation.model.MealEntityUi
 
 @Composable
 fun HomeScreen(
@@ -69,9 +65,8 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    val mealImages = state.mealHistory.mapNotNull { it.imageUri }
-                    if (mealImages.isNotEmpty()) {
-                        MealImagesRow(imageUris = mealImages)
+                    if (state.mealHistory.isNotEmpty()) {
+                        MealImagesRow(meals = state.mealHistory)
                     }
 
                 }
@@ -124,13 +119,13 @@ fun CgmChartDisplay(
 }
 
 @Composable
-fun MealImagesRow(imageUris: List<Uri>) {
+fun MealImagesRow(meals: List<MealEntityUi>) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(imageUris) { uri ->
-            ComponentMealImage(uri)
+        items(meals) { meal ->
+            ComponentMealImage(meal)
         }
     }
 }
