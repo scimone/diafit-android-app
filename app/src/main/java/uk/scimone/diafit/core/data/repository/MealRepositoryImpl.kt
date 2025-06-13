@@ -49,6 +49,10 @@ class MealRepositoryImpl(
         return mealDao.observeMealsByUserId(userId)
     }
 
+    override fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>> {
+        return mealDao.getAllMealsSince(startTime, userId)
+    }
+
     private fun saveImageToLocalFolder(mealId: String, sourceUri: Uri): Uri {
         val resolver: ContentResolver = context.contentResolver
 

@@ -1,5 +1,7 @@
 package uk.scimone.diafit.home.presentation
 
+import android.app.Application
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
@@ -15,11 +17,15 @@ import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
 
 import kotlinx.coroutines.delay
+import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
+import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 
 class HomeViewModel(
     private val getLatestCgmUseCase: GetLatestCgmUseCase,
     private val getAllCgmSinceUseCase: GetAllCgmSinceUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
+    private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
+    private val application: Application,
     private val userId: Int,
 ) : ViewModel() {
 
@@ -44,6 +50,7 @@ class HomeViewModel(
     private fun loadAllData() {
         observeLatestCgm()
         observeCgmHistory()
+        observeMealHistory()
         loadTargetRange()
     }
 
@@ -84,6 +91,29 @@ class HomeViewModel(
                     _state.update {
                         it.copy(
                             cgmHistory = cgmChartDataList,
+                            isLoading = false
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun observeMealHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
+        viewModelScope.launch {
+            getAllMealsSinceUseCase(nowMinus24h, userId)
+                .catch { e ->
+                    _state.update {
+                        it.copy(
+                            error = e.message,
+                            isLoading = false
+                        )
+                    }
+                }
+                .collect { meals ->
+                    val mealUiList = meals.map { it.toMealEntityUi(application.applicationContext) }
+                    _state.update {
+                        it.copy(
+                            mealHistory = mealUiList,
                             isLoading = false
                         )
                     }

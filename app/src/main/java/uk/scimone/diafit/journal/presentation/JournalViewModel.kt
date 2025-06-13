@@ -25,7 +25,7 @@ class JournalViewModel(
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val calculateMealGlucoseImpactUseCase: CalculateMealGlucoseImpactUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
-    private val context: Context,   // Inject or provide from UI layer
+    private val context: Context,
     private val userId: Int
 ) : ViewModel() {
 

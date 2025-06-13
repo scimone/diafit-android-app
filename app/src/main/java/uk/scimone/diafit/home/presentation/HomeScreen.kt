@@ -1,5 +1,6 @@
 package uk.scimone.diafit.home.presentation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +19,15 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.layout.ContentScale
+import uk.scimone.diafit.home.presentation.components.ComponentMealImage
 
 @Composable
 fun HomeScreen(
@@ -43,24 +53,33 @@ fun HomeScreen(
                 )
             }
 
-            state.cgmUi != null -> {
-                Column {
-                    CgmDisplay(cgm = state.cgmUi!!)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CgmChartDisplay(
-                        history = state.cgmHistory,
-                        lower = state.targetRangeLower,
-                        upper = state.targetRangeUpper
-                    )
-                }
-            }
-
             else -> {
-                Text("No CGM data available")
+                Column {
+                    if (state.cgmUi != null) {
+                        CgmDisplay(cgm = state.cgmUi!!)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CgmChartDisplay(
+                            history = state.cgmHistory,
+                            lower = state.targetRangeLower,
+                            upper = state.targetRangeUpper
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else {
+                        Text("No CGM data available")
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    val mealImages = state.mealHistory.mapNotNull { it.imageUri }
+                    if (mealImages.isNotEmpty()) {
+                        MealImagesRow(imageUris = mealImages)
+                    }
+
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun CgmDisplay(cgm: CgmEntityUi) {
@@ -101,5 +120,17 @@ fun CgmChartDisplay(
             lowerBound = lower,
             upperBound = upper
         )
+    }
+}
+
+@Composable
+fun MealImagesRow(imageUris: List<Uri>) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(imageUris) { uri ->
+            ComponentMealImage(uri)
+        }
     }
 }

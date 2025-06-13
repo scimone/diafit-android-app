@@ -11,6 +11,8 @@ val homeModule = module {
             getLatestCgmUseCase = get(),
             getAllCgmSinceUseCase = get(),
             getTargetRangeUseCase = get(),
+            getAllMealsSinceUseCase = get(),
+            application = get(),
             userId = userId
         )
     }
