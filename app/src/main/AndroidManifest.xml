@@ -45,6 +45,10 @@
                 <!-- xDrip Intent -->
                 <action android:name="com.eveningoutpost.dexdrip.BgEstimate" />
 
+                <action android:name="info.nightscout.client.NEW_FOOD" />
+                <action android:name="info.nightscout.client.NEW_TREATMENT" />
+
+
             </intent-filter>
         </receiver>
 

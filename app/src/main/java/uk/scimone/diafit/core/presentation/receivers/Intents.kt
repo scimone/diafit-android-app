@@ -10,6 +10,7 @@ interface Intents {
         const val XDRIP_NEW_CGM = "com.eveningoutpost.dexdrip.BgEstimate"
 
         // AAPS -> diafit
+        const val AAPS_NEW_BROADCAST = "info.nightscout.androidaps.status"
         const val NSCLIENT_NEW_TREATMENT = "info.nightscout.client.NEW_TREATMENT"
         const val NSCLIENT_NEW_PROFILE = "info.nightscout.client.NEW_PROFILE"
         const val NSCLIENT_NEW_DEVICE_STATUS = "info.nightscout.client.NEW_DEVICESTATUS"
