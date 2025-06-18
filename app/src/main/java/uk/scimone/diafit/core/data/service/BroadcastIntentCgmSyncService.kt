@@ -10,8 +10,8 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import uk.scimone.diafit.R
-import uk.scimone.diafit.core.data.service.RemoteCgmSyncService.Companion
 import uk.scimone.diafit.core.presentation.receivers.CgmReceiver
+import uk.scimone.diafit.core.presentation.receivers.Intents
 
 class BroadcastIntentCgmSyncService : Service() {
 
@@ -29,8 +29,10 @@ class BroadcastIntentCgmSyncService : Service() {
         Log.d("BroadcastIntentCgmSyncService", "onCreate called")
         cgmReceiver = CgmReceiver()
         val filter = IntentFilter().apply {
-            addAction("glucodata.Minute")
-            addAction("com.eveningoutpost.dexdrip.BgEstimate")
+            addAction(Intents.JUGGLUCO_NEW_CGM)
+            addAction(Intents.XDRIP_NEW_CGM)
+            addAction(Intents.NSCLIENT_NEW_FOOD)
+            addAction(Intents.NSCLIENT_NEW_TREATMENT)
         }
 
         if (Build.VERSION.SDK_INT >= 33) {
