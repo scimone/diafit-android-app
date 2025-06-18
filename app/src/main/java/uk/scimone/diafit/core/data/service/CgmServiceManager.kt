@@ -10,11 +10,11 @@ class CgmServiceManager(
     private val context: Context
 ) {
 
-    fun start(source: CgmSource) {
+    fun start(cgmSource: CgmSource) {
         Log.d("CgmServiceManager", "Starting BroadcastIntentHealthSyncService")
         stopAll()
 
-        when (source) {
+        when (cgmSource) {
             CgmSource.NIGHTSCOUT -> ContextCompat.startForegroundService(
                 context,
                 Intent(context, RemoteCgmSyncService::class.java)

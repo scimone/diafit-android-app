@@ -3,10 +3,10 @@ package uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource
 import android.content.Intent
 import android.util.Log
 import uk.scimone.diafit.core.domain.model.CgmEntity
-import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
+import uk.scimone.diafit.core.domain.repository.syncsource.IntentHealthSyncSource
 import uk.scimone.diafit.core.presentation.receivers.Intents
 
-class CgmSyncSourceXdrip : IntentCgmSyncSource {
+class CgmSyncSourceXdrip : IntentHealthSyncSource {
 
     companion object {
         const val ACTION = Intents.XDRIP_NEW_CGM

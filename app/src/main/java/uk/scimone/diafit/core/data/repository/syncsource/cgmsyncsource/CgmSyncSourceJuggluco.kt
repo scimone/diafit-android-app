@@ -4,10 +4,10 @@ import android.content.Intent
 import uk.scimone.diafit.core.presentation.receivers.Intents
 import android.util.Log
 import uk.scimone.diafit.core.domain.model.CgmEntity
-import uk.scimone.diafit.core.domain.repository.syncsource.IntentCgmSyncSource
+import uk.scimone.diafit.core.domain.repository.syncsource.IntentHealthSyncSource
 
 class CgmSyncSourceJuggluco(
-) : IntentCgmSyncSource {
+) : IntentHealthSyncSource {
 
     val name: String = "JUGGLUCO"
 

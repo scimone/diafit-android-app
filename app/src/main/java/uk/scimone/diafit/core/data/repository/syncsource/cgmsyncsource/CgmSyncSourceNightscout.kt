@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.networking.dto.toCgmEntity
-import uk.scimone.diafit.core.domain.repository.syncsource.CgmSyncSource
+import uk.scimone.diafit.core.domain.repository.syncsource.HealthSyncSource
 import uk.scimone.diafit.core.domain.util.networking.Result
 import uk.scimone.diafit.core.domain.util.formatTimestamp
 import java.time.Instant
@@ -14,7 +14,7 @@ import java.time.temporal.ChronoUnit
 class CgmSyncSourceNightscout(
     private val nightscoutApi: NightscoutApi,
     private val cgmDao: CgmDao
-) : CgmSyncSource {
+) : HealthSyncSource {
 
     override suspend fun sync() {
         Log.d("NightscoutSync", "Starting Nightscout sync...")

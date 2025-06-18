@@ -9,52 +9,50 @@ import androidx.work.WorkerParameters
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.koin.core.qualifier.named
-import uk.scimone.diafit.core.domain.model.CgmEntity
+import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.repository.syncsource.IntentHealthSyncSource
-import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
-import uk.scimone.diafit.settings.domain.model.CgmSource
-import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
+import uk.scimone.diafit.core.domain.usecase.InsertBolusUseCase
+import uk.scimone.diafit.settings.domain.model.BolusSource
+import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
 
-class CgmBroadcastWorker(
+class BolusBroadcastWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params), KoinComponent {
 
-    private val insertCgmUseCase: InsertCgmUseCase by inject()
-    private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
+    private val insertBolusUseCase: InsertBolusUseCase by inject()
+    private val getBolusSourceUseCase: GetBolusSourceUseCase by inject()
 
-    private val juggluco: IntentHealthSyncSource by inject(named("JUGGLUCO"))
-    private val xdrip: IntentHealthSyncSource by inject(named("XDRIP"))
+    private val aaps: IntentHealthSyncSource by inject(named("AAPS"))
 
     companion object {
-        private const val TAG = "CgmInsertWorker"
+        private const val TAG = "BolusInsertWorker"
     }
 
     override suspend fun doWork(): Result {
-        val selectedSource = getCgmSourceUseCase()
+        val selectedSource = getBolusSourceUseCase()
 
         val intent = reconstructIntent(inputData)
 
         val entity = when (selectedSource) {
-            CgmSource.JUGGLUCO -> juggluco.handleIntent(intent)
-            CgmSource.XDRIP -> xdrip.handleIntent(intent)
+            BolusSource.AAPS -> aaps.handleIntent(intent)
             else -> {
-                Log.d(TAG, "CGM source $selectedSource doesn't support intent parsing.")
+                Log.d(TAG, "Bolus source $selectedSource doesn't support intent parsing.")
                 null
             }
         }
 
-        return if (entity is CgmEntity) {
+        return if (entity is BolusEntity) {
             try {
-                insertCgmUseCase(entity)
-                Log.d(TAG, "Inserted CGM: $entity")
+                insertBolusUseCase(entity)
+                Log.d(TAG, "Inserted Bolus: $entity")
                 Result.success()
             } catch (e: Exception) {
                 Log.e(TAG, "Insert failed", e)
                 Result.retry()
             }
         } else {
-            Log.w(TAG, "No CGM entity parsed or unsupported source.")
+            Log.w(TAG, "No bolus entity parsed or unsupported source.")
             Result.success()
         }
     }

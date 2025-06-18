@@ -5,7 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    indices = [Index(value = ["timestamp"], unique = true)]
+    indices = [Index(value = ["timestampUtc"], unique = true)]
 )
 data class BolusEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -18,5 +18,6 @@ data class BolusEntity(
     val isSmb: Boolean,
     val pumpType: String,
     val pumpSerial: String,
+    val pumpId: Long,
     val sourceId: String? = null
 )

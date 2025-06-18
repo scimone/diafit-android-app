@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
@@ -24,6 +25,14 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         prefs.edit().putString("cgm_source", source.name).apply()
     }
 
+    override suspend fun getBolusSource(): BolusSource {
+        val name = prefs.getString("bolus_source", BolusSource.AAPS.name)
+        return BolusSource.valueOf(name!!)
+    }
+
+    override suspend fun setBolusSource(source: BolusSource) {
+        prefs.edit().putString("bolus_source", source.name).apply()
+    }
 
     override suspend fun getTargetRange(): SettingsGlucoseTargetRange {
         val lower = prefs.getInt("glucose_lower_bound", 70)

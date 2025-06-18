@@ -8,11 +8,14 @@ import org.koin.dsl.module
 import uk.scimone.diafit.core.data.file.FileStorageRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealRepositoryImpl
 import uk.scimone.diafit.core.data.local.AppDatabase
+import uk.scimone.diafit.core.data.local.BolusDao
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
 import uk.scimone.diafit.core.data.networking.util.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
+import uk.scimone.diafit.core.data.repository.BolusRepositoryImpl
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
+import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
@@ -21,6 +24,7 @@ import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
+import uk.scimone.diafit.core.domain.usecase.InsertBolusUseCase
 import uk.scimone.diafit.core.domain.usecase.InsertCgmUseCase
 
 val coreModule = module {
@@ -39,6 +43,7 @@ val coreModule = module {
     // Provide DAO from database
     single<MealDao> { get<AppDatabase>().mealDao() }
     single<CgmDao> { get<AppDatabase>().cgmDao() }
+    single<BolusDao> { get<AppDatabase>().bolusDao() }
 
     // Provide file storage
     single<FileStorageRepository> { FileStorageRepositoryImpl(get()) }
@@ -54,6 +59,10 @@ val coreModule = module {
     single { GetLatestCgmUseCase(get()) }
     single { GetAllCgmSinceUseCase(get()) }
     single { InsertCgmUseCase(get()) }
+
+    // Provide bolus repositories and use cases
+    single<BolusRepository> { BolusRepositoryImpl(get()) }
+    single { InsertBolusUseCase(get()) }
 
     // Nightscout HTTP API
     single { HttpClientFactory.create(Android.create()) }

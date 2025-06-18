@@ -13,7 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.collectAsState
-
+import uk.scimone.diafit.settings.domain.model.BolusSource
 
 
 @Composable
@@ -62,6 +62,28 @@ fun SettingsScreen(
                 RadioButton(
                     selected = source == state.selectedCgmSource,
                     onClick = { viewModel.onCgmSourceSelected(source) }
+                )
+                Text(
+                    text = source.name,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Bolus Data Source", style = MaterialTheme.typography.titleMedium)
+        BolusSource.values().forEach { source ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.onBolusSourceSelected(source) }
+                    .padding(vertical = 8.dp)
+            ) {
+                RadioButton(
+                    selected = source == state.selectedBolusSource,
+                    onClick = { viewModel.onBolusSourceSelected(source) }
                 )
                 Text(
                     text = source.name,
