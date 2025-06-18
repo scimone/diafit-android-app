@@ -10,12 +10,12 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import uk.scimone.diafit.R
-import uk.scimone.diafit.core.presentation.receivers.CgmReceiver
+import uk.scimone.diafit.core.presentation.receivers.HealthReceiver
 import uk.scimone.diafit.core.presentation.receivers.Intents
 
-class BroadcastIntentCgmSyncService : Service() {
+class BroadcastIntentHealthSyncService : Service() {
 
-    private lateinit var cgmReceiver: CgmReceiver
+    private lateinit var healthReceiver: HealthReceiver
     private var isReceiverRegistered = false
 
     companion object {
@@ -26,21 +26,20 @@ class BroadcastIntentCgmSyncService : Service() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
-        Log.d("BroadcastIntentCgmSyncService", "onCreate called")
-        cgmReceiver = CgmReceiver()
+        Log.d("BroadcastIntentHealthSyncService", "onCreate called")
+        healthReceiver = HealthReceiver()
         val filter = IntentFilter().apply {
             addAction(Intents.JUGGLUCO_NEW_CGM)
             addAction(Intents.XDRIP_NEW_CGM)
             addAction(Intents.NSCLIENT_NEW_FOOD)
-            addAction(Intents.NSCLIENT_NEW_TREATMENT)
         }
 
         if (Build.VERSION.SDK_INT >= 33) {
             // API 33+ version with flags
-            registerReceiver(cgmReceiver, filter, null, null, android.content.Context.RECEIVER_EXPORTED)
+            registerReceiver(healthReceiver, filter, null, null, android.content.Context.RECEIVER_EXPORTED)
         } else {
             // API < 33 fallback
-            registerReceiver(cgmReceiver, filter)
+            registerReceiver(healthReceiver, filter)
         }
         isReceiverRegistered = true
 
@@ -51,13 +50,13 @@ class BroadcastIntentCgmSyncService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("BroadcastIntentCgmSyncService", "Service started")
+        Log.d("BroadcastIntentHealthSyncService", "Service started")
         return START_STICKY
     }
 
     override fun onDestroy() {
         if (isReceiverRegistered) {
-            unregisterReceiver(cgmReceiver)
+            unregisterReceiver(healthReceiver)
             isReceiverRegistered = false
         }
         super.onDestroy()
@@ -66,10 +65,10 @@ class BroadcastIntentCgmSyncService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotification(): Notification {
-        Log.d("BroadcastIntentCgmSyncService", "Creating notification")
+        Log.d("BroadcastIntentHealthSyncService", "Creating notification")
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("CGM Sync Service")
-            .setContentText("Listening for CGM broadcasts")
+            .setContentTitle("Health Sync Service")
+            .setContentText("Listening for health data broadcasts")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

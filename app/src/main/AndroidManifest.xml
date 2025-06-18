@@ -35,18 +35,16 @@
         </activity>
 
         <receiver
-            android:name="uk.scimone.diafit.core.presentation.receivers.CgmReceiver"
+            android:name="uk.scimone.diafit.core.presentation.receivers.HealthReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <!-- Juggluco Intent -->
+                <!-- CGM -->
                 <action android:name="glucodata.Minute" />
-
-                <!-- xDrip Intent -->
                 <action android:name="com.eveningoutpost.dexdrip.BgEstimate" />
 
+                <!-- Carbs / Bolus -->
                 <action android:name="info.nightscout.client.NEW_FOOD" />
-                <action android:name="info.nightscout.client.NEW_TREATMENT" />
 
 
             </intent-filter>
@@ -68,7 +66,7 @@
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name=".core.data.service.BroadcastIntentCgmSyncService"
+            android:name=".core.data.service.BroadcastIntentHealthSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 

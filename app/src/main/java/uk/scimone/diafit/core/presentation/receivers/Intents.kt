@@ -22,5 +22,18 @@ interface Intents {
         const val RECEIVER_PERMISSION =
             "com.eveningoutpost.dexdrip.permissions.RECEIVE_EXTERNAL_STATUSLINE"
 
+        val CGM_ACTIONS = setOf(
+            JUGGLUCO_NEW_CGM,
+            XDRIP_NEW_CGM,
+        )
+
+        val BOLUS_ACTIONS = setOf(
+            NSCLIENT_NEW_FOOD,
+        )
+
+        val CARBS_ACTIONS = setOf(
+            NSCLIENT_NEW_FOOD,
+        )
+
     }
 }

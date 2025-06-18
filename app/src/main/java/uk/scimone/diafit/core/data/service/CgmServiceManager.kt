@@ -11,7 +11,7 @@ class CgmServiceManager(
 ) {
 
     fun start(source: CgmSource) {
-        Log.d("CgmServiceManager", "Starting BroadcastIntentCgmSyncService")
+        Log.d("CgmServiceManager", "Starting BroadcastIntentHealthSyncService")
         stopAll()
 
         when (source) {
@@ -21,7 +21,7 @@ class CgmServiceManager(
             )
             CgmSource.JUGGLUCO, CgmSource.XDRIP -> ContextCompat.startForegroundService(
                 context,
-                Intent(context, BroadcastIntentCgmSyncService::class.java)
+                Intent(context, BroadcastIntentHealthSyncService::class.java)
             )
             else -> { /* No service started */ }
         }
@@ -29,13 +29,13 @@ class CgmServiceManager(
 
     private fun stopAll() {
         context.stopService(Intent().setClass(context, RemoteCgmSyncService::class.java))
-        context.stopService(Intent().setClass(context, BroadcastIntentCgmSyncService::class.java))
+        context.stopService(Intent().setClass(context, BroadcastIntentHealthSyncService::class.java))
     }
 
     fun stop(source: CgmSource) {
         when (source) {
             CgmSource.NIGHTSCOUT -> context.stopService(Intent().setClass(context, RemoteCgmSyncService::class.java))
-            CgmSource.JUGGLUCO, CgmSource.XDRIP -> context.stopService(Intent().setClass(context, BroadcastIntentCgmSyncService::class.java))
+            CgmSource.JUGGLUCO, CgmSource.XDRIP -> context.stopService(Intent().setClass(context, BroadcastIntentHealthSyncService::class.java))
             else -> { }
         }
     }
