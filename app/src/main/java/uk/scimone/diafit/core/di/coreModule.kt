@@ -21,6 +21,7 @@ import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
+import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetLatestCgmUseCase
@@ -63,6 +64,7 @@ val coreModule = module {
     // Provide bolus repositories and use cases
     single<BolusRepository> { BolusRepositoryImpl(get()) }
     single { InsertBolusUseCase(get()) }
+    single { GetAllBolusSinceUseCase(get()) }
 
     // Nightscout HTTP API
     single { HttpClientFactory.create(Android.create()) }

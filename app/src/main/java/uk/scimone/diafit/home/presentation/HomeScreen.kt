@@ -22,7 +22,9 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import uk.scimone.diafit.home.presentation.components.ComponentBolusChart
 import uk.scimone.diafit.home.presentation.components.ComponentMealImage
+import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
 
 @Composable
@@ -59,9 +61,17 @@ fun HomeScreen(
                             lower = state.targetRangeLower,
                             upper = state.targetRangeUpper
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                     } else {
                         Text("No CGM data available")
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    if (state.bolusHistory.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        BolusChartDisplay(
+                            history = state.bolusHistory
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
@@ -127,5 +137,20 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
         items(meals) { meal ->
             ComponentMealImage(meal)
         }
+    }
+}
+
+@Composable
+fun BolusChartDisplay(
+    history: List<BolusChartData>,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+    ) {
+        ComponentBolusChart(
+            values = history,
+        )
     }
 }

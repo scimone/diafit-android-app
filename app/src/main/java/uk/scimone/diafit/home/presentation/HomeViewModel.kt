@@ -17,12 +17,15 @@ import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
 
 import kotlinx.coroutines.delay
+import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
+import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 
 class HomeViewModel(
     private val getLatestCgmUseCase: GetLatestCgmUseCase,
     private val getAllCgmSinceUseCase: GetAllCgmSinceUseCase,
+    private val getAllBolusSinceUseCase: GetAllBolusSinceUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
     private val application: Application,
@@ -50,6 +53,7 @@ class HomeViewModel(
     private fun loadAllData() {
         observeLatestCgm()
         observeCgmHistory()
+        observeBolusHistory()
         observeMealHistory()
         loadTargetRange()
     }
@@ -97,6 +101,36 @@ class HomeViewModel(
                 }
         }
     }
+
+    private fun observeBolusHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
+        viewModelScope.launch {
+            getAllBolusSinceUseCase(nowMinus24h)
+                .catch { e ->
+                    _state.update {
+                        it.copy(
+                            error = e.message,
+                            isLoading = false
+                        )
+                    }
+                }
+                .collect { bolusList ->
+                    val bolusUiList = bolusList.map {
+                        BolusChartData(
+                            timeFloat = it.timestampUtc.toFloat(),
+                            value = it.value
+                        )
+                    }
+                    _state.update {
+                        it.copy(
+                            bolusHistory = bolusUiList,
+                            isLoading = false
+                        )
+                    }
+                }
+        }
+    }
+
+
 
     private fun observeMealHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
