@@ -37,7 +37,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .fallbackToDestructiveMigration(false)
+            .addMigrations(AppDatabase.MIGRATION_9_10)
             .build()
     }
 

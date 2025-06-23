@@ -19,7 +19,8 @@ data class MealEntity(
     val isValid: Boolean = true,
     val imageId: String,
     val recommendation: String?,       // AI recommendation text
-    val reasoning: String?              // AI reasoning text
+    val reasoning: String?,              // AI reasoning text
+    val sourceId: String? = null
 ) {
     companion object {
         fun inferImpactType(carbs: Int?, proteins: Int?, fats: Int?): ImpactType {
