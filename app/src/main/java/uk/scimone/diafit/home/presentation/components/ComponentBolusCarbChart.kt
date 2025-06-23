@@ -1,14 +1,12 @@
 package uk.scimone.diafit.home.presentation.components
 
 import android.text.Layout
-import android.util.Log
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
@@ -19,37 +17,34 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.core.cartesian.Scroll
-import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.common.component.LineComponent
-import com.patrykandpatrick.vico.core.common.component.ShapeComponent
-import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.shape.Shape
-import uk.scimone.diafit.home.presentation.model.BolusChartData
+import uk.scimone.diafit.home.presentation.model.ChartData
 import java.util.Calendar
 
 @Composable
-fun ComponentBolusChart(
-    values: List<BolusChartData>
+fun ComponentBolusCarbChart(
+    values: List<ChartData>,
+    barColor: Color
 ) {
     val minY = 0f
-    val maxY = (values.maxOfOrNull { it.value } ?: 10f) * 1.2f  // 20% headroom
+    val maxY = (values.maxOfOrNull { it.value.toFloat() } ?: 10f) * 1.2f  // 20% headroom
     val modelProducer = remember { CartesianChartModelProducer.build() }
     val currentTime = System.currentTimeMillis()
-    val oneDayAgo = currentTime - 24 * 60 * 60 * 1000 // 24h in ms
+    val oneDayAgo = currentTime - 24 * 60 * 60 * 1000
 
     val filteredValues = values.filter { it.timeFloat >= oneDayAgo && it.timeFloat <= currentTime }
-    
+
     LaunchedEffect(filteredValues) {
         if (filteredValues.isNotEmpty()) {
             modelProducer.runTransaction {
                 columnSeries {
                     series(
                         x = filteredValues.map { it.timeFloat },
-                        y = filteredValues.map { it.value }
+                        y = filteredValues.map { it.value.toFloat() }
                     )
                 }
             }
@@ -62,8 +57,8 @@ fun ComponentBolusChart(
                 columnProvider = com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer.ColumnProvider.series(
                     columns = listOf(
                         LineComponent(
-                            color = MaterialTheme.colorScheme.primary.toArgb(),
-                            thicknessDp = 3f, // thickness unused for bars, so set to 0
+                            color = barColor.toArgb(),
+                            thicknessDp = 3f,
                             shape = Shape.Rectangle
                         )
                     )
@@ -113,3 +108,4 @@ fun ComponentBolusChart(
         )
     }
 }
+

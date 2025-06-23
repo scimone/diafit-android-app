@@ -22,10 +22,13 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import uk.scimone.diafit.home.presentation.components.ComponentBolusChart
+import uk.scimone.diafit.home.presentation.components.ComponentBolusCarbChart
 import uk.scimone.diafit.home.presentation.components.ComponentMealImage
 import uk.scimone.diafit.home.presentation.model.BolusChartData
+import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
+import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Carbs
 
 @Composable
 fun HomeScreen(
@@ -61,21 +64,22 @@ fun HomeScreen(
                             lower = state.targetRangeLower,
                             upper = state.targetRangeUpper
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
                     } else {
                         Text("No CGM data available")
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     if (state.bolusHistory.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
                         BolusChartDisplay(
                             history = state.bolusHistory
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     if (state.mealHistory.isNotEmpty()) {
+                        CarbsChartDisplay(
+                            history = state.carbHistory
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         MealImagesRow(meals = state.mealHistory)
                     }
 
@@ -149,8 +153,25 @@ fun BolusChartDisplay(
             .fillMaxWidth()
             .height(90.dp)
     ) {
-        ComponentBolusChart(
+        ComponentBolusCarbChart(
             values = history,
+            barColor = Bolus
+        )
+    }
+}
+
+@Composable
+fun CarbsChartDisplay(
+    history: List<CarbsChartData>,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+    ) {
+        ComponentBolusCarbChart(
+            values = history,
+            barColor = Carbs
         )
     }
 }

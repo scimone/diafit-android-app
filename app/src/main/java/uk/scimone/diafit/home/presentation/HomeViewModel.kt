@@ -20,6 +20,7 @@ import kotlinx.coroutines.delay
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
 import uk.scimone.diafit.home.presentation.model.BolusChartData
+import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 
 class HomeViewModel(
@@ -54,6 +55,7 @@ class HomeViewModel(
         observeLatestCgm()
         observeCgmHistory()
         observeBolusHistory()
+        observeCarbHistory()
         observeMealHistory()
         loadTargetRange()
     }
@@ -123,6 +125,31 @@ class HomeViewModel(
                     _state.update {
                         it.copy(
                             bolusHistory = bolusUiList,
+                            isLoading = false
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun observeCarbHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
+        viewModelScope.launch {
+            getAllMealsSinceUseCase(nowMinus24h, userId)
+                .catch { e ->
+                    _state.update {
+                        it.copy(
+                            error = e.message,
+                            isLoading = false
+                        )
+                    }
+                }
+                .collect { meals ->
+                    val carbUiList = meals.map {
+                        it.toMealEntityUi(application.applicationContext).toChartData()
+                    }
+                    _state.update {
+                        it.copy(
+                            carbHistory = carbUiList,
                             isLoading = false
                         )
                     }
