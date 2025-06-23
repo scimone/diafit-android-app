@@ -6,12 +6,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberPoint
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -22,13 +25,11 @@ import com.patrykandpatrick.vico.core.common.component.LineComponent
 import uk.scimone.diafit.core.domain.model.InsulinActivity
 import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
 import java.util.Calendar
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.common.component.ShapeComponent
+import com.patrykandpatrick.vico.core.common.shape.Shape
+import kotlin.math.abs
 
 @Composable
 fun ComponentInsulinActivityChart(
@@ -64,27 +65,62 @@ fun ComponentInsulinActivityChart(
         )
     }
 
+    // Points exactly at insulin administration timestamps (x = bolus time, y = total activity at that time)
+    val insulinPoints = values.map { bolus ->
+        val nearestPoint = activityPoints.minByOrNull { abs(it.time - bolus.timeMillis) }
+        InsulinActivityChartPoint(
+            time = bolus.timeMillis,   // keep the exact bolus time
+            activity = nearestPoint?.activity ?: 0f
+        )
+    }
 
-    LaunchedEffect(activityPoints) {
-        if (activityPoints.isNotEmpty()) {
-            modelProducer.runTransaction {
-                lineSeries {
-                    series(
-                        x = activityPoints.map { it.time },
-                        y = activityPoints.map { it.activity }
-                    )
-                }
+    LaunchedEffect(activityPoints, insulinPoints) {
+        modelProducer.runTransaction {
+            lineSeries {
+                // Curve
+                series(
+                    x = activityPoints.map { it.time },
+                    y = activityPoints.map { it.activity }
+                )}
+            lineSeries {
+                // Bolus points
+                series(
+                    x = insulinPoints.map { it.time },
+                    y = insulinPoints.map { it.activity }
+                )
             }
         }
     }
 
     if (activityPoints.isNotEmpty()) {
-        val chart = rememberCartesianChart(
-            rememberLineCartesianLayer(
-                LineCartesianLayer.LineProvider.series(
-                    LineCartesianLayer.Line(LineCartesianLayer.LineFill.single(fill(Color(color.toArgb()))))
+        val lineLayer = rememberLineCartesianLayer(
+            LineCartesianLayer.LineProvider.series(
+                LineCartesianLayer.Line(LineCartesianLayer.LineFill.single(fill(Color(color.toArgb()))))
+            )
+        )
+
+        val pointsLayer = rememberLineCartesianLayer(
+            lineProvider = LineCartesianLayer.LineProvider.series(
+                lines = listOf(
+                    rememberLine(
+                        pointProvider = LineCartesianLayer.PointProvider.single(
+                            rememberPoint(
+                                component = ShapeComponent(
+                                    shape = Shape.Pill,
+                                    color = color.toArgb()
+                                ),
+                                size = 10.dp
+                            )
+                        ),
+                        thickness = 0.dp,
+                        fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent))
+                    )
                 )
-            ),
+            )
+        )
+        val chart = rememberCartesianChart(
+            lineLayer,
+            pointsLayer,
             startAxis = rememberStartAxis(
                 horizontalLabelPosition = com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis.HorizontalLabelPosition.Inside,
                 guideline = LineComponent(
