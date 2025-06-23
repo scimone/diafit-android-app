@@ -1,4 +1,4 @@
-package uk.scimone.diafit.home.presentation.components
+package uk.scimone.diafit.home.presentation.components.util
 
 import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
