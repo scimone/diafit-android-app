@@ -23,9 +23,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import uk.scimone.diafit.home.presentation.components.ComponentBolusCarbChart
+import uk.scimone.diafit.home.presentation.components.ComponentInsulinActivityChart
 import uk.scimone.diafit.home.presentation.components.ComponentMealImage
 import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
+import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
@@ -72,6 +74,9 @@ fun HomeScreen(
                     if (state.bolusHistory.isNotEmpty()) {
                         BolusChartDisplay(
                             history = state.bolusHistory
+                        )
+                        InsulinActivityDisplay(
+                            history = state.insulinActivityHistory
                         )
                     }
 
@@ -156,6 +161,22 @@ fun BolusChartDisplay(
         ComponentBolusCarbChart(
             values = history,
             barColor = Bolus
+        )
+    }
+}
+
+@Composable
+fun InsulinActivityDisplay(
+    history: List<InsulinActivityChartData>,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+    ) {
+        ComponentInsulinActivityChart(
+            values = history,
+            color = Bolus
         )
     }
 }

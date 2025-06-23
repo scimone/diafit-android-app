@@ -21,6 +21,7 @@ import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
 import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
+import uk.scimone.diafit.home.presentation.model.toInsulinActivityChartData
 import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 
 class HomeViewModel(
@@ -116,21 +117,21 @@ class HomeViewModel(
                     }
                 }
                 .collect { bolusList ->
-                    val bolusUiList = bolusList.map {
-                        BolusChartData(
-                            timeFloat = it.timestampUtc.toFloat(),
-                            value = it.value
-                        )
-                    }
+                    val bolusUiList = bolusList.map { it.toChartData() }
+                    val insulinActivityList = bolusList.map { it.toInsulinActivityChartData() }
+
                     _state.update {
                         it.copy(
                             bolusHistory = bolusUiList,
+                            insulinActivityHistory = insulinActivityList,
                             isLoading = false
                         )
                     }
                 }
         }
     }
+
+
 
     private fun observeCarbHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
