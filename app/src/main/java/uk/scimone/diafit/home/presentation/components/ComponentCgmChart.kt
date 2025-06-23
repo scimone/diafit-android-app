@@ -105,7 +105,8 @@ fun ComponentCgmChart(
                                 )
                             ),
                             thickness = 0.dp,
-                            fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent))
+                            fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent)),
+                            areaFill = LineCartesianLayer.AreaFill.single(fill = fill(Color.Transparent))
                         )
                     }
                 ),

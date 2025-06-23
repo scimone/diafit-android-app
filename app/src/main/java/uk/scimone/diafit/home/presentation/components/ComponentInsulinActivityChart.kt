@@ -113,7 +113,8 @@ fun ComponentInsulinActivityChart(
                             )
                         ),
                         thickness = 0.dp,
-                        fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent))
+                        fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent)),
+                        areaFill = LineCartesianLayer.AreaFill.single(fill = fill(Color.Transparent))
                     )
                 )
             )
@@ -147,6 +148,12 @@ fun ComponentInsulinActivityChart(
                 }
             ),
             getXStep = { 3600000.0 }, // 1 hour
+//            marker = rememberDefaultCartesianMarker(
+//                label = TextComponent(
+//                    color = color.toArgb(),
+//                    textSizeSp = 10f
+//                )
+//            )
         )
 
         CartesianChartHost(
