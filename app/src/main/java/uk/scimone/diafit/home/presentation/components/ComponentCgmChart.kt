@@ -21,9 +21,10 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.Scroll
-import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -51,29 +52,41 @@ fun ComponentCgmChart(
     val minY = 40f
     val maxY = 250f
     val modelProducer = remember { CartesianChartModelProducer.build() }
-    val currentTime = System.currentTimeMillis()
-    val oneDayAgo = currentTime - 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+    val realTime = System.currentTimeMillis()
+    val alignedMaxTime = Calendar.getInstance().apply {
+        timeInMillis = realTime
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 
-    val filteredValues = values.filter { it.timeFloat >= oneDayAgo && it.timeFloat <= currentTime }
+    val alignedMinTime = Calendar.getInstance().apply {
+        timeInMillis = alignedMaxTime
+        add(Calendar.HOUR_OF_DAY, -24)
+    }.timeInMillis
+
+    val filteredValues = values.filter {
+        it.timeLong in alignedMinTime..realTime
+    }
 
     val lineColors = mutableListOf<Color>()
-    val lineData = mutableListOf<Pair<List<Float>, List<Int>>>()
+    val lineData = mutableListOf<Pair<List<Long>, List<Int>>>()
 
     val below = filteredValues.filter { it.value < lowerBound }
     if (below.isNotEmpty()) {
-        lineData.add(Pair(below.map { it.timeFloat }, below.map { it.value }))
+        lineData.add(Pair(below.map { it.timeLong }, below.map { it.value }))
         lineColors.add(BelowRange)
     }
 
     val inRange = filteredValues.filter { it.value in lowerBound .. upperBound }
     if (inRange.isNotEmpty()) {
-        lineData.add(Pair(inRange.map { it.timeFloat }, inRange.map { it.value }))
+        lineData.add(Pair(inRange.map { it.timeLong }, inRange.map { it.value }))
         lineColors.add(InRange)
     }
 
     val above = filteredValues.filter { it.value > upperBound }
     if (above.isNotEmpty()) {
-        lineData.add(Pair(above.map { it.timeFloat }, above.map { it.value }))
+        lineData.add(Pair(above.map { it.timeLong }, above.map { it.value }))
         lineColors.add(AboveRange)
     }
 
@@ -112,8 +125,8 @@ fun ComponentCgmChart(
                 ),
                 verticalAxisPosition = Position.Vertical.Start,
                 axisValueOverrider = AxisValueOverrider.fixed(
-                    minX = oneDayAgo.toDouble(),
-                    maxX = currentTime.toDouble(),
+                    minX = alignedMinTime.toDouble(),
+                    maxX = realTime.toDouble(),
                     minY = minY.toDouble(),   // fixed vertical axis minimum
                     maxY = maxY.toDouble()    // fixed vertical axis maximum
                 )
@@ -124,7 +137,7 @@ fun ComponentCgmChart(
                     color = MaterialTheme.colorScheme.onSurface.toArgb(),
                     thicknessDp = .1f
                 ),
-                itemPlacer = remember { CustomAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) }
+                itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) }
             ),
             bottomAxis = rememberBottomAxis(
                 guideline = LineComponent(
@@ -135,14 +148,23 @@ fun ComponentCgmChart(
                     textAlignment = Layout.Alignment.ALIGN_CENTER,
                     textSize = 10.sp
                 ),
+                itemPlacer =
+                    remember {
+                        HorizontalAxis.ItemPlacer.default(
+                            addExtremeLabelPadding = true,
+                            shiftExtremeTicks = true
+                        )
+                    },
                 valueFormatter = { value, _, _ ->
                     val calendar = Calendar.getInstance().apply {
                         timeInMillis = value.toLong()
                     }
                     val hours = calendar.get(Calendar.HOUR_OF_DAY)
-                    String.format("%02d", hours)
+                    val minutes = calendar.get(Calendar.MINUTE)
+                    String.format("%02d:%02d", hours, minutes)
                 }
             ),
+
             getXStep = { 3600000.0 }, // 1 hour in ms
             marker = rememberDefaultCartesianMarker(
                 label = TextComponent(
@@ -159,8 +181,9 @@ fun ComponentCgmChart(
                     decimalFormat = DecimalFormat("#.## mg/dl"),
                     colorCode = false
                 )
+            ),
+            horizontalLayout = HorizontalLayout.FullWidth(),
             )
-        )
 
         CartesianChartHost(
             chart = chart,

@@ -5,7 +5,7 @@ import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 
-class CustomAxisItemPlacer(
+class CustomCgmAxisItemPlacer(
     private val targetLower: Double = 70.0,
     private val targetUpper: Double= 180.0,
     private val extraLine: Double = 250.0
