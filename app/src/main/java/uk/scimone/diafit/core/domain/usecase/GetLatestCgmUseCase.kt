@@ -7,7 +7,7 @@ import uk.scimone.diafit.core.domain.repository.CgmRepository
 class GetLatestCgmUseCase(
     private val repository: CgmRepository
 ) {
-    operator fun invoke(): Flow<CgmEntity?> {
-        return repository.getLatestCgm()
+    operator fun invoke(userId: Int): Flow<CgmEntity?> {
+        return repository.getLatestCgm(userId)
     }
 }

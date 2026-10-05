@@ -1,8 +1,11 @@
 package uk.scimone.diafit.core.data.worker
 
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlin.time.Duration.Companion.seconds
 import uk.scimone.diafit.core.domain.usecase.SyncCgmDataUseCase
+
+private const val TAG = "CgmRemotePoller"
 
 class CgmRemotePoller(
     private val syncCgmDataUseCase: SyncCgmDataUseCase
@@ -16,7 +19,7 @@ class CgmRemotePoller(
                 try {
                     syncCgmDataUseCase()
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e(TAG, "CGM sync failed", e)
                 }
                 delay(60.seconds)
             }

@@ -5,7 +5,7 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 
 interface CgmRepository {
 
-    fun getLatestCgm(): Flow<CgmEntity>
+    fun getLatestCgm(userId: Int): Flow<CgmEntity>
 
     fun getAllCgmSince(startOfDay: Long, userId: Int): Flow<List<CgmEntity>>
 

@@ -7,7 +7,7 @@ import uk.scimone.diafit.core.domain.repository.BolusRepository
 class GetAllBolusSinceUseCase(
     private val repository: BolusRepository
 ) {
-    operator fun invoke(start: Long): Flow<List<BolusEntity>> {
-        return repository.getAllBolusSince(start)
+    operator fun invoke(start: Long, userId: Int): Flow<List<BolusEntity>> {
+        return repository.getAllBolusSince(start, userId)
     }
 }

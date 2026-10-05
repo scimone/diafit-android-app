@@ -1,21 +1,17 @@
 package uk.scimone.diafit.core.data.repository
 
-import android.content.ContentResolver
-import android.content.Context
-import android.net.Uri
+import android.util.Log
 import uk.scimone.diafit.core.data.local.MealDao
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
+
+private const val TAG = "MealRepositoryImpl"
 
 class MealRepositoryImpl(
-    private val mealDao: MealDao,
-    private val context: Context
+    private val mealDao: MealDao
 ) : MealRepository {
 
     override suspend fun createMeal(meal: MealEntity): Result<Unit> = withContext(Dispatchers.IO) {
@@ -23,15 +19,7 @@ class MealRepositoryImpl(
             mealDao.insertMeal(meal)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun storeImage(mealId: String, sourceUri: Uri): Result<Uri> = withContext(Dispatchers.IO) {
-        try {
-            val destUri = saveImageToLocalFolder(mealId, sourceUri)
-            Result.success(destUri)
-        } catch (e: Exception) {
+            Log.e(TAG, "Failed to insert meal", e)
             Result.failure(e)
         }
     }
@@ -41,6 +29,7 @@ class MealRepositoryImpl(
             val meals = mealDao.getMealsByUserId(userId)
             Result.success(meals)
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to load meals for userId=$userId", e)
             Result.failure(e)
         }
     }
@@ -51,38 +40,5 @@ class MealRepositoryImpl(
 
     override fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>> {
         return mealDao.getAllMealsSince(startTime, userId)
-    }
-
-    private fun saveImageToLocalFolder(mealId: String, sourceUri: Uri): Uri {
-        val resolver: ContentResolver = context.contentResolver
-
-        // Prepare destination folder in app's files dir
-        val imagesDir = File(context.filesDir, "meal_images")
-        if (!imagesDir.exists()) {
-            imagesDir.mkdirs()
-        }
-
-        // Create destination file with mealId as name + extension from source (or default)
-        val destFile = File(imagesDir, "$mealId.jpg")
-
-        resolver.openInputStream(sourceUri).use { inputStream ->
-            destFile.outputStream().use { outputStream ->
-                copyStream(inputStream, outputStream)
-            }
-        }
-
-        // Return Uri to the saved image file
-        return Uri.fromFile(destFile)
-    }
-
-
-    private fun copyStream(input: InputStream?, output: OutputStream) {
-        if (input == null) throw IllegalArgumentException("InputStream cannot be null")
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        var bytesRead: Int
-        while (input.read(buffer).also { bytesRead = it } >= 0) {
-            output.write(buffer, 0, bytesRead)
-        }
-        output.flush()
     }
 }

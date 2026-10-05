@@ -12,7 +12,7 @@ class BolusRepositoryImpl(
     override suspend fun insertBolus(bolusEntity: BolusEntity) {
         bolusDao.insertBolus(bolusEntity)
     }
-    override fun getAllBolusSince(start: Long): Flow<List<BolusEntity>> {
-        return bolusDao.getAllBolusSince(start)
+    override fun getAllBolusSince(start: Long, userId: Int): Flow<List<BolusEntity>> {
+        return bolusDao.getAllBolusSince(start, userId)
     }
 }

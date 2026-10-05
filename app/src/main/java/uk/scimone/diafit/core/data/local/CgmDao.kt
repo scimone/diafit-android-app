@@ -15,8 +15,8 @@ interface CgmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(cgmList: List<CgmEntity>)
 
-    @Query("SELECT * FROM CgmEntity ORDER BY timestamp DESC LIMIT 1")
-    fun getLatestCgm(): Flow<CgmEntity>
+    @Query("SELECT * FROM CgmEntity WHERE userId == :userId ORDER BY timestamp DESC LIMIT 1")
+    fun getLatestCgm(userId: Int): Flow<CgmEntity>
 
     @Query("SELECT * FROM CgmEntity WHERE timestamp >= :start AND userId == :userId ORDER BY timestamp ASC")
     fun getAllCgmSince(start: Long, userId: Int): Flow<List<CgmEntity>>

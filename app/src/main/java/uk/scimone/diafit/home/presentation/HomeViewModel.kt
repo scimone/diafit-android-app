@@ -56,14 +56,13 @@ class HomeViewModel(
         observeLatestCgm()
         observeCgmHistory()
         observeBolusHistory()
-        observeCarbHistory()
-        observeMealHistory()
+        observeMealData()
         loadTargetRange()
     }
 
     private fun observeLatestCgm() {
         viewModelScope.launch {
-            getLatestCgmUseCase()
+            getLatestCgmUseCase(userId)
                 .catch { e ->
                     _state.update {
                         it.copy(
@@ -109,7 +108,7 @@ class HomeViewModel(
 
     private fun observeBolusHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
-            getAllBolusSinceUseCase(nowMinus24h)
+            getAllBolusSinceUseCase(nowMinus24h, userId)
                 .catch { e ->
                     _state.update {
                         it.copy(
@@ -135,34 +134,7 @@ class HomeViewModel(
 
 
 
-    private fun observeCarbHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
-        viewModelScope.launch {
-            getAllMealsSinceUseCase(nowMinus24h, userId)
-                .catch { e ->
-                    _state.update {
-                        it.copy(
-                            error = e.message,
-                            isLoading = false
-                        )
-                    }
-                }
-                .collect { meals ->
-                    val carbUiList = meals.map {
-                        it.toMealEntityUi(application.applicationContext).toChartData()
-                    }
-                    _state.update {
-                        it.copy(
-                            carbHistory = carbUiList,
-                            isLoading = false
-                        )
-                    }
-                }
-        }
-    }
-
-
-
-    private fun observeMealHistory(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
+    private fun observeMealData(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
             getAllMealsSinceUseCase(nowMinus24h, userId)
                 .catch { e ->
@@ -175,9 +147,11 @@ class HomeViewModel(
                 }
                 .collect { meals ->
                     val mealUiList = meals.map { it.toMealEntityUi(application.applicationContext) }
+                    val carbUiList = mealUiList.map { it.toChartData() }
                     _state.update {
                         it.copy(
                             mealHistory = mealUiList,
+                            carbHistory = carbUiList,
                             isLoading = false
                         )
                     }

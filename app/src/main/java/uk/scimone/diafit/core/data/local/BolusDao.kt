@@ -13,6 +13,6 @@ interface BolusDao {
     suspend fun insertBolus(bolus: BolusEntity)
 
     // get all entries since defined timestamp, ordered by timestamp ascending
-    @Query("SELECT * FROM BolusEntity WHERE timestampUtc >= :start ORDER BY timestampUtc ASC")
-    fun getAllBolusSince(start: Long): Flow<List<BolusEntity>>
+    @Query("SELECT * FROM BolusEntity WHERE userId == :userId AND timestampUtc >= :start ORDER BY timestampUtc ASC")
+    fun getAllBolusSince(start: Long, userId: Int): Flow<List<BolusEntity>>
 }

@@ -50,7 +50,7 @@ val coreModule = module {
     single<FileStorageRepository> { FileStorageRepositoryImpl(get()) }
 
     // Provide meal repository and use cases
-    single<MealRepository> { MealRepositoryImpl(get(), get()) }
+    single<MealRepository> { MealRepositoryImpl(get()) }
     single { CreateMealUseCase(get(), get()) }
     single { CalculateMealGlucoseImpactUseCase(get(), get()) }
     single { GetAllMealsSinceUseCase(get()) }

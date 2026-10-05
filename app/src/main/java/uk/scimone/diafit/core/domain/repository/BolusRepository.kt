@@ -7,6 +7,6 @@ interface BolusRepository {
 
     suspend fun insertBolus(bolusEntity: BolusEntity)
 
-    fun getAllBolusSince(start: Long): Flow<List<BolusEntity>>
+    fun getAllBolusSince(start: Long, userId: Int): Flow<List<BolusEntity>>
 
 }

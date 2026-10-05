@@ -20,7 +20,7 @@ class CgmSyncSourceNightscout(
         Log.d("NightscoutSync", "Starting Nightscout sync...")
 
         val oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS).toEpochMilli()
-        val latest = cgmDao.getLatestCgm().firstOrNull()
+        val latest = cgmDao.getLatestCgm(userId = 1).firstOrNull()
         val fromDate = latest?.timestamp?.let { formatTimestamp(it) } ?: formatTimestamp(oneHourAgo)
         // log the date from which we are fetching CGM entries
         Log.d("NightscoutSync", "fetching from: $fromDate")
