@@ -38,12 +38,21 @@ class FileStorageRepositoryImpl(
 
     private fun saveImageToLocalFolder(mealId: String, sourceUri: Uri): Uri {
         val destFile = File(getImagesDir(), "$mealId.jpg")
+        val destUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", destFile)
+
+        // sourceUri may already point at destFile (e.g. a camera capture or gallery copy
+        // taken under this same mealId earlier in the flow). Copying a file onto itself
+        // would truncate it before the read completes, corrupting the image.
+        if (sourceUri == destUri && destFile.exists()) {
+            return destUri
+        }
+
         context.contentResolver.openInputStream(sourceUri).use { inputStream ->
             destFile.outputStream().use { outputStream ->
                 inputStream?.copyTo(outputStream) ?: throw IllegalStateException("Failed to open input stream")
             }
         }
-        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", destFile)
+        return destUri
     }
 
     override fun getFileProviderUri(mealId: String): Uri? {

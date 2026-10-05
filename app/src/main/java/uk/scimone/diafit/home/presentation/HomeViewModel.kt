@@ -65,10 +65,12 @@ class HomeViewModel(
         viewModelScope.launch {
             getLatestCgmUseCase()
                 .catch { e ->
-                    _state.value = HomeState(
-                        error = e.message,
-                        isLoading = false
-                    )
+                    _state.update {
+                        it.copy(
+                            error = e.message,
+                            isLoading = false
+                        )
+                    }
                 }
                 .collect { cgm ->
                     latestCgmEntity = cgm

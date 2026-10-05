@@ -72,8 +72,6 @@ class AddMealViewModel(
             val uri = uiState.value.imageUri ?: return@launch
             _uiState.update { it.copy(isLoading = true) }
 
-            val newImageId = UUID.randomUUID().toString()
-
             val result = createMealUseCase(
                 imageUri = uri,
                 description = uiState.value.description,
@@ -83,7 +81,7 @@ class AddMealViewModel(
                 proteins = uiState.value.proteins,
                 fats = uiState.value.fats,
                 calories = uiState.value.calories,
-                imageId = newImageId,
+                imageId = imageId,
                 impactType = uiState.value.impactType,
                 mealType = uiState.value.mealType
             )

@@ -1,48 +1,27 @@
 package uk.scimone.diafit.core.data.service
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.Service
 import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import uk.scimone.diafit.R
-import uk.scimone.diafit.core.presentation.receivers.HealthReceiver
-import uk.scimone.diafit.core.presentation.receivers.Intents
 
 class BroadcastIntentHealthSyncService : Service() {
-
-    private lateinit var healthReceiver: HealthReceiver
-    private var isReceiverRegistered = false
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
         private const val NOTIFICATION_ID = 1
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    // Broadcasts are handled by the manifest-declared HealthReceiver, which works
+    // regardless of whether this service is running. This service only keeps the
+    // app alive in the foreground while an intent-based source is selected; it must
+    // NOT register a second HealthReceiver here, or every broadcast gets processed twice.
     override fun onCreate() {
         super.onCreate()
         Log.d("BroadcastIntentHealthSyncService", "onCreate called")
-        healthReceiver = HealthReceiver()
-        val filter = IntentFilter().apply {
-            addAction(Intents.JUGGLUCO_NEW_CGM)
-            addAction(Intents.XDRIP_NEW_CGM)
-            addAction(Intents.NSCLIENT_NEW_FOOD)
-        }
-
-        if (Build.VERSION.SDK_INT >= 33) {
-            // API 33+ version with flags
-            registerReceiver(healthReceiver, filter, null, null, android.content.Context.RECEIVER_EXPORTED)
-        } else {
-            // API < 33 fallback
-            registerReceiver(healthReceiver, filter)
-        }
-        isReceiverRegistered = true
-
         startForeground(
             NOTIFICATION_ID,
             createNotification()
@@ -55,10 +34,6 @@ class BroadcastIntentHealthSyncService : Service() {
     }
 
     override fun onDestroy() {
-        if (isReceiverRegistered) {
-            unregisterReceiver(healthReceiver)
-            isReceiverRegistered = false
-        }
         super.onDestroy()
     }
 
