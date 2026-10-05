@@ -13,12 +13,11 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberPoint
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
-import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -45,7 +44,9 @@ import java.text.DecimalFormat
 fun ComponentCgmChart(
     values: List<CgmChartData>,
     lowerBound: Int,
-    upperBound: Int
+    upperBound: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     val minY = 40f
     val maxY = 250f
@@ -152,8 +153,8 @@ fun ComponentCgmChart(
         CartesianChartHost(
             chart = chart,
             modelProducer = modelProducer,
-            zoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = { _, _, _ -> 2f }),
-            scrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
+            zoomState = zoomState,
+            scrollState = scrollState
         )
     }
 }

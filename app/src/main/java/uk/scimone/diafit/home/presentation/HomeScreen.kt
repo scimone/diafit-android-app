@@ -11,6 +11,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.core.cartesian.Scroll
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.home.presentation.components.ComponentCgmChart
@@ -39,6 +44,10 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    // Shared across every chart below so panning/zooming one keeps the others' x-axes in sync.
+    val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
+    val chartZoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = { _, _, _ -> 2f })
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -64,7 +73,9 @@ fun HomeScreen(
                         CgmChartDisplay(
                             history = state.cgmHistory,
                             lower = state.targetRangeLower,
-                            upper = state.targetRangeUpper
+                            upper = state.targetRangeUpper,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState
                         )
                     } else {
                         Text("No CGM data available")
@@ -73,16 +84,22 @@ fun HomeScreen(
 
                     if (state.bolusHistory.isNotEmpty()) {
                         BolusChartDisplay(
-                            history = state.bolusHistory
+                            history = state.bolusHistory,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState
                         )
                         InsulinActivityDisplay(
-                            history = state.insulinActivityHistory
+                            history = state.insulinActivityHistory,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState
                         )
                     }
 
                     if (state.mealHistory.isNotEmpty()) {
                         CarbsChartDisplay(
-                            history = state.carbHistory
+                            history = state.carbHistory,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         MealImagesRow(meals = state.mealHistory)
@@ -122,7 +139,9 @@ fun CgmDisplay(cgm: CgmEntityUi) {
 fun CgmChartDisplay(
     history: List<CgmChartData>,
     lower: Int,
-    upper: Int
+    upper: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     Box(
         modifier = Modifier
@@ -132,7 +151,9 @@ fun CgmChartDisplay(
         ComponentCgmChart(
             values = history,
             lowerBound = lower,
-            upperBound = upper
+            upperBound = upper,
+            scrollState = scrollState,
+            zoomState = zoomState
         )
     }
 }
@@ -152,6 +173,8 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
 @Composable
 fun BolusChartDisplay(
     history: List<BolusChartData>,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     Box(
         modifier = Modifier
@@ -160,7 +183,9 @@ fun BolusChartDisplay(
     ) {
         ComponentBolusCarbChart(
             values = history,
-            barColor = Bolus
+            barColor = Bolus,
+            scrollState = scrollState,
+            zoomState = zoomState
         )
     }
 }
@@ -168,6 +193,8 @@ fun BolusChartDisplay(
 @Composable
 fun InsulinActivityDisplay(
     history: List<InsulinActivityChartData>,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     Box(
         modifier = Modifier
@@ -176,7 +203,9 @@ fun InsulinActivityDisplay(
     ) {
         ComponentInsulinActivityChart(
             values = history,
-            color = Bolus
+            color = Bolus,
+            scrollState = scrollState,
+            zoomState = zoomState
         )
     }
 }
@@ -184,6 +213,8 @@ fun InsulinActivityDisplay(
 @Composable
 fun CarbsChartDisplay(
     history: List<CarbsChartData>,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     Box(
         modifier = Modifier
@@ -192,7 +223,9 @@ fun CarbsChartDisplay(
     ) {
         ComponentBolusCarbChart(
             values = history,
-            barColor = Carbs
+            barColor = Carbs,
+            scrollState = scrollState,
+            zoomState = zoomState
         )
     }
 }

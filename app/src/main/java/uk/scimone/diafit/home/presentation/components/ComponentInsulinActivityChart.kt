@@ -15,9 +15,8 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberPoint
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.core.cartesian.Scroll
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.common.component.LineComponent
@@ -37,7 +36,9 @@ import kotlin.math.abs
 @Composable
 fun ComponentInsulinActivityChart(
     values: List<InsulinActivityChartData>,
-    color: Color
+    color: Color,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     val modelProducer = remember { CartesianChartModelProducer.build() }
 
@@ -146,8 +147,8 @@ fun ComponentInsulinActivityChart(
         CartesianChartHost(
             chart = chart,
             modelProducer = modelProducer,
-            zoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = { _, _, _ -> 2f }),
-            scrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
+            zoomState = zoomState,
+            scrollState = scrollState
         )
     }
 }

@@ -13,10 +13,9 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelCompone
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
-import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.common.component.LineComponent
@@ -30,7 +29,9 @@ import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
 @Composable
 fun ComponentBolusCarbChart(
     values: List<ChartData>,
-    barColor: Color
+    barColor: Color,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState
 ) {
     val minY = 0f
     val maxY = (values.maxOfOrNull { it.value.toFloat() } ?: 10f) * 1.2f  // 20% headroom
@@ -90,8 +91,8 @@ fun ComponentBolusCarbChart(
         CartesianChartHost(
             chart = chart,
             modelProducer = modelProducer,
-            zoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = { _, _, _ -> 2f }),
-            scrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
+            zoomState = zoomState,
+            scrollState = scrollState
         )
     }
 }
