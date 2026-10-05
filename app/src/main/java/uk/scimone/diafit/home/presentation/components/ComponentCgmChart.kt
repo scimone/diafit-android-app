@@ -13,13 +13,12 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberPoint
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
@@ -31,6 +30,7 @@ import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.shape.Shape
 import uk.scimone.diafit.home.presentation.components.util.CustomCgmAxisItemPlacer
 import uk.scimone.diafit.home.presentation.model.CgmChartData
+import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSizeConstraint
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisValueOverrider
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
@@ -103,7 +103,7 @@ fun ComponentCgmChart(
                                         shape = Shape.Pill,
                                         color = color.toArgb()
                                     ),
-                                    size = 4.dp
+                                    size = 6.dp
                                 )
                             ),
                             thickness = 0.dp,
@@ -121,12 +121,12 @@ fun ComponentCgmChart(
                 )
             ),
             startAxis = rememberStartAxis(
-                horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
                 guideline = LineComponent(
                     color = MaterialTheme.colorScheme.onSurface.toArgb(),
                     thicknessDp = .1f
                 ),
-                itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) }
+                itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
+                sizeConstraint = SharedStartAxisSizeConstraint
             ),
             bottomAxis = rememberTimeBottomAxis(),
             getXStep = { getTimeAxisXStep() },

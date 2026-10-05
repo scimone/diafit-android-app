@@ -7,9 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -27,6 +25,7 @@ import com.patrykandpatrick.vico.core.common.component.ShapeComponent
 import com.patrykandpatrick.vico.core.common.shape.Shape
 import uk.scimone.diafit.core.domain.model.InsulinActivity
 import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
+import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSizeConstraint
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisValueOverrider
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
@@ -42,7 +41,7 @@ fun ComponentInsulinActivityChart(
 ) {
     val modelProducer = remember { CartesianChartModelProducer.build() }
 
-    // ✅ Use reusable time axis helpers
+    // Use reusable time axis helpers
     val (alignedMinTime, alignedMaxTime, realTime) = getTimeAxisBounds(hoursBack = 24)
 
     val timeStepMillis = 5 * 60 * 1000L // 5 min
@@ -117,7 +116,7 @@ fun ComponentInsulinActivityChart(
                                     shape = Shape.Pill,
                                     color = color.toArgb()
                                 ),
-                                size = 10.dp
+                                size = 6.dp
                             )
                         ),
                         thickness = 0.dp,
@@ -132,13 +131,13 @@ fun ComponentInsulinActivityChart(
             lineLayer,
             pointsLayer,
             startAxis = rememberStartAxis(
-                horizontalLabelPosition = com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis.HorizontalLabelPosition.Inside,
                 guideline = LineComponent(
                     color = MaterialTheme.colorScheme.onSurface.toArgb(),
                     thicknessDp = .1f
-                )
+                ),
+                sizeConstraint = SharedStartAxisSizeConstraint
             ),
-            // ✅ Use reusable time bottom axis
+            // Use reusable time bottom axis
             bottomAxis = rememberTimeBottomAxis(),
             getXStep = { getTimeAxisXStep() },
             horizontalLayout = HorizontalLayout.FullWidth(),

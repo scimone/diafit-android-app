@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
+import com.patrykandpatrick.vico.core.cartesian.axis.BaseAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.common.component.LineComponent
@@ -50,6 +51,15 @@ fun createTimeAxisValueOverrider(
         maxY = maxY
     )
 }
+
+/**
+ * Fixed width every Home-screen chart's start (vertical) axis reserves, regardless of its own
+ * label content. Without this, each chart's auto-sized axis column ends up a different width
+ * (e.g. CGM's "70"/"180"/"250" labels vs. a bolus chart's unit labels), so even though every
+ * chart shares the same time range and now scrolls/zooms in sync, their plot areas started at
+ * different x pixels and the time gridlines didn't line up when the charts were stacked.
+ */
+val SharedStartAxisSizeConstraint: BaseAxis.SizeConstraint = BaseAxis.SizeConstraint.Exact(32f)
 
 /**
  * Provides a reusable BottomAxis with time labels, guidelines, and default settings

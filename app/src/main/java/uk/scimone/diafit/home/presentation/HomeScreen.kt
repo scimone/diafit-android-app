@@ -16,6 +16,8 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.core.cartesian.Scroll
+import com.patrykandpatrick.vico.core.cartesian.Zoom
+import com.patrykandpatrick.vico.core.common.Defaults
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.home.presentation.components.ComponentCgmChart
@@ -45,8 +47,18 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     // Shared across every chart below so panning/zooming one keeps the others' x-axes in sync.
+    // minZoom/maxZoom must be content-independent (not the Zoom.Content default) — otherwise each
+    // chart recomputes its own valueRange from its own data extent (e.g. the insulin-activity
+    // chart synthesizes points across the full 24h while the CGM/bolus charts only have points
+    // where real readings exist), and the shared zoom value gets clamped differently per chart,
+    // silently desyncing their visible time windows even though the raw scroll/zoom state is shared.
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
-    val chartZoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = { _, _, _ -> 2f })
+    val chartZoomState = rememberVicoZoomState(
+        zoomEnabled = true,
+        initialZoom = { _, _, _ -> 2f },
+        minZoom = Zoom.static(1f),
+        maxZoom = Zoom.static(Defaults.MAX_ZOOM)
+    )
 
     Box(
         modifier = Modifier
