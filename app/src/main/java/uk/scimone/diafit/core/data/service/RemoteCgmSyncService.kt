@@ -18,7 +18,7 @@ class RemoteCgmSyncService : Service() {
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
-        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_ID = CgmServiceManager.CGM_SYNC_NOTIFICATION_ID
     }
 
     override fun onCreate() {
@@ -27,6 +27,13 @@ class RemoteCgmSyncService : Service() {
         poller.start()
         startForeground(NOTIFICATION_ID, createNotification())
         Log.d("RemoteCgmSyncService", "Foreground service started")
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Ask the OS to recreate this service if it gets killed (e.g. by OEM
+        // battery management overnight) instead of leaving CGM sync dead until
+        // the app is manually reopened.
+        return START_STICKY
     }
 
     override fun onDestroy() {

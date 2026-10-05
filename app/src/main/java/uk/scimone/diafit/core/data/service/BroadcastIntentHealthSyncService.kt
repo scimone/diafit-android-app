@@ -12,7 +12,7 @@ class BroadcastIntentHealthSyncService : Service() {
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
-        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_ID = CgmServiceManager.CGM_SYNC_NOTIFICATION_ID
     }
 
     // Broadcasts are handled by the manifest-declared HealthReceiver, which works

@@ -68,6 +68,7 @@ class CgmBroadcastWorker(
                     is Float -> intent.putExtra(key, value)
                     is Long -> intent.putExtra(key, value)
                     is String -> intent.putExtra(key, value)
+                    is Boolean -> intent.putExtra(key, value)
                 }
             }
         }

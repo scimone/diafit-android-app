@@ -24,6 +24,9 @@ class HealthReceiver : BroadcastReceiver() {
             val workRequest = OneTimeWorkRequestBuilder<CgmBroadcastWorker>()
                 .setInputData(intent.toWorkData())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+                // Ask to run immediately rather than wait for the next Doze maintenance
+                // window; falls back to normal (deferrable) work if the quota is used up.
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
             WorkManager.getInstance(context).enqueue(workRequest)
             Log.d(TAG, "Enqueued CGM worker for action: $action")
@@ -33,6 +36,7 @@ class HealthReceiver : BroadcastReceiver() {
             val workRequest = OneTimeWorkRequestBuilder<BolusBroadcastWorker>()
                 .setInputData(intent.toWorkData())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
             WorkManager.getInstance(context).enqueue(workRequest)
             Log.d(TAG, "Enqueued Bolus worker for action: $action")
@@ -60,6 +64,9 @@ fun Intent.toWorkData(): Data {
             is Long -> builder.putLong(key, value)
             is Double -> builder.putFloat(key, value.toFloat()) // ✅ FIX
             is String -> builder.putString(key, value)
+            is Boolean -> builder.putBoolean(key, value)
+            null -> Unit
+            else -> Log.w("HealthReceiver", "Dropping unsupported extra '$key' of type ${value.javaClass.simpleName}")
         }
     }
     return builder.build()
