@@ -29,6 +29,10 @@ class CgmSyncSourceJuggluco(
             return null
         }
 
+        intent.extras?.keySet()?.forEach { key ->
+            Log.d(TAG, "Intent Extra - Key: $key, Value: ${intent.extras?.get(key)}")
+        } ?: Log.d(TAG, "Intent has no extras")
+
         val cgmValue = intent.getIntExtra(CGMVALUE, 0)
         val rate = intent.getFloatExtra(RATE, 0f)
         val timestamp = intent.getLongExtra(TIMESTAMP, 0L)
