@@ -6,88 +6,93 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+
+private data class NavTab(
+    val index: Int,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+
+private val navTabs = listOf(
+    NavTab(0, "Home", Icons.Filled.Home, Icons.Outlined.Home),
+    NavTab(1, "Summary", Icons.Filled.Insights, Icons.Outlined.Insights),
+    NavTab(2, "Journal", Icons.Filled.History, Icons.Outlined.History),
+    NavTab(3, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
+)
+
+/** Index used for the central "Add meal" action, kept out of [navTabs] since it renders as a FAB, not a NavigationBarItem. */
+const val ADD_MEAL_TAB_INDEX = 4
 
 @Composable
 fun BottomNavigationBar(
     selectedItem: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
+    NavigationBar {
+        navTabs.forEach { tab ->
+            val selected = selectedItem == tab.index
+            NavigationBarItem(
+                selected = selected,
+                onClick = { onItemSelected(tab.index) },
+                icon = {
+                    Icon(
+                        imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
+                        contentDescription = tab.label
+                    )
+                },
+                label = { Text(tab.label) }
+            )
+        }
 
-    NavigationBar(containerColor = colors.surface) {
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = "Home",
-                    tint = if (selectedItem == 0) colors.primary else colors.onSurfaceVariant
-                )
-            },
-            selected = selectedItem == 0,
-            onClick = { onItemSelected(0) }
-        )
-
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Email,
-                    contentDescription = "Summary",
-                    tint = if (selectedItem == 1) colors.primary else colors.onSurfaceVariant
-                )
-            },
-            selected = selectedItem == 1,
-            onClick = { onItemSelected(1) }
-        )
-
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Create,
-                    contentDescription = "Journal",
-                    tint = if (selectedItem == 2) colors.primary else colors.onSurfaceVariant
-                )
-            },
-            selected = selectedItem == 2,
-            onClick = { onItemSelected(2) }
-        )
-
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Settings",
-                    tint = if (selectedItem == 3) colors.primary else colors.onSurfaceVariant
-                )
-            },
-            selected = selectedItem == 3,
-            onClick = { onItemSelected(3) }
-        )
-
-        // Custom Add button without NavigationBarItem - no selection rectangle
+        // Custom Add button, rendered inside the bar but visually raised and elevated
+        // so it reads as a primary action rather than a sixth equal-weight nav item.
+        // NOTE: do not use fillMaxHeight() here — NavigationBar's row only sets a
+        // *minimum* height, and Scaffold gives the bottomBar slot very loose height
+        // constraints, so a fillMaxHeight() child makes the whole bar balloon to
+        // fill the screen (pushing all page content into zero remaining height).
         Box(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .size(48.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
-                .clickable(
-                    indication = null,   // disables ripple effect
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = { onItemSelected(4) }
-                ),
+                .weight(1f)
+                .align(Alignment.CenterVertically),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add",
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
+            Box(
+                modifier = Modifier
+                    .offset(y = (-6).dp)
+                    .size(52.dp)
+                    .shadow(elevation = 4.dp, shape = CircleShape)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = { onItemSelected(ADD_MEAL_TAB_INDEX) }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add meal",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }

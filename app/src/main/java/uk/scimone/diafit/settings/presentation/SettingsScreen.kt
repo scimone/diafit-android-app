@@ -1,20 +1,41 @@
 package uk.scimone.diafit.settings.presentation
 
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import org.koin.androidx.compose.koinViewModel
-import uk.scimone.diafit.settings.domain.model.CgmSource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.runtime.collectAsState
+import org.koin.androidx.compose.koinViewModel
 import uk.scimone.diafit.settings.domain.model.BolusSource
-
+import uk.scimone.diafit.settings.domain.model.CgmSource
 
 @Composable
 fun SettingsScreen(
@@ -22,10 +43,9 @@ fun SettingsScreen(
     onRequestIgnoreBatteryOptimizations: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
-
+    val context = LocalContext.current
 
     val lifecycleOwner = LocalLifecycleOwner.current
-
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -36,7 +56,6 @@ fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Battery warning dialog
     if (!state.isBatteryOptimizationIgnored) {
         BatteryOptimizationWarningDialog(
             onDismiss = { /* optional: set flag in ViewModel if you want to suppress it */ },
@@ -46,65 +65,143 @@ fun SettingsScreen(
 
     Column(
         modifier = Modifier
-            .padding(16.dp)
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("CGM Data Source", style = MaterialTheme.typography.titleMedium)
+        Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
-        CgmSource.values().forEach { source ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.onCgmSourceSelected(source) }
-                    .padding(vertical = 8.dp)
-            ) {
-                RadioButton(
+        SettingsSection(title = "CGM data source", icon = Icons.Filled.Sensors) {
+            CgmSource.values().forEach { source ->
+                SelectableRow(
+                    label = source.name,
                     selected = source == state.selectedCgmSource,
                     onClick = { viewModel.onCgmSourceSelected(source) }
                 )
-                Text(
-                    text = source.name,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Bolus Data Source", style = MaterialTheme.typography.titleMedium)
-        BolusSource.values().forEach { source ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.onBolusSourceSelected(source) }
-                    .padding(vertical = 8.dp)
-            ) {
-                RadioButton(
+        SettingsSection(title = "Bolus data source", icon = Icons.Filled.Vaccines) {
+            BolusSource.values().forEach { source ->
+                SelectableRow(
+                    label = source.name,
                     selected = source == state.selectedBolusSource,
                     onClick = { viewModel.onBolusSourceSelected(source) }
                 )
-                Text(
-                    text = source.name,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
             }
         }
 
-        Text("Battery Optimization ignored: ${state.isBatteryOptimizationIgnored}", modifier = Modifier.padding(vertical = 8.dp))
+        SettingsSection(title = "Glucose target range (mg/dL)", icon = Icons.Filled.GpsFixed) {
+            GlucoseTargetRangeInput(
+                lower = state.glucoseTargetRange.lowerBound,
+                upper = state.glucoseTargetRange.upperBound,
+                onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
+            )
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {
+            BackgroundReliabilityStatus(
+                isBatteryOptimizationIgnored = state.isBatteryOptimizationIgnored,
+                onRequestIgnoreBatteryOptimizations = onRequestIgnoreBatteryOptimizations
+            )
 
-        Text("Glucose Target Range (mg/dL)", style = MaterialTheme.typography.titleMedium)
+            if (Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Xiaomi/MIUI devices can still kill background sync overnight even with battery optimization disabled. Enable Autostart for Diafit too:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { openXiaomiAutostartSettings(context) }) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open Autostart settings")
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
 
-        GlucoseTargetRangeInput(
-            lower = state.glucoseTargetRange.lowerBound,
-            upper = state.glucoseTargetRange.upperBound,
-            onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
+private fun openXiaomiAutostartSettings(context: Context) {
+    try {
+        val intent = Intent().apply {
+            component = ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+            )
+        }
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            "Couldn't open Autostart settings automatically — look for \"Autostart\" under Settings > Apps > Diafit > Permissions instead.",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    icon: ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp)
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(label, modifier = Modifier.padding(start = 4.dp))
+    }
+}
+
+@Composable
+private fun BackgroundReliabilityStatus(
+    isBatteryOptimizationIgnored: Boolean,
+    onRequestIgnoreBatteryOptimizations: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = if (isBatteryOptimizationIgnored) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+            contentDescription = null,
+            tint = if (isBatteryOptimizationIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            if (isBatteryOptimizationIgnored) "Battery optimization excluded" else "Battery optimization is still restricting background sync",
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+    if (!isBatteryOptimizationIgnored) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onRequestIgnoreBatteryOptimizations) {
+            Text("Exclude from battery optimization")
+        }
     }
 }
 
@@ -142,45 +239,35 @@ fun GlucoseTargetRangeInput(
     var lowerText by remember { mutableStateOf(lower.toString()) }
     var upperText by remember { mutableStateOf(upper.toString()) }
 
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Text("Lower:", modifier = Modifier.width(60.dp))
-            TextField(
-                value = lowerText,
-                onValueChange = {
-                    lowerText = it
-                    val lowerInt = it.toIntOrNull()
-                    val upperInt = upperText.toIntOrNull()
-                    if (lowerInt != null && upperInt != null) {
-                        onRangeChanged(lowerInt, upperInt)
-                    }
-                },
-                modifier = Modifier.width(100.dp),
-                singleLine = true
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Text("Upper:", modifier = Modifier.width(60.dp))
-            TextField(
-                value = upperText,
-                onValueChange = {
-                    upperText = it
-                    val lowerInt = lowerText.toIntOrNull()
-                    val upperInt = it.toIntOrNull()
-                    if (lowerInt != null && upperInt != null) {
-                        onRangeChanged(lowerInt, upperInt)
-                    }
-                },
-                modifier = Modifier.width(100.dp),
-                singleLine = true
-            )
-        }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        OutlinedTextField(
+            value = lowerText,
+            onValueChange = {
+                lowerText = it
+                val lowerInt = it.toIntOrNull()
+                val upperInt = upperText.toIntOrNull()
+                if (lowerInt != null && upperInt != null) onRangeChanged(lowerInt, upperInt)
+            },
+            label = { Text("Lower") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = upperText,
+            onValueChange = {
+                upperText = it
+                val lowerInt = lowerText.toIntOrNull()
+                val upperInt = it.toIntOrNull()
+                if (lowerInt != null && upperInt != null) onRangeChanged(lowerInt, upperInt)
+            },
+            label = { Text("Upper") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
