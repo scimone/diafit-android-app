@@ -129,7 +129,11 @@ class MealAnalysisRepositoryImpl(
     }
 
     private fun parseAnalysis(content: String): MealAnalysisResult {
-        val json = Json.parseToJsonElement(content).jsonObject
+        // Models may wrap the JSON in code fences or add prose; take the outermost {...}.
+        val start = content.indexOf('{')
+        val end = content.lastIndexOf('}')
+        require(start in 0 until end) { "AI response contained no JSON object." }
+        val json = Json.parseToJsonElement(content.substring(start, end + 1)).jsonObject
 
         val ingredients = (json["ingredients"] as? JsonArray)?.mapNotNull { element ->
             val obj = element as? JsonObject ?: return@mapNotNull null

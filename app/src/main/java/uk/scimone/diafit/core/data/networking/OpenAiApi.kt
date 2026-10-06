@@ -49,9 +49,8 @@ class OpenAiApi(private val client: HttpClient) {
                     )))
                 }
             )))
-            put("response_format", buildJsonObject {
-                put("type", "json_object")
-            })
+            // No response_format: servers disagree on it (OpenAI wants "json_object", LM Studio only
+            // accepts "json_schema"/"text"). The prompt asks for JSON and parseAnalysis extracts it.
         }
 
         return safeCall {
