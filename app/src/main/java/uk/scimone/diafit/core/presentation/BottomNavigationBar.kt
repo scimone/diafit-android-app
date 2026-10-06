@@ -7,14 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Insights
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -34,12 +34,15 @@ private data class NavTab(
 private val navTabs = listOf(
     NavTab(0, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     NavTab(1, "Summary", Icons.Filled.Insights, Icons.Outlined.Insights),
-    NavTab(2, "Journal", Icons.Filled.History, Icons.Outlined.History),
-    NavTab(3, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
+    NavTab(2, "Journal", Icons.Filled.Book, Icons.Outlined.Book),
+    NavTab(3, "History", Icons.Filled.History, Icons.Outlined.History),
 )
 
+/** Settings moved behind the top-bar overflow menu (see MainActivity) and is no longer a bottom tab. */
+const val SETTINGS_TAB_INDEX = 4
+
 /** Index used for the central "Add meal" action, kept out of [navTabs] since it renders as a FAB, not a NavigationBarItem. */
-const val ADD_MEAL_TAB_INDEX = 4
+const val ADD_MEAL_TAB_INDEX = 5
 
 @Composable
 fun BottomNavigationBar(

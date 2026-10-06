@@ -12,13 +12,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings as SettingsIcon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import uk.scimone.diafit.addmeal.presentation.AddMealScreen
 import uk.scimone.diafit.ui.theme.DiafitTheme
+import uk.scimone.diafit.core.presentation.ADD_MEAL_TAB_INDEX
 import uk.scimone.diafit.core.presentation.BottomNavigationBar
+import uk.scimone.diafit.core.presentation.SETTINGS_TAB_INDEX
 import org.koin.android.ext.android.inject
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -42,6 +47,7 @@ class MainActivity : ComponentActivity() {
     private val cgmServiceManager: CgmServiceManager by inject()
     private val settingsViewModel: SettingsViewModel by viewModel()
     private val userId = 1 // replace with real user ID from your auth system
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
@@ -81,9 +87,41 @@ class MainActivity : ComponentActivity() {
         setContent {
             DiafitTheme {
                 var selectedTab by remember { mutableStateOf(0) }
+                var overflowMenuExpanded by remember { mutableStateOf(false) }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Diafit") },
+                            actions = {
+                                IconButton(onClick = { overflowMenuExpanded = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = "More options"
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = overflowMenuExpanded,
+                                    onDismissRequest = { overflowMenuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Settings") },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Filled.SettingsIcon,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            selectedTab = SETTINGS_TAB_INDEX
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    },
                     bottomBar = {
                         BottomNavigationBar(
                             selectedItem = selectedTab,
@@ -100,13 +138,14 @@ class MainActivity : ComponentActivity() {
                             0 -> HomeScreen(userId = userId)
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(userId = userId)
-                            3 -> SettingsScreen(
+                            3 -> Greeting("History")
+                            SETTINGS_TAB_INDEX -> SettingsScreen(
                                 onRequestIgnoreBatteryOptimizations = {
                                     val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                     startActivity(intent)
                                 }
                             )
-                            4 -> AddMealScreen(userId = userId)
+                            ADD_MEAL_TAB_INDEX -> AddMealScreen(userId = userId)
                         }
                     }
                 }
