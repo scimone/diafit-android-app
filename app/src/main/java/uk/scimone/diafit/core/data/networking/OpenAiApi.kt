@@ -89,23 +89,30 @@ private fun objectSchema(vararg props: Pair<String, kotlinx.serialization.json.J
     put("additionalProperties", false)
 }
 
+private fun enumProp(vararg values: String) = buildJsonObject {
+    put("type", "string")
+    put("enum", JsonArray(values.map { JsonPrimitive(it) }))
+}
+
+/** Mirrors the response shape described in MEAL_ANALYSIS_PROMPT. */
 private val MEAL_ANALYSIS_SCHEMA = objectSchema(
-    "dish_name" to stringProp(),
-    "dishes" to buildJsonObject {
+    "meal_name" to stringProp(),
+    "components" to buildJsonObject {
         put("type", "array")
-        put("items", objectSchema("name" to stringProp(), "carbohydrates" to numberProp()))
+        put("items", objectSchema(
+            "name" to stringProp(),
+            "emoji" to stringProp(),
+            "basis" to stringProp(),
+            "weight_g" to numberProp(),
+            "calories" to numberProp(),
+            "carbs_g" to numberProp(),
+            "sugar_g" to numberProp(),
+            "fiber_g" to numberProp(),
+            "protein_g" to numberProp(),
+            "fat_g" to numberProp(),
+            "confidence" to enumProp("LOW", "MEDIUM", "HIGH")
+        ))
     },
-    "ingredients" to buildJsonObject {
-        put("type", "array")
-        put("items", objectSchema("name" to stringProp(), "quantity" to stringProp()))
-    },
-    "macronutrients" to objectSchema(
-        "calories" to numberProp(), "protein" to numberProp(), "carbohydrates" to numberProp(),
-        "fat" to numberProp(), "fiber" to numberProp(), "sugar" to numberProp(), "sodium" to numberProp()
-    ),
-    "reasoning" to stringProp(),
-    "meal_impact_duration" to buildJsonObject {
-        put("type", "string")
-        put("enum", JsonArray(listOf(JsonPrimitive("SHORT"), JsonPrimitive("MEDIUM"), JsonPrimitive("LONG"))))
-    }
+    "absorption" to enumProp("SHORT", "MEDIUM", "LONG"),
+    "reasoning" to stringProp()
 )

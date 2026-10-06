@@ -1,5 +1,6 @@
 package uk.scimone.diafit.journal.presentation.detail
 
+import uk.scimone.diafit.core.presentation.components.MealComponentCard
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -106,6 +107,11 @@ fun MealDetailScreen(
             MealTimelineCard(state, onEditCourse = onEdit)
             GlucoseResponseCard(meal, state)
             NutritionCard(meal, wholeMeal = state.isMultiCourse)
+            if (meal.components.isNotEmpty()) {
+                CardSection("What's in it", subtitle = "AI estimate per food") {
+                    meal.components.forEach { MealComponentCard(it) }
+                }
+            }
             if (!state.isMultiCourse) {
                 AbsorptionCard(meal)
                 meal.reasoning?.takeIf { it.isNotBlank() }?.let { AiNotesCard(it) }

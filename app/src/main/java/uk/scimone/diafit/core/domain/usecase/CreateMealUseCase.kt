@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.domain.usecase
 
 import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealPhoto
 import uk.scimone.diafit.core.domain.model.MealType
@@ -29,6 +30,7 @@ class CreateMealUseCase(
         mealType: MealType = MealType.SNACK,
         recommendation: String? = null,
         reasoning: String? = null,
+        components: List<MealComponent> = emptyList(),
     ): Result<MealEntity> {
         // Photos are optional: a meal can be logged from carbs alone.
         for (photo in photos) {
@@ -52,6 +54,7 @@ class CreateMealUseCase(
             extraImageIds = ids.drop(1),
             recommendation = recommendation,
             reasoning = reasoning,
+            components = components,
             // Every logged meal gets a sitting so further courses can join it later.
             sittingId = sittingId ?: UUID.randomUUID().toString()
         )

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import uk.scimone.diafit.core.presentation.components.MealComponentCard
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.components.*
@@ -172,6 +173,8 @@ fun MealEditorScreen(
                 onRemove = viewModel::onRemovePhoto,
                 onMakeCover = viewModel::onMakeCover,
                 onAiNotesChanged = viewModel::onAiNotesChanged,
+                onComponentWeightChanged = viewModel::onComponentWeightChanged,
+                onComponentRemoved = viewModel::onComponentRemoved,
                 onAnalyze = viewModel::analyzeMeal
             )
 
@@ -206,6 +209,13 @@ fun MealEditorScreen(
                     textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.fillMaxWidth()
                 )
+                uiState.componentCarbsHint?.let { sum ->
+                    Text(
+                        "Components add up to $sum g. Your value is used.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 uiState.sitting?.let { sitting ->
                     val thisCourse = uiState.carbohydrates ?: 0
                     Text(
@@ -377,6 +387,8 @@ private fun PhotoSection(
     onRemove: (imageId: String) -> Unit,
     onMakeCover: (imageId: String) -> Unit,
     onAiNotesChanged: (String) -> Unit,
+    onComponentWeightChanged: (Int, Double) -> Unit,
+    onComponentRemoved: (Int) -> Unit,
     onAnalyze: () -> Unit
 ) {
     val photos = state.photos
@@ -459,6 +471,16 @@ private fun PhotoSection(
                             photos.size > 1 -> "Estimate nutrition of all ${photos.size} photos"
                             else -> "Estimate nutrition with AI"
                         }
+                    )
+                }
+            }
+            if (state.components.isNotEmpty()) {
+                SectionLabel("Components")
+                state.components.forEachIndexed { index, component ->
+                    MealComponentCard(
+                        component = component,
+                        onWeightChange = { onComponentWeightChanged(index, it) },
+                        onRemove = { onComponentRemoved(index) }
                     )
                 }
             }

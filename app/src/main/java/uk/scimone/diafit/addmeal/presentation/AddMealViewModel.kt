@@ -8,7 +8,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.ImpactType
-import uk.scimone.diafit.core.domain.model.MealDish
+import uk.scimone.diafit.core.domain.model.MealComponent
+import uk.scimone.diafit.core.domain.model.totals
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
@@ -126,6 +127,7 @@ class AddMealViewModel(
                 mealType = meal.mealType,
                 mealTypeAuto = false,
                 reasoning = meal.reasoning,
+                components = meal.components,
                 sitting = sitting?.let { sittingContext(it, excludeId = meal.id) }
             )
             baseline = _uiState.value.formFields()
@@ -238,21 +240,23 @@ class AddMealViewModel(
 
             analyzeMealUseCase(photos.map { it.uri }, uiState.value.aiNotes)
                 .onSuccess { analysis ->
+                    val totals = analysis.totals
                     _uiState.update {
                         it.copy(
-                            dishName = analysis.dishName,
+                            dishName = analysis.mealName,
                             analyzedPhotoIds = photos.map { p -> p.imageId },
                             // Re-analysing replaces a name the AI suggested before, but never one the user typed.
-                            description = if (it.description.isNullOrBlank() || it.description == it.dishName) analysis.dishName else it.description,
-                            carbohydrates = analysis.carbohydrates ?: it.carbohydrates,
-                            proteins = analysis.protein ?: it.proteins,
-                            fats = analysis.fat ?: it.fats,
-                            calories = analysis.calories ?: it.calories,
+                            description = if (it.description.isNullOrBlank() || it.description == it.dishName) analysis.mealName else it.description,
+                            components = analysis.components,
+                            carbohydrates = if (analysis.components.isEmpty()) it.carbohydrates else totals.carbs,
+                            proteins = if (analysis.components.isEmpty()) it.proteins else totals.protein,
+                            fats = if (analysis.components.isEmpty()) it.fats else totals.fat,
+                            calories = if (analysis.components.isEmpty()) it.calories else totals.calories,
                             impactType = analysis.impactType,
                             impactAuto = false,
-                            reasoning = reasoningWithDishes(analysis.reasoning, analysis.dishes),
+                            reasoning = analysis.reasoning,
                             isAnalyzing = false,
-                            snackbarMessage = "AI estimate ready. Check the values before saving"
+                            snackbarMessage = if (analysis.components.isEmpty()) "The AI found no food in the photos" else "AI estimate ready. Check the values before saving"
                         )
                     }
                 }
@@ -268,11 +272,27 @@ class AddMealViewModel(
         }
     }
 
-    /** Keeps the per-dish split with the course (it is what makes a sushi round checkable later). */
-    private fun reasoningWithDishes(reasoning: String?, dishes: List<MealDish>): String? {
-        if (dishes.size < 2) return reasoning
-        val split = dishes.joinToString("\n") { d -> "• ${d.name}" + (d.carbohydrates?.let { " · $it g" } ?: "") }
-        return listOfNotNull(split, reasoning?.takeIf { it.isNotBlank() }).joinToString("\n\n")
+    /** Changes a component's weight (its nutrients scale) and refreshes the totals from the components. */
+    fun onComponentWeightChanged(index: Int, weightG: Double) = updateComponents { list ->
+        list.mapIndexed { i, c -> if (i == index) c.withWeight(weightG) else c }
+    }
+
+    fun onComponentRemoved(index: Int) = updateComponents { list -> list.filterIndexed { i, _ -> i != index } }
+
+    /** Edits to the components re-sum the nutrition totals (overwriting manually typed ones). */
+    private fun updateComponents(change: (List<MealComponent>) -> List<MealComponent>) {
+        _uiState.update {
+            val components = change(it.components)
+            val totals = components.totals()
+            val next = it.copy(
+                components = components,
+                carbohydrates = if (components.isEmpty()) it.carbohydrates else totals.carbs,
+                proteins = if (components.isEmpty()) it.proteins else totals.protein,
+                fats = if (components.isEmpty()) it.fats else totals.fat,
+                calories = if (components.isEmpty()) it.calories else totals.calories
+            )
+            if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next
+        }
     }
 
     fun saveMeal() {
@@ -294,7 +314,8 @@ class AddMealViewModel(
                     calories = state.calories,
                     impactType = state.impactType,
                     mealType = state.mealType,
-                    reasoning = state.reasoning
+                    reasoning = state.reasoning,
+                    components = state.components
                 )
             } else {
                 val edited = original.copy(
@@ -306,7 +327,8 @@ class AddMealViewModel(
                     calories = state.calories,
                     impactType = state.impactType,
                     mealType = state.mealType,
-                    reasoning = state.reasoning
+                    reasoning = state.reasoning,
+                    components = state.components
                 )
                 updateMealUseCase(meal = edited, photos = state.photos)
             }

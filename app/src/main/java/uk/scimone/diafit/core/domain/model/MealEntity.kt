@@ -42,7 +42,10 @@ data class MealEntity(
     val estimatedCarbs: Int? = null,
     /** Logged meal that an imported AAPS carb entry was merged into. */
     @ColumnInfo(defaultValue = "0")
-    val aapsLinked: Boolean = false
+    val aapsLinked: Boolean = false,
+    /** The foods of this course as identified by the AI (editable); the nutrition totals are their sum unless overridden. */
+    @ColumnInfo(defaultValue = "[]")
+    val components: List<MealComponent> = emptyList()
 ) {
     /** Every photo of this course, cover first. */
     val photoIds: List<String> get() = (listOf(imageId) + extraImageIds).filter { it.isNotEmpty() }

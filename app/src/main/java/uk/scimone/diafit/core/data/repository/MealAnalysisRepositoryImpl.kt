@@ -18,8 +18,8 @@ import java.io.ByteArrayOutputStream
 import uk.scimone.diafit.core.data.networking.OpenAiApi
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealAnalysisResult
-import uk.scimone.diafit.core.domain.model.MealDish
-import uk.scimone.diafit.core.domain.model.MealIngredient
+import uk.scimone.diafit.core.domain.model.ComponentConfidence
+import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 import uk.scimone.diafit.core.domain.util.networking.Result as NetResult
 import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
@@ -30,35 +30,29 @@ private const val MAX_UPLOAD_EDGE_PX = 1280
 private const val UPLOAD_JPEG_QUALITY = 85
 
 private const val MEAL_ANALYSIS_PROMPT = """
-You are a highly accurate and detailed food recognition and nutrition analysis expert, helping a person with type 1 diabetes count carbohydrates.
+You are a nutrition analyst helping a person with type 1 diabetes estimate the nutrients of a meal from photos, mainly to count carbohydrates accurately.
 
-You get one or more photos of food that is eaten together, as one course. Photos may show different dishes (e.g. a main dish and a dessert, or several small plates) or the same dish from different angles: count every food exactly once and never double count a dish that appears in more than one photo. Give totals for everything shown.
+INPUT
+One or more photos of food eaten together as one course. Several photos may show different dishes or the same dish from different angles: count every food exactly once. There may also be notes from the person; they know what they actually ate, so follow them over what the photos suggest (e.g. if they ate only half, estimate only that part and say so in the reasoning).
 
-Provide a structured JSON output containing:
+TASK
+Split the meal into its distinct components: every separate food, drink, sauce, topping or garnish that adds a meaningful amount of calories or carbs (e.g. soup, bread slice, walnut topping). Merge trivial items (a pinch of herbs) into the component they belong to; don't list water or zero-calorie items. Use 1-12 components, the minimum that describes the meal.
 
-1. Dish Name: a short name for everything shown together (e.g. "Chicken Caesar Salad", "Salmon nigiri and California maki", "Pasta Bolognese with tiramisu"). Be as specific as possible.
+For each component give:
+- name: short, specific, in English (e.g. "Whole wheat bread", not "Bread").
+- emoji: exactly one emoji that best represents it.
+- basis: one short phrase with the portion you assumed and how you judged it (e.g. "1 bowl, ~300 g, creamy").
+- weight_g: edible weight in grams (ml for drinks, treat 1 ml = 1 g). Estimate from visible size, plate/cutlery/hand as scale, and typical portions; for cooked food give the cooked weight.
+- calories (kcal), carbs_g, sugar_g, fiber_g, protein_g, fat_g for exactly that portion. Be internally consistent: sugar_g and fiber_g are part of carbs_g, and calories should roughly equal 4*carbs + 4*protein + 9*fat. carbs_g is total carbohydrates (fiber included), as on a nutrition label.
+- confidence: HIGH (clearly visible, standard food), MEDIUM (portion or recipe uncertain), LOW (hidden or ambiguous content, e.g. sauce, filling, oil).
 
-2. Dishes: each distinct dish or plate with its own carbohydrate estimate in grams (one entry if there is only one dish).
+Then give:
+- meal_name: short name for the whole meal.
+- absorption: how long the meal will raise blood sugar: SHORT (mostly fast sugars, drinks, dextrose, up to about 2 h), MEDIUM (ordinary mixed meal, 2-4 h), LONG (high fat/protein or very slow, e.g. pizza, cream sauces, 4 h or more).
+- reasoning: at most 4 sentences, plain language. State how the portions were estimated, the key assumptions (recipe, hidden ingredients, any notes from the person that were applied) and which component is the least certain. End with a one-sentence disclaimer that this is an estimate and should be checked against labels or weighing before dosing insulin.
 
-3. Ingredients: all identifiable ingredients, including sauces/seasonings/garnishes, as granular as possible, each with an estimated quantity/weight.
-
-4. Macronutrient Breakdown (total for everything shown): Calories (kcal), Protein (g), Carbohydrates (g), Fat (g), Fiber (g), Sugar (g), Sodium (mg). Carbohydrates must equal the sum of the dishes.
-
-5. Reasoning: a precise and analytical breakdown of the carb calculation.
-
-6. Meal impact duration: "SHORT" (e.g. dextrose/juice), "MEDIUM", or "LONG" (e.g. a cheesy pizza): an estimate of how long the food will affect blood sugar.
-
-Output strictly as JSON, e.g.:
-{
-  "dish_name": "",
-  "dishes": [{"name": "", "carbohydrates": 0}],
-  "ingredients": [{"name": "", "quantity": ""}],
-  "macronutrients": {
-    "calories": 0, "protein": 0, "carbohydrates": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0
-  },
-  "reasoning": "",
-  "meal_impact_duration": "SHORT | MEDIUM | LONG"
-}
+Prefer realistic, not conservative, numbers. If a photo shows no food, return an empty components list and explain in the reasoning.
+Respond only with JSON matching the provided schema.
 """
 
 
@@ -170,10 +164,10 @@ $notes
         return (element as? JsonPrimitive)?.content
     }
 
-    private fun intOrNull(obj: JsonObject?, key: String): Int? {
-        val element = obj?.get(key) ?: return null
-        if (element is JsonNull) return null
-        return (element as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt()
+    private fun doubleOrZero(obj: JsonObject, key: String): Double {
+        val element = obj[key] ?: return 0.0
+        if (element is JsonNull) return 0.0
+        return (element as? JsonPrimitive)?.content?.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
     }
 
     private fun parseAnalysis(content: String): MealAnalysisResult {
@@ -183,36 +177,37 @@ $notes
         require(start in 0 until end) { "AI response contained no JSON object." }
         val json = Json.parseToJsonElement(content.substring(start, end + 1)).jsonObject
 
-        val ingredients = (json["ingredients"] as? JsonArray)?.mapNotNull { element ->
+        val components = (json["components"] as? JsonArray)?.mapNotNull { element ->
             val obj = element as? JsonObject ?: return@mapNotNull null
-            MealIngredient(
-                name = stringOrNull(obj, "name") ?: "",
-                quantity = stringOrNull(obj, "quantity")
+            val name = stringOrNull(obj, "name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            MealComponent(
+                name = name,
+                emoji = stringOrNull(obj, "emoji")?.trim()?.takeIf { it.isNotEmpty() } ?: "🍽️",
+                basis = stringOrNull(obj, "basis")?.takeIf { it.isNotBlank() },
+                weightG = doubleOrZero(obj, "weight_g"),
+                calories = doubleOrZero(obj, "calories"),
+                carbsG = doubleOrZero(obj, "carbs_g"),
+                sugarG = doubleOrZero(obj, "sugar_g"),
+                fiberG = doubleOrZero(obj, "fiber_g"),
+                proteinG = doubleOrZero(obj, "protein_g"),
+                fatG = doubleOrZero(obj, "fat_g"),
+                confidence = when (stringOrNull(obj, "confidence")?.uppercase()) {
+                    "LOW" -> ComponentConfidence.LOW
+                    "HIGH" -> ComponentConfidence.HIGH
+                    else -> ComponentConfidence.MEDIUM
+                }
             )
         } ?: emptyList()
 
-        val dishes = (json["dishes"] as? JsonArray)?.mapNotNull { element ->
-            val obj = element as? JsonObject ?: return@mapNotNull null
-            val name = stringOrNull(obj, "name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            MealDish(name = name, carbohydrates = intOrNull(obj, "carbohydrates"))
-        } ?: emptyList()
-
-        val macros = json["macronutrients"] as? JsonObject
-
-        val impactType = when (stringOrNull(json, "meal_impact_duration")?.uppercase()) {
+        val impactType = when (stringOrNull(json, "absorption")?.uppercase()) {
             "SHORT" -> ImpactType.SHORT
             "LONG" -> ImpactType.LONG
             else -> ImpactType.MEDIUM
         }
 
         return MealAnalysisResult(
-            dishName = stringOrNull(json, "dish_name"),
-            dishes = dishes,
-            ingredients = ingredients,
-            calories = intOrNull(macros, "calories"),
-            protein = intOrNull(macros, "protein"),
-            carbohydrates = intOrNull(macros, "carbohydrates"),
-            fat = intOrNull(macros, "fat"),
+            mealName = stringOrNull(json, "meal_name"),
+            components = components,
             reasoning = stringOrNull(json, "reasoning"),
             impactType = impactType
         )

@@ -12,7 +12,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 
 @Database(
     entities = [MealEntity::class, CgmEntity::class, BolusEntity::class],
-    version = 12,
+    version = 13,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -56,6 +56,13 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN mergeDeclined INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN estimatedCarbs INTEGER")
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN aapsLinked INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** AI-identified meal components (JSON list). */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN components TEXT NOT NULL DEFAULT '[]'")
             }
         }
     }

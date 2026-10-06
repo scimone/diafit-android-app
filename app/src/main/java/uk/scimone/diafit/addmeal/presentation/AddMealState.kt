@@ -2,6 +2,8 @@ package uk.scimone.diafit.addmeal.presentation
 
 import android.net.Uri
 import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.MealComponent
+import uk.scimone.diafit.core.domain.model.totals
 import uk.scimone.diafit.core.domain.model.MealPhoto
 import uk.scimone.diafit.core.domain.model.MealType
 
@@ -33,12 +35,18 @@ data class AddMealState(
     val reasoning: String? = null,
     /** Optional context sent to the AI together with the photos, e.g. "I only ate half". */
     val aiNotes: String = "",
+    /** Foods identified in the photos; the nutrition totals start as their sum (the user may still override them). */
+    val components: List<MealComponent> = emptyList(),
     val isAnalyzing: Boolean = false,
     val isLoading: Boolean = false,
     val snackbarMessage: String? = null,
     /** Set once a save/delete finished; the screen consumes it and closes. */
     val finished: EditorResult? = null
 ) {
+    /** Set when the typed totals differ from the sum of the components (the manual value wins). */
+    val componentCarbsHint: Int?
+        get() = components.takeIf { it.isNotEmpty() }?.totals()?.carbs?.takeIf { it != carbohydrates }
+
     val isEditing: Boolean get() = editingMealId != null
 
     /** Logging a new course into an existing meal. */

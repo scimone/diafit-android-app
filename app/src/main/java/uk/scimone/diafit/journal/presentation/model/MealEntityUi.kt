@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
 import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealOutcome
 import uk.scimone.diafit.core.domain.model.MealSitting
@@ -51,7 +52,9 @@ data class MealEntityUi(
     /** The carbs estimated/typed before the dosed amount replaced them (only when they differ). */
     val estimatedCarbs: Int? = null,
     /** An imported carb entry that might be the same food, waiting for the user to merge or dismiss it. */
-    val possibleDuplicate: PossibleDuplicateUi? = null
+    val possibleDuplicate: PossibleDuplicateUi? = null,
+    /** The AI-identified foods (all courses' for a multi-course meal). */
+    val components: List<MealComponent> = emptyList()
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
     override val timeUtc: Long get() = mealTimeUtc
@@ -115,6 +118,7 @@ fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         hasGlucoseData = impact.hasData,
         glucoseStatus = impact.status,
         photoUris = photos,
+        components = courses.flatMap { it.components },
         courseIds = courses.map { it.id },
         endTimeUtc = endTime
     )
@@ -146,7 +150,8 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         timeBelowRange = impact.timeBelowRange,
         hasGlucoseData = impact.hasData,
         glucoseStatus = impact.status,
-        photoUris = photos
+        photoUris = photos,
+        components = components
     )
 }
 
