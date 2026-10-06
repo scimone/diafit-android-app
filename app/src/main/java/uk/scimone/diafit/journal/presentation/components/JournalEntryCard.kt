@@ -79,28 +79,41 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                             append(" · ")
                             append(meal.mealType.type)
                             if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
-                            if (meal.isImported) append(" · AAPS")
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = meal.mealType.accent,
-                        modifier = Modifier.weight(1f),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     AbsorptionBadge(meal.impactType)
                 }
                 Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 MealOutcomeRow(meal, target)
             }
+            Spacer(Modifier.width(10.dp))
+            // The numbers to read at a glance, like the lowest value of a low.
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                BigValue("${meal.carbohydrates}", "g", Carbs)
+                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
+            }
         }
     }
 }
 
-/** The cover photo (or the meal-type tile) with the carbs and insulin on it, and a "+N" badge when there are more photos. */
+@Composable
+private fun BigValue(value: String, unit: String, color: Color) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
+        Text(" $unit", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false, modifier = Modifier.padding(bottom = 3.dp))
+    }
+}
+
+/** The cover photo (or the meal-type tile), with a "+N" badge when there are more photos. */
 @Composable
 private fun MealThumbnail(meal: MealEntityUi) {
-    val size = 100.dp
+    val size = 96.dp
     val photos = meal.photoUris
     Box(Modifier.size(size)) {
         if (photos.isEmpty()) {
@@ -126,27 +139,7 @@ private fun MealThumbnail(meal: MealEntityUi) {
                     .padding(horizontal = 6.dp, vertical = 1.dp)
             )
         }
-        // A dark pill keeps the values legible on any photo.
-        Row(Modifier.align(Alignment.BottomStart).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            ValueChip("${meal.carbohydrates} g", Carbs)
-            meal.insulinUnits?.takeIf { it > 0.05 }?.let { ValueChip("${formatUnits(it)} U", Bolus) }
-        }
     }
-}
-
-@Composable
-private fun ValueChip(value: String, accent: Color) {
-    Text(
-        value,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = accent,
-        maxLines = 1,
-        softWrap = false,
-        modifier = Modifier
-            .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(7.dp))
-            .padding(horizontal = 5.dp, vertical = 2.dp)
-    )
 }
 
 fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
@@ -155,7 +148,7 @@ fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
     else -> InRange
 }
 
-/** "112 → peak 186 (+74) after 1h 43min", then the 4 h range split, or why it isn't known yet. Sits beside the photo, so it stays narrow. */
+/** "112 → peak 186 after 1h 43min", then the 4 h range split, or why it isn't known yet. Sits beside the photo, so it stays narrow. */
 @Composable
 private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,7 +169,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
                 if (peak != null && (start == null || peak > start)) {
                     append(if (start != null) " → peak " else "peak ")
                     value(peak)
-                    if (start != null) append(" (+${peak - start})")
+                    if (start != null) 
                     meal.peakTimeUtc?.let {
                         val mins = ((it - meal.mealTimeUtc) / 60_000).toInt().coerceAtLeast(0)
                         append(" after ${if (mins >= 60) "${mins / 60}h ${mins % 60}min" else "$mins min"}")
