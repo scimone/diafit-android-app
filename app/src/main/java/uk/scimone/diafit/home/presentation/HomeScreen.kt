@@ -45,7 +45,6 @@ import uk.scimone.diafit.home.presentation.components.ChartEvent
 import uk.scimone.diafit.home.presentation.components.ComponentEventActivityChart
 import uk.scimone.diafit.home.presentation.components.MealDetailSheet
 import uk.scimone.diafit.home.presentation.components.MealGroup
-import uk.scimone.diafit.home.presentation.components.MealGroupPreview
 import uk.scimone.diafit.home.presentation.components.MealTimeline
 import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.nearest
@@ -129,7 +128,6 @@ fun HomeScreen(
                             } else {
                                 CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.weight(1f))
                             }
-                            if (focusedMeal != null) MealGroupPreview(focusedMeal)
                         }
                     } else {
                         Text("No CGM data available", modifier = Modifier.padding(start = 10.dp))
@@ -154,14 +152,16 @@ fun HomeScreen(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         nowMinute = nowMinute,
-                        selectedTime = selectedTime
+                        selectedTime = selectedTime,
+                        onSelectedTimeChange = { selectedTime = it }
                     )
                     CarbActivityDisplay(
                         history = state.carbHistory,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         nowMinute = nowMinute,
-                        selectedTime = selectedTime
+                        selectedTime = selectedTime,
+                        onSelectedTimeChange = { selectedTime = it }
                     )
 
                     MealTimeline(
@@ -286,7 +286,8 @@ fun InsulinActivityDisplay(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long,
-    selectedTime: Long?
+    selectedTime: Long?,
+    onSelectedTimeChange: (Long?) -> Unit
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
     Box(modifier = Modifier.fillMaxWidth().trimBottom(PanelGapTrim).height(EventPanelHeight)) {
@@ -302,7 +303,8 @@ fun InsulinActivityDisplay(
             scrollState = scrollState,
             zoomState = zoomState,
             nowMinute = nowMinute,
-            selectedTime = selectedTime
+            selectedTime = selectedTime,
+            onSelectedTimeChange = onSelectedTimeChange
         )
     }
 }
@@ -313,7 +315,8 @@ fun CarbActivityDisplay(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long,
-    selectedTime: Long?
+    selectedTime: Long?,
+    onSelectedTimeChange: (Long?) -> Unit
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
     Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + TimeLabelsHeight)) {
@@ -327,7 +330,8 @@ fun CarbActivityDisplay(
             scrollState = scrollState,
             zoomState = zoomState,
             nowMinute = nowMinute,
-            selectedTime = selectedTime
+            selectedTime = selectedTime,
+            onSelectedTimeChange = onSelectedTimeChange
         )
     }
 }

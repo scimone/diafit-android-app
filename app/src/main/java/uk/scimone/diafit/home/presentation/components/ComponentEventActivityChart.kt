@@ -23,6 +23,8 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
@@ -82,7 +84,10 @@ private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
  */
 private const val VALUE_SCALE = 1e-4
 
-private fun decodeValue(y: Double): Double = (y / VALUE_SCALE).coerceAtLeast(0.0)
+/** Bubble y (curve height at the event + value offset) -> the event's value. */
+private class BubbleValues(val byY: Map<Double, Double>) {
+    fun decode(y: Double): Double = byY[y] ?: 0.0
+}
 
 /** Draws a circle whose bottom sits at the centre y of the rect Vico hands us (rect = 2x diameter). */
 private class BottomAnchoredCircle(private val delegate: Component) : Component {
@@ -96,12 +101,13 @@ private class BottomAnchoredCircle(private val delegate: Component) : Component 
 
 private class EventBubbleProvider(
     private val component: Component,
-    private val refValue: Double
+    private val refValue: Double,
+    private val values: BubbleValues
 ) : LineCartesianLayer.PointProvider {
     private fun diameter(value: Double): Dp = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0).dp
 
     override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
-        LineCartesianLayer.Point(component, diameter(decodeValue(entry.y)) * 2)
+        LineCartesianLayer.Point(component, diameter(values.decode(entry.y)) * 2)
 
     // Deliberately constant: Vico pads each layer by half its largest point, and every Home chart
     // must end up with identical padding to stay x-aligned.
@@ -118,6 +124,7 @@ fun ComponentEventActivityChart(
     showTimeLabels: Boolean,
     nowMinute: Long,
     selectedTime: Long?,
+    onSelectedTimeChange: (Long?) -> Unit,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState
 ) {
@@ -133,9 +140,15 @@ fun ComponentEventActivityChart(
     }.toList().let { if (it.last() != maxX) it + maxX else it }
 
     val activityPoints = timePoints.map { t -> t to events.sumOf { activityOf(it, t) } }
+    fun activityAt(t: Long) = events.sumOf { activityOf(it, t) }
     // Events close together (a meal and its drink, a split bolus) become one bubble with their summed
     // value, so bubbles and labels never pile up on top of each other.
     val recentEvents = mergeNearbyEvents(events.filter { it.time in alignedMinTime..realTime })
+
+    // Each bubble sits on the curve: y = curve height at the event time, nudged by a tiny
+    // value-proportional offset so the value survives Vico's y-only point/label callbacks.
+    val bubbleYs = recentEvents.map { activityAt(it.time) + it.value * VALUE_SCALE }
+    val bubbleValues = BubbleValues(recentEvents.indices.associate { bubbleYs[it] to recentEvents[it].value })
 
     LaunchedEffect(activityPoints, recentEvents) {
         modelProducer.runTransaction {
@@ -144,7 +157,7 @@ fun ComponentEventActivityChart(
             }
             if (recentEvents.isNotEmpty()) {
                 lineSeries {
-                    series(x = recentEvents.map { it.time }, y = recentEvents.map { it.value * VALUE_SCALE })
+                    series(x = recentEvents.map { it.time }, y = bubbleYs)
                 }
             }
         }
@@ -152,6 +165,7 @@ fun ComponentEventActivityChart(
 
     val onSurface = MaterialTheme.colorScheme.onSurface
     val maxActivity = (activityPoints.maxOfOrNull { it.second } ?: 0.0).coerceAtLeast(0.001)
+    val maxY = maxActivity * 1.5 // headroom for bubbles + labels sitting on the curve
 
     val curveLayer = rememberLineCartesianLayer(
         lineProvider = LineCartesianLayer.LineProvider.series(
@@ -164,7 +178,7 @@ fun ComponentEventActivityChart(
         pointSpacing = ChartPointSpacing,
         verticalAxisPosition = Axis.Position.Vertical.Start,
         rangeProvider = createTimeAxisRangeProvider(
-            minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxActivity * 1.15
+            minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxY
         )
     )
 
@@ -180,22 +194,22 @@ fun ComponentEventActivityChart(
             LineCartesianLayer.rememberLine(
                 fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
                 stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 0.dp),
-                pointProvider = remember(bubbleComponent, bubbleRefValue) {
-                    EventBubbleProvider(BottomAnchoredCircle(bubbleComponent), bubbleRefValue)
+                pointProvider = remember(bubbleComponent, bubbleRefValue, bubbleValues) {
+                    EventBubbleProvider(BottomAnchoredCircle(bubbleComponent), bubbleRefValue, bubbleValues)
                 },
                 dataLabel = rememberTextComponent(style = labelStyle),
                 dataLabelPosition = Position.Vertical.Top,
-                dataLabelValueFormatter = remember(valueUnit) {
+                dataLabelValueFormatter = remember(valueUnit, bubbleValues) {
                     CartesianValueFormatter { _, value, _ ->
-                        val v = Math.round(decodeValue(value) * 10) / 10.0
+                        val v = Math.round(bubbleValues.decode(value) * 10) / 10.0
                         (if (v % 1.0 == 0.0) v.toInt().toString() else v.toString()) + " " + valueUnit
                     }
                 }
             )
         ),
         pointSpacing = ChartPointSpacing,
-        verticalAxisPosition = Axis.Position.Vertical.End,
-        rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = 1.0)
+        verticalAxisPosition = Axis.Position.Vertical.Start,
+        rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxY)
     )
 
     val chart = rememberCartesianChart(
@@ -218,6 +232,16 @@ fun ComponentEventActivityChart(
             selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
         ),
         getXStep = { _ -> getTimeAxisXStep() },
+        marker = remember { object : CartesianMarker {} },
+        markerVisibilityListener = remember(onSelectedTimeChange) {
+            object : CartesianMarkerVisibilityListener {
+                override fun onShown(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
+                    onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
+                override fun onUpdated(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
+                    onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
+                override fun onHidden(marker: CartesianMarker) = onSelectedTimeChange(null)
+            }
+        },
     )
 
     CartesianChartHost(
