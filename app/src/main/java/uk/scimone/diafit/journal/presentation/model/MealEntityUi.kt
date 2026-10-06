@@ -32,6 +32,7 @@ data class MealEntityUi(
     val timeBelowRange: Double,
     /** False while there are no CGM readings in the meal's window (e.g. a just-logged meal). */
     val hasGlucoseData: Boolean,
+    val glucoseStatus: GlucoseStatus = GlucoseStatus.READY,
     /** Every photo, cover first (all courses' photos for a multi-course meal). */
     val photoUris: List<Uri> = listOfNotNull(imageUri),
     /** The courses this entry stands for (just [id] for a single-course meal). */
@@ -48,10 +49,14 @@ data class MealEntityUi(
     val courseCount: Int get() = courseIds.size
 }
 
+/** Whether a meal's glucose outcome can be shown yet. */
+enum class GlucoseStatus { READY, TOO_EARLY, NOT_ENOUGH_DATA }
+
 data class GlucoseImpact(
     val timeInRange: Double,
     val timeAboveRange: Double,
-    val timeBelowRange: Double
+    val timeBelowRange: Double,
+    val status: GlucoseStatus = GlucoseStatus.READY
 ) {
     val hasData: Boolean get() = timeInRange + timeAboveRange + timeBelowRange > 0.0
 }
@@ -89,6 +94,7 @@ fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,
         hasGlucoseData = impact.hasData,
+        glucoseStatus = impact.status,
         photoUris = photos,
         courseIds = courses.map { it.id },
         endTimeUtc = endTime
@@ -118,6 +124,7 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,
         hasGlucoseData = impact.hasData,
+        glucoseStatus = impact.status,
         photoUris = photos
     )
 }

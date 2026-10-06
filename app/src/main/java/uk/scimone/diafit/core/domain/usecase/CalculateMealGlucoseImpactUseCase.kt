@@ -14,7 +14,9 @@ class CalculateMealGlucoseImpactUseCase(
     data class Result(
         val timeInRange: Double,
         val timeAboveRange: Double,
-        val timeBelowRange: Double
+        val timeBelowRange: Double,
+        /** Share (0..1) of the window's 5-minute slots that have at least one reading. */
+        val coverage: Double = 0.0
     )
 
     suspend operator fun invoke(meal: MealEntity, targetRange: GlucoseTargetRange): Result {
@@ -31,6 +33,9 @@ class CalculateMealGlucoseImpactUseCase(
         if (entries.isEmpty()) return Result(0.0, 0.0, 0.0)
 
         val totalCount = entries.size.toDouble()
+        val slotMs = 5 * 60_000L
+        val slots = entries.map { (it.timestamp - start) / slotMs }.toSet().size
+        val coverage = (slots / (((end - start) / slotMs).toDouble().coerceAtLeast(1.0))).coerceAtMost(1.0)
 
         val timeInRange = entries.count { it.isInRange(targetRange) } / totalCount * 100
         val timeAboveRange = entries.count { it.isAboveRange(targetRange) } / totalCount * 100
@@ -39,7 +44,8 @@ class CalculateMealGlucoseImpactUseCase(
         return Result(
             timeInRange = timeInRange,
             timeAboveRange = timeAboveRange,
-            timeBelowRange = timeBelowRange
+            timeBelowRange = timeBelowRange,
+            coverage = coverage
         )
     }
 

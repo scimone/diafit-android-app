@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
+import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -74,9 +76,14 @@ private fun MealEntryCard(meal: MealEntityUi, onClick: () -> Unit, modifier: Mod
 /** Range split bar plus a one-word verdict, or a muted note while there is no CGM data. */
 @Composable
 private fun GlucoseOutcome(meal: MealEntityUi) {
-    if (!meal.hasGlucoseData) {
+    val note = when {
+        meal.glucoseStatus == GlucoseStatus.TOO_EARLY -> "Not enough glucose data yet."
+        meal.glucoseStatus == GlucoseStatus.NOT_ENOUGH_DATA || !meal.hasGlucoseData -> "Not enough glucose data."
+        else -> null
+    }
+    if (note != null) {
         Text(
-            "No glucose data yet",
+            note,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -94,7 +101,9 @@ private fun GlucoseOutcome(meal: MealEntityUi) {
             "${meal.timeInRange.toInt()}% in range",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
+            maxLines = 1,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(84.dp)
         )
     }
 }

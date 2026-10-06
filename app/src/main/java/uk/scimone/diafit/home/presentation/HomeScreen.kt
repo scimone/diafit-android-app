@@ -23,6 +23,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -110,6 +112,7 @@ fun HomeScreen(
     // Where the shared time axis sits on screen, reported by the CGM chart on every frame. Read only
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
+    var chartsBottomInRoot by remember { mutableFloatStateOf(Float.MAX_VALUE) }
     val onGeometry = remember { { g: ChartGeometry -> geometry.value = g } }
 
     // Shared across every chart so panning/zooming one keeps the others' x-axes in sync. Zoom bounds
@@ -205,7 +208,7 @@ fun HomeScreen(
                     }
 
                     // The stacked panels share one time axis; the pin lane and cursor overlay follow it.
-                    Box(Modifier.weight(1f)) {
+                    Box(Modifier.weight(1f).onGloballyPositioned { chartsBottomInRoot = it.positionInRoot().y + it.size.height }) {
                         Column(Modifier.fillMaxSize()) {
                             Column(
                                 Modifier.fillMaxSize().inspectGestures(
@@ -279,13 +282,16 @@ fun HomeScreen(
                 }
                 // One dashed "now" line over the whole screen height, not just inside each panel.
                 val nowLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                Canvas(Modifier.fillMaxSize()) {
+                var canvasTopInRoot by remember { mutableFloatStateOf(0f) }
+                Canvas(Modifier.fillMaxSize().onGloballyPositioned { canvasTopInRoot = it.positionInRoot().y }) {
                     val x = geometry.value?.xOf(nowMinute) ?: return@Canvas
+                    // Stop above the meal photo row.
+                    val lineBottom = (chartsBottomInRoot - canvasTopInRoot).coerceIn(0f, size.height)
                     if (x in 0f..size.width) {
                         drawLine(
                             color = nowLineColor,
                             start = Offset(x, 0f),
-                            end = Offset(x, size.height),
+                            end = Offset(x, lineBottom),
                             strokeWidth = 2f,
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
                         )

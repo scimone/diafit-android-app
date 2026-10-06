@@ -17,6 +17,7 @@ import uk.scimone.diafit.core.domain.model.toSittings
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
+import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
@@ -64,12 +65,20 @@ class JournalViewModel(
                     val mealUiList = meals.toSittings().map { sitting ->
                         viewModelScope.async(Dispatchers.IO) {
                             val impact = try {
-                                val result = calculateMealGlucoseImpactUseCase(sitting, getTargetRangeUseCase().toCore())
-                                GlucoseImpact(
-                                    timeInRange = result.timeInRange,
-                                    timeAboveRange = result.timeAboveRange,
-                                    timeBelowRange = result.timeBelowRange
-                                )
+                                val windowEnd = sitting.startTime + OUTCOME_WINDOW_MS
+                                if (System.currentTimeMillis() < windowEnd) {
+                                    GlucoseImpact(0.0, 0.0, 0.0, GlucoseStatus.TOO_EARLY)
+                                } else {
+                                    val result = calculateMealGlucoseImpactUseCase(
+                                        sitting.startTime, windowEnd, getTargetRangeUseCase().toCore()
+                                    )
+                                    GlucoseImpact(
+                                        timeInRange = result.timeInRange,
+                                        timeAboveRange = result.timeAboveRange,
+                                        timeBelowRange = result.timeBelowRange,
+                                        status = if (result.coverage < MIN_COVERAGE) GlucoseStatus.NOT_ENOUGH_DATA else GlucoseStatus.READY
+                                    )
+                                }
                             } catch (e: Exception) {
                                 Log.e("JournalViewModel", "Error calculating glucose impact", e)
                                 GlucoseImpact(0.0, 0.0, 0.0)
@@ -103,3 +112,7 @@ data class JournalUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
+
+/** The journal's glucose outcome covers the 4 h after the meal and needs 70% CGM coverage. */
+private const val OUTCOME_WINDOW_MS = 4 * 60 * 60_000L
+private const val MIN_COVERAGE = 0.7
