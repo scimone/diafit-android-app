@@ -130,11 +130,6 @@ fun HomeScreen(
                             nowMinute = nowMinute
                     )
 
-                    val mealsWithPhotos = state.mealHistory.filter { it.imageUri != null }
-                    if (mealsWithPhotos.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MealImagesRow(meals = mealsWithPhotos)
-                    }
                 }
             }
         }
@@ -205,6 +200,8 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
 /** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
 private val EventPanelHeight = 70.dp
 private val TimeLabelsHeight = 22.dp
+/** Extra plot height in the carb panel so meal-photo bubbles are big enough to recognise. */
+private val PhotoExtraHeight = 12.dp
 
 @Composable
 fun InsulinActivityDisplay(
@@ -238,8 +235,8 @@ fun CarbActivityDisplay(
     zoomState: VicoZoomState,
     nowMinute: Long
 ) {
-    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
-    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + TimeLabelsHeight)) {
+    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes, it.imageUri) } }
+    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + PhotoExtraHeight + TimeLabelsHeight)) {
         ComponentEventActivityChart(
             events = events,
             activityOf = { e, t -> CarbActivity.calculate(e.value, e.time, t, e.durationMinutes) },
@@ -272,7 +269,6 @@ fun ChartZoomControls(zoomState: VicoZoomState, scrollState: VicoScrollState) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Zoom", style = MaterialTheme.typography.labelMedium)
         listOf(3, 6, 12, 24).forEach { hours ->
             AssistChip(
                 onClick = {

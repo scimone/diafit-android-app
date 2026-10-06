@@ -31,6 +31,7 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.utils.ChartPointSize
 import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
 import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
+import uk.scimone.diafit.home.presentation.utils.NowDecoration
 import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSize
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
@@ -125,10 +126,18 @@ fun ComponentCgmChart(
             startAxis = VerticalAxis.rememberStart(
                 guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
                 itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
-                size = SharedStartAxisSize
+                size = SharedStartAxisSize,
+                horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside
             ),
             bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
             layerPadding = { LineChartLayerPadding },
+            decorations = listOf(
+                NowDecoration(
+                    nowX = realTime.toDouble(),
+                    lineColor = onSurface.copy(alpha = 0.7f),
+                    washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
+                )
+            ),
             getXStep = { _ -> getTimeAxisXStep() },
             marker = rememberDefaultCartesianMarker(
                 label = rememberTextComponent(style = TextStyle(color = onBackground, fontSize = 10.sp)),

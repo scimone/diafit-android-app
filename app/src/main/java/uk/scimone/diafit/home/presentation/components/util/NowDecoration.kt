@@ -1,0 +1,55 @@
+package uk.scimone.diafit.home.presentation.utils
+
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.PathEffect
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
+
+/**
+ * Marks "now" on a time chart: a dashed vertical line, and a translucent wash over everything to its
+ * right so the future (forecast / activity tail) reads as weaker than the measured past. Drawn over
+ * the layers; the x -> pixel mapping uses the layer dimensions, scroll and x range, so it follows zoom and scroll.
+ */
+class NowDecoration(
+    private val nowX: Double,
+    private val lineColor: Color,
+    private val washColor: Color,
+    private val dashPx: Float = 10f,
+    private val strokePx: Float = 2f
+) : Decoration {
+    override fun drawOverLayers(context: CartesianDrawingContext) {
+        val bounds = context.layerBounds
+        val dims = context.layerDimensions
+        val ranges = context.ranges
+        val x = bounds.left + dims.startPadding +
+            dims.xSpacing * ((nowX - ranges.minX) / ranges.xStep).toFloat() - context.scroll
+        if (x > bounds.right) return
+
+        val canvas = context.canvas
+        val washLeft = x.coerceAtLeast(bounds.left)
+        canvas.drawRect(
+            washLeft, bounds.top, bounds.right, bounds.bottom,
+            Paint().apply { color = washColor; style = PaintingStyle.Fill }
+        )
+        if (x >= bounds.left) {
+            canvas.drawLine(
+                Offset(x, bounds.top), Offset(x, bounds.bottom),
+                Paint().apply {
+                    color = lineColor
+                    style = PaintingStyle.Stroke
+                    strokeWidth = strokePx
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, dashPx))
+                }
+            )
+        }
+    }
+
+    // Decorations are compared by the chart to decide whether to redraw.
+    override fun equals(other: Any?) =
+        other is NowDecoration && other.nowX == nowX && other.lineColor == lineColor && other.washColor == washColor
+
+    override fun hashCode() = 31 * (31 * nowX.hashCode() + lineColor.hashCode()) + washColor.hashCode()
+}

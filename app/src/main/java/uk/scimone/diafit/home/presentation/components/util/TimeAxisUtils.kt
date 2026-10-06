@@ -69,7 +69,7 @@ fun createTimeAxisRangeProvider(
  * Fixed width every Home-screen chart's start (vertical) axis reserves, regardless of its own
  * label content, so the plot areas of the stacked charts start at the same x pixel.
  */
-val SharedStartAxisSize: BaseAxis.Size = BaseAxis.Size.Fixed(36.dp)
+val SharedStartAxisSize: BaseAxis.Size = BaseAxis.Size.Fixed(4.dp)
 
 val ChartPointSize: Dp = 6.dp
 /** Same x-spacing (pixels per x step at zoom 1) on every chart's layers, or their zoom scales differ. */
