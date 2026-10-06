@@ -167,24 +167,17 @@ data class JournalUiState(
     val errorMessage: String? = null
 )
 
-enum class JournalRangePreset(val days: Int, val label: String) {
-    LAST_7(7, "Last 7 days"),
-    LAST_14(14, "Last 14 days"),
-    LAST_30(30, "Last 30 days"),
-    LAST_90(90, "Last 90 days"),
-    CUSTOM(0, "Custom range")
-}
+/** How far back the journal looks when no range was picked. */
+const val DEFAULT_RANGE_DAYS = 30
 
-/** The journal's time filter: a preset ending today, or custom first/last days (both inclusive). */
-data class JournalRange(
-    val preset: JournalRangePreset = JournalRangePreset.LAST_30,
-    val customFrom: LocalDate? = null,
-    val customTo: LocalDate? = null
-) {
+/** The journal's time filter: the last [DEFAULT_RANGE_DAYS] days, or a picked first–last day (both inclusive). */
+data class JournalRange(val customFrom: LocalDate? = null, val customTo: LocalDate? = null) {
+    val isCustom: Boolean get() = customFrom != null && customTo != null
+
     fun days(zone: ZoneId = ZoneId.systemDefault()): Pair<LocalDate, LocalDate> {
         val today = LocalDate.now(zone)
-        return if (preset == JournalRangePreset.CUSTOM && customFrom != null && customTo != null) customFrom to customTo
-        else today.minusDays(preset.days - 1L) to today
+        return if (customFrom != null && customTo != null) customFrom to customTo
+        else today.minusDays(DEFAULT_RANGE_DAYS - 1L) to today
     }
 
     /** Start of the first day to end of the last day, in epoch ms. */

@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -68,10 +67,11 @@ private fun EntrySurface(onClick: (() -> Unit)?, modifier: Modifier, content: @C
 @Composable
 fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit, modifier: Modifier = Modifier) {
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp)) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             MealThumbnail(meal)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Heading line: when, what kind of meal, and how fast it absorbs.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         buildString {
@@ -87,50 +87,49 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Icon(Icons.Filled.ChevronRight, "Open meal", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                }
-                Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // The chip colours say carbs / insulin, so the values need no words; that leaves room for absorption.
-                    ValueChip("${meal.carbohydrates} g", Carbs)
-                    meal.insulinUnits?.takeIf { it > 0.05 }?.let { ValueChip("${formatUnits(it)} U", Bolus) }
-                    Spacer(Modifier.width(2.dp))
+                    Spacer(Modifier.width(6.dp))
                     AbsorptionBadge(meal.impactType)
                 }
+                Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 MealOutcomeRow(meal, target)
             }
         }
     }
 }
 
-/** The cover photo (or the meal-type tile), with a "+N" badge when there are more photos. */
+/** The cover photo (or the meal-type tile) with the carbs and insulin on it, and a "+N" badge when there are more photos. */
 @Composable
 private fun MealThumbnail(meal: MealEntityUi) {
-    val size = 96.dp
+    val size = 100.dp
     val photos = meal.photoUris
-    if (photos.isEmpty()) {
-        MealTypeTile(meal.mealType, size)
-        return
-    }
     Box(Modifier.size(size)) {
-        AsyncImage(
-            model = photos.first(),
-            contentDescription = meal.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize().clip(RoundedCornerShape(16.dp))
-        )
+        if (photos.isEmpty()) {
+            MealTypeTile(meal.mealType, size)
+        } else {
+            AsyncImage(
+                model = photos.first(),
+                contentDescription = meal.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize().clip(RoundedCornerShape(16.dp))
+            )
+        }
         if (photos.size > 1) {
             Text(
                 "+${photos.size - 1}",
                 color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(6.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(5.dp)
                     .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
             )
+        }
+        // A dark pill keeps the values legible on any photo.
+        Row(Modifier.align(Alignment.BottomStart).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            ValueChip("${meal.carbohydrates} g", Carbs)
+            meal.insulinUnits?.takeIf { it > 0.05 }?.let { ValueChip("${formatUnits(it)} U", Bolus) }
         }
     }
 }
@@ -139,12 +138,14 @@ private fun MealThumbnail(meal: MealEntityUi) {
 private fun ValueChip(value: String, accent: Color) {
     Text(
         value,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
+        color = accent,
         maxLines = 1,
+        softWrap = false,
         modifier = Modifier
-            .background(accent.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(7.dp))
+            .padding(horizontal = 5.dp, vertical = 2.dp)
     )
 }
 
@@ -163,8 +164,8 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         val start = meal.startMgdl
         val peak = meal.peakMgdl

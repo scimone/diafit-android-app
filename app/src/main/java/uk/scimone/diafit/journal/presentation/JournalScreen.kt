@@ -14,7 +14,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.CalendarMonth
 import java.time.Instant
 import java.time.LocalDate
@@ -105,36 +108,29 @@ fun JournalScreen(
 
 private val SHORT_DATE = DateTimeFormatter.ofPattern("d MMM")
 
-private fun JournalRange.label(): String = if (preset == JournalRangePreset.CUSTOM) {
+private fun JournalRange.label(): String = if (isCustom) {
     val (from, to) = days()
     if (from == to) from.format(SHORT_DATE) else "${from.format(SHORT_DATE)} – ${to.format(SHORT_DATE)}"
-} else preset.label
+} else "Last $DEFAULT_RANGE_DAYS days"
 
-/** Time filter chip: opens a menu of presets and a custom date range picker. */
+/** Time filter chip: opens the date range picker; a picked range can be cleared back to the default. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
-    var menuOpen by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
-    Box {
-        AssistChip(
-            onClick = { menuOpen = true },
-            label = { Text(range.label()) },
-            leadingIcon = { Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp)) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, "Change time range", Modifier.size(18.dp)) }
-        )
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            JournalRangePreset.entries.forEach { preset ->
-                DropdownMenuItem(
-                    text = { Text(preset.label, fontWeight = if (preset == range.preset) FontWeight.Bold else null) },
-                    onClick = {
-                        menuOpen = false
-                        if (preset == JournalRangePreset.CUSTOM) picking = true else onRange(JournalRange(preset))
-                    }
+    AssistChip(
+        onClick = { picking = true },
+        label = { Text(range.label()) },
+        leadingIcon = { Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp)) },
+        trailingIcon = {
+            if (range.isCustom) {
+                Icon(
+                    Icons.Filled.Close, "Back to last $DEFAULT_RANGE_DAYS days",
+                    Modifier.size(18.dp).clip(CircleShape).clickable { onRange(JournalRange()) }
                 )
             }
         }
-    }
+    )
     if (picking) {
         val (from, to) = range.days()
         val today = remember { LocalDate.now() }
@@ -156,7 +152,7 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
                         val start = day(state.selectedStartDateMillis!!)
                         val end = state.selectedEndDateMillis?.let(::day) ?: start
                         picking = false
-                        onRange(JournalRange(JournalRangePreset.CUSTOM, start, end))
+                        onRange(JournalRange(start, end))
                     }
                 ) { Text("Apply") }
             },
