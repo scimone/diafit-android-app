@@ -40,6 +40,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.service.CgmServiceManager
 import uk.scimone.diafit.journal.presentation.JournalScreen
+import uk.scimone.diafit.history.presentation.HistoryScreen
 import uk.scimone.diafit.home.presentation.HomeScreen
 import uk.scimone.diafit.home.presentation.HomeTitle
 import uk.scimone.diafit.home.presentation.HomeViewModel
@@ -187,7 +188,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAddEntry = { showNewEntrySheet = true }
                             )
-                            3 -> Greeting("History")
+                            3 -> HistoryScreen(userId = userId)
                             SETTINGS_TAB_INDEX -> SettingsScreen(
                                 onRequestIgnoreBatteryOptimizations = {
                                     val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)

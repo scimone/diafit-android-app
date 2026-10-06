@@ -9,6 +9,7 @@ import org.koin.core.context.startKoin
 import uk.scimone.diafit.core.data.worker.CgmServiceWatchdogWorker
 import uk.scimone.diafit.core.di.coreModule
 import uk.scimone.diafit.addmeal.di.addmealModule
+import uk.scimone.diafit.history.di.historyModule
 import uk.scimone.diafit.home.di.homeModule
 import uk.scimone.diafit.journal.di.journalModule
 import uk.scimone.diafit.settings.di.settingsModule
@@ -28,6 +29,7 @@ class DiafitApp : Application() {
                     journalModule,
                     addmealModule,
                     homeModule,
+                    historyModule,
                     syncModule,
                     settingsModule
                 )
