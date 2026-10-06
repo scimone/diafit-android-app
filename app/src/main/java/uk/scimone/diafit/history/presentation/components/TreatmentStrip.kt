@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +30,7 @@ fun TreatmentStrip(
     modifier: Modifier = Modifier,
     height: Dp = 7.dp
 ) {
-    Canvas(modifier.fillMaxWidth().height(height).background(MaterialTheme.colorScheme.surface)) {
+    Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
         val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
         clusters.forEach { cluster ->
             val x0 = axis.x(cluster.centerUtc - BLOCK_HALF_WIDTH_MS).coerceAtLeast(0f)

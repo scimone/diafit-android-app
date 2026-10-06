@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -25,8 +24,9 @@ import kotlin.math.min
 
 private const val Y_MIN = 40f
 private const val Y_MAX_FLOOR = 250f
+private val POINT_RADIUS = 1.2.dp
 
-/** The expanded form of a [HorizonChart]: the day's glucose as a line, coloured by range, with the target band. */
+/** The expanded form of a [HorizonChart]: the day's readings as a scatter plot, coloured by range, over a grey target band (as on Home). */
 @Composable
 fun DayLineChart(
     day: DayHistoryUi,
@@ -35,16 +35,16 @@ fun DayLineChart(
 ) {
     val labelStyle = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
     val textMeasurer = rememberTextMeasurer()
-    val runs = day.glucose.splitAtGaps()
+    val targetBandColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val yMax = max(Y_MAX_FLOOR, (day.glucose.maxOfOrNull { it.mgdl } ?: 0) + 10f)
 
-    Canvas(modifier.fillMaxWidth().height(180.dp).background(MaterialTheme.colorScheme.surface)) {
+    Canvas(modifier.fillMaxWidth().height(180.dp).background(stripBackground())) {
         val plotHeight = size.height
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         fun y(mgdl: Float) = plotHeight - (mgdl - Y_MIN) / (yMax - Y_MIN) * plotHeight
 
         drawRect(
-            InRange.copy(alpha = 0.10f),
+            targetBandColor,
             Offset(0f, y(thresholds.high.toFloat())),
             Size(size.width, y(thresholds.low.toFloat()) - y(thresholds.high.toFloat()))
         )
@@ -53,20 +53,13 @@ fun DayLineChart(
         }
 
 
-        runs.forEach { run ->
-            run.zipWithNext().forEach { (a, b) ->
-                val color = when {
-                    (a.mgdl + b.mgdl) / 2f > thresholds.high -> AboveRange
-                    (a.mgdl + b.mgdl) / 2f < thresholds.low -> BelowRange
-                    else -> InRange
-                }
-                drawLine(
-                    color,
-                    Offset(axis.x(a.timeUtc), y(min(a.mgdl.toFloat(), yMax))),
-                    Offset(axis.x(b.timeUtc), y(min(b.mgdl.toFloat(), yMax))),
-                    2.dp.toPx(), StrokeCap.Round
-                )
+        day.glucose.forEach { reading ->
+            val color = when {
+                reading.mgdl > thresholds.high -> AboveRange
+                reading.mgdl < thresholds.low -> BelowRange
+                else -> InRange
             }
+            drawCircle(color, POINT_RADIUS.toPx(), Offset(axis.x(reading.timeUtc), y(min(reading.mgdl.toFloat(), yMax))))
         }
     }
 }

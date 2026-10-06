@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -42,8 +41,8 @@ private val IN_RANGE_STRIP_HEIGHT = 5.dp
 
 /**
  * A day of glucose folded into a thin panel: a green strip along the bottom wherever data exists,
- * with high/low excursions rising from its top edge, deepening in colour the further out of range
- * they go.
+ * with high/low excursions rising from the bottom edge in front of it, deepening in colour the
+ * further out of range they go.
  */
 @Composable
 fun HorizonChart(
@@ -53,15 +52,14 @@ fun HorizonChart(
     height: Dp = 36.dp
 ) {
     val runs = day.glucose.splitAtGaps()
-    Canvas(modifier.fillMaxWidth().height(height).background(MaterialTheme.colorScheme.surface)) {
+    Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         val stripHeight = IN_RANGE_STRIP_HEIGHT.toPx()
-        val baselineY = size.height - stripHeight
         runs.filter { it.size > 1 }.forEach { run ->
             val left = axis.x(run.first().timeUtc)
-            drawRect(InRange, Offset(left, baselineY), Size(axis.x(run.last().timeUtc) - left, stripHeight))
+            drawRect(InRange, Offset(left, size.height - stripHeight), Size(axis.x(run.last().timeUtc) - left, stripHeight))
             HORIZON_BANDS.forEach { band ->
-                drawMountain(run, axis, baselineY, { band.level(thresholds.levels(it.mgdl)) }, band.color)
+                drawMountain(run, axis, { band.level(thresholds.levels(it.mgdl)) }, band.color)
             }
         }
     }
@@ -70,15 +68,14 @@ fun HorizonChart(
 private fun DrawScope.drawMountain(
     run: List<GlucosePoint>,
     axis: DayXAxis,
-    baselineY: Float,
     levelOf: (GlucosePoint) -> Float,
     color: Color
 ) {
     if (run.none { levelOf(it) > 0f }) return
     val path = Path().apply {
-        moveTo(axis.x(run.first().timeUtc), baselineY)
-        run.forEach { lineTo(axis.x(it.timeUtc), baselineY - baselineY * levelOf(it)) }
-        lineTo(axis.x(run.last().timeUtc), baselineY)
+        moveTo(axis.x(run.first().timeUtc), size.height)
+        run.forEach { lineTo(axis.x(it.timeUtc), size.height * (1f - levelOf(it))) }
+        lineTo(axis.x(run.last().timeUtc), size.height)
         close()
     }
     drawPath(path, color)
