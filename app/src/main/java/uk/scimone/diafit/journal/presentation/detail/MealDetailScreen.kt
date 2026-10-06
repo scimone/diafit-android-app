@@ -208,6 +208,7 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
     CardSection(
         title = if (state.isMultiCourse) "Courses & insulin" else "Insulin for this meal",
         subtitle = buildString {
+            if (state.boluses.isEmpty() && !state.isMultiCourse) append("No insulin found") else
             append("$carbs g carbs · ${formatUnits(insulin)} U insulin")
             if (insulin > 0.05 && carbs > 0) append(" · ${"%.0f".format(carbs / insulin)} g per U")
         }
@@ -222,8 +223,10 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        // Without any insulin the carb row says nothing the rest of the page doesn't, so it is dropped.
+        val shown = if (state.boluses.isEmpty() && !state.isMultiCourse) emptyList() else items
         Column {
-            items.forEachIndexed { index, item ->
+            shown.forEachIndexed { index, item ->
                 when (item) {
                     is TimelineItem.Course -> {
                         runningCarbs += item.meal.carbohydrates
@@ -233,7 +236,7 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
                             label = if (state.isMultiCourse) "Course $courseNo" else null,
                             time = fmt.format(java.util.Date(item.time)),
                             running = if (state.isMultiCourse && courseNo > 1) "$runningCarbs g total" else null,
-                            isLast = index == items.lastIndex,
+                            isLast = index == shown.lastIndex,
                             onClick = if (state.isMultiCourse && !item.meal.isImported) ({ onEditCourse(item.meal.id) }) else null
                         )
                     }
@@ -244,7 +247,7 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
                             isSmb = item.bolus.isSmb,
                             time = fmt.format(java.util.Date(item.time)),
                             running = "${formatUnits(runningUnits)} U total",
-                            isLast = index == items.lastIndex
+                            isLast = index == shown.lastIndex
                         )
                     }
                 }
@@ -355,7 +358,7 @@ private fun TitleBlock(meal: MealEntityUi) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (meal.isImported) {
-                Text("· Imported", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("· AAPS", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

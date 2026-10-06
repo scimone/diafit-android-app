@@ -78,7 +78,7 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                                 append(" · ")
                                 append(meal.mealType.type)
                                 if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
-                                if (meal.isImported) append(" · Imported")
+                                if (meal.isImported) append(" · AAPS")
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = meal.mealType.accent,
@@ -154,7 +154,7 @@ private fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
     else -> InRange
 }
 
-/** "Glucose 112 → peak 186 (+74) at 13:05", then the 4 h range split, or why it isn't known yet. */
+/** "Glucose 112 → peak 186 (+74) after 1h 43min", then the 4 h range split, or why it isn't known yet. */
 @Composable
 private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange, clock: SimpleDateFormat) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,7 +176,9 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange, clock
                     GlucoseValue(peak, target)
                     if (start != null) Text(" (+${peak - start})", style = MaterialTheme.typography.labelMedium, color = muted)
                     meal.peakTimeUtc?.let {
-                        Text(" at ${clock.format(Date(it))}", style = MaterialTheme.typography.labelMedium, color = muted)
+                        val mins = ((it - meal.mealTimeUtc) / 60_000).toInt().coerceAtLeast(0)
+                        val after = if (mins >= 60) "${mins / 60}h ${mins % 60}min" else "$mins min"
+                        Text(" after $after", style = MaterialTheme.typography.labelMedium, color = muted)
                     }
                 }
             }
@@ -194,7 +196,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange, clock
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(10.dp))
-                Text("${meal.timeInRange.toInt()}% in range · 4 h", style = MaterialTheme.typography.labelMedium, color = muted)
+                Text("${meal.timeInRange.toInt()}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = InRange)
             }
         }
     }

@@ -33,6 +33,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import uk.scimone.diafit.home.presentation.utils.ChartXSpacing
 import uk.scimone.diafit.home.presentation.utils.ChartPointSize
 import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
 import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
@@ -58,12 +59,15 @@ data class ChartEvent(
 private const val BUBBLE_MERGE_WINDOW_MS = 15 * 60_000L
 private val TickDotSize = 5.dp
 
-private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
+/** Bubbles closer than this many dp on screen overlap, so they merge however wide the zoom. */
+private const val BUBBLE_MIN_GAP_DP = 30f
+
+private fun mergeNearbyEvents(events: List<ChartEvent>, windowMs: Long): List<ChartEvent> {
     val merged = mutableListOf<ChartEvent>()
     var lastTime = Long.MIN_VALUE
     for (e in events.sortedBy { it.time }) {
         val prev = merged.lastOrNull()
-        if (prev != null && e.time - lastTime <= BUBBLE_MERGE_WINDOW_MS) merged[merged.lastIndex] = prev.copy(value = prev.value + e.value)
+        if (prev != null && e.time - lastTime <= windowMs) merged[merged.lastIndex] = prev.copy(value = prev.value + e.value)
         else merged += e
         lastTime = e.time
     }
@@ -148,7 +152,10 @@ fun ComponentEventActivityChart(
     // Events close together (a meal and its drink, a split bolus) become one bubble with their summed
     // value, so bubbles and labels never pile up on top of each other.
     val rawRecentEvents = events.filter { it.time in alignedMinTime..realTime }.sortedBy { it.time }
-    val recentEvents = mergeNearbyEvents(rawRecentEvents)
+    // At wide zoom 15 min is a few dp, so the merge distance grows to keep bubbles apart on screen.
+    val dpPerHour = ChartXSpacing.value * zoomState.value.coerceAtLeast(0.01f)
+    val mergeWindowMs = maxOf(BUBBLE_MERGE_WINDOW_MS, (BUBBLE_MIN_GAP_DP / dpPerHour * 3_600_000f).toLong())
+    val recentEvents = mergeNearbyEvents(rawRecentEvents, mergeWindowMs)
     // Only worth drawing when some bubble stands for more than one event.
     val tickEvents = if (recentEvents.size < rawRecentEvents.size) rawRecentEvents else emptyList()
 

@@ -27,7 +27,7 @@ object AapsCarbParser {
                 val sourceId = t.optString("_id", "").ifEmpty { "aaps-carbs-$timestamp" }
                 MealEntity(
                     userId = userId,
-                    description = "Carbs (AAPS)",
+                    description = "Carbs",
                     createdAtUtc = System.currentTimeMillis(),
                     mealTimeUtc = timestamp,
                     carbohydrates = Math.round(carbs).toInt(),
