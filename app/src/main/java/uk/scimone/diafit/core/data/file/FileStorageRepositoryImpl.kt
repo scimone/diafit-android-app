@@ -71,6 +71,8 @@ class FileStorageRepositoryImpl(
             }
         }
 
+    override suspend fun deleteImage(imageId: String) {
+        if (imageId.isEmpty()) return
+        withContext(Dispatchers.IO) { File(getImagesDir(), "$imageId.jpg").delete() }
+    }
 }
-
-

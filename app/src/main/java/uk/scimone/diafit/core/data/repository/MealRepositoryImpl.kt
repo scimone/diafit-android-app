@@ -24,6 +24,28 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun getMealById(id: Int): MealEntity? = withContext(Dispatchers.IO) { mealDao.getMealById(id) }
+
+    override suspend fun updateMeal(meal: MealEntity): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.updateMeal(meal)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update meal ${meal.id}", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun setMealValid(id: Int, isValid: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.setValid(id, isValid)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set meal $id valid=$isValid", e)
+            Result.failure(e)
+        }
+    }
+
     override suspend fun updateMealImage(id: Int, imageId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             mealDao.updateImageId(id, imageId)

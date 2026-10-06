@@ -7,4 +7,5 @@ interface FileStorageRepository {
     fun getFileProviderUri(mealId: String): Uri?
     fun createImageUri(mealId: String): Uri
     suspend fun copyGalleryImageToPrivateStorage(sourceUri: Uri, mealId: String): Result<Uri>
+    suspend fun deleteImage(imageId: String)
 }

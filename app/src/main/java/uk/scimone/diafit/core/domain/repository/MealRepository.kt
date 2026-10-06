@@ -8,6 +8,13 @@ interface MealRepository {
 
     suspend fun createMeal(meal: MealEntity): Result<Unit>
 
+    suspend fun getMealById(id: Int): MealEntity?
+
+    suspend fun updateMeal(meal: MealEntity): Result<Unit>
+
+    /** Soft delete (`isValid = false`) or restore. */
+    suspend fun setMealValid(id: Int, isValid: Boolean): Result<Unit>
+
     suspend fun updateMealImage(id: Int, imageId: String): Result<Unit>
 
     suspend fun existsBySourceId(sourceId: String): Boolean

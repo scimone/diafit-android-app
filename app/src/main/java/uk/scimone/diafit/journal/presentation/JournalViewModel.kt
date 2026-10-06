@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
@@ -42,8 +43,11 @@ class JournalViewModel(
         }
     }
 
+    private var observeJob: Job? = null
+
     private fun observeMeals() {
-        viewModelScope.launch {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
             mealRepository.observeMealsByUserId(userId)
                 .catch { e ->
                     _uiState.update {
@@ -75,7 +79,7 @@ class JournalViewModel(
 
                     _uiState.update {
                         it.copy(
-                            meals = mealUiList,
+                            entries = mealUiList,
                             isLoading = false,
                             errorMessage = null
                         )
@@ -92,7 +96,8 @@ class JournalViewModel(
 }
 
 data class JournalUiState(
-    val meals: List<MealEntityUi> = emptyList(),
+    /** Every journal entry, of any kind, in no particular order. */
+    val entries: List<JournalEntryUi> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

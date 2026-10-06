@@ -14,7 +14,7 @@ class CreateMealUseCase(
     private val fileStorageRepository: FileStorageRepository
 ) {
     suspend operator fun invoke(
-        imageUri: Uri,
+        imageUri: Uri?,
         description: String?,
         userId: Int,
         imageId: String,
@@ -27,13 +27,16 @@ class CreateMealUseCase(
         mealType: MealType = MealType.SNACK,
         recommendation: String? = null,
         reasoning: String? = null,
-    ): Result<Pair<MealEntity, Uri>> {
-        val storedFileUriResult = fileStorageRepository.storeImage(imageId, imageUri)
-        if (storedFileUriResult.isFailure) return Result.failure(storedFileUriResult.exceptionOrNull()!!)
-
-        val storedFileUri = storedFileUriResult.getOrThrow()
-
-        val storedContentUri = fileStorageRepository.getFileProviderUri(imageId) ?: storedFileUri
+    ): Result<Pair<MealEntity, Uri?>> {
+        // The photo is optional: a meal can be logged from carbs alone.
+        var storedImageId = ""
+        var storedContentUri: Uri? = null
+        if (imageUri != null) {
+            val storedFileUriResult = fileStorageRepository.storeImage(imageId, imageUri)
+            if (storedFileUriResult.isFailure) return Result.failure(storedFileUriResult.exceptionOrNull()!!)
+            storedImageId = imageId
+            storedContentUri = fileStorageRepository.getFileProviderUri(imageId) ?: storedFileUriResult.getOrThrow()
+        }
 
         val meal = MealEntity(
             userId = userId,
@@ -47,7 +50,7 @@ class CreateMealUseCase(
             impactType = impactType,
             mealType = mealType,
             isValid = true,
-            imageId = imageId,
+            imageId = storedImageId,
             recommendation = recommendation,
             reasoning = reasoning
         )

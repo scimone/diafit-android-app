@@ -9,4 +9,6 @@ interface BolusRepository {
 
     fun getAllBolusSince(start: Long, userId: Int): Flow<List<BolusEntity>>
 
+    suspend fun getBolusBetween(start: Long, end: Long, userId: Int): List<BolusEntity>
+
 }

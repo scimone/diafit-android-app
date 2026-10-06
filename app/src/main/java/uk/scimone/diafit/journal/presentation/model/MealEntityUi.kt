@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 data class MealEntityUi(
+    override val id: Int,
     val mealTimeUtc: Long,
     val carbohydrates: Int = 0,
     val proteins: Int? = null,
@@ -19,58 +20,58 @@ data class MealEntityUi(
     val impactType: ImpactType,
     val mealType: MealType,
     val timeFormatted: String,
-    val description: String,
+    /** User/AI description, or null when none was entered. */
+    val description: String?,
     val imageUri: Uri?,
-    val macrosSummary: String,
+    val reasoning: String?,
+    /** Imported from another app (e.g. AAPS) rather than logged here. */
+    val isImported: Boolean,
     val timeInRange: Double,
     val timeAboveRange: Double,
     val timeBelowRange: Double,
-    val impactDuration: String
-) {
-    val mealTypeDisplayName: String
-        get() = mealType.type.lowercase().replaceFirstChar { it.titlecase() }
-}
+    /** False while there are no CGM readings in the meal's window (e.g. a just-logged meal). */
+    val hasGlucoseData: Boolean
+) : JournalEntryUi {
+    override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
+    override val timeUtc: Long get() = mealTimeUtc
 
+    /** Headline for lists: the description, falling back to the meal type. */
+    val title: String get() = description?.takeIf { it.isNotBlank() } ?: mealType.type
+}
 
 data class GlucoseImpact(
     val timeInRange: Double,
     val timeAboveRange: Double,
     val timeBelowRange: Double
-)
+) {
+    val hasData: Boolean get() = timeInRange + timeAboveRange + timeBelowRange > 0.0
+}
 
 fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
-    val timeFormatted = SimpleDateFormat("HH:mm", Locale.getDefault())
-        .format(Date(mealTimeUtc))
-
-    val descriptionText = description ?: "No description"
+    val timeFormatted = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(mealTimeUtc))
 
     val imageFile = File(context.filesDir, "meal_images/$imageId.jpg")
-    val imageUri = if (imageFile.exists()) {
+    val imageUri = if (imageId.isNotEmpty() && imageFile.exists()) {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
     } else null
 
-    val macrosSummary =
-        "Carbs: $carbohydrates g, Proteins: ${proteins ?: 0} g, Fats: ${fats ?: 0} g"
-
-    val hours = impactType.durationMinutes / 60
-    val minutes = impactType.durationMinutes % 60
-    val impactDuration = "$hours:${minutes.toString().padStart(2, '0')}"
-
     return MealEntityUi(
+        id = id,
         mealTimeUtc = mealTimeUtc,
         carbohydrates = carbohydrates,
         proteins = proteins,
         fats = fats,
         calories = calories,
         impactType = impactType,
+        mealType = mealType,
         timeFormatted = timeFormatted,
-        description = descriptionText,
+        description = description,
         imageUri = imageUri,
-        macrosSummary = macrosSummary,
+        reasoning = reasoning,
+        isImported = sourceId != null,
         timeInRange = impact.timeInRange,
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,
-        impactDuration = impactDuration,
-        mealType = mealType
+        hasGlucoseData = impact.hasData
     )
 }

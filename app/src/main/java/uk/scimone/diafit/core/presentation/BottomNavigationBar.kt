@@ -41,7 +41,7 @@ private val navTabs = listOf(
 /** Settings moved behind the top-bar overflow menu (see MainActivity) and is no longer a bottom tab. */
 const val SETTINGS_TAB_INDEX = 4
 
-/** Index used for the central "Add meal" action, kept out of [navTabs] since it renders as a FAB, not a NavigationBarItem. */
+/** Index used for the central "Add entry" action, kept out of [navTabs] since it renders as a FAB, not a NavigationBarItem. */
 const val ADD_MEAL_TAB_INDEX = 5
 
 @Composable
@@ -92,7 +92,7 @@ fun BottomNavigationBar(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Add meal",
+                    contentDescription = "Add entry",
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }

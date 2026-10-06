@@ -19,7 +19,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import uk.scimone.diafit.addmeal.presentation.AddMealScreen
+import uk.scimone.diafit.addmeal.presentation.MealEditorScreen
+import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
+import uk.scimone.diafit.journal.presentation.components.NewEntrySheet
+import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
+import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
+import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import androidx.activity.compose.BackHandler
 import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.presentation.ADD_MEAL_TAB_INDEX
 import uk.scimone.diafit.core.presentation.BottomNavigationBar
@@ -49,6 +55,7 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 class MainActivity : ComponentActivity() {
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
     private val cgmServiceManager: CgmServiceManager by inject()
+    private val setMealValid: SetMealValidUseCase by inject()
     private val settingsViewModel: SettingsViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel { parametersOf(userId) }
     private val userId = 1 // replace with real user ID from your auth system
@@ -93,9 +100,27 @@ class MainActivity : ComponentActivity() {
             DiafitTheme {
                 var selectedTab by remember { mutableStateOf(0) }
                 var overflowMenuExpanded by remember { mutableStateOf(false) }
+                var showNewEntrySheet by remember { mutableStateOf(false) }
+                val overlays = remember { mutableStateListOf<Overlay>() }
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+
+                // Soft-deleted entries can be brought back from the snackbar.
+                val onMealDeleted: (Int) -> Unit = { mealId ->
+                    overlays.clear()
+                    scope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Meal deleted",
+                            actionLabel = "Undo",
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed) setMealValid(mealId, true)
+                    }
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
                     topBar = {
                         TopAppBar(
                             title = {
@@ -104,7 +129,7 @@ class MainActivity : ComponentActivity() {
                                     val scrubTime by homeViewModel.selectedTime.collectAsStateWithLifecycle()
                                     HomeTitle(state = homeState, selectedTime = scrubTime)
                                 } else {
-                                    Text("Diafit")
+                                    Text(if (selectedTab == 2) "Journal" else "Diafit")
                                 }
                             },
                             actions = {
@@ -138,7 +163,10 @@ class MainActivity : ComponentActivity() {
                     bottomBar = {
                         BottomNavigationBar(
                             selectedItem = selectedTab,
-                            onItemSelected = { selectedTab = it }
+                            onItemSelected = {
+                                // The + button opens the entry chooser instead of switching tab.
+                                if (it == ADD_MEAL_TAB_INDEX) showNewEntrySheet = true else selectedTab = it
+                            }
                         )
                     }
                 ) { innerPadding ->
@@ -150,7 +178,15 @@ class MainActivity : ComponentActivity() {
                         when (selectedTab) {
                             0 -> HomeScreen(userId = userId)
                             1 -> Greeting("Summary")
-                            2 -> JournalScreen(userId = userId)
+                            2 -> JournalScreen(
+                                userId = userId,
+                                onOpenEntry = { entry ->
+                                    when (entry) {
+                                        is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
+                                    }
+                                },
+                                onAddEntry = { showNewEntrySheet = true }
+                            )
                             3 -> Greeting("History")
                             SETTINGS_TAB_INDEX -> SettingsScreen(
                                 onRequestIgnoreBatteryOptimizations = {
@@ -158,7 +194,49 @@ class MainActivity : ComponentActivity() {
                                     startActivity(intent)
                                 }
                             )
-                            ADD_MEAL_TAB_INDEX -> AddMealScreen(userId = userId)
+                        }
+                    }
+                }
+
+                if (showNewEntrySheet) {
+                    NewEntrySheet(
+                        onDismiss = { showNewEntrySheet = false },
+                        onPick = { kind ->
+                            showNewEntrySheet = false
+                            if (kind == JournalEntryKind.MEAL) overlays.add(Overlay.MealEditor(null))
+                        }
+                    )
+                }
+
+                // Full-screen pages (entry detail, editors) stacked above the tabs.
+                overlays.forEach { overlay ->
+                    key(overlay) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && overlay is Overlay.MealDetail) {
+                            overlays.remove(overlay)
+                        }
+                        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                            when (overlay) {
+                                is Overlay.MealDetail -> MealDetailScreen(
+                                    userId = userId,
+                                    mealId = overlay.mealId,
+                                    onBack = { overlays.remove(overlay) },
+                                    onEdit = { overlays.add(Overlay.MealEditor(it)) },
+                                    onDeleted = onMealDeleted
+                                )
+                                is Overlay.MealEditor -> MealEditorScreen(
+                                    userId = userId,
+                                    mealId = overlay.mealId,
+                                    onClose = { overlays.remove(overlay) },
+                                    onSaved = { wasNew ->
+                                        overlays.remove(overlay)
+                                        if (wasNew) {
+                                            selectedTab = 2
+                                            scope.launch { snackbarHostState.showSnackbar("Meal added") }
+                                        }
+                                    },
+                                    onDeleted = onMealDeleted
+                                )
+                            }
                         }
                     }
                 }
@@ -179,6 +257,13 @@ class MainActivity : ComponentActivity() {
             manager.createNotificationChannel(channel)
         }
     }
+}
+
+/** A full-screen page shown above the tabs. */
+private sealed interface Overlay {
+    data class MealDetail(val mealId: Int) : Overlay
+    /** [mealId] == null creates a new meal. */
+    data class MealEditor(val mealId: Int?) : Overlay
 }
 
 @Composable

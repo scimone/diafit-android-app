@@ -15,4 +15,7 @@ class BolusRepositoryImpl(
     override fun getAllBolusSince(start: Long, userId: Int): Flow<List<BolusEntity>> {
         return bolusDao.getAllBolusSince(start, userId)
     }
+
+    override suspend fun getBolusBetween(start: Long, end: Long, userId: Int): List<BolusEntity> =
+        bolusDao.getBolusBetween(start, end, userId)
 }

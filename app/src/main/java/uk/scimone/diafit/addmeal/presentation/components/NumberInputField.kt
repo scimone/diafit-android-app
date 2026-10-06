@@ -5,6 +5,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
@@ -12,12 +13,16 @@ fun NumberInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    suffix: String? = null,
+    textStyle: TextStyle = TextStyle.Default
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = { onValueChange(it.filter { ch -> ch.isDigit() }) },
         label = { Text(label) },
+        suffix = suffix?.let { { Text(it) } },
+        textStyle = textStyle,
         modifier = modifier,
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)

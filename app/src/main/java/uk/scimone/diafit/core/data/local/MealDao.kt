@@ -3,7 +3,6 @@ package uk.scimone.diafit.core.data.local
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.MealEntity
-import java.util.UUID
 
 @Dao
 interface MealDao {
@@ -21,15 +20,19 @@ interface MealDao {
     suspend fun deleteMeal(meal: MealEntity)
 
     @Query("SELECT * FROM MealEntity WHERE id = :mealId LIMIT 1")
-    suspend fun getMealById(mealId: UUID): MealEntity?
+    suspend fun getMealById(mealId: Int): MealEntity?
 
-    @Query("SELECT * FROM MealEntity ORDER BY mealTimeUtc DESC")
+    /** Soft delete / restore: invalid rows stay in the table so synced imports aren't re-created. */
+    @Query("UPDATE MealEntity SET isValid = :isValid WHERE id = :mealId")
+    suspend fun setValid(mealId: Int, isValid: Boolean)
+
+    @Query("SELECT * FROM MealEntity WHERE isValid = 1 ORDER BY mealTimeUtc DESC")
     fun getAllMeals(): Flow<List<MealEntity>>
 
-    @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 ORDER BY mealTimeUtc DESC")
     suspend fun getMealsByUserId(userId: Int): List<MealEntity>
 
-    @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 ORDER BY mealTimeUtc DESC")
     fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
 
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId = :sourceId")
@@ -39,6 +42,6 @@ interface MealDao {
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId IS NOT NULL AND mealTimeUtc = :mealTimeUtc AND carbohydrates = :carbohydrates")
     suspend fun countImportedAt(mealTimeUtc: Long, carbohydrates: Int): Int
 
-    @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId ORDER BY mealTimeUtc ASC")
+    @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId AND isValid = 1 ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
 }

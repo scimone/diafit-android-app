@@ -3,6 +3,7 @@ package uk.scimone.diafit.journal.di
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import uk.scimone.diafit.journal.presentation.JournalViewModel
+import uk.scimone.diafit.journal.presentation.detail.MealDetailViewModel
 
 val journalModule = module {
     viewModel {
@@ -15,4 +16,15 @@ val journalModule = module {
         )
     }
 
+    viewModel { (userId: Int, mealId: Int) ->
+        MealDetailViewModel(
+            mealRepository = get(),
+            getGlucoseResponse = get(),
+            getTargetRange = get(),
+            setMealValid = get(),
+            context = get(),
+            userId = userId,
+            mealId = mealId
+        )
+    }
 }
