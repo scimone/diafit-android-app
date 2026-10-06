@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
@@ -78,7 +80,7 @@ fun HomeScreen(
     }
     // Time (x) the user is scrubbing on the CGM chart; every chart draws the cursor line, and the
     // header swaps the live reading for the reading at that time.
-    var selectedTime by remember { mutableStateOf<Long?>(null) }
+    val selectedTime by viewModel.selectedTime.collectAsStateWithLifecycle()
     // Meals grouped into sittings, shared by the header preview, the meal strip and the detail sheet.
     val mealGroups = remember(state.mealHistory) { groupMeals(state.mealHistory) }
     val focusedMeal = mealGroups.nearest(selectedTime)
@@ -121,24 +123,9 @@ fun HomeScreen(
 
             else -> {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    if (state.cgmUi != null) {
-                        val pastReading = selectedTime?.let { t -> state.cgmHistory.minByOrNull { abs(it.timeLong - t) } }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(84.dp).padding(start = 10.dp, end = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (pastReading != null) {
-                                PastCgmDisplay(reading = pastReading, modifier = Modifier.weight(1f))
-                            } else {
-                                CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.weight(1f))
-                            }
-                        }
-                    } else {
-                        Text("No CGM data available", modifier = Modifier.padding(start = 10.dp))
-                    }
                     ChartZoomControls(zoomState = chartZoomState, scrollState = chartScrollState)
 
-                    // Stacked panels share one time axis; only the last one draws the hour labels.
+                    // Stacked panels share one time axis.
                     if (state.cgmUi != null) {
                         CgmChartDisplay(
                             history = state.cgmHistory,
@@ -148,16 +135,19 @@ fun HomeScreen(
                             zoomState = chartZoomState,
                             nowMinute = nowMinute,
                             selectedTime = selectedTime,
-                            onSelectedTimeChange = { selectedTime = it }
+                            onSelectedTimeChange = viewModel::onSelectedTimeChange
                         )
                     }
+                    // Placeholders for upcoming graphs.
+                    PlaceholderPanel("Activity")
+                    PlaceholderPanel("Basal")
                     InsulinActivityDisplay(
                         history = state.insulinActivityHistory,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         nowMinute = nowMinute,
                         selectedTime = selectedTime,
-                        onSelectedTimeChange = { selectedTime = it }
+                        onSelectedTimeChange = viewModel::onSelectedTimeChange
                     )
                     CarbActivityDisplay(
                         history = state.carbHistory,
@@ -165,7 +155,7 @@ fun HomeScreen(
                         zoomState = chartZoomState,
                         nowMinute = nowMinute,
                         selectedTime = selectedTime,
-                        onSelectedTimeChange = { selectedTime = it }
+                        onSelectedTimeChange = viewModel::onSelectedTimeChange
                     )
 
                     MealTimeline(
@@ -194,15 +184,36 @@ fun HomeScreen(
 }
 
 
+/** Reports [amount] less height than the content measures, so the next sibling overlaps the slack. */
+private fun Modifier.trimBottom(amount: Dp): Modifier = layout { measurable, constraints ->
+    val p = measurable.measure(constraints)
+    layout(p.width, (p.height - amount.roundToPx()).coerceAtLeast(0)) { p.place(0, 0) }
+}
+
+/**
+ * The app bar title on Home: the live glucose reading with its trend arrow and age. While the user
+ * scrubs the charts it swaps to the reading at that time, deliberately in a lighter, muted look with
+ * a "past reading" tag, so nobody mistakes it for the current glucose.
+ */
 @Composable
-fun CgmDisplay(cgm: CgmEntityUi, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+fun HomeTitle(state: HomeState, selectedTime: Long?) {
+    val cgm = state.cgmUi ?: return Text("Diafit")
+    val pastReading = selectedTime?.let { t -> state.cgmHistory.minByOrNull { abs(it.timeLong - t) } }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (pastReading != null) {
+            val time = remember(pastReading.timeLong) {
+                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(pastReading.timeLong))
+            }
+            Text("${pastReading.value}", fontSize = 28.sp, fontWeight = FontWeight.Light, color = muted)
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Default.History, contentDescription = null, tint = muted, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("past reading · $time", fontSize = 12.sp, color = muted)
+        } else {
             Text(
                 text = "${cgm.value}",
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = when {
                     (cgm.value ?: 0) <= 70 -> BelowRange
@@ -211,48 +222,28 @@ fun CgmDisplay(cgm: CgmEntityUi, modifier: Modifier = Modifier) {
                 },
                 textDecoration = if (cgm.isStale) TextDecoration.LineThrough else TextDecoration.None
             )
-            ComponentRotatingArrowIcon(inputValue = cgm.rate)
+            ComponentRotatingArrowIcon(inputValue = cgm.rate, size = 40.dp)
+            Text("${cgm.timeSince} ago", fontSize = 12.sp, color = muted)
         }
-        Text(text = "${cgm.timeSince} ago")
     }
 }
 
-/** Reports [amount] less height than the content measures, so the next sibling overlaps the slack. */
-private fun Modifier.trimBottom(amount: Dp): Modifier = layout { measurable, constraints ->
-    val p = measurable.measure(constraints)
-    layout(p.width, (p.height - amount.roundToPx()).coerceAtLeast(0)) { p.place(0, 0) }
-}
-
-/**
- * The header reading while scrubbing: deliberately *not* the live look - lighter, italic, muted,
- * with a "PAST READING" tag and its clock time, so nobody mistakes it for the current glucose.
- */
+/** Small muted heading in a panel's top-left corner. */
 @Composable
-fun PastCgmDisplay(reading: CgmChartData, modifier: Modifier = Modifier) {
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val time = remember(reading.timeLong) {
-        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reading.timeLong))
-    }
-    Column(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "${reading.value}",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Light,
-                color = muted
-            )
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.Default.History, contentDescription = null, tint = muted, modifier = Modifier.size(22.dp))
-        }
-        Text(
-            text = "PAST READING · $time",
-            fontSize = 12.sp,
-            letterSpacing = 0.8.sp,
-            color = muted,
-            modifier = Modifier
-                .border(1.dp, muted.copy(alpha = 0.5f), RoundedCornerShape(50))
-                .padding(horizontal = 8.dp, vertical = 1.dp)
-        )
+private fun BoxScope.PanelTitle(text: String) {
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 2.dp)
+    )
+}
+
+/** Reserved space (with its heading) for a graph that doesn't exist yet. */
+@Composable
+private fun PlaceholderPanel(title: String) {
+    Box(modifier = Modifier.fillMaxWidth().trimBottom(PanelGapTrim).height(EventPanelHeight)) {
+        PanelTitle(title)
     }
 }
 
@@ -283,6 +274,7 @@ fun CgmChartDisplay(
             selectedTime = selectedTime,
             onSelectedTimeChange = onSelectedTimeChange
         )
+        PanelTitle("Glucose")
     }
 }
 
@@ -318,6 +310,7 @@ fun InsulinActivityDisplay(
             selectedTime = selectedTime,
             onSelectedTimeChange = onSelectedTimeChange
         )
+        PanelTitle("Bolus")
     }
 }
 
@@ -345,6 +338,7 @@ fun CarbActivityDisplay(
             selectedTime = selectedTime,
             onSelectedTimeChange = onSelectedTimeChange
         )
+        PanelTitle("Carbohydrates")
     }
 }
 
@@ -362,20 +356,31 @@ private fun visibleHoursMillis(pastHours: Int): Double =
 fun ChartZoomControls(zoomState: VicoZoomState, scrollState: VicoScrollState) {
     val scope = rememberCoroutineScope()
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Drop Material's 48dp minimum touch target so the buttons can actually be small.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
         listOf(3, 6, 12, 24).forEach { hours ->
-            AssistChip(
+            Surface(
                 onClick = {
                     scope.launch {
                         zoomState.animateZoom(Zoom.x(visibleHoursMillis(hours)))
                         scrollState.animateScroll(Scroll.Absolute.End)
                     }
                 },
-                label = { Text("${hours}h") }
-            )
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Text(
+                    text = "${hours}h",
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
         }
     }
 }

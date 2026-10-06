@@ -20,14 +20,14 @@ import androidx.compose.ui.unit.dp
 
 
 @Composable
-fun ComponentRotatingArrowIcon(inputValue: Float?) {
+fun ComponentRotatingArrowIcon(inputValue: Float?, size: androidx.compose.ui.unit.Dp = 50.dp) {
     if (inputValue != null) {
         val rotationAngle = (-inputValue * 180f) // Scale inputValue to [0, 180] range
         val color = MaterialTheme.colorScheme.onSurface
 
         Canvas(
             modifier = Modifier
-                .size(50.dp)
+                .size(size)
                 .rotate(rotationAngle)
         ) {
             drawArrow(color = color)

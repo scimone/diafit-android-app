@@ -49,8 +49,16 @@ class OpenAiApi(private val client: HttpClient) {
                     )))
                 }
             )))
-            // No response_format: servers disagree on it (OpenAI wants "json_object", LM Studio only
-            // accepts "json_schema"/"text"). The prompt asks for JSON and parseAnalysis extracts it.
+            // Structured outputs: "json_schema" is accepted by both OpenAI and LM Studio (which rejects
+            // the older "json_object"). Mirrors the shape requested in MEAL_ANALYSIS_PROMPT.
+            put("response_format", buildJsonObject {
+                put("type", "json_schema")
+                put("json_schema", buildJsonObject {
+                    put("name", "meal_analysis")
+                    put("strict", true)
+                    put("schema", MEAL_ANALYSIS_SCHEMA)
+                })
+            })
         }
 
         return safeCall {
@@ -69,3 +77,30 @@ class OpenAiApi(private val client: HttpClient) {
             }
         }
 }
+
+private fun stringProp() = buildJsonObject { put("type", "string") }
+private fun numberProp() = buildJsonObject { put("type", "number") }
+
+private fun objectSchema(vararg props: Pair<String, kotlinx.serialization.json.JsonElement>) = buildJsonObject {
+    put("type", "object")
+    put("properties", buildJsonObject { props.forEach { (k, v) -> put(k, v) } })
+    put("required", JsonArray(props.map { JsonPrimitive(it.first) }))
+    put("additionalProperties", false)
+}
+
+private val MEAL_ANALYSIS_SCHEMA = objectSchema(
+    "dish_name" to stringProp(),
+    "ingredients" to buildJsonObject {
+        put("type", "array")
+        put("items", objectSchema("name" to stringProp(), "quantity" to stringProp()))
+    },
+    "macronutrients" to objectSchema(
+        "calories" to numberProp(), "protein" to numberProp(), "carbohydrates" to numberProp(),
+        "fat" to numberProp(), "fiber" to numberProp(), "sugar" to numberProp(), "sodium" to numberProp()
+    ),
+    "reasoning" to stringProp(),
+    "meal_impact_duration" to buildJsonObject {
+        put("type", "string")
+        put("enum", JsonArray(listOf(JsonPrimitive("SHORT"), JsonPrimitive("MEDIUM"), JsonPrimitive("LONG"))))
+    }
+)

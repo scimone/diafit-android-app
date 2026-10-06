@@ -35,6 +35,10 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.service.CgmServiceManager
 import uk.scimone.diafit.journal.presentation.JournalScreen
 import uk.scimone.diafit.home.presentation.HomeScreen
+import uk.scimone.diafit.home.presentation.HomeTitle
+import uk.scimone.diafit.home.presentation.HomeViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 import uk.scimone.diafit.settings.presentation.SettingsScreen
 import uk.scimone.diafit.settings.presentation.SettingsViewModel
@@ -46,6 +50,7 @@ class MainActivity : ComponentActivity() {
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
     private val cgmServiceManager: CgmServiceManager by inject()
     private val settingsViewModel: SettingsViewModel by viewModel()
+    private val homeViewModel: HomeViewModel by viewModel { parametersOf(userId) }
     private val userId = 1 // replace with real user ID from your auth system
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,7 +98,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
                         TopAppBar(
-                            title = { Text("Diafit") },
+                            title = {
+                                if (selectedTab == 0) {
+                                    val homeState by homeViewModel.state.collectAsStateWithLifecycle()
+                                    val scrubTime by homeViewModel.selectedTime.collectAsStateWithLifecycle()
+                                    HomeTitle(state = homeState, selectedTime = scrubTime)
+                                } else {
+                                    Text("Diafit")
+                                }
+                            },
                             actions = {
                                 IconButton(onClick = { overflowMenuExpanded = true }) {
                                     Icon(

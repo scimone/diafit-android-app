@@ -141,6 +141,11 @@ class HomeViewModel(
 
 
 
+    // Time the user is scrubbing on the charts; lives here so the app bar title can show that reading.
+    private val _selectedTime = MutableStateFlow<Long?>(null)
+    val selectedTime: StateFlow<Long?> = _selectedTime.asStateFlow()
+    fun onSelectedTimeChange(time: Long?) { _selectedTime.value = time }
+
     // Image id of a camera capture in flight (the camera writes into the file behind the Uri we hand out).
     private var pendingCameraMealId: Int? = null
     private var pendingCameraImageId: String? = null
