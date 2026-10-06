@@ -73,30 +73,18 @@ private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
  * One panel per therapy type (insulin, carbs), same design for both:
  *  - the summed **activity curve** as a soft filled area (its shape matters, not its absolute
  *    numbers, so the y labels are hidden), extended into the future to show the tail;
- *  - each **event** as a bubble *sitting on the zero line* with area ∝ value and a "6.8 U" /
+ *  - each **event** as a bubble *centred on the curve* with area ∝ value and a "6.8 U" /
  *    "45 g" label above it.
  *
- * Bubbles are a second [LineCartesianLayer] on the (axis-less) end axis with a fixed 0..1 range at
- * y = 0. Vico's point provider / data label only see `y`, so the value is encoded as a negligible
- * offset (`value * VALUE_SCALE`) and decoded again. Vico centres points on their y, so
- * [BottomAnchoredCircle] draws each bubble *above* the point (bottom edge on the zero line); to keep
- * the label clear of the bubble the reported point size is 2x the drawn diameter.
+ * Bubbles are a second [LineCartesianLayer] sharing the curve's y axis: each point is centred on
+ * the curve at the event's time. Vico's point provider / data label only see `y`, so the event's
+ * value is looked up from the (curve height + tiny offset) y via [BubbleValues].
  */
 private const val VALUE_SCALE = 1e-4
 
 /** Bubble y (curve height at the event + value offset) -> the event's value. */
 private class BubbleValues(val byY: Map<Double, Double>) {
     fun decode(y: Double): Double = byY[y] ?: 0.0
-}
-
-/** Draws a circle whose bottom sits at the centre y of the rect Vico hands us (rect = 2x diameter). */
-private class BottomAnchoredCircle(private val delegate: Component) : Component {
-    override fun draw(context: DrawingContext, left: Float, top: Float, right: Float, bottom: Float) {
-        val d = (right - left) / 2f
-        val cx = (left + right) / 2f
-        val cy = (top + bottom) / 2f
-        delegate.draw(context, cx - d / 2f, cy - d, cx + d / 2f, cy)
-    }
 }
 
 private class EventBubbleProvider(
@@ -107,7 +95,7 @@ private class EventBubbleProvider(
     private fun diameter(value: Double): Dp = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0).dp
 
     override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
-        LineCartesianLayer.Point(component, diameter(values.decode(entry.y)) * 2)
+        LineCartesianLayer.Point(component, diameter(values.decode(entry.y)))
 
     // Deliberately constant: Vico pads each layer by half its largest point, and every Home chart
     // must end up with identical padding to stay x-aligned.
@@ -195,7 +183,7 @@ fun ComponentEventActivityChart(
                 fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
                 stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 0.dp),
                 pointProvider = remember(bubbleComponent, bubbleRefValue, bubbleValues) {
-                    EventBubbleProvider(BottomAnchoredCircle(bubbleComponent), bubbleRefValue, bubbleValues)
+                    EventBubbleProvider(bubbleComponent, bubbleRefValue, bubbleValues)
                 },
                 dataLabel = rememberTextComponent(style = labelStyle),
                 dataLabelPosition = Position.Vertical.Top,
