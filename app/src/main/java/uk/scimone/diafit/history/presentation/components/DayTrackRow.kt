@@ -1,7 +1,6 @@
 package uk.scimone.diafit.history.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -24,40 +23,35 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * One day as a full-width band on the shared 24 h scale. Bands alternate between two background
- * tints ([striped]) instead of using divider lines; glucose mountains rise from the bottom of the
- * chart with carb and bolus blocks in lanes below, and the date is a small caption in the corner.
- * Tapping expands the band into a line graph.
+ * One day on the shared 24 h scale, as three stacked strips on the page background: glucose
+ * (green strip with high/low mountains), carbs and bolus. No lines or cards: each strip is just a
+ * slightly lighter field. Tapping expands the glucose strip into a line graph.
  */
 @Composable
 fun DayTrackRow(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
-    striped: Boolean,
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable(day.epochDay) { mutableStateOf(false) }
-    val background = if (striped) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
 
-    Box(modifier.fillMaxWidth().background(background).clickable { expanded = !expanded }) {
-        Column(Modifier.padding(top = if (expanded) CAPTION_HEIGHT else 0.dp, bottom = 2.dp)) {
+    Column(modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 5.dp)) {
+        Box {
             if (expanded) DayLineChart(day, thresholds) else HorizonChart(day, thresholds)
-            Spacer(Modifier.height(1.dp))
-            TreatmentStrip(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G, height = 4.dp)
-            Spacer(Modifier.height(1.dp))
-            TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U, height = 4.dp)
-            AnimatedVisibility(expanded) { TreatmentList(day) }
+            Text(
+                caption(day, expanded),
+                Modifier.padding(start = 6.dp, top = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
-        Text(
-            caption(day, expanded),
-            Modifier.padding(start = 8.dp, top = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Spacer(Modifier.height(2.dp))
+        TreatmentStrip(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)
+        Spacer(Modifier.height(2.dp))
+        TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
+        AnimatedVisibility(expanded) { TreatmentList(day) }
     }
 }
-
-private val CAPTION_HEIGHT = 20.dp
 
 /** "Tue 6", and once expanded the day's totals as well. */
 private fun caption(day: DayHistoryUi, expanded: Boolean): String {

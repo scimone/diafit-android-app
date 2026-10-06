@@ -1,6 +1,7 @@
 package uk.scimone.diafit.history.presentation.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +38,7 @@ fun DayLineChart(
     val runs = day.glucose.splitAtGaps()
     val yMax = max(Y_MAX_FLOOR, (day.glucose.maxOfOrNull { it.mgdl } ?: 0) + 10f)
 
-    Canvas(modifier.fillMaxWidth().height(180.dp)) {
+    Canvas(modifier.fillMaxWidth().height(180.dp).background(MaterialTheme.colorScheme.surface)) {
         val plotHeight = size.height
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         fun y(mgdl: Float) = plotHeight - (mgdl - Y_MIN) / (yMax - Y_MIN) * plotHeight

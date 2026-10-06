@@ -1,9 +1,13 @@
 package uk.scimone.diafit.history.presentation.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -23,53 +27,58 @@ import uk.scimone.diafit.ui.theme.InRange
 private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Color)
 
 /**
- * Opaque, drawn in order so each deeper band overlays the shallower one. High/low use the same
- * colours as the CGM line; the "very" bands are a lighter shade of them.
+ * Opaque, drawn in order so each deeper band overlays the shallower one. They are the CGM line's
+ * high/low colours: the mild band slightly muted, the "very" band at full strength.
  */
 private val HORIZON_BANDS = listOf(
-    HorizonBandStyle({ it.high }, AboveRange),
-    HorizonBandStyle({ it.veryHigh }, lerp(AboveRange, Color.White, 0.45f)),
-    HorizonBandStyle({ it.low }, BelowRange),
-    HorizonBandStyle({ it.veryLow }, lerp(BelowRange, Color.White, 0.45f))
+    HorizonBandStyle({ it.high }, lerp(AboveRange, Color.Black, 0.3f)),
+    HorizonBandStyle({ it.veryHigh }, AboveRange),
+    HorizonBandStyle({ it.low }, lerp(BelowRange, Color.Black, 0.3f)),
+    HorizonBandStyle({ it.veryLow }, BelowRange)
 )
 
-/** Height, as a fraction of the chart, of the green strip that marks "glucose was recorded and in range". */
-private const val IN_RANGE_BASELINE = 0.2f
+/** Thickness of the green strip along the bottom that marks "glucose was recorded and in range". */
+private val IN_RANGE_STRIP_HEIGHT = 5.dp
 
 /**
- * A day of glucose folded into a thin strip: an in-range baseline wherever data exists, with
- * high/low excursions stacked on top as bands that deepen in colour the further out of range they go.
+ * A day of glucose folded into a thin panel: a green strip along the bottom wherever data exists,
+ * with high/low excursions rising from its top edge, deepening in colour the further out of range
+ * they go.
  */
 @Composable
 fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 32.dp
+    height: Dp = 36.dp
 ) {
     val runs = day.glucose.splitAtGaps()
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    Canvas(modifier.fillMaxWidth().height(height).background(MaterialTheme.colorScheme.surface)) {
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
+        val stripHeight = IN_RANGE_STRIP_HEIGHT.toPx()
+        val baselineY = size.height - stripHeight
         runs.filter { it.size > 1 }.forEach { run ->
-            drawArea(run, axis, { IN_RANGE_BASELINE }, InRange)
+            val left = axis.x(run.first().timeUtc)
+            drawRect(InRange, Offset(left, baselineY), Size(axis.x(run.last().timeUtc) - left, stripHeight))
             HORIZON_BANDS.forEach { band ->
-                drawArea(run, axis, { band.level(thresholds.levels(it.mgdl)) }, band.color)
+                drawMountain(run, axis, baselineY, { band.level(thresholds.levels(it.mgdl)) }, band.color)
             }
         }
     }
 }
 
-private fun DrawScope.drawArea(
+private fun DrawScope.drawMountain(
     run: List<GlucosePoint>,
     axis: DayXAxis,
+    baselineY: Float,
     levelOf: (GlucosePoint) -> Float,
     color: Color
 ) {
     if (run.none { levelOf(it) > 0f }) return
     val path = Path().apply {
-        moveTo(axis.x(run.first().timeUtc), size.height)
-        run.forEach { lineTo(axis.x(it.timeUtc), size.height * (1f - levelOf(it))) }
-        lineTo(axis.x(run.last().timeUtc), size.height)
+        moveTo(axis.x(run.first().timeUtc), baselineY)
+        run.forEach { lineTo(axis.x(it.timeUtc), baselineY - baselineY * levelOf(it)) }
+        lineTo(axis.x(run.last().timeUtc), baselineY)
         close()
     }
     drawPath(path, color)

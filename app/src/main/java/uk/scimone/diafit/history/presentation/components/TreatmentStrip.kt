@@ -1,8 +1,10 @@
 package uk.scimone.diafit.history.presentation.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -27,9 +29,9 @@ fun TreatmentStrip(
     color: Color,
     fullIntensityAt: Float,
     modifier: Modifier = Modifier,
-    height: Dp = 8.dp
+    height: Dp = 7.dp
 ) {
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    Canvas(modifier.fillMaxWidth().height(height).background(MaterialTheme.colorScheme.surface)) {
         val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
         clusters.forEach { cluster ->
             val x0 = axis.x(cluster.centerUtc - BLOCK_HALF_WIDTH_MS).coerceAtLeast(0f)
@@ -40,7 +42,7 @@ fun TreatmentStrip(
     }
 }
 
-private const val MIN_ALPHA = 0.15f
+private const val MIN_ALPHA = 0.2f
 
 /** Full-intensity totals: a 100 g meal / a 10 U bolus draws a fully opaque block. */
 const val CARBS_FULL_INTENSITY_G = 100f

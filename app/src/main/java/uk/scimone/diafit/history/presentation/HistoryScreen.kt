@@ -2,7 +2,7 @@ package uk.scimone.diafit.history.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,10 +33,10 @@ fun HistoryScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            else -> Column(Modifier.fillMaxSize()) {
+            else -> Column(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
                 LazyColumn(Modifier.weight(1f)) {
-                    itemsIndexed(state.days, key = { _, day -> day.epochDay }) { index, day ->
-                        DayTrackRow(day, state.thresholds, striped = index % 2 == 0)
+                    items(state.days, key = { it.epochDay }) { day ->
+                        DayTrackRow(day, state.thresholds)
                     }
                 }
                 HistoryTimeAxis()
