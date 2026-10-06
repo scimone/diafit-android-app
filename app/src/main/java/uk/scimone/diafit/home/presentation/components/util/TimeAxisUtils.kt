@@ -12,6 +12,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.BaseAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
@@ -83,9 +84,10 @@ val LineChartLayerPadding = CartesianLayerPadding(unscalableEnd = -ChartPointSiz
  * Provides a reusable BottomAxis with time labels, guidelines, and default settings
  */
 @Composable
-fun rememberTimeBottomAxis(showLabels: Boolean = true): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
+fun rememberTimeBottomAxis(showLabels: Boolean = true, showLine: Boolean = true): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
     val onSurface = MaterialTheme.colorScheme.onSurface
     return HorizontalAxis.rememberBottom(
+        line = if (showLine) rememberAxisLineComponent() else null,
         guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
         label = if (showLabels) {
             rememberAxisLabelComponent(

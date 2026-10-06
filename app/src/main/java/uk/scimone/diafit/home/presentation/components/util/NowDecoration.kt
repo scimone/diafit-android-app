@@ -29,11 +29,12 @@ class NowDecoration(
         if (x > bounds.right) return
 
         val canvas = context.canvas
-        val washLeft = x.coerceAtLeast(bounds.left)
-        canvas.drawRect(
-            washLeft, bounds.top, bounds.right, bounds.bottom,
-            Paint().apply { color = washColor; style = PaintingStyle.Fill }
-        )
+        if (washColor.alpha > 0f) {
+            canvas.drawRect(
+                x.coerceAtLeast(bounds.left), bounds.top, bounds.right, bounds.bottom,
+                Paint().apply { color = washColor; style = PaintingStyle.Fill }
+            )
+        }
         if (x >= bounds.left) {
             canvas.drawLine(
                 Offset(x, bounds.top), Offset(x, bounds.bottom),

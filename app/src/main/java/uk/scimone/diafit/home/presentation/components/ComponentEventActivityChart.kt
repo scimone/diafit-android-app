@@ -142,10 +142,17 @@ fun ComponentEventActivityChart(
     val bubbleYs = recentEvents.map { activityAt(it.time) + it.value * VALUE_SCALE }
     val bubbleValues = BubbleValues(recentEvents.indices.associate { bubbleYs[it] to recentEvents[it].value })
 
+    // The curve is split at "now": the past is drawn normally, the forecast tail (shared point at now
+    // keeps the line continuous) in a faded variant. Bubbles and CGM points are never faded.
+    val nowPoint = realTime to activityAt(realTime)
+    val pastPoints = activityPoints.filter { it.first < realTime } + nowPoint
+    val futurePoints = listOf(nowPoint) + activityPoints.filter { it.first > realTime }
+
     LaunchedEffect(activityPoints, recentEvents) {
         modelProducer.runTransaction {
             lineSeries {
-                series(x = activityPoints.map { it.first }, y = activityPoints.map { it.second })
+                series(x = pastPoints.map { it.first }, y = pastPoints.map { it.second })
+                series(x = futurePoints.map { it.first }, y = futurePoints.map { it.second })
             }
             if (recentEvents.isNotEmpty()) {
                 lineSeries {
@@ -174,6 +181,11 @@ fun ComponentEventActivityChart(
                 fill = LineCartesianLayer.LineFill.single(Fill(color)),
                 stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp),
                 areaFill = LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.25f)))
+            ),
+            LineCartesianLayer.rememberLine(
+                fill = LineCartesianLayer.LineFill.single(Fill(color.copy(alpha = 0.45f))),
+                stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp),
+                areaFill = LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.1f)))
             )
         ),
         pointSpacing = ChartPointSpacing,
@@ -219,16 +231,16 @@ fun ComponentEventActivityChart(
             label = null,
             tick = null,
             itemPlacer = remember { VerticalAxis.ItemPlacer.count({ 2 }) },
-            guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
+            guideline = null,
             size = SharedStartAxisSize
         ),
-        bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
+        bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels, showLine = showTimeLabels),
         layerPadding = { LineChartLayerPadding },
         decorations = listOfNotNull(
             NowDecoration(
                 nowX = realTime.toDouble(),
                 lineColor = onSurface.copy(alpha = 0.7f),
-                washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
+                washColor = Color.Transparent
             ),
             selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
         ),

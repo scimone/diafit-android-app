@@ -2,6 +2,7 @@ package uk.scimone.diafit.core.data.networking.util
 
 import uk.scimone.diafit.core.domain.util.networking.NetworkError
 import uk.scimone.diafit.core.domain.util.networking.Result
+import android.util.Log
 import io.ktor.client.statement.HttpResponse
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.SerializationException
@@ -19,6 +20,7 @@ suspend inline fun <reified T> safeCall(
         return Result.Error(NetworkError.SERIALIZATION)
     } catch(e: Exception) {
         coroutineContext.ensureActive()
+        Log.e("safeCall", "Request failed", e)
         return Result.Error(NetworkError.UNKNOWN)
     }
 

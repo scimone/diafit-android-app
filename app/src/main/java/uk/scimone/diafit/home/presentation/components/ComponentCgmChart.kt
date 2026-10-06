@@ -140,7 +140,7 @@ fun ComponentCgmChart(
                 NowDecoration(
                     nowX = realTime.toDouble(),
                     lineColor = onSurface.copy(alpha = 0.7f),
-                    washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
+                    washColor = Color.Transparent
                 ),
                 selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
             ),
