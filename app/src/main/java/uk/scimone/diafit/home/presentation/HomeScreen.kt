@@ -45,6 +45,7 @@ import uk.scimone.diafit.home.presentation.components.ChartEvent
 import uk.scimone.diafit.home.presentation.components.ComponentEventActivityChart
 import uk.scimone.diafit.home.presentation.components.MealDetailSheet
 import uk.scimone.diafit.home.presentation.components.MealGroup
+import uk.scimone.diafit.home.presentation.utils.SHOW_TIME_LABELS
 import uk.scimone.diafit.home.presentation.components.MealTimeline
 import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.nearest
@@ -287,7 +288,7 @@ fun CgmChartDisplay(
 
 /** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
 private val EventPanelHeight = 90.dp
-private val TimeLabelsHeight = 22.dp
+private val TimeLabelsHeight = if (SHOW_TIME_LABELS) 22.dp else 0.dp
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp
 

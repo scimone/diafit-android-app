@@ -42,6 +42,7 @@ import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
 import uk.scimone.diafit.home.presentation.utils.timeAxisMaxX
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
+import uk.scimone.diafit.home.presentation.utils.TargetRangeDecoration
 import uk.scimone.diafit.ui.theme.InRange
 
 @Composable
@@ -128,8 +129,10 @@ fun ComponentCgmChart(
                 )
             ),
             startAxis = VerticalAxis.rememberStart(
-                guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
-                label = rememberAxisLabelComponent(style = TextStyle(color = onSurface.copy(alpha = 0.45f), fontSize = 11.sp)),
+                line = null,
+                tick = null,
+                guideline = null,
+                label = null,
                 itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
                 size = SharedStartAxisSize,
                 horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside
@@ -137,6 +140,13 @@ fun ComponentCgmChart(
             bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
             layerPadding = { LineChartLayerPadding },
             decorations = listOfNotNull(
+                TargetRangeDecoration(
+                    lower = lowerBound.toDouble(),
+                    upper = upperBound.toDouble(),
+                    minY = minY.toDouble(),
+                    maxY = maxY.toDouble(),
+                    color = onSurface.copy(alpha = 0.12f)
+                ),
                 NowDecoration(
                     nowX = realTime.toDouble(),
                     lineColor = onSurface.copy(alpha = 0.7f),

@@ -83,13 +83,16 @@ val LineChartLayerPadding = CartesianLayerPadding(unscalableEnd = -ChartPointSiz
 /**
  * Provides a reusable BottomAxis with time labels, guidelines, and default settings
  */
+/** Timestamps under the charts are switched off for now; flip to bring them (and the carb panel's label strip) back. */
+const val SHOW_TIME_LABELS = false
+
 @Composable
 fun rememberTimeBottomAxis(showLabels: Boolean = true, showLine: Boolean = true): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
     val onSurface = MaterialTheme.colorScheme.onSurface
     return HorizontalAxis.rememberBottom(
-        line = if (showLine) rememberAxisLineComponent() else null,
-        guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
-        label = if (showLabels) {
+        line = null,
+        guideline = null,
+        label = if (showLabels && SHOW_TIME_LABELS) {
             rememberAxisLabelComponent(
                 style = TextStyle(color = onSurface, fontSize = 10.sp, textAlign = TextAlign.Center)
             )
@@ -97,7 +100,7 @@ fun rememberTimeBottomAxis(showLabels: Boolean = true, showLine: Boolean = true)
         // Same tick component on every chart (its thickness feeds the layer margin, which must match
         // for the stacked axes to align); it is just zero-length where labels are hidden.
         tick = rememberAxisTickComponent(),
-        tickLength = if (showLabels) 4.dp else 0.dp,
+        tickLength = if (showLabels && SHOW_TIME_LABELS) 4.dp else 0.dp,
         itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(addExtremeLabelPadding = false) },
         valueFormatter = remember {
             CartesianValueFormatter { _, value, _ ->

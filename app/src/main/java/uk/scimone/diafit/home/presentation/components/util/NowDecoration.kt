@@ -82,3 +82,29 @@ class SelectionDecoration(
 
     override fun hashCode() = 31 * selectedX.hashCode() + lineColor.hashCode()
 }
+
+
+/** Dark band behind the CGM data marking the glucose target range ([lower]..[upper] on a [minY]..[maxY] axis). */
+class TargetRangeDecoration(
+    private val lower: Double,
+    private val upper: Double,
+    private val minY: Double,
+    private val maxY: Double,
+    private val color: Color
+) : Decoration {
+    override fun drawUnderLayers(context: CartesianDrawingContext) {
+        val bounds = context.layerBounds
+        val span = (maxY - minY).toFloat()
+        fun yOf(v: Double) = bounds.bottom - ((v - minY).toFloat() / span) * bounds.height
+        context.canvas.drawRect(
+            bounds.left, yOf(upper.coerceAtMost(maxY)), bounds.right, yOf(lower.coerceAtLeast(minY)),
+            Paint().apply { this.color = this@TargetRangeDecoration.color; style = PaintingStyle.Fill }
+        )
+    }
+
+    override fun equals(other: Any?) =
+        other is TargetRangeDecoration && other.lower == lower && other.upper == upper &&
+            other.minY == minY && other.maxY == maxY && other.color == color
+
+    override fun hashCode() = listOf(lower, upper, minY, maxY, color).hashCode()
+}

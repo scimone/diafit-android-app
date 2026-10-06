@@ -231,6 +231,7 @@ fun ComponentEventActivityChart(
             label = null,
             tick = null,
             itemPlacer = remember { VerticalAxis.ItemPlacer.count({ 2 }) },
+            line = null,
             guideline = null,
             size = SharedStartAxisSize
         ),
