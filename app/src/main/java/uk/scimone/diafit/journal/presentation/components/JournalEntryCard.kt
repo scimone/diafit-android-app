@@ -76,7 +76,7 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             MealThumbnail(meal)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Heading line: when, what kind of meal, and how fast it absorbs. Indented by the outcome box's own padding so the text lines up with it.
+                // Heading line spans the full card width (above the numbers): when, what kind of meal, and how fast it absorbs. Indented by the outcome box's own padding so the text lines up with it.
                 Row(Modifier.padding(start = MEAL_TEXT_INDENT), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         buildString {
@@ -98,14 +98,17 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                         Text("AAPS ✓", style = MaterialTheme.typography.labelSmall, color = Bolus, maxLines = 1, softWrap = false)
                     }
                 }
-                Text(meal.title, Modifier.padding(start = MEAL_TEXT_INDENT), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                MealOutcomeRow(meal, target)
-            }
-            Spacer(Modifier.width(10.dp))
-            // The numbers to read at a glance, like the lowest value of a low.
-            Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                BigValue("${meal.carbohydrates}", "g", Carbs)
-                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(meal.title, Modifier.padding(start = MEAL_TEXT_INDENT), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        MealOutcomeRow(meal, target)
+                    }
+                    // The numbers to read at a glance, like the lowest value of a low.
+                    Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        BigValue("${meal.carbohydrates}", "g", Carbs)
+                        meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
+                    }
+                }
             }
         }
     }

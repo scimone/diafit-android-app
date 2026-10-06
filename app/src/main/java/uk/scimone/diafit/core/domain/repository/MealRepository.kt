@@ -24,6 +24,8 @@ interface MealRepository {
 
     suspend fun setSittingId(mealId: Int, sittingId: String): Result<Unit>
 
+    suspend fun setSittingName(sittingId: String, name: String?): Result<Unit>
+
     suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity?
 
     /** Meals of [userId] from [since] on that aren't hidden as merged duplicates. */

@@ -52,6 +52,9 @@ interface MealDao {
     @Query("SELECT * FROM MealEntity WHERE sittingId = :sittingId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc ASC")
     suspend fun getMealsBySitting(sittingId: String): List<MealEntity>
 
+    @Query("UPDATE MealEntity SET sittingName = :name WHERE sittingId = :sittingId")
+    suspend fun setSittingName(sittingId: String, name: String?)
+
     @Query("UPDATE MealEntity SET sittingId = :sittingId WHERE id = :mealId")
     suspend fun setSittingId(mealId: Int, sittingId: String)
 

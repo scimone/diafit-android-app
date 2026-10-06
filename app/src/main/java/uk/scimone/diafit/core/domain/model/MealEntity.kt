@@ -30,6 +30,8 @@ data class MealEntity(
     val sourceId: String? = null,
     /** Groups the courses of one meal; null for imported entries and meals logged before courses existed. */
     val sittingId: String? = null,
+    /** User-chosen name of the whole meal (copied onto every course of the sitting); null = derive from the courses. */
+    val sittingName: String? = null,
     /** Photos beyond the cover [imageId], in display order. */
     @ColumnInfo(defaultValue = "[]")
     val extraImageIds: List<String> = emptyList(),

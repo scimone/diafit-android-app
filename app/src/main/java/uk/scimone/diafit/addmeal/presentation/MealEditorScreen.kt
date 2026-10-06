@@ -178,6 +178,19 @@ fun MealEditorScreen(
                 onAnalyze = viewModel::analyzeMeal
             )
 
+            if (uiState.sitting != null) {
+                Section("Meal name") {
+                    OutlinedTextField(
+                        value = uiState.mealName,
+                        onValueChange = viewModel::onMealNameChanged,
+                        placeholder = { Text("Name of the whole meal") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                }
+            }
+
             Section(if (uiState.isAddingCourse) "What arrived?" else "What did you eat?") {
                 OutlinedTextField(
                     value = uiState.description.orEmpty(),

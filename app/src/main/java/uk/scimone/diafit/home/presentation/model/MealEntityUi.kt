@@ -24,6 +24,7 @@ data class MealEntityUi(
     /** Every photo of this course, cover ([imageUri]) first. */
     val photoUris: List<Uri> = listOfNotNull(imageUri),
     val sittingId: String? = null,
+    val sittingName: String? = null,
     val isImported: Boolean = false,
 )
 
@@ -50,6 +51,7 @@ fun MealEntity.toMealEntityUi(context: Context
         reasoning = reasoning,
         photoUris = photos,
         sittingId = sittingId,
+        sittingName = sittingName,
         isImported = sourceId != null
     )
 }

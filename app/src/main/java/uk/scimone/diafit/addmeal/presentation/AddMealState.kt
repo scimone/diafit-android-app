@@ -29,6 +29,8 @@ data class AddMealState(
     val mealTypeAuto: Boolean = true,
     /** The meal this course belongs to, when it has (or will have) other courses. */
     val sitting: SittingContext? = null,
+    /** Name of the whole meal (only edited when [sitting] is set); starts as the meal's current title. */
+    val mealName: String = "",
     val dishName: String? = null,
     /** Photo ids the last AI analysis looked at; differs from [photos] once photos are added/removed. */
     val analyzedPhotoIds: List<String>? = null,

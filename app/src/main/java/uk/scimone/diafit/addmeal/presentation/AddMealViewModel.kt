@@ -61,10 +61,13 @@ class AddMealViewModel(
     /** The meal a new course joins (its courses), or null for a brand-new meal. */
     private var targetSitting: MealSitting? = null
     private var baseline: AddMealState = AddMealState()
+    /** The meal's title when the editor opened, to tell a rename from an untouched default. */
+    private var sittingTitleAtStart: String? = null
 
     private fun reset() {
         editing = null
         targetSitting = null
+        sittingTitleAtStart = null
         pendingCamera = null
         unsavedPhotoIds.clear()
     }
@@ -90,6 +93,7 @@ class AddMealViewModel(
                 return@launch
             }
             targetSitting = sitting
+            sittingTitleAtStart = sitting.title
             val now = System.currentTimeMillis()
             val time = if (now - sitting.endTime < RECENT_MEAL_MS) now else sitting.endTime + COURSE_DEFAULT_GAP_MS
             _uiState.value = AddMealState(
@@ -97,7 +101,8 @@ class AddMealViewModel(
                 mealType = sitting.courses.first().mealType,
                 mealTypeAuto = false,
                 description = "",
-                sitting = sittingContext(sitting, excludeId = null)
+                sitting = sittingContext(sitting, excludeId = null),
+                mealName = sitting.title
             )
             baseline = _uiState.value.formFields()
         }
@@ -113,6 +118,7 @@ class AddMealViewModel(
             }
             editing = meal
             val sitting = getMealSitting(mealId)?.takeIf { it.isExtended }
+            sittingTitleAtStart = sitting?.title
             _uiState.value = AddMealState(
                 editingMealId = meal.id,
                 photos = meal.photoIds.mapNotNull { id -> fileStorageRepository.getFileProviderUri(id)?.let { MealPhoto(id, it) } },
@@ -128,7 +134,8 @@ class AddMealViewModel(
                 mealTypeAuto = false,
                 reasoning = meal.reasoning,
                 components = meal.components,
-                sitting = sitting?.let { sittingContext(it, excludeId = meal.id) }
+                sitting = sitting?.let { sittingContext(it, excludeId = meal.id) },
+                mealName = sitting?.title.orEmpty()
             )
             baseline = _uiState.value.formFields()
         }
@@ -301,12 +308,13 @@ class AddMealViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val original = editing
+            val sittingId = if (original == null) targetSitting?.let { ensureSittingId(it) } else original.sittingId
             val result: Result<*> = if (original == null) {
                 createMealUseCase(
                     photos = state.photos,
                     description = state.description?.trim(),
                     userId = userId,
-                    sittingId = targetSitting?.let { ensureSittingId(it) },
+                    sittingId = sittingId,
                     mealTimeUtc = state.mealTime ?: Instant.now().toEpochMilli(),
                     carbohydrates = state.carbohydrates ?: 0,
                     proteins = state.proteins,
@@ -334,6 +342,12 @@ class AddMealViewModel(
             }
 
             if (result.isSuccess) {
+                // A renamed meal carries its name on every course; an untouched default stays derived.
+                val name = state.mealName.trim()
+                val sitting = state.sitting
+                if (sitting != null && sittingId != null && name.isNotEmpty() && name != targetSitting?.title && name != sittingTitleAtStart) {
+                    mealRepository.setSittingName(sittingId, name)
+                }
                 unsavedPhotoIds.clear()
                 _uiState.update {
                     it.copy(isLoading = false, finished = EditorResult.Saved(wasNew = original == null, addedCourse = targetSitting != null))
@@ -365,6 +379,10 @@ class AddMealViewModel(
 
     fun onAiNotesChanged(notes: String) {
         _uiState.update { it.copy(aiNotes = notes) }
+    }
+
+    fun onMealNameChanged(name: String) {
+        _uiState.update { it.copy(mealName = name) }
     }
 
     fun onDescriptionChanged(newDescription: String) {

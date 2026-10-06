@@ -79,6 +79,16 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun setSittingName(sittingId: String, name: String?): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.setSittingName(sittingId, name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to name sitting $sittingId", e)
+            Result.failure(e)
+        }
+    }
+
     override suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity? =
         withContext(Dispatchers.IO) { mealDao.getLatestLoggedMeal(userId, now) }
 

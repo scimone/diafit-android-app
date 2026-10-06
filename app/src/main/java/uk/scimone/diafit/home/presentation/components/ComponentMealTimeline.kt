@@ -75,8 +75,9 @@ fun List<MealGroup>.nearest(time: Long?, toleranceMs: Long = 20 * 60_000L): Meal
 
 private fun formatTime(millis: Long): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(millis))
 
-private fun MealGroup.title(): String = meals.mapNotNull { it.description?.takeIf(String::isNotBlank) }
-    .distinct().joinToString(" + ").ifEmpty { meals.first().mealType.type }
+private fun MealGroup.title(): String = meals.firstNotNullOfOrNull { it.sittingName?.takeIf(String::isNotBlank) }
+    ?: meals.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) }
+    ?: meals.first().mealType.type
 
 /** The sittings that overlap the charts' visible time window [start]..[end]. */
 fun List<MealGroup>.inView(start: Long, end: Long): List<MealGroup> =
