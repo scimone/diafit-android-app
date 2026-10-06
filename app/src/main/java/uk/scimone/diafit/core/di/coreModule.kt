@@ -6,6 +6,7 @@ import io.ktor.client.engine.android.Android
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import uk.scimone.diafit.core.data.file.FileStorageRepositoryImpl
+import uk.scimone.diafit.core.data.repository.MealAnalysisRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealRepositoryImpl
 import uk.scimone.diafit.core.data.local.AppDatabase
 import uk.scimone.diafit.core.data.local.BolusDao
@@ -13,12 +14,15 @@ import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
 import uk.scimone.diafit.core.data.networking.util.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
+import uk.scimone.diafit.core.data.networking.OpenAiApi
 import uk.scimone.diafit.core.data.repository.BolusRepositoryImpl
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
 import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
+import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
@@ -68,5 +72,10 @@ val coreModule = module {
 
     // Nightscout HTTP API
     single { HttpClientFactory.create(Android.create()) }
-    single { NightscoutApi(get()) }
+    single { NightscoutApi(get(), get()) }
+
+    // OpenAI-compatible meal photo analysis
+    single { OpenAiApi(get()) }
+    single<MealAnalysisRepository> { MealAnalysisRepositoryImpl(get(), get(), get()) }
+    single { AnalyzeMealUseCase(get()) }
 }

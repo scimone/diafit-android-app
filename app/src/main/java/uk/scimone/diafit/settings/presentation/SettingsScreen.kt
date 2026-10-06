@@ -15,10 +15,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +33,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -97,6 +103,32 @@ fun SettingsScreen(
                 lower = state.glucoseTargetRange.lowerBound,
                 upper = state.glucoseTargetRange.upperBound,
                 onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
+            )
+        }
+
+        SettingsSection(title = "Nightscout", icon = Icons.Filled.CloudQueue) {
+            ServerConfigInput(
+                baseUrl = state.nightscoutConfig.baseUrl,
+                apiKey = state.nightscoutConfig.apiKey,
+                baseUrlLabel = "Base URL",
+                apiKeyLabel = "API secret",
+                onConfigChanged = { baseUrl, apiKey -> viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
+            )
+        }
+
+        SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {
+            Text(
+                "OpenAI-compatible endpoint used to analyze meal photos for nutrient estimates.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            ServerConfigInput(
+                baseUrl = state.aiConfig.baseUrl,
+                apiKey = state.aiConfig.apiKey,
+                baseUrlLabel = "Base URL",
+                apiKeyLabel = "API key",
+                onConfigChanged = { baseUrl, apiKey -> viewModel.onAiConfigChanged(baseUrl, apiKey) }
             )
         }
 
@@ -227,6 +259,52 @@ fun BatteryOptimizationWarningDialog(
                 Text("Dismiss")
             }
         }
+    )
+}
+
+@Composable
+fun ServerConfigInput(
+    baseUrl: String,
+    apiKey: String,
+    baseUrlLabel: String,
+    apiKeyLabel: String,
+    onConfigChanged: (String, String) -> Unit
+) {
+    var baseUrlText by remember(baseUrl) { mutableStateOf(baseUrl) }
+    var apiKeyText by remember(apiKey) { mutableStateOf(apiKey) }
+    var apiKeyVisible by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = baseUrlText,
+        onValueChange = {
+            baseUrlText = it
+            onConfigChanged(it, apiKeyText)
+        },
+        label = { Text(baseUrlLabel) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    OutlinedTextField(
+        value = apiKeyText,
+        onValueChange = {
+            apiKeyText = it
+            onConfigChanged(baseUrlText, it)
+        },
+        label = { Text(apiKeyLabel) },
+        singleLine = true,
+        visualTransformation = if (apiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        trailingIcon = {
+            IconButton(onClick = { apiKeyVisible = !apiKeyVisible }) {
+                Icon(
+                    imageVector = if (apiKeyVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = if (apiKeyVisible) "Hide $apiKeyLabel" else "Show $apiKeyLabel"
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
     )
 }
 

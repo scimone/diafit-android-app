@@ -2,6 +2,7 @@ package uk.scimone.diafit.addmeal.presentation
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
@@ -11,14 +12,18 @@ import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
+import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.util.localDateTimeToInstant
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
 
+private const val TAG = "AddMealViewModel"
+
 class AddMealViewModel(
     private val createMealUseCase: CreateMealUseCase,
+    private val analyzeMealUseCase: AnalyzeMealUseCase,
     private val fileStorageRepository: FileStorageRepository,  // TODO: Use usecase instead of repository
     private val userId: Int,
     private var hasStartedMeal: Boolean = false,
@@ -67,6 +72,41 @@ class AddMealViewModel(
         }
     }
 
+    fun analyzeMeal() {
+        viewModelScope.launch {
+            val uri = uiState.value.imageUri ?: return@launch
+            _uiState.update { it.copy(isAnalyzing = true) }
+
+            analyzeMealUseCase(uri)
+                .onSuccess { analysis ->
+                    _uiState.update {
+                        it.copy(
+                            dishName = analysis.dishName,
+                            description = it.description.takeUnless { desc -> desc.isNullOrBlank() }
+                                ?: analysis.dishName,
+                            carbohydrates = analysis.carbohydrates ?: it.carbohydrates,
+                            proteins = analysis.protein ?: it.proteins,
+                            fats = analysis.fat ?: it.fats,
+                            calories = analysis.calories ?: it.calories,
+                            impactType = analysis.impactType,
+                            reasoning = analysis.reasoning,
+                            isAnalyzing = false,
+                            snackbarMessage = "AI analysis complete — review the estimated values below"
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "Meal analysis failed", error)
+                    _uiState.update {
+                        it.copy(
+                            isAnalyzing = false,
+                            snackbarMessage = "AI analysis failed: ${error.message}"
+                        )
+                    }
+                }
+        }
+    }
+
     fun saveMeal() {
         viewModelScope.launch {
             val uri = uiState.value.imageUri ?: return@launch
@@ -83,7 +123,8 @@ class AddMealViewModel(
                 calories = uiState.value.calories,
                 imageId = imageId,
                 impactType = uiState.value.impactType,
-                mealType = uiState.value.mealType
+                mealType = uiState.value.mealType,
+                reasoning = uiState.value.reasoning
             )
 
             if (result.isSuccess) {

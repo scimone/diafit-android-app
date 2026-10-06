@@ -8,6 +8,7 @@ val addmealModule = module {
     viewModel { (userId: Int) ->
         AddMealViewModel(
             createMealUseCase = get(),
+            analyzeMealUseCase = get(),
             fileStorageRepository = get(),
             userId = userId,
             application = get()

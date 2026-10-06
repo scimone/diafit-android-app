@@ -14,6 +14,9 @@ data class AddMealState (
     val calories: Int? = null,
     val impactType: ImpactType = ImpactType.MEDIUM,
     val mealType: MealType = MealType.SNACK,
+    val dishName: String? = null,
+    val reasoning: String? = null,
+    val isAnalyzing: Boolean = false,
     val isLoading: Boolean = false,
     val snackbarMessage: String? = null
 )

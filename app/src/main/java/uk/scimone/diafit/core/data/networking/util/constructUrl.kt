@@ -1,15 +1,13 @@
 package uk.scimone.diafit.core.data.networking.util
 
-import uk.scimone.diafit.BuildConfig
+fun constructUrl(url: String, baseUrl: String, apiKey: String?): String {
+    val trimmedBaseUrl = baseUrl.trimEnd('/')  // remove trailing slash if any
+    val path = url.trimStart('/')              // remove leading slash if any
 
-fun constructUrl(url: String, apiKey: String? = BuildConfig.API_KEY): String {
-    val baseUrl = BuildConfig.BASE_URL.trimEnd('/')  // remove trailing slash if any
-    val path = url.trimStart('/')                    // remove leading slash if any
-
-    val base = if (url.contains(baseUrl)) {
+    val base = if (url.contains(trimmedBaseUrl)) {
         url
     } else {
-        "$baseUrl/$path"  // always exactly one slash between baseUrl and path
+        "$trimmedBaseUrl/$path"  // always exactly one slash between baseUrl and path
     }
 
     return if (!apiKey.isNullOrBlank()) {

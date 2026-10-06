@@ -102,6 +102,34 @@ fun AddMealScreen(
 
                 Spacer(Modifier.height(16.dp))
 
+                OutlinedButton(
+                    onClick = viewModel::analyzeMeal,
+                    enabled = !uiState.isAnalyzing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (uiState.isAnalyzing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Analyzing…")
+                    } else {
+                        Text("Analyze with AI")
+                    }
+                }
+
+                uiState.reasoning?.let { reasoning ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        reasoning,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = uiState.description.orEmpty(),
                     onValueChange = viewModel::onDescriptionChanged,
