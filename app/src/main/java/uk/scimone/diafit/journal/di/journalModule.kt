@@ -11,6 +11,7 @@ val journalModule = module {
             mealRepository = get(),
             getMealOutcome = get(),
             cgmRepository = get(),
+            bolusRepository = get(),
             getTargetRangeUseCase = get(),
             context = get(),
             userId = get()

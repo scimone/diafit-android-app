@@ -160,4 +160,5 @@ private fun JournalEntryKind.description(): String = when (this) {
     JournalEntryKind.SLEEP -> "Bedtime, wake-up and quality"
     JournalEntryKind.ACTIVITY -> "Workouts and how hard they were"
     JournalEntryKind.GLUCOSE -> "Found in your CGM data"
+    JournalEntryKind.BOLUS -> "Found in your pump data"
 }

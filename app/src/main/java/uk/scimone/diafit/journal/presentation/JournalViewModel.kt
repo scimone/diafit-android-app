@@ -25,9 +25,13 @@ import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.toSittings
+import uk.scimone.diafit.core.domain.model.MEAL_DOSE_LEAD_MS
+import uk.scimone.diafit.core.domain.model.standalone
+import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
+import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -48,6 +52,7 @@ class JournalViewModel(
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val getMealOutcome: GetMealOutcomeUseCase,
     private val cgmRepository: CgmRepository,
+    private val bolusRepository: BolusRepository,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,
     private val userId: Int
@@ -102,7 +107,7 @@ class JournalViewModel(
                 .collect { meals ->
                     val (from, to) = range.boundsUtc()  // re-resolved each time so "last 7 days" rolls over at midnight
                     val entries = withContext(Dispatchers.IO) {
-                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to)
+                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to)
                     }
                     _uiState.update {
                         it.copy(
@@ -142,6 +147,14 @@ class JournalViewModel(
             emptyList()
         }
         return episodes.map(::GlucoseEpisodeUi)
+    }
+
+    /** Manual boluses in the range that belong to no meal (see [standalone]). */
+    private suspend fun bolusEntries(meals: List<MealEntity>, from: Long, to: Long): List<BolusEntryUi> = try {
+        bolusRepository.getBolusBetween(from, to, userId).standalone(meals.toSittings()).map(::BolusEntryUi)
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading boluses", e)
+        emptyList()
     }
 
     fun refreshMeals() {

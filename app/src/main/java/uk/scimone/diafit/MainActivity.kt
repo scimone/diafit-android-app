@@ -27,6 +27,7 @@ import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
 import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
+import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import androidx.activity.compose.BackHandler
@@ -199,6 +200,7 @@ class MainActivity : ComponentActivity() {
                                     when (entry) {
                                         is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
                                         // A low or high opens its day in History, where the trace around it is visible.
+                                        is BolusEntryUi -> Unit
                                         is GlucoseEpisodeUi -> overlays.add(
                                             Overlay.DayDetail(
                                                 java.time.Instant.ofEpochMilli(entry.timeUtc)

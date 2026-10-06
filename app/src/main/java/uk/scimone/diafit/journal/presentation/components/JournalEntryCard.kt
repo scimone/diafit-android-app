@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,11 +24,14 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.GlucoseEpisode
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
+import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -48,6 +52,7 @@ fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick:
     when (entry) {
         is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier)
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
+        is BolusEntryUi -> BolusCard(entry.bolus, onClick, modifier)
     }
 }
 
@@ -81,7 +86,7 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                             if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
                         },
                         style = MaterialTheme.typography.labelMedium,
-                        color = meal.mealType.accent,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -94,13 +99,16 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             }
             Spacer(Modifier.width(10.dp))
             // The numbers to read at a glance, like the lowest value of a low.
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 BigValue("${meal.carbohydrates}", "g", Carbs)
                 meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
             }
         }
     }
 }
+
+/** Fixed, so the glucose outcome box (and its range bar) is the same width on every meal card. */
+private val MEAL_VALUES_WIDTH = 56.dp
 
 @Composable
 private fun BigValue(value: String, unit: String, color: Color) {
@@ -113,7 +121,7 @@ private fun BigValue(value: String, unit: String, color: Color) {
 /** The cover photo (or the meal-type tile), with a "+N" badge when there are more photos. */
 @Composable
 private fun MealThumbnail(meal: MealEntityUi) {
-    val size = 96.dp
+    val size = 88.dp
     val photos = meal.photoUris
     Box(Modifier.size(size)) {
         if (photos.isEmpty()) {
@@ -172,7 +180,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
                     if (start != null) 
                     meal.peakTimeUtc?.let {
                         val mins = ((it - meal.mealTimeUtc) / 60_000).toInt().coerceAtLeast(0)
-                        append(" after ${if (mins >= 60) "${mins / 60}h ${mins % 60}min" else "$mins min"}")
+                        append(" · ${if (mins >= 60) "${mins / 60}h ${mins % 60}m" else "${mins}m"}")
                     }
                 }
             }
@@ -191,7 +199,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("${meal.timeInRange.toInt()}%", style = labelStyle, fontWeight = FontWeight.Bold, color = InRange)
+                Text("${meal.timeInRange.toInt()}%", Modifier.width(34.dp), style = labelStyle, fontWeight = FontWeight.Bold, color = InRange, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
             }
         }
     }
@@ -236,6 +244,31 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+/** A manual bolus that belongs to no meal. */
+@Composable
+fun BolusCard(bolus: BolusEntity, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    EntrySurface(onClick, modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Vaccines, null, tint = Bolus, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(clock.format(Date(bolus.timestampUtc)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Insulin bolus", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatUnits(bolus.value.toDouble()), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Bolus)
+                Text("U, no meal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

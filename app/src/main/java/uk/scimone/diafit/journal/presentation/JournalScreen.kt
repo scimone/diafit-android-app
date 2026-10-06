@@ -167,6 +167,7 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
 private fun daySummary(entries: List<JournalEntryUi>): String {
     val meals = entries.filterIsInstance<MealEntityUi>()
     val episodes = entries.filterIsInstance<GlucoseEpisodeUi>()
+    val boluses = entries.count { it is uk.scimone.diafit.journal.presentation.model.BolusEntryUi }
     val lows = episodes.count { it.episode.isLow }
     val highs = episodes.size - lows
     val parts = buildList {
@@ -174,6 +175,7 @@ private fun daySummary(entries: List<JournalEntryUi>): String {
             add("${meals.size} ${if (meals.size == 1) "meal" else "meals"}")  // a multi-course meal counts once
             add("${meals.sumOf { it.carbohydrates }} g carbs")
         }
+        if (boluses > 0) add("$boluses ${if (boluses == 1) "bolus" else "boluses"}")
         if (lows > 0) add("$lows ${if (lows == 1) "low" else "lows"}")
         if (highs > 0) add("$highs ${if (highs == 1) "high" else "highs"}")
     }
