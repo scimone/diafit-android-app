@@ -240,12 +240,9 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
             Column(horizontalAlignment = Alignment.End) {
                 Text("${episode.extremeMgdl}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
                 Text(
-                    buildAnnotatedString {
-                        append(if (episode.isLow) "lowest " else "highest ")
-                        withStyle(SpanStyle(color = color)) { append("mg/dL") }
-                    },
+                    if (episode.isLow) "lowest mg/dL" else "highest mg/dL",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = color
                 )
             }
         }
