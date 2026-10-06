@@ -80,7 +80,8 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                 Row(Modifier.padding(start = MEAL_TEXT_INDENT), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         buildString {
-                            append(meal.timeFormatted)
+                            // The start time only for multi-course meals: the full range doesn't fit next to the badge.
+                            append(if (meal.courseCount > 1) meal.timeFormatted.substringBefore('–') else meal.timeFormatted)
                             append(" · ")
                             append(meal.mealType.type)
                             if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
