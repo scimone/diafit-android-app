@@ -68,7 +68,7 @@ class MealAnalysisRepositoryImpl(
     private val getAiConfig: GetAiConfigUseCase
 ) : MealAnalysisRepository {
 
-    override suspend fun analyzeMealPhotos(imageUris: List<Uri>): Result<MealAnalysisResult> =
+    override suspend fun analyzeMealPhotos(imageUris: List<Uri>, userNotes: String?): Result<MealAnalysisResult> =
         withContext(Dispatchers.IO) {
             try {
                 val config = getAiConfig()
@@ -92,7 +92,7 @@ class MealAnalysisRepositoryImpl(
                         baseUrl = config.baseUrl,
                         apiKey = config.apiKey,
                         model = config.model.ifBlank { DEFAULT_AI_MODEL },
-                        prompt = MEAL_ANALYSIS_PROMPT,
+                        prompt = buildPrompt(userNotes),
                         imagesBase64 = images
                     )
                 ) {
@@ -111,6 +111,17 @@ class MealAnalysisRepositoryImpl(
                 Result.failure(e)
             }
         }
+
+    /** Appends the user's notes so the model adjusts quantities (e.g. "I only drank half of the bottle"). */
+    private fun buildPrompt(userNotes: String?): String {
+        val notes = userNotes?.trim().orEmpty()
+        if (notes.isEmpty()) return MEAL_ANALYSIS_PROMPT
+        return MEAL_ANALYSIS_PROMPT + """
+
+Notes from the person eating (they know what they actually ate; follow them over what the photos suggest, e.g. if they only ate or drank part of something, count only that part and say so in the reasoning):
+$notes
+"""
+    }
 
     override suspend fun listModels(): Result<List<String>> = withContext(Dispatchers.IO) {
         try {

@@ -31,6 +31,8 @@ data class AddMealState(
     /** Photo ids the last AI analysis looked at; differs from [photos] once photos are added/removed. */
     val analyzedPhotoIds: List<String>? = null,
     val reasoning: String? = null,
+    /** Optional context sent to the AI together with the photos, e.g. "I only ate half". */
+    val aiNotes: String = "",
     val isAnalyzing: Boolean = false,
     val isLoading: Boolean = false,
     val snackbarMessage: String? = null,
@@ -55,7 +57,7 @@ data class AddMealState(
     /** The user-editable fields only, for unsaved-changes detection. */
     fun formFields() = copy(
         isAnalyzing = false, isLoading = false, snackbarMessage = null, finished = null, dishName = null,
-        analyzedPhotoIds = null, sitting = null
+        analyzedPhotoIds = null, sitting = null, aiNotes = ""
     )
 }
 

@@ -236,7 +236,7 @@ class AddMealViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isAnalyzing = true) }
 
-            analyzeMealUseCase(photos.map { it.uri })
+            analyzeMealUseCase(photos.map { it.uri }, uiState.value.aiNotes)
                 .onSuccess { analysis ->
                     _uiState.update {
                         it.copy(
@@ -339,6 +339,10 @@ class AddMealViewModel(
                 .onSuccess { _uiState.update { it.copy(finished = EditorResult.Deleted(id)) } }
                 .onFailure { _uiState.update { s -> s.copy(snackbarMessage = "Couldn't delete the meal") } }
         }
+    }
+
+    fun onAiNotesChanged(notes: String) {
+        _uiState.update { it.copy(aiNotes = notes) }
     }
 
     fun onDescriptionChanged(newDescription: String) {

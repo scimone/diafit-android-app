@@ -171,6 +171,7 @@ fun MealEditorScreen(
                 onPickPhoto = pickPhoto,
                 onRemove = viewModel::onRemovePhoto,
                 onMakeCover = viewModel::onMakeCover,
+                onAiNotesChanged = viewModel::onAiNotesChanged,
                 onAnalyze = viewModel::analyzeMeal
             )
 
@@ -375,6 +376,7 @@ private fun PhotoSection(
     onPickPhoto: () -> Unit,
     onRemove: (imageId: String) -> Unit,
     onMakeCover: (imageId: String) -> Unit,
+    onAiNotesChanged: (String) -> Unit,
     onAnalyze: () -> Unit
 ) {
     val photos = state.photos
@@ -434,6 +436,15 @@ private fun PhotoSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            OutlinedTextField(
+                value = state.aiNotes,
+                onValueChange = onAiNotesChanged,
+                label = { Text("Notes for the AI (optional)") },
+                placeholder = { Text("e.g. I only drank half of the bottle") },
+                enabled = !state.isAnalyzing,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            )
             FilledTonalButton(onClick = onAnalyze, enabled = !state.isAnalyzing, modifier = Modifier.fillMaxWidth()) {
                 if (state.isAnalyzing) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
