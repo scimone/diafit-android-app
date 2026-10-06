@@ -49,10 +49,12 @@ fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 36.dp
+    height: Dp = 30.dp
 ) {
     val runs = day.glucose.splitAtGaps()
+    val guides = hourGuideColor()
     Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
+        drawHourGuides(guides)
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         val stripHeight = IN_RANGE_STRIP_HEIGHT.toPx()
         runs.filter { it.size > 1 }.forEach { run ->

@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.service.CgmServiceManager
 import uk.scimone.diafit.journal.presentation.JournalScreen
 import uk.scimone.diafit.history.presentation.HistoryScreen
+import uk.scimone.diafit.history.presentation.detail.DayDetailScreen
 import uk.scimone.diafit.home.presentation.HomeScreen
 import uk.scimone.diafit.home.presentation.HomeTitle
 import uk.scimone.diafit.home.presentation.HomeViewModel
@@ -136,7 +137,13 @@ class MainActivity : ComponentActivity() {
                                     val homeState by homeViewModel.state.collectAsStateWithLifecycle()
                                     HomeTitle(state = homeState)
                                 } else {
-                                    Text(if (selectedTab == 2) "Journal" else "Diafit")
+                                    Text(
+                                        when (selectedTab) {
+                                            2 -> "Journal"
+                                            3 -> "History"
+                                            else -> "Diafit"
+                                        }
+                                    )
                                 }
                             },
                             actions = {
@@ -194,7 +201,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAddEntry = { showNewEntrySheet = true }
                             )
-                            3 -> HistoryScreen(userId = userId)
+                            3 -> HistoryScreen(userId = userId, onOpenDay = { overlays.add(Overlay.DayDetail(it)) })
                             SETTINGS_TAB_INDEX -> SettingsScreen(
                                 onRequestIgnoreBatteryOptimizations = {
                                     val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
@@ -238,7 +245,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && overlay is Overlay.MealDetail) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -250,6 +257,12 @@ class MainActivity : ComponentActivity() {
                                     onEdit = { overlays.add(Overlay.MealEditor(it)) },
                                     onAddCourse = addCourse,
                                     onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
+                                )
+                                is Overlay.DayDetail -> DayDetailScreen(
+                                    userId = userId,
+                                    initialEpochDay = overlay.epochDay,
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpenMeal = { overlays.add(Overlay.MealDetail(it)) }
                                 )
                                 is Overlay.MealEditor -> MealEditorScreen(
                                     userId = userId,
@@ -295,6 +308,8 @@ class MainActivity : ComponentActivity() {
 /** A full-screen page shown above the tabs. */
 private sealed interface Overlay {
     data class MealDetail(val mealId: Int) : Overlay
+    /** One day of History in full; swipeable to neighbouring days. */
+    data class DayDetail(val epochDay: Long) : Overlay
     /** [mealId] == null creates a new meal, or a new course of [addToMealId]'s meal when that is set. */
     data class MealEditor(val mealId: Int?, val addToMealId: Int? = null) : Overlay
 }

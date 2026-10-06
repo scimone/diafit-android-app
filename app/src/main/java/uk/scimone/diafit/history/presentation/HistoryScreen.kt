@@ -1,81 +1,90 @@
 package uk.scimone.diafit.history.presentation
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.automirrored.outlined.ShowChart
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import uk.scimone.diafit.history.presentation.model.DayHistoryUi
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.history.presentation.components.DayTrackRow
 import uk.scimone.diafit.history.presentation.components.HistoryTimeAxis
+import uk.scimone.diafit.history.presentation.model.DayHistoryUi
+import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Carbs
+import uk.scimone.diafit.ui.theme.InRange
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
+/**
+ * Two weeks at a glance: period headline numbers, the (sticky) glucose profile chart, and one compact
+ * horizon track per day underneath on a shared 0–24 h axis. Tapping a day opens it in full ([onOpenDay]).
+ */
 @Composable
 fun HistoryScreen(
     userId: Int,
+    onOpenDay: (epochDay: Long) -> Unit,
     viewModel: HistoryViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val state by viewModel.state.collectAsState()
+    val today = remember { LocalDate.now().toEpochDay() }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader(
+        PeriodHeader(
             days = state.days,
-            canGoNewer = state.page > 0,
+            isLatest = state.page == 0,
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
-        when {
-            state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-            state.days.isEmpty() -> Text(
-                state.errorMessage ?: "No history yet",
-                Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            else -> Column(Modifier.fillMaxSize()) {
-                // Sticky chart placeholder (~30% of the page), full width.
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.3f)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Placeholder Chart",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                    HistoryTimeAxis()
-                    LazyColumn(Modifier.weight(1f)) {
-                        items(state.days, key = { it.epochDay }) { day ->
-                            DayTrackRow(day, state.thresholds)
+            when {
+                state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                state.days.isEmpty() -> Text(
+                    state.errorMessage ?: "No history yet",
+                    Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                else -> Column(Modifier.fillMaxSize()) {
+                    PeriodStats(state.period)
+                    ProfileChartPlaceholder(Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 12.dp))
+                    Spacer(Modifier.height(10.dp))
+                    HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
+                    LazyColumn(
+                        Modifier.weight(1f),
+                        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 12.dp)
+                    ) {
+                        itemsIndexed(state.days, key = { _, day -> day.epochDay }) { index, day ->
+                            // Newest first: a Sunday starts a new (older) week, so give it some air.
+                            val weekBreak = index > 0 && LocalDate.ofEpochDay(day.epochDay).dayOfWeek == DayOfWeek.SUNDAY
+                            DayTrackRow(
+                                day = day,
+                                thresholds = state.thresholds,
+                                isToday = day.epochDay == today,
+                                onClick = { onOpenDay(day.epochDay) },
+                                modifier = if (weekBreak) Modifier.padding(top = 10.dp) else Modifier
+                            )
                         }
                     }
                 }
             }
         }
-    }
     }
 }
 
@@ -83,15 +92,77 @@ private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
 
 /** Two-week window selector: back/forward arrows around the date range. */
 @Composable
-private fun PageHeader(days: List<DayHistoryUi>, canGoNewer: Boolean, onOlder: () -> Unit, onNewer: () -> Unit) {
+private fun PeriodHeader(days: List<DayHistoryUi>, isLatest: Boolean, onOlder: () -> Unit, onNewer: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous two weeks") }
-        val label = if (days.isEmpty()) "" else {
-            val first = LocalDate.ofEpochDay(days.last().epochDay)
-            val last = LocalDate.ofEpochDay(days.first().epochDay)
-            "${first.format(RANGE_FORMAT)} – ${last.format(RANGE_FORMAT)}"
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            val label = if (days.isEmpty()) "" else {
+                val first = LocalDate.ofEpochDay(days.last().epochDay)
+                val last = LocalDate.ofEpochDay(days.first().epochDay)
+                "${first.format(RANGE_FORMAT)} – ${last.format(RANGE_FORMAT)}"
+            }
+            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(
+                if (isLatest) "Last 14 days" else "14 days",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        Text(label, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall)
-        IconButton(onClick = onNewer, enabled = canGoNewer) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next two weeks") }
+        IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next two weeks") }
+    }
+}
+
+/** The window's headline numbers in one row. */
+@Composable
+private fun PeriodStats(period: PeriodSummary?) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        PeriodStat(period?.inRangeShare?.let { "${Math.round(it * 100)}%" }, "in range", if ((period?.inRangeShare ?: 0.0) >= 0.7) InRange else null, Modifier.weight(1f))
+        PeriodStat(period?.meanMgdl?.let { "${it.toInt()}" }, "avg mg/dL", null, Modifier.weight(1f))
+        PeriodStat(period?.carbsPerDay?.let { "${it.toInt()} g" }, "carbs / day", Carbs, Modifier.weight(1f))
+        PeriodStat(period?.insulinPerDay?.let { "%.1f U".format(it) }, "insulin / day", Bolus, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun PeriodStat(value: String?, label: String, accent: Color?, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value ?: "–",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = accent ?: MaterialTheme.colorScheme.onSurface
+        )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    }
+}
+
+/** Space reserved for the ambulatory glucose profile (median and percentile bands over the window). */
+@Composable
+private fun ProfileChartPlaceholder(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Box(Modifier.fillMaxSize().padding(14.dp)) {
+            Column(Modifier.align(Alignment.TopStart)) {
+                Text("Glucose profile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("AGP · median and percentile bands", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.ShowChart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(32.dp)
+                )
+                Text(
+                    "Placeholder Chart",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
     }
 }

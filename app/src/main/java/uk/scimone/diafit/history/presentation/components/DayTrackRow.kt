@@ -1,81 +1,99 @@
 package uk.scimone.diafit.history.presentation.components
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.history.domain.model.GlucoseThresholds
-import uk.scimone.diafit.history.domain.model.TreatmentCluster
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
+import uk.scimone.diafit.ui.theme.AboveRange
+import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import uk.scimone.diafit.ui.theme.InRange
+
+/** Width of the date column left of every track; the time axis is inset by the same amount. */
+val DAY_LABEL_WIDTH = 40.dp
+
+/** Width of the time-in-range column right of every track; the time axis is inset by the same amount. */
+val DAY_SUMMARY_WIDTH = 48.dp
+
+/** A day with at least this share in range gets its percentage in the in-range colour (consensus target). */
+private const val TIR_GOAL = 0.7
 
 /**
- * One day on the shared 24 h scale, as three stacked strips on the page background: glucose
- * (green strip with high/low mountains), carbs and bolus. No lines or cards: each strip is just a
- * slightly lighter field. Tapping expands the glucose strip into a line graph.
+ * One day on the shared 24 h scale: the date, then one rounded track made of three bands (glucose
+ * horizon with high/low mountains, carbs, bolus), then the day's time in range. Tapping opens the day.
  */
 @Composable
 fun DayTrackRow(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
+    isToday: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var expanded by rememberSaveable(day.epochDay) { mutableStateOf(false) }
-
-    Column(modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 5.dp)) {
-        Box {
-            if (expanded) DayLineChart(day, thresholds) else HorizonChart(day, thresholds)
-            Text(
-                caption(day, expanded),
-                Modifier.padding(start = 6.dp, top = 2.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        DayLabel(day, isToday)
+        Column(Modifier.weight(1f).clip(RoundedCornerShape(8.dp))) {
+            HorizonChart(day, thresholds)
+            Spacer(Modifier.height(1.dp))
+            TreatmentStrip(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)
+            Spacer(Modifier.height(1.dp))
+            TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
         }
-        Spacer(Modifier.height(2.dp))
-        TreatmentStrip(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)
-        Spacer(Modifier.height(2.dp))
-        TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
-        AnimatedVisibility(expanded) { TreatmentList(day) }
-    }
-}
-
-/** "Tue 6", and once expanded the day's totals as well. */
-private fun caption(day: DayHistoryUi, expanded: Boolean): String {
-    val date = "${day.weekday} ${day.dayOfMonth}"
-    return if (expanded) "$date · ${summary(day)}" else date
-}
-
-private fun summary(day: DayHistoryUi): String = listOfNotNull(
-    day.timeInRangePercent?.let { "$it% in range" },
-    day.totalCarbs.takeIf { it > 0f }?.let { "%.0f g".format(it) },
-    day.totalInsulin.takeIf { it > 0f }?.let { "%.1f U".format(it) }
-).joinToString(" · ").ifEmpty { "No data" }
-
-@Composable
-private fun TreatmentList(day: DayHistoryUi) {
-    Column(Modifier.padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        day.carbs.forEach { TreatmentRow(it, "g", "%.0f", Carbs) }
-        day.insulin.forEach { TreatmentRow(it, "U", "%.1f", Bolus) }
+        DaySummary(day)
     }
 }
 
 @Composable
-private fun TreatmentRow(cluster: TreatmentCluster, unit: String, valueFormat: String, color: Color) {
-    val clock = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val times = cluster.events.joinToString(", ") { clock.format(Date(it.timeUtc)) }
-    Text("$times — ${valueFormat.format(cluster.total)} $unit", style = MaterialTheme.typography.bodySmall, color = color)
+private fun DayLabel(day: DayHistoryUi, isToday: Boolean) {
+    val color = when {
+        isToday -> MaterialTheme.colorScheme.primary
+        day.hasData -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    }
+    Column(Modifier.width(DAY_LABEL_WIDTH), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(day.weekday.uppercase(), style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = if (isToday) 1f else 0.7f))
+        Text(day.dayOfMonth, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+    }
+}
+
+/** The day's time in range as a number over a tiny below/in/above bar. */
+@Composable
+private fun DaySummary(day: DayHistoryUi) {
+    Column(Modifier.width(DAY_SUMMARY_WIDTH).padding(start = 8.dp), horizontalAlignment = Alignment.End) {
+        val tir = day.inRangeShare
+        if (tir == null) {
+            Text("–", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            return@Column
+        }
+        Text(
+            "${day.timeInRangePercent}%",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = if (tir >= TIR_GOAL) InRange else MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(3.dp))
+        Row(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp))) {
+            listOf((day.belowShare ?: 0.0) to BelowRange, tir to InRange, (day.aboveShare ?: 0.0) to AboveRange).forEach { (share, color) ->
+                if (share > 0.0) Box(Modifier.weight(share.toFloat()).fillMaxHeight().background(color))
+            }
+        }
+    }
 }

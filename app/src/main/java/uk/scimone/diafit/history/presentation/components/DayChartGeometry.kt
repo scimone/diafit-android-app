@@ -1,5 +1,8 @@
 package uk.scimone.diafit.history.presentation.components
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import uk.scimone.diafit.history.presentation.model.GlucosePoint
 
 /** Readings further apart than this are a sensor gap: charts break the trace instead of bridging it. */
@@ -20,4 +23,12 @@ fun List<GlucosePoint>.splitAtGaps(maxGapMs: Long = GLUCOSE_GAP_MS): List<List<G
         else runs += mutableListOf(point)
     }
     return runs
+}
+
+/** Faint vertical guides at 06:00, 12:00 and 18:00, the same on every track so the eye can follow an hour down the page. */
+fun DrawScope.drawHourGuides(color: Color) {
+    for (hour in 6..18 step 6) {
+        val x = hour / 24f * size.width
+        drawLine(color, Offset(x, 0f), Offset(x, size.height), 1f)
+    }
 }

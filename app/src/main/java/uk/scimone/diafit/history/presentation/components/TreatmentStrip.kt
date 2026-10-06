@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -28,15 +29,17 @@ fun TreatmentStrip(
     color: Color,
     fullIntensityAt: Float,
     modifier: Modifier = Modifier,
-    height: Dp = 7.dp
+    height: Dp = 8.dp
 ) {
+    val guides = hourGuideColor()
     Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
+        drawHourGuides(guides)
         val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
         clusters.forEach { cluster ->
             val x0 = axis.x(cluster.centerUtc - BLOCK_HALF_WIDTH_MS).coerceAtLeast(0f)
             val x1 = axis.x(cluster.centerUtc + BLOCK_HALF_WIDTH_MS).coerceAtMost(size.width)
             val alpha = min(cluster.total / fullIntensityAt, 1f).coerceAtLeast(MIN_ALPHA)
-            drawRect(color.copy(alpha = alpha), Offset(x0, 0f), Size(x1 - x0, size.height))
+            drawRoundRect(color.copy(alpha = alpha), Offset(x0, 1f), Size(x1 - x0, size.height - 2f), CornerRadius(size.height / 2))
         }
     }
 }
