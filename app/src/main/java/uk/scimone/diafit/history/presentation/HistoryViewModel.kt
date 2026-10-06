@@ -32,6 +32,7 @@ class HistoryViewModel(
     val state: StateFlow<HistoryState> = _state
 
     private var observeJob: Job? = null
+    private var page = 0
 
     init {
         observe()
@@ -39,11 +40,23 @@ class HistoryViewModel(
         viewModelScope.launch { SettingsChangeBus.settingsChanged.collect { observe() } }
     }
 
+    /** Pages are two-week windows; 0 is the latest, higher is older. */
+    fun showOlder() = setPage(page + 1)
+
+    fun showNewer() = setPage((page - 1).coerceAtLeast(0))
+
+    private fun setPage(newPage: Int) {
+        if (newPage == page) return
+        page = newPage
+        _state.update { it.copy(isLoading = true) }
+        observe()
+    }
+
     private fun observe() {
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
             val target = getTargetRange().toCore()
-            getDailyHistory(userId, HISTORY_DAYS)
+            getDailyHistory(userId, HISTORY_DAYS, page)
                 .flowOn(Dispatchers.Default)
                 .catch { e ->
                     Log.e(TAG, "Failed to load history", e)
@@ -52,7 +65,7 @@ class HistoryViewModel(
                 .collect { days ->
                     val ui = days.map { it.toUi(target, clusterTreatments) }
                     _state.update {
-                        HistoryState(days = ui, thresholds = target.toThresholds(), isLoading = false)
+                        HistoryState(days = ui, thresholds = target.toThresholds(), page = page, isLoading = false)
                     }
                 }
         }
@@ -67,6 +80,7 @@ class HistoryViewModel(
 data class HistoryState(
     val days: List<DayHistoryUi> = emptyList(),
     val thresholds: GlucoseThresholds = GlucoseThresholds(low = 70, high = 180),
+    val page: Int = 0,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

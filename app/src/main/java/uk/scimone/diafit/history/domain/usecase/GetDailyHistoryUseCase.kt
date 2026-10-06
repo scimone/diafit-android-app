@@ -10,14 +10,16 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** CGM, bolus and meal data of the last [days] local days, grouped per day, newest day first. Every day is included, empty or not, so the tracks stay a fixed grid. */
+/** CGM, bolus and meal data of the [days] local days ending [page] pages back, grouped per day, newest day first. Every day is included, empty or not, so the tracks stay a fixed grid. */
 class GetDailyHistoryUseCase(
     private val getAllCgmSince: GetAllCgmSinceUseCase,
     private val getAllBolusSince: GetAllBolusSinceUseCase,
     private val getAllMealsSince: GetAllMealsSinceUseCase
 ) {
-    operator fun invoke(userId: Int, days: Int, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayHistory>> {
-        val start = LocalDate.now(zone).minusDays(days - 1L).atStartOfDay(zone).toInstant().toEpochMilli()
+    operator fun invoke(userId: Int, days: Int, page: Int = 0, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayHistory>> {
+        // Page 0 ends today; each further page steps back by [days] days.
+        val lastDay = LocalDate.now(zone).minusDays(page.toLong() * days)
+        val start = lastDay.minusDays(days - 1L).atStartOfDay(zone).toInstant().toEpochMilli()
         fun dayOf(timeUtc: Long) = Instant.ofEpochMilli(timeUtc).atZone(zone).toLocalDate()
 
         return combine(
@@ -28,9 +30,8 @@ class GetDailyHistoryUseCase(
             val cgmByDay = cgm.groupBy { dayOf(it.timestamp) }
             val bolusByDay = boluses.groupBy { dayOf(it.timestampUtc) }
             val mealsByDay = meals.filter { it.carbohydrates > 0 }.groupBy { dayOf(it.mealTimeUtc) }
-            val today = LocalDate.now(zone)
             (0 until days)
-                .map { today.minusDays(it.toLong()) }
+                .map { lastDay.minusDays(it.toLong()) }
                 .map { date ->
                     DayHistory(
                         date = date,
