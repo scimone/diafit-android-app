@@ -3,13 +3,12 @@ package uk.scimone.diafit.history.presentation.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.history.domain.model.BandLevels
@@ -21,16 +20,17 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 
 /** One out-of-range band of the horizon: how deep a reading reaches into it, and how it is tinted. */
-private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Color, val alpha: Float)
+private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Color)
 
+/** Opaque, drawn in order so each deeper band overlays the shallower one: the "very" bands are the full colour. */
 private val HORIZON_BANDS = listOf(
-    HorizonBandStyle({ it.high }, AboveRange, 0.55f),
-    HorizonBandStyle({ it.veryHigh }, AboveRange, 1f),
-    HorizonBandStyle({ it.low }, BelowRange, 0.55f),
-    HorizonBandStyle({ it.veryLow }, BelowRange, 1f)
+    HorizonBandStyle({ it.high }, lerp(AboveRange, Color.Black, 0.35f)),
+    HorizonBandStyle({ it.veryHigh }, AboveRange),
+    HorizonBandStyle({ it.low }, lerp(BelowRange, Color.Black, 0.35f)),
+    HorizonBandStyle({ it.veryLow }, BelowRange)
 )
 
-/** Height, as a fraction of the chart, of the strip that marks "glucose was recorded and in range". */
+/** Height, as a fraction of the chart, of the green strip that marks "glucose was recorded and in range". */
 private const val IN_RANGE_BASELINE = 0.2f
 
 /**
@@ -42,17 +42,15 @@ fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 30.dp
+    height: Dp = 52.dp
 ) {
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
     val runs = day.glucose.splitAtGaps()
     Canvas(modifier.fillMaxWidth().height(height)) {
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
-        drawHourGrid(axis, day.dayStartUtc, gridColor)
         runs.filter { it.size > 1 }.forEach { run ->
-            drawArea(run, axis, { IN_RANGE_BASELINE }, InRange.copy(alpha = 0.35f))
+            drawArea(run, axis, { IN_RANGE_BASELINE }, InRange)
             HORIZON_BANDS.forEach { band ->
-                drawArea(run, axis, { band.level(thresholds.levels(it.mgdl)) }, band.color.copy(alpha = band.alpha))
+                drawArea(run, axis, { band.level(thresholds.levels(it.mgdl)) }, band.color)
             }
         }
     }
@@ -73,13 +71,3 @@ private fun DrawScope.drawArea(
     }
     drawPath(path, color)
 }
-
-/** Faint vertical lines every 6 hours of the day, so strips of different days can be read against each other. */
-internal fun DrawScope.drawHourGrid(axis: DayXAxis, dayStartUtc: Long, color: Color) {
-    for (hour in GRID_HOURS) {
-        val x = axis.x(dayStartUtc + hour * 3_600_000L)
-        drawLine(color, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
-    }
-}
-
-private val GRID_HOURS = listOf(6, 12, 18)

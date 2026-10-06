@@ -3,7 +3,6 @@ package uk.scimone.diafit.history.presentation.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -22,14 +21,12 @@ private const val TICK_STEP_HOURS = 3
 fun HistoryTimeAxis(modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
     val style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
-    val tickColor = MaterialTheme.colorScheme.outlineVariant
-    Box(modifier.fillMaxWidth().height(22.dp).padding(start = TrackLabelWidth)) {
+    Box(modifier.fillMaxWidth().height(22.dp)) {
         Canvas(Modifier.fillMaxWidth().height(22.dp)) {
             for (hour in 0..24 step TICK_STEP_HOURS) {
                 val x = hour / 24f * size.width
-                drawLine(tickColor, Offset(x, 0f), Offset(x, 4.dp.toPx()), 1.dp.toPx())
                 val label = measurer.measure("$hour:00", style)
-                drawText(label, topLeft = Offset((x - label.size.width / 2f).coerceIn(0f, size.width - label.size.width), 6.dp.toPx()))
+                drawText(label, topLeft = Offset((x - label.size.width / 2f).coerceIn(0f, size.width - label.size.width), 2.dp.toPx()))
             }
         }
     }
