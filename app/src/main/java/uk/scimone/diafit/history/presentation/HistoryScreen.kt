@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
@@ -27,7 +28,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private enum class HistoryTab(val label: String) { CHARTS("Charts"), STATS("Stats") }
+internal enum class HistoryTab(val label: String) { CHARTS("Charts"), STATS("Stats") }
 
 /**
  * A selectable time frame (1 week to 3 months) at a glance, in two views: the (sticky) glucose profile chart, and one compact
@@ -50,20 +51,11 @@ fun HistoryScreen(
             range = state.range,
             isLatest = state.page == 0,
             onRange = viewModel::setRange,
+            tab = tab,
+            onTab = { tab = it },
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
-        PrimaryTabRow(selectedTabIndex = tab.ordinal) {
-            HistoryTab.entries.forEach { t ->
-                Tab(
-                    selected = tab == t,
-                    onClick = { tab = t },
-                    text = { Text(t.label) },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -109,6 +101,8 @@ private fun PeriodHeader(
     range: HistoryRange,
     isLatest: Boolean,
     onRange: (HistoryRange) -> Unit,
+    tab: HistoryTab,
+    onTab: (HistoryTab) -> Unit,
     onOlder: () -> Unit,
     onNewer: () -> Unit
 ) {
@@ -136,6 +130,11 @@ private fun PeriodHeader(
             }
         }
         IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
+        // View switch: shows the icon of the view it leads to.
+        FilledTonalIconButton(onClick = { onTab(if (tab == HistoryTab.CHARTS) HistoryTab.STATS else HistoryTab.CHARTS) }) {
+            if (tab == HistoryTab.CHARTS) Icon(Icons.Outlined.BarChart, "Show statistics")
+            else Icon(Icons.AutoMirrored.Outlined.ShowChart, "Show charts")
+        }
     }
 }
 
