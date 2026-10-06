@@ -30,6 +30,7 @@ import uk.scimone.diafit.core.domain.util.friendlyDateString
 import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.journal.presentation.components.DayHeader
 import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
+import uk.scimone.diafit.journal.presentation.components.formatUnits
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -167,7 +168,9 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
 private fun daySummary(entries: List<JournalEntryUi>): String {
     val meals = entries.filterIsInstance<MealEntityUi>()
     val episodes = entries.filterIsInstance<GlucoseEpisodeUi>()
-    val boluses = entries.count { it is uk.scimone.diafit.journal.presentation.model.BolusEntryUi }
+    val bolusEntries = entries.filterIsInstance<uk.scimone.diafit.journal.presentation.model.BolusEntryUi>()
+    val boluses = bolusEntries.count { !it.isSmb }
+    val smbUnits = bolusEntries.filter { it.isSmb }.sumOf { it.units }
     val lows = episodes.count { it.episode.isLow }
     val highs = episodes.size - lows
     val parts = buildList {
@@ -176,6 +179,7 @@ private fun daySummary(entries: List<JournalEntryUi>): String {
             add("${meals.sumOf { it.carbohydrates }} g carbs")
         }
         if (boluses > 0) add("$boluses ${if (boluses == 1) "bolus" else "boluses"}")
+        if (smbUnits > 0) add("${formatUnits(smbUnits)} U SMB")
         if (lows > 0) add("$lows ${if (lows == 1) "low" else "lows"}")
         if (highs > 0) add("$highs ${if (highs == 1) "high" else "highs"}")
     }

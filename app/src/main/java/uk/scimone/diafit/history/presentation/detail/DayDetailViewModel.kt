@@ -28,7 +28,7 @@ import uk.scimone.diafit.home.presentation.model.toChartData
 import uk.scimone.diafit.home.presentation.model.toInsulinActivityChartData
 import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 import uk.scimone.diafit.core.domain.model.standalone
-import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
+import uk.scimone.diafit.journal.presentation.model.toBolusEntries
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.toUi
@@ -79,7 +79,7 @@ class DayDetailViewModel(
         val stats = DayGlucoseStats.from(dayReadings.map { GlucoseSample(it.timestamp, it.valueMgdl) }, thresholds)
         val dayBoluses = boluses.filter { it.timestampUtc in dayStartUtc until dayEndUtc }
         val mealCards = meals.toSittings().map { it.toUi(context, MealOutcome.of(it, readings, boluses, target)) }
-        val bolusCards = dayBoluses.standalone(meals.toSittings()).map(::BolusEntryUi)
+        val bolusCards = dayBoluses.standalone(meals.toSittings()).toBolusEntries()
         val episodeCards = stats?.episodes.orEmpty().map(::GlucoseEpisodeUi)
         return DayDetailState(
             isLoading = false,

@@ -52,7 +52,7 @@ fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick:
     when (entry) {
         is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier)
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
-        is BolusEntryUi -> BolusCard(entry.bolus, onClick, modifier)
+        is BolusEntryUi -> BolusCard(entry, onClick, modifier)
     }
 }
 
@@ -114,7 +114,7 @@ private val MEAL_VALUES_WIDTH = 56.dp
 private fun BigValue(value: String, unit: String, color: Color) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
-        Text(" $unit", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false, modifier = Modifier.padding(bottom = 3.dp))
+        Text(" $unit", style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, softWrap = false, modifier = Modifier.padding(bottom = 3.dp))
     }
 }
 
@@ -240,7 +240,10 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
             Column(horizontalAlignment = Alignment.End) {
                 Text("${episode.extremeMgdl}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
                 Text(
-                    if (episode.isLow) "lowest mg/dL" else "highest mg/dL",
+                    buildAnnotatedString {
+                        append(if (episode.isLow) "lowest " else "highest ")
+                        withStyle(SpanStyle(color = color)) { append("mg/dL") }
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -249,9 +252,9 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
     }
 }
 
-/** A manual bolus that belongs to no meal. */
+/** Insulin that belongs to no meal: a manual bolus, or the SMBs of one hour. */
 @Composable
-fun BolusCard(bolus: BolusEntity, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     EntrySurface(onClick, modifier) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -263,13 +266,19 @@ fun BolusCard(bolus: BolusEntity, onClick: (() -> Unit)?, modifier: Modifier = M
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(clock.format(Date(bolus.timestampUtc)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Insulin bolus", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (entry.isSmb) "${clock.format(Date(entry.hourStartUtc))}–${clock.format(Date(entry.hourStartUtc + 3_600_000L))}"
+                    else clock.format(Date(entry.timeUtc)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    if (entry.isSmb) "Automatic · ${entry.count} ${if (entry.count == 1) "SMB" else "SMBs"}" else "Insulin bolus",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(formatUnits(bolus.value.toDouble()), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Bolus)
-                Text("U, no meal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            BigValue(formatUnits(entry.units), "U", Bolus)
         }
     }
 }

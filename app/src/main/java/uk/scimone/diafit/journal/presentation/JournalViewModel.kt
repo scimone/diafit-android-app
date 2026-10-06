@@ -32,6 +32,7 @@ import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
+import uk.scimone.diafit.journal.presentation.model.toBolusEntries
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -149,9 +150,9 @@ class JournalViewModel(
         return episodes.map(::GlucoseEpisodeUi)
     }
 
-    /** Manual boluses in the range that belong to no meal (see [standalone]). */
+    /** Boluses in the range that belong to no meal (see [standalone]). */
     private suspend fun bolusEntries(meals: List<MealEntity>, from: Long, to: Long): List<BolusEntryUi> = try {
-        bolusRepository.getBolusBetween(from, to, userId).standalone(meals.toSittings()).map(::BolusEntryUi)
+        bolusRepository.getBolusBetween(from, to, userId).standalone(meals.toSittings()).toBolusEntries()
     } catch (e: Exception) {
         Log.e(TAG, "Error loading boluses", e)
         emptyList()
