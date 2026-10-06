@@ -13,6 +13,11 @@ import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import android.graphics.BitmapFactory
@@ -85,8 +90,8 @@ data class ChartEvent(
  */
 private const val VALUE_SCALE = 1e-4
 
-/** Meal-photo bubble diameter (dp): big enough to recognise the food at a glance. */
-private const val PHOTO_DIAMETER = 52.0
+/** Meal-photo size (dp) in the top lane. */
+private const val PHOTO_LANE_DIAMETER_DP = 44f
 
 private fun decodeValue(y: Double): Double = (y / VALUE_SCALE).coerceAtLeast(0.0)
 
@@ -101,63 +106,77 @@ private class BottomAnchoredCircle(private val delegate: Component) : Component 
 }
 
 /**
- * A meal photo as a bubble: the picture cropped to a circle (bottom on the zero line like the plain
- * bubbles) with a ring in the panel colour, so it still reads as "carbs" while showing the food.
+ * Meal photos live in their own lane along the top of the panel (above the curve and bubbles), so
+ * they never cover the graph. Each is laid out left to right without overlapping its neighbour; a thin
+ * stem connects it to its meal's true time, and a photo pushed aside by a neighbour keeps its stem.
  */
-private class PhotoBubble(
-    private val photo: ImageBitmap,
-    private val ring: Color
-) : Component {
-    override fun draw(context: DrawingContext, left: Float, top: Float, right: Float, bottom: Float) {
-        val d = (right - left) / 2f
-        val cx = (left + right) / 2f
-        val cy = (top + bottom) / 2f
-        val dst = Rect(cx - d / 2f, cy - d, cx + d / 2f, cy)
-        val side = minOf(photo.width, photo.height)
+private class MealPhotoDecoration(
+    private val photos: List<Pair<Long, ImageBitmap>>,
+    private val ring: Color,
+    private val density: Float
+) : Decoration {
+    override fun drawOverLayers(context: CartesianDrawingContext) {
+        if (photos.isEmpty()) return
+        val bounds = context.layerBounds
+        val dims = context.layerDimensions
+        val ranges = context.ranges
+        val d = PHOTO_LANE_DIAMETER_DP * density
+        val gap = 3f * density
+        val top = bounds.top + 2f * density
         val canvas = context.canvas
-        canvas.save()
-        canvas.clipPath(Path().apply { addOval(dst) }, ClipOp.Intersect)
-        canvas.drawImageRect(
-            image = photo,
-            srcOffset = IntOffset((photo.width - side) / 2, (photo.height - side) / 2),
-            srcSize = IntSize(side, side),
-            dstOffset = IntOffset(dst.left.toInt(), dst.top.toInt()),
-            dstSize = IntSize(dst.width.toInt(), dst.height.toInt()),
-            paint = Paint()
-        )
-        canvas.restore()
-        canvas.drawCircle(
-            dst.center, d / 2f,
-            Paint().apply { color = ring; style = PaintingStyle.Stroke; strokeWidth = 3f; isAntiAlias = true }
-        )
+        var prevRight = Float.NEGATIVE_INFINITY
+        for ((t, photo) in photos.sortedBy { it.first }) {
+            val cx = bounds.left + dims.startPadding +
+                dims.xSpacing * ((t - ranges.minX) / ranges.xStep).toFloat() - context.scroll
+            val left = maxOf(cx - d / 2f, prevRight + gap)
+            prevRight = left + d
+            if (prevRight < bounds.left || left > bounds.right) continue
+            val dst = Rect(left, top, left + d, top + d)
+            // stem from the photo down to the meal's time on the zero line
+            canvas.drawLine(
+                Offset(cx, dst.bottom), Offset(cx, bounds.bottom),
+                Paint().apply { color = ring.copy(alpha = 0.8f); style = PaintingStyle.Stroke; strokeWidth = 2f * density }
+            )
+            val side = minOf(photo.width, photo.height)
+            canvas.save()
+            canvas.clipPath(Path().apply { addRoundRect(RoundRect(dst, CornerRadius(8f * density))) }, ClipOp.Intersect)
+            canvas.drawImageRect(
+                image = photo,
+                srcOffset = IntOffset((photo.width - side) / 2, (photo.height - side) / 2),
+                srcSize = IntSize(side, side),
+                dstOffset = IntOffset(dst.left.toInt(), dst.top.toInt()),
+                dstSize = IntSize(dst.width.toInt(), dst.height.toInt()),
+                paint = Paint()
+            )
+            canvas.restore()
+            canvas.drawRoundRect(
+                dst.left, dst.top, dst.right, dst.bottom, 8f * density, 8f * density,
+                Paint().apply { this.color = ring; style = PaintingStyle.Stroke; strokeWidth = 2f * density; isAntiAlias = true }
+            )
+        }
     }
+
+    override fun equals(other: Any?) =
+        other is MealPhotoDecoration && other.ring == ring && other.density == density &&
+            other.photos.map { it.first } == photos.map { it.first } &&
+            other.photos.map { System.identityHashCode(it.second) } == photos.map { System.identityHashCode(it.second) }
+
+    override fun hashCode() = 31 * photos.map { it.first }.hashCode() + ring.hashCode()
 }
 
 private class EventBubbleProvider(
     private val component: Component,
-    private val refValue: Double,
-    private val photos: Map<Long, ImageBitmap>,
-    private val ring: Color
+    private val refValue: Double
 ) : LineCartesianLayer.PointProvider {
-    // Photo bubbles get a larger floor so the food is recognisable.
-    private fun diameter(value: Double, hasPhoto: Boolean): Dp {
-        val d = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0)
-        return (if (hasPhoto) PHOTO_DIAMETER else d).dp
-    }
+    private fun diameter(value: Double): Dp = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0).dp
 
-    override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point {
-        val photo = photos[entry.x.toLong()]
-        val comp = if (photo != null) BottomAnchoredPhoto(PhotoBubble(photo, ring)) else component
-        return LineCartesianLayer.Point(comp, diameter(decodeValue(entry.y), photo != null) * 2)
-    }
+    override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
+        LineCartesianLayer.Point(component, diameter(decodeValue(entry.y)) * 2)
 
     // Deliberately constant: Vico pads each layer by half its largest point, and every Home chart
     // must end up with identical padding to stay x-aligned.
     override fun getLargestPoint(extraStore: ExtraStore) = LineCartesianLayer.Point(component, ChartPointSize)
 }
-
-/** PhotoBubble already anchors itself to the zero line, so it is used as-is. */
-private fun BottomAnchoredPhoto(c: PhotoBubble): Component = c
 
 @Composable
 fun ComponentEventActivityChart(
@@ -181,7 +200,7 @@ fun ComponentEventActivityChart(
     val timePoints = generateSequence(alignedMinTime) { prev ->
         val next = prev + timeStepMillis
         if (next > maxX) null else next
-    }.toList()
+    }.toList().let { if (it.last() != maxX) it + maxX else it }
 
     val activityPoints = timePoints.map { t -> t to events.sumOf { activityOf(it, t) } }
     val recentEvents = events.filter { it.time in alignedMinTime..realTime }
@@ -228,7 +247,7 @@ fun ComponentEventActivityChart(
         pointSpacing = ChartPointSpacing,
         verticalAxisPosition = Axis.Position.Vertical.Start,
         rangeProvider = createTimeAxisRangeProvider(
-            minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxActivity * 1.15
+            minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxActivity * (if (photos.isEmpty()) 1.15 else 2.5)
         )
     )
 
@@ -244,8 +263,8 @@ fun ComponentEventActivityChart(
             LineCartesianLayer.rememberLine(
                 fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
                 stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 0.dp),
-                pointProvider = remember(bubbleComponent, bubbleRefValue, photos, color) {
-                    EventBubbleProvider(BottomAnchoredCircle(bubbleComponent), bubbleRefValue, photos, color)
+                pointProvider = remember(bubbleComponent, bubbleRefValue) {
+                    EventBubbleProvider(BottomAnchoredCircle(bubbleComponent), bubbleRefValue)
                 },
                 dataLabel = rememberTextComponent(style = labelStyle),
                 dataLabelPosition = Position.Vertical.Top,
@@ -262,6 +281,7 @@ fun ComponentEventActivityChart(
         rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = 1.0)
     )
 
+    val density = LocalDensity.current.density
     val chart = rememberCartesianChart(
         *listOfNotNull(curveLayer, bubbleLayer.takeIf { recentEvents.isNotEmpty() }).toTypedArray(),
         startAxis = VerticalAxis.rememberStart(
@@ -279,6 +299,7 @@ fun ComponentEventActivityChart(
                 lineColor = onSurface.copy(alpha = 0.7f),
                 washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
             ),
+            MealPhotoDecoration(photos.map { (t, bmp) -> t to bmp }, color, density).takeIf { photos.isNotEmpty() },
             selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
         ),
         getXStep = { _ -> getTimeAxisXStep() },

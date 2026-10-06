@@ -21,7 +21,6 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -222,7 +221,6 @@ fun PastCgmDisplay(reading: CgmChartData, modifier: Modifier = Modifier) {
                 text = "${reading.value}",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Light,
-                fontStyle = FontStyle.Italic,
                 color = muted
             )
             Spacer(Modifier.width(8.dp))
@@ -309,7 +307,7 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
 private val EventPanelHeight = 70.dp
 private val TimeLabelsHeight = 22.dp
 /** Extra plot height in the carb panel so meal-photo bubbles are big enough to recognise. */
-private val PhotoExtraHeight = 32.dp
+private val PhotoExtraHeight = 40.dp
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp
 private const val MEAL_PREVIEW_WINDOW_MS = 20 * 60_000L

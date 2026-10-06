@@ -77,7 +77,7 @@ val ChartXSpacing: Dp = 38.dp
 val ChartPointSpacing: Dp = ChartXSpacing - ChartPointSize
 
 /** All Home charts are line layers with the same point size, so no extra padding is needed. */
-val LineChartLayerPadding = CartesianLayerPadding()
+val LineChartLayerPadding = CartesianLayerPadding(unscalableEnd = -ChartPointSize / 2)
 
 /**
  * Provides a reusable BottomAxis with time labels, guidelines, and default settings
