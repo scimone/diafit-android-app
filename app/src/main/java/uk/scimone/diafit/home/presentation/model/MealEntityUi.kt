@@ -10,6 +10,7 @@ import android.content.Context
 
 
 data class MealEntityUi(
+    val id: Int,
     val mealTimeUtc: Long,
     val carbohydrates: Int = 0,
     val proteins: Int? = null,
@@ -19,6 +20,7 @@ data class MealEntityUi(
     val mealType: MealType,
     val description: String?,
     val imageUri: Uri?,
+    val reasoning: String? = null,
 )
 
 fun MealEntity.toMealEntityUi(context: Context
@@ -30,6 +32,7 @@ fun MealEntity.toMealEntityUi(context: Context
     } else null
 
     return MealEntityUi(
+        id = this.id,
         mealTimeUtc = this.mealTimeUtc,
         carbohydrates = this.carbohydrates,
         proteins = this.proteins,
@@ -38,6 +41,7 @@ fun MealEntity.toMealEntityUi(context: Context
         impactType = this.impactType,
         mealType = this.mealType,
         description = description,
-        imageUri = imageUri
+        imageUri = imageUri,
+        reasoning = reasoning
     )
 }

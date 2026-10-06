@@ -1,6 +1,5 @@
 package uk.scimone.diafit.home.presentation
 
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,21 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import coil3.compose.rememberAsyncImagePainter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.abs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.abs
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
@@ -47,17 +40,19 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.CgmEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import uk.scimone.diafit.home.presentation.components.ChartEvent
 import uk.scimone.diafit.home.presentation.components.ComponentEventActivityChart
+import uk.scimone.diafit.home.presentation.components.MealDetailSheet
+import uk.scimone.diafit.home.presentation.components.MealGroup
+import uk.scimone.diafit.home.presentation.components.MealGroupPreview
+import uk.scimone.diafit.home.presentation.components.MealTimeline
+import uk.scimone.diafit.home.presentation.components.groupMeals
+import uk.scimone.diafit.home.presentation.components.nearest
 import uk.scimone.diafit.core.domain.model.CarbActivity
 import uk.scimone.diafit.core.domain.model.InsulinActivity
-import uk.scimone.diafit.home.presentation.components.ComponentMealImage
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
-import uk.scimone.diafit.home.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 
@@ -84,6 +79,11 @@ fun HomeScreen(
     // Time (x) the user is scrubbing on the CGM chart; every chart draws the cursor line, and the
     // header swaps the live reading for the reading at that time.
     var selectedTime by remember { mutableStateOf<Long?>(null) }
+    // Meals grouped into sittings, shared by the header preview, the meal strip and the detail sheet.
+    val mealGroups = remember(state.mealHistory) { groupMeals(state.mealHistory) }
+    val focusedMeal = mealGroups.nearest(selectedTime)
+    var openMeal by remember { mutableStateOf<MealGroup?>(null) }
+    val scope = rememberCoroutineScope()
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     // The Zoom objects MUST be remembered: rememberVicoZoomState keys on them, so fresh lambdas on
     // every recomposition would recreate the state and silently reset the user's zoom (HomeScreen
@@ -120,11 +120,6 @@ fun HomeScreen(
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     if (state.cgmUi != null) {
                         val pastReading = selectedTime?.let { t -> state.cgmHistory.minByOrNull { abs(it.timeLong - t) } }
-                        val pastMeal = selectedTime?.let { t ->
-                            state.carbHistory
-                                .filter { it.imageUri != null && abs(it.timeLong - t) <= MEAL_PREVIEW_WINDOW_MS }
-                                .minByOrNull { abs(it.timeLong - t) }
-                        }
                         Row(
                             modifier = Modifier.fillMaxWidth().height(84.dp).padding(start = 10.dp, end = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -134,7 +129,7 @@ fun HomeScreen(
                             } else {
                                 CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.weight(1f))
                             }
-                            if (pastMeal != null) MealPreview(pastMeal)
+                            if (focusedMeal != null) MealGroupPreview(focusedMeal)
                         }
                     } else {
                         Text("No CGM data available", modifier = Modifier.padding(start = 10.dp))
@@ -169,7 +164,18 @@ fun HomeScreen(
                         selectedTime = selectedTime
                     )
 
+                    MealTimeline(
+                        groups = mealGroups,
+                        highlighted = focusedMeal,
+                        onGroupClick = { group ->
+                            openMeal = group
+                            // Bring the meal into view on the charts behind the sheet.
+                            scope.launch { chartScrollState.animateScroll(Scroll.Absolute.x(group.startTime.toDouble(), 0.5f)) }
+                        }
+                    )
+                    Spacer(Modifier.height(16.dp))
                 }
+                openMeal?.let { MealDetailSheet(group = it, onDismiss = { openMeal = null }) }
             }
         }
     }
@@ -238,29 +244,6 @@ fun PastCgmDisplay(reading: CgmChartData, modifier: Modifier = Modifier) {
     }
 }
 
-/** Enlarged meal photo shown in the header while the cursor is on a meal. */
-@Composable
-fun MealPreview(meal: CarbsChartData) {
-    Box(modifier = Modifier.size(84.dp).clip(RoundedCornerShape(12.dp))) {
-        Image(
-            painter = rememberAsyncImagePainter(meal.imageUri),
-            contentDescription = "Meal photo",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        Text(
-            text = "${meal.value} g",
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .background(Carbs.copy(alpha = 0.9f), RoundedCornerShape(topStart = 8.dp))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-        )
-    }
-}
-
 @Composable
 fun CgmChartDisplay(
     history: List<CgmChartData>,
@@ -291,26 +274,11 @@ fun CgmChartDisplay(
     }
 }
 
-@Composable
-fun MealImagesRow(meals: List<MealEntityUi>) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(meals) { meal ->
-            ComponentMealImage(meal)
-        }
-    }
-}
-
 /** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
 private val EventPanelHeight = 70.dp
 private val TimeLabelsHeight = 22.dp
-/** Extra plot height in the carb panel so meal-photo bubbles are big enough to recognise. */
-private val PhotoExtraHeight = 40.dp
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp
-private const val MEAL_PREVIEW_WINDOW_MS = 20 * 60_000L
 
 @Composable
 fun InsulinActivityDisplay(
@@ -347,8 +315,8 @@ fun CarbActivityDisplay(
     nowMinute: Long,
     selectedTime: Long?
 ) {
-    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes, it.imageUri) } }
-    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + PhotoExtraHeight + TimeLabelsHeight)) {
+    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
+    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + TimeLabelsHeight)) {
         ComponentEventActivityChart(
             events = events,
             activityOf = { e, t -> CarbActivity.calculate(e.value, e.time, t, e.durationMinutes) },
