@@ -20,7 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -64,41 +67,38 @@ private fun EntrySurface(onClick: (() -> Unit)?, modifier: Modifier, content: @C
 /** A meal: its photo, carbs, the insulin for it, absorption speed, and what glucose did afterwards. */
 @Composable
 fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     EntrySurface(onClick, modifier) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row {
-                MealThumbnail(meal)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            buildString {
-                                append(meal.timeFormatted)
-                                append(" · ")
-                                append(meal.mealType.type)
-                                if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
-                                if (meal.isImported) append(" · AAPS")
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = meal.mealType.accent,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Icon(Icons.Filled.ChevronRight, "Open meal", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    }
-                    Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        // The chip colours say carbs / insulin, so the values need no words; that leaves room for absorption.
-                        ValueChip("${meal.carbohydrates} g", Carbs)
-                        meal.insulinUnits?.takeIf { it > 0.05 }?.let { ValueChip("${formatUnits(it)} U", Bolus) }
-                        Spacer(Modifier.width(2.dp))
-                        AbsorptionBadge(meal.impactType)
-                    }
+        Row(Modifier.padding(12.dp)) {
+            MealThumbnail(meal)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        buildString {
+                            append(meal.timeFormatted)
+                            append(" · ")
+                            append(meal.mealType.type)
+                            if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
+                            if (meal.isImported) append(" · AAPS")
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = meal.mealType.accent,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Icon(Icons.Filled.ChevronRight, "Open meal", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
+                Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // The chip colours say carbs / insulin, so the values need no words; that leaves room for absorption.
+                    ValueChip("${meal.carbohydrates} g", Carbs)
+                    meal.insulinUnits?.takeIf { it > 0.05 }?.let { ValueChip("${formatUnits(it)} U", Bolus) }
+                    Spacer(Modifier.width(2.dp))
+                    AbsorptionBadge(meal.impactType)
+                }
+                MealOutcomeRow(meal, target)
             }
-            MealOutcomeRow(meal, target, clock)
         }
     }
 }
@@ -154,40 +154,41 @@ fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
     else -> InRange
 }
 
-/** "Glucose 112 → peak 186 (+74) after 1h 43min", then the 4 h range split, or why it isn't known yet. */
+/** "112 → peak 186 (+74) after 1h 43min", then the 4 h range split, or why it isn't known yet. Sits beside the photo, so it stays narrow. */
 @Composable
-private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange, clock: SimpleDateFormat) {
+private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelStyle = MaterialTheme.typography.labelMedium
     Column(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         val start = meal.startMgdl
         val peak = meal.peakMgdl
         if (start != null || peak != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Glucose ", style = MaterialTheme.typography.labelMedium, color = muted)
-                start?.let { GlucoseValue(it, target) }
+            val text = buildAnnotatedString {
+                fun value(mgdl: Int) = withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = glucoseColor(mgdl, target))) { append("$mgdl") }
+                start?.let { value(it) }
                 if (peak != null && (start == null || peak > start)) {
-                    Text(if (start != null) "  →  peak " else "peak ", style = MaterialTheme.typography.labelMedium, color = muted)
-                    GlucoseValue(peak, target)
-                    if (start != null) Text(" (+${peak - start})", style = MaterialTheme.typography.labelMedium, color = muted)
+                    append(if (start != null) " → peak " else "peak ")
+                    value(peak)
+                    if (start != null) append(" (+${peak - start})")
                     meal.peakTimeUtc?.let {
                         val mins = ((it - meal.mealTimeUtc) / 60_000).toInt().coerceAtLeast(0)
-                        val after = if (mins >= 60) "${mins / 60}h ${mins % 60}min" else "$mins min"
-                        Text(" after $after", style = MaterialTheme.typography.labelMedium, color = muted)
+                        append(" after ${if (mins >= 60) "${mins / 60}h ${mins % 60}min" else "$mins min"}")
                     }
                 }
             }
+            Text(text, style = labelStyle, color = muted)
         }
         when {
             meal.glucoseStatus == GlucoseStatus.TOO_EARLY ->
-                Text("Outcome is shown 4 h after the meal", style = MaterialTheme.typography.labelMedium, color = muted)
+                Text("Outcome is shown 4 h after the meal", style = labelStyle, color = muted)
             meal.glucoseStatus == GlucoseStatus.NOT_ENOUGH_DATA || !meal.hasGlucoseData ->
-                Text("Not enough sensor data after this meal", style = MaterialTheme.typography.labelMedium, color = muted)
+                Text("Not enough sensor data after this meal", style = labelStyle, color = muted)
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
                 RangeBar(
                     below = meal.timeBelowRange.toFloat(),
@@ -195,16 +196,11 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange, clock
                     above = meal.timeAboveRange.toFloat(),
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(10.dp))
-                Text("${meal.timeInRange.toInt()}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = InRange)
+                Spacer(Modifier.width(8.dp))
+                Text("${meal.timeInRange.toInt()}%", style = labelStyle, fontWeight = FontWeight.Bold, color = InRange)
             }
         }
     }
-}
-
-@Composable
-private fun GlucoseValue(mgdl: Int, target: GlucoseTargetRange) {
-    Text("$mgdl", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = glucoseColor(mgdl, target))
 }
 
 /** A stretch below or above range: how long, when, and how far it went. [onClick] opens its day. */

@@ -12,10 +12,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.outlined.CalendarMonth
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.util.friendlyDateString
+import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.journal.presentation.components.DayHeader
 import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
@@ -38,7 +47,6 @@ fun JournalScreen(
         uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
     }
 
-    // A filter row only earns its space once there is more than one kind of entry to filter by.
     var filter by remember { mutableStateOf<JournalEntryKind?>(null) }
     val kinds = JournalEntryKind.availableKinds
     val visible = remember(uiState.entries, filter) {
@@ -50,11 +58,16 @@ fun JournalScreen(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            if (kinds.size > 1) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RangeChip(uiState.range, viewModel::setRange)
+                // A kind filter only earns its space once there is more than one kind of entry to filter by.
+                if (kinds.size > 1) {
                     FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
                     kinds.forEach { kind ->
-                        Spacer(Modifier.width(8.dp))
                         FilterChip(selected = filter == kind, onClick = { filter = kind }, label = { Text(kind.pluralLabel) })
                     }
                 }
@@ -87,6 +100,70 @@ fun JournalScreen(
             }
         }
         SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+private val SHORT_DATE = DateTimeFormatter.ofPattern("d MMM")
+
+private fun JournalRange.label(): String = if (preset == JournalRangePreset.CUSTOM) {
+    val (from, to) = days()
+    if (from == to) from.format(SHORT_DATE) else "${from.format(SHORT_DATE)} – ${to.format(SHORT_DATE)}"
+} else preset.label
+
+/** Time filter chip: opens a menu of presets and a custom date range picker. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    Box {
+        AssistChip(
+            onClick = { menuOpen = true },
+            label = { Text(range.label()) },
+            leadingIcon = { Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp)) },
+            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, "Change time range", Modifier.size(18.dp)) }
+        )
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            JournalRangePreset.entries.forEach { preset ->
+                DropdownMenuItem(
+                    text = { Text(preset.label, fontWeight = if (preset == range.preset) FontWeight.Bold else null) },
+                    onClick = {
+                        menuOpen = false
+                        if (preset == JournalRangePreset.CUSTOM) picking = true else onRange(JournalRange(preset))
+                    }
+                )
+            }
+        }
+    }
+    if (picking) {
+        val (from, to) = range.days()
+        val today = remember { LocalDate.now() }
+        val state = rememberDateRangePickerState(
+            initialSelectedStartDateMillis = from.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            initialSelectedEndDateMillis = to.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) =
+                    utcTimeMillis <= today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            }
+        )
+        fun day(millis: Long) = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(
+                    enabled = state.selectedStartDateMillis != null,
+                    onClick = {
+                        val start = day(state.selectedStartDateMillis!!)
+                        val end = state.selectedEndDateMillis?.let(::day) ?: start
+                        picking = false
+                        onRange(JournalRange(JournalRangePreset.CUSTOM, start, end))
+                    }
+                ) { Text("Apply") }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+        ) {
+            DateRangePicker(state, Modifier.height(500.dp), showModeToggle = false)
+        }
     }
 }
 

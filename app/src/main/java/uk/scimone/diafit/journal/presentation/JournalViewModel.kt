@@ -36,6 +36,8 @@ import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Journal entries: every meal (one per sitting, with its insulin and glucose outcome) and the lows
@@ -54,6 +56,9 @@ class JournalViewModel(
     private val _uiState = MutableStateFlow(JournalUiState(isLoading = true))
     val uiState: StateFlow<JournalUiState> = _uiState
 
+    // Declared before init: observeEntries() runs from it and reads this.
+    private var range = JournalRange()
+
     init {
         observeEntries()
         viewModelScope.launch {
@@ -66,9 +71,18 @@ class JournalViewModel(
 
     private var observeJob: Job? = null
 
+    /** Shows the entries of [newRange] only. */
+    fun setRange(newRange: JournalRange) {
+        if (newRange == range) return
+        range = newRange
+        _uiState.update { it.copy(range = newRange, isLoading = true) }
+        observeEntries()
+    }
+
     private fun observeEntries() {
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
+            val range = range
             val target = runCatching { getTargetRangeUseCase().toCore() }.getOrDefault(_uiState.value.target)
             val ticks = flow {
                 while (true) {
@@ -86,7 +100,10 @@ class JournalViewModel(
                     }
                 }
                 .collect { meals ->
-                    val entries = withContext(Dispatchers.IO) { mealEntries(meals, target) + episodeEntries(target) }
+                    val (from, to) = range.boundsUtc()  // re-resolved each time so "last 7 days" rolls over at midnight
+                    val entries = withContext(Dispatchers.IO) {
+                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to)
+                    }
                     _uiState.update {
                         it.copy(
                             entries = entries,
@@ -113,10 +130,11 @@ class JournalViewModel(
         }.awaitAll()
     }
 
-    private suspend fun episodeEntries(target: GlucoseTargetRange): List<GlucoseEpisodeUi> {
+    private suspend fun episodeEntries(target: GlucoseTargetRange, from: Long, to: Long): List<GlucoseEpisodeUi> {
         val now = System.currentTimeMillis()
         val episodes: List<GlucoseEpisode> = try {
-            val samples = cgmRepository.getEntriesBetween(now - EPISODE_DAYS * DAY_MS, now, userId)
+            // Reading everything of a very long custom range every few minutes would be heavy: cap how far back.
+            val samples = cgmRepository.getEntriesBetween(maxOf(from, now - MAX_EPISODE_DAYS * DAY_MS), minOf(to, now), userId)
                 .map { GlucoseSample(it.timestamp, it.valueMgdl) }
             DayGlucoseStats.from(samples, GlucoseThresholds.from(target))?.episodes.orEmpty()
         } catch (e: Exception) {
@@ -133,8 +151,8 @@ class JournalViewModel(
 
     private companion object {
         const val TAG = "JournalViewModel"
-        /** Lows and highs are listed for this many days back. */
-        const val EPISODE_DAYS = 30
+        /** Lows and highs are only searched this many days back, however wide the range. */
+        const val MAX_EPISODE_DAYS = 180
         const val DAY_MS = 24 * 60 * 60_000L
         const val REFRESH_MS = 5 * 60_000L
     }
@@ -144,6 +162,34 @@ data class JournalUiState(
     /** Every journal entry, of any kind, in no particular order. */
     val entries: List<JournalEntryUi> = emptyList(),
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
+    val range: JournalRange = JournalRange(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
+
+enum class JournalRangePreset(val days: Int, val label: String) {
+    LAST_7(7, "Last 7 days"),
+    LAST_14(14, "Last 14 days"),
+    LAST_30(30, "Last 30 days"),
+    LAST_90(90, "Last 90 days"),
+    CUSTOM(0, "Custom range")
+}
+
+/** The journal's time filter: a preset ending today, or custom first/last days (both inclusive). */
+data class JournalRange(
+    val preset: JournalRangePreset = JournalRangePreset.LAST_30,
+    val customFrom: LocalDate? = null,
+    val customTo: LocalDate? = null
+) {
+    fun days(zone: ZoneId = ZoneId.systemDefault()): Pair<LocalDate, LocalDate> {
+        val today = LocalDate.now(zone)
+        return if (preset == JournalRangePreset.CUSTOM && customFrom != null && customTo != null) customFrom to customTo
+        else today.minusDays(preset.days - 1L) to today
+    }
+
+    /** Start of the first day to end of the last day, in epoch ms. */
+    fun boundsUtc(zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
+        val (from, to) = days(zone)
+        return from.atStartOfDay(zone).toInstant().toEpochMilli() to to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+    }
+}
