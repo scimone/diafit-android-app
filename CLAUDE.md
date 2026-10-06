@@ -180,3 +180,15 @@ The only supported way to reach the phone from this server. It works on **Wi-Fi 
   ```
 - **Reconnect:** if `adb devices` doesn't list the phone, run `adb connect 10.200.200.2:5555` again. "Connection refused" ⇒ the phone rebooted (or USB debugging was toggled), so TCP mode is gone: repeat the USB + `adb tcpip 5555` step on the laptop. A timeout ⇒ VPN/routing problem, see below. "offline"/"unauthorized": `adb disconnect`, `adb kill-server`, connect again, re-accept the prompt on the phone.
 - **Troubleshooting order:** (1) `ping 10.200.200.2`; (2) `sudo wg show` on the server — the phone peer needs a recent handshake and `allowed ips: 10.200.200.2/32` (needs a real terminal for sudo); (3) the phone's WireGuard tunnel needs `PersistentKeepalive = 25` (carrier NAT drops idle mappings); (4) exempt the WireGuard app from battery optimization and ideally set it as Always-on VPN; (5) `adb kill-server` and reconnect. No firewall (ufw/iptables) rules blocked tcp/5555 on this server as of 2026-10-06 (`ufw` isn't installed).
+
+## Claude Code Remote Control service (added 2026-10-06)
+
+`claude remote-control` runs for this repo as the systemd **user** service `claude-rc-diafit.service` (copy of the unit in `deploy/claude-rc-diafit.service`; installed at `~/.config/systemd/user/`). It starts at boot (`loginctl` linger is on), restarts on failure, and shows up as **diafit-android-app** in the Claude mobile app / claude.ai/code, so sessions can be started from the phone in this directory (`--spawn=same-dir`, which also skips the interactive first-run spawn-mode prompt that would otherwise block a service). The unit sets `JAVA_HOME`/`ANDROID_HOME`/`PATH` so sessions started from the phone can run `./gradlew` and `adb` (the `.bashrc` exports don't apply to services). A separate, independent `claude-rc.service` serves another project (`la-compagna-del-gobbo`) — don't touch it.
+
+```
+systemctl --user status claude-rc-diafit.service
+systemctl --user restart claude-rc-diafit.service   # e.g. after a Claude Code update
+journalctl --user -u claude-rc-diafit.service -f    # logs
+systemctl --user disable --now claude-rc-diafit.service
+# after editing the unit: cp deploy/claude-rc-diafit.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+```

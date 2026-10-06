@@ -1,0 +1,20 @@
+[Unit]
+Description=Claude Code Remote Control (diafit-android-app)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/diafit-android-app
+Environment=PATH=%h/.local/bin:%h/jdk/jdk-17.0.20.1+1/bin:%h/Android/Sdk/platform-tools:/usr/local/bin:/usr/bin:/bin
+Environment=JAVA_HOME=%h/jdk/jdk-17.0.20.1+1
+Environment=ANDROID_HOME=%h/Android/Sdk
+Environment=ANDROID_SDK_ROOT=%h/Android/Sdk
+# `script` gives claude a pseudo-terminal, which the interactive bridge expects
+ExecStart=/usr/bin/script -qefc "%h/.local/bin/claude remote-control --spawn=same-dir --name diafit-android-app" /dev/null
+Restart=always
+RestartSec=10
+KillMode=control-group
+
+[Install]
+WantedBy=default.target
