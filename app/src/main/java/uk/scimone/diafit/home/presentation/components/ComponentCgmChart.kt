@@ -47,13 +47,15 @@ fun ComponentCgmChart(
     lowerBound: Int,
     upperBound: Int,
     scrollState: VicoScrollState,
-    zoomState: VicoZoomState
+    zoomState: VicoZoomState,
+    nowMinute: Long,
+    showTimeLabels: Boolean = false
 ) {
     val minY = 40f
     val maxY = 250f
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val (alignedMinTime, _, realTime) = getTimeAxisBounds(hoursBack = 24)
+    val (alignedMinTime, _, realTime) = getTimeAxisBounds(nowMinute, hoursBack = 24)
 
     val filteredValues = values.filter {
         it.timeLong in alignedMinTime..realTime
@@ -125,7 +127,7 @@ fun ComponentCgmChart(
                 itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
                 size = SharedStartAxisSize
             ),
-            bottomAxis = rememberTimeBottomAxis(),
+            bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
             layerPadding = { LineChartLayerPadding },
             getXStep = { _ -> getTimeAxisXStep() },
             marker = rememberDefaultCartesianMarker(

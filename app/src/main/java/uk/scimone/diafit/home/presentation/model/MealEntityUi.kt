@@ -25,7 +25,7 @@ fun MealEntity.toMealEntityUi(context: Context
 ): MealEntityUi {
 
     val imageFile = File(context.filesDir, "meal_images/$imageId.jpg")
-    val imageUri = if (imageFile.exists()) {
+    val imageUri = if (imageId.isNotEmpty() && imageFile.exists()) {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
     } else null
 

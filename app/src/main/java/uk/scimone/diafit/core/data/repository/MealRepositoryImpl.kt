@@ -24,6 +24,9 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun existsBySourceId(sourceId: String): Boolean =
+        withContext(Dispatchers.IO) { mealDao.countBySourceId(sourceId) > 0 }
+
     override suspend fun getMealsByUserId(userId: Int): Result<List<MealEntity>> {
         return try {
             val meals = mealDao.getMealsByUserId(userId)

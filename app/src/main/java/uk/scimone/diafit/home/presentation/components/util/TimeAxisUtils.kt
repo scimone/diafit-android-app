@@ -12,6 +12,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.BaseAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.layer.CartesianLayerPadding
@@ -22,12 +23,17 @@ import java.util.Calendar
 /** How far past "now" every Home chart's x axis extends, so data never touches the right edge. */
 const val TIME_AXIS_FUTURE_HOURS = 2
 
+/** "Now" floored to the minute. */
+fun currentMinute(): Long = System.currentTimeMillis() / 60_000L * 60_000L
+
 /**
- * Returns aligned time boundaries (minX, alignedMaxX, realTime). [realTime] is floored to the
- * minute so every chart computing it independently in the same frame gets the same value.
+ * Returns aligned time boundaries (minX, alignedMaxX, realTime) for the given [nowMinute]. It MUST be
+ * computed once by the screen and handed to every chart: charts recompose at different moments
+ * (the CGM chart with each new reading, the others rarely), so a per-chart "now" drifts apart and
+ * the stacked time axes stop lining up.
  */
-fun getTimeAxisBounds(hoursBack: Int = 24): Triple<Long, Long, Long> {
-    val realTime = System.currentTimeMillis() / 60_000L * 60_000L
+fun getTimeAxisBounds(nowMinute: Long, hoursBack: Int = 24): Triple<Long, Long, Long> {
+    val realTime = nowMinute
     val alignedMaxTime = Calendar.getInstance().apply {
         timeInMillis = realTime
         set(Calendar.MINUTE, 0)
@@ -66,44 +72,31 @@ fun createTimeAxisRangeProvider(
 val SharedStartAxisSize: BaseAxis.Size = BaseAxis.Size.Fixed(36.dp)
 
 val ChartPointSize: Dp = 6.dp
-val ChartColumnThickness: Dp = 3.dp
-
-/** Same x-spacing (pixels per x step at zoom 1) for line and column layers, or zoom scales differ. */
+/** Same x-spacing (pixels per x step at zoom 1) on every chart's layers, or their zoom scales differ. */
 val ChartXSpacing: Dp = 38.dp
 val ChartPointSpacing: Dp = ChartXSpacing - ChartPointSize
-val ChartColumnSpacing: Dp = ChartXSpacing - ChartColumnThickness
 
-/**
- * Line layers pad their ends by half a point marker (unscalable); column layers pad by half a
- * column (scalable, i.e. multiplied by zoom). Each layer type is given the *other's* padding via
- * `layerPadding`, so all four charts end up with identical scalable + unscalable padding and the
- * time axes line up exactly at every zoom level.
- */
-val LineChartLayerPadding = CartesianLayerPadding(
-    scalableStart = ChartColumnThickness / 2,
-    scalableEnd = ChartColumnThickness / 2,
-)
-val ColumnChartLayerPadding = CartesianLayerPadding(
-    unscalableStart = ChartPointSize / 2,
-    unscalableEnd = ChartPointSize / 2,
-)
+/** All Home charts are line layers with the same point size, so no extra padding is needed. */
+val LineChartLayerPadding = CartesianLayerPadding()
 
 /**
  * Provides a reusable BottomAxis with time labels, guidelines, and default settings
  */
 @Composable
-fun rememberTimeBottomAxis(): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
+fun rememberTimeBottomAxis(showLabels: Boolean = true): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
     val onSurface = MaterialTheme.colorScheme.onSurface
     return HorizontalAxis.rememberBottom(
         guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
-        label = rememberAxisLabelComponent(
-            style = TextStyle(
-                color = onSurface,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center
+        label = if (showLabels) {
+            rememberAxisLabelComponent(
+                style = TextStyle(color = onSurface, fontSize = 10.sp, textAlign = TextAlign.Center)
             )
-        ),
-        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned() },
+        } else null,
+        // Same tick component on every chart (its thickness feeds the layer margin, which must match
+        // for the stacked axes to align); it is just zero-length where labels are hidden.
+        tick = rememberAxisTickComponent(),
+        tickLength = if (showLabels) 4.dp else 0.dp,
+        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(addExtremeLabelPadding = false) },
         valueFormatter = remember {
             CartesianValueFormatter { _, value, _ ->
                 val calendar = Calendar.getInstance().apply { timeInMillis = value.toLong() }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.work.*
 import uk.scimone.diafit.core.data.worker.BolusBroadcastWorker
+import uk.scimone.diafit.core.data.worker.CarbBroadcastWorker
 import uk.scimone.diafit.core.data.worker.CgmBroadcastWorker
 import java.util.concurrent.TimeUnit
 
@@ -43,8 +44,13 @@ class HealthReceiver : BroadcastReceiver() {
             matched = true
         }
         if (action in Intents.CARBS_ACTIONS) {
-            // Dummy Carb worker (not implemented yet)
-            Log.d(TAG, "Carb worker not implemented. Received CARBS action: $action")
+            val workRequest = OneTimeWorkRequestBuilder<CarbBroadcastWorker>()
+                .setInputData(intent.toWorkData())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            WorkManager.getInstance(context).enqueue(workRequest)
+            Log.d(TAG, "Enqueued Carb worker for action: $action")
             matched = true
         }
         if (!matched) {

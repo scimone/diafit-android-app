@@ -4,7 +4,9 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.home.presentation.utils.currentMinute
 import uk.scimone.diafit.home.presentation.utils.TIME_AXIS_FUTURE_HOURS
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,10 +34,11 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import uk.scimone.diafit.home.presentation.components.ComponentBolusCarbChart
-import uk.scimone.diafit.home.presentation.components.ComponentInsulinActivityChart
+import uk.scimone.diafit.home.presentation.components.ChartEvent
+import uk.scimone.diafit.home.presentation.components.ComponentEventActivityChart
+import uk.scimone.diafit.core.domain.model.CarbActivity
+import uk.scimone.diafit.core.domain.model.InsulinActivity
 import uk.scimone.diafit.home.presentation.components.ComponentMealImage
-import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
@@ -55,6 +58,13 @@ fun HomeScreen(
     // chart synthesizes points across the full 24h while the CGM/bolus charts only have points
     // where real readings exist), and the shared zoom value gets clamped differently per chart,
     // silently desyncing their visible time windows even though the raw scroll/zoom state is shared.
+    // One "now" (minute resolution) for every chart's time axis, see getTimeAxisBounds.
+    val nowMinute by produceState(initialValue = currentMinute()) {
+        while (true) {
+            delay(60_000L - System.currentTimeMillis() % 60_000L)
+            value = currentMinute()
+        }
+    }
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     // The Zoom objects MUST be remembered: rememberVicoZoomState keys on them, so fresh lambdas on
     // every recomposition would recreate the state and silently reset the user's zoom (HomeScreen
@@ -73,7 +83,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 6.dp, vertical = 8.dp),
     ) {
         when {
             state.isLoading -> {
@@ -90,39 +100,41 @@ fun HomeScreen(
             else -> {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     if (state.cgmUi != null) {
-                        CgmDisplay(cgm = state.cgmUi!!)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ChartZoomControls(zoomState = chartZoomState, scrollState = chartScrollState)
+                        CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.padding(start = 10.dp))
+                    } else {
+                        Text("No CGM data available", modifier = Modifier.padding(start = 10.dp))
+                    }
+                    ChartZoomControls(zoomState = chartZoomState, scrollState = chartScrollState)
+
+                    // Stacked panels share one time axis; only the last one draws the hour labels.
+                    if (state.cgmUi != null) {
                         CgmChartDisplay(
                             history = state.cgmHistory,
                             lower = state.targetRangeLower,
                             upper = state.targetRangeUpper,
                             scrollState = chartScrollState,
-                            zoomState = chartZoomState
-                        )
-                    } else {
-                        Text("No CGM data available")
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (state.bolusHistory.isNotEmpty()) {
-                        InsulinActivityDisplay(
-                            history = state.insulinActivityHistory,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState
+                            zoomState = chartZoomState,
+                            nowMinute = nowMinute
                         )
                     }
+                    InsulinActivityDisplay(
+                        history = state.insulinActivityHistory,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                            nowMinute = nowMinute
+                    )
+                    CarbActivityDisplay(
+                        history = state.carbHistory,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                            nowMinute = nowMinute
+                    )
 
-                    if (state.mealHistory.isNotEmpty()) {
-                        CarbsChartDisplay(
-                            history = state.carbHistory,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        MealImagesRow(meals = state.mealHistory)
+                    val mealsWithPhotos = state.mealHistory.filter { it.imageUri != null }
+                    if (mealsWithPhotos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        MealImagesRow(meals = mealsWithPhotos)
                     }
-
                 }
             }
         }
@@ -131,8 +143,8 @@ fun HomeScreen(
 
 
 @Composable
-fun CgmDisplay(cgm: CgmEntityUi) {
-    Column {
+fun CgmDisplay(cgm: CgmEntityUi, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -159,19 +171,21 @@ fun CgmChartDisplay(
     lower: Int,
     upper: Int,
     scrollState: VicoScrollState,
-    zoomState: VicoZoomState
+    zoomState: VicoZoomState,
+    nowMinute: Long
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(170.dp)
+            .height(115.dp)
     ) {
         ComponentCgmChart(
             values = history,
             lowerBound = lower,
             upperBound = upper,
             scrollState = scrollState,
-            zoomState = zoomState
+            zoomState = zoomState,
+            nowMinute = nowMinute
         )
     }
 }
@@ -188,42 +202,54 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
     }
 }
 
+/** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
+private val EventPanelHeight = 70.dp
+private val TimeLabelsHeight = 22.dp
+
 @Composable
 fun InsulinActivityDisplay(
     history: List<InsulinActivityChartData>,
     scrollState: VicoScrollState,
-    zoomState: VicoZoomState
+    zoomState: VicoZoomState,
+    nowMinute: Long
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(130.dp)
-    ) {
-        ComponentInsulinActivityChart(
-            values = history,
+    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
+    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight)) {
+        ComponentEventActivityChart(
+            events = events,
+            activityOf = { e, t ->
+                if (t >= e.time) InsulinActivity.calculate(bolusAmount = e.value, bolusTime = e.time, time = t).activity else 0.0
+            },
             color = Bolus,
+            valueUnit = "U",
+            bubbleRefValue = 1.0,
+            showTimeLabels = false,
             scrollState = scrollState,
-            zoomState = zoomState
+            zoomState = zoomState,
+            nowMinute = nowMinute
         )
     }
 }
 
 @Composable
-fun CarbsChartDisplay(
+fun CarbActivityDisplay(
     history: List<CarbsChartData>,
     scrollState: VicoScrollState,
-    zoomState: VicoZoomState
+    zoomState: VicoZoomState,
+    nowMinute: Long
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(90.dp)
-    ) {
-        ComponentBolusCarbChart(
-            values = history,
-            barColor = Carbs,
+    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
+    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + TimeLabelsHeight)) {
+        ComponentEventActivityChart(
+            events = events,
+            activityOf = { e, t -> CarbActivity.calculate(e.value, e.time, t, e.durationMinutes) },
+            color = Carbs,
+            valueUnit = "g",
+            bubbleRefValue = 10.0,
+            showTimeLabels = true,
             scrollState = scrollState,
-            zoomState = zoomState
+            zoomState = zoomState,
+            nowMinute = nowMinute
         )
     }
 }

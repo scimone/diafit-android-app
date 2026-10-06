@@ -29,6 +29,9 @@ interface MealDao {
     @Query("SELECT * FROM MealEntity WHERE userId = :userId ORDER BY mealTimeUtc DESC")
     fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
 
+    @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId = :sourceId")
+    suspend fun countBySourceId(sourceId: String): Int
+
     @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
 }

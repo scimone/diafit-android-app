@@ -8,6 +8,8 @@ interface MealRepository {
 
     suspend fun createMeal(meal: MealEntity): Result<Unit>
 
+    suspend fun existsBySourceId(sourceId: String): Boolean
+
     suspend fun getMealsByUserId(userId: Int): Result<List<MealEntity>>
 
     fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
