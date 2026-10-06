@@ -33,6 +33,8 @@ data class MealDetailState(
     /** Boluses delivered around the meal, oldest first. */
     val boluses: List<BolusEntity> = emptyList(),
     val response: GlucoseResponse? = null,
+    /** Carb entries (time, grams) inside the chart window that aren't part of this meal. */
+    val otherCarbs: List<Pair<Long, Int>> = emptyList(),
     /** When the last course should have been absorbed. */
     val effectEndUtc: Long = 0L,
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
@@ -96,6 +98,10 @@ class MealDetailViewModel(
                         courses = courses.map { it.toUi(context, GlucoseImpact(0.0, 0.0, 0.0)) },
                         boluses = response?.boluses.orEmpty().filter { it.timestampUtc in doseWindow }.sortedBy { it.timestampUtc },
                         response = response,
+                        otherCarbs = response?.let { r ->
+                            meals.filter { m -> m.isValid && m.carbohydrates > 0 && courses.none { it.id == m.id } && m.mealTimeUtc in r.windowStartUtc..r.windowEndUtc }
+                                .map { it.mealTimeUtc to it.carbohydrates }
+                        }.orEmpty(),
                         effectEndUtc = sitting.effectEndTime,
                         target = target,
                         isLoading = false

@@ -417,7 +417,8 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
             effectEndUtc = effectEnd,
             target = state.target,
             eventColor = Carbs,
-            laterEventTimesUtc = state.courses.drop(1).map { it.mealTimeUtc }
+            laterEventTimesUtc = state.courses.drop(1).map { it.mealTimeUtc },
+            otherCarbs = state.otherCarbs
         )
         Legend()
         if (response.readings.isNotEmpty()) {

@@ -54,6 +54,8 @@ fun GlucoseResponseChart(
     modifier: Modifier = Modifier,
     /** Later courses of a multi-course meal, marked like the event but lighter. */
     laterEventTimesUtc: List<Long> = emptyList(),
+    /** Carb entries (time, grams) from other meals inside the window, drawn as small labelled markers. */
+    otherCarbs: List<Pair<Long, Int>> = emptyList(),
     nowUtc: Long = System.currentTimeMillis()
 ) {
     val readings = response.readings
@@ -170,6 +172,17 @@ fun GlucoseResponseChart(
                 drawLine(eventColor.copy(alpha = 0.55f), Offset(x, 0f), Offset(x, plotH), 1.5.dp.toPx(),
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f)))
                 drawCircle(eventColor, 4.dp.toPx(), Offset(x, 8.dp.toPx()))
+            }
+
+            // Carbs from other entries
+            otherCarbs.forEach { (t, g) ->
+                val x = xOf(t)
+                drawLine(eventColor.copy(alpha = 0.4f), Offset(x, 0f), Offset(x, plotH), 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f)))
+                drawCircle(eventColor.copy(alpha = 0.8f), 4.dp.toPx(), Offset(x, 8.dp.toPx()))
+                val label = textMeasurer.measure("$g g", labelStyle)
+                val lx = (x + 7.dp.toPx()).coerceAtMost(size.width - label.size.width)
+                drawText(label, topLeft = Offset(lx, 1.dp.toPx()))
             }
 
             // Insulin: small triangles on the baseline, size grows with the dose
