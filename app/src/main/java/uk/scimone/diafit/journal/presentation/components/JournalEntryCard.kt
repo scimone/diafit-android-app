@@ -76,8 +76,8 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             MealThumbnail(meal)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Heading line: when, what kind of meal, and how fast it absorbs.
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Heading line: when, what kind of meal, and how fast it absorbs. Indented by the outcome box's own padding so the text lines up with it.
+                Row(Modifier.padding(start = MEAL_TEXT_INDENT), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         buildString {
                             append(meal.timeFormatted)
@@ -85,16 +85,16 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                             append(meal.mealType.type)
                             if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
                         },
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(4.dp))
                     AbsorptionBadge(meal.impactType)
                 }
-                Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meal.title, Modifier.padding(start = MEAL_TEXT_INDENT), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 MealOutcomeRow(meal, target)
             }
             Spacer(Modifier.width(10.dp))
@@ -107,8 +107,11 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
     }
 }
 
+/** Horizontal padding inside the outcome box; the heading and title are indented by the same amount. */
+private val MEAL_TEXT_INDENT = 8.dp
+
 /** Fixed, so the glucose outcome box (and its range bar) is the same width on every meal card. */
-private val MEAL_VALUES_WIDTH = 56.dp
+private val MEAL_VALUES_WIDTH = 52.dp
 
 @Composable
 private fun BigValue(value: String, unit: String, color: Color) {
@@ -121,7 +124,7 @@ private fun BigValue(value: String, unit: String, color: Color) {
 /** The cover photo (or the meal-type tile), with a "+N" badge when there are more photos. */
 @Composable
 private fun MealThumbnail(meal: MealEntityUi) {
-    val size = 88.dp
+    val size = 84.dp
     val photos = meal.photoUris
     Box(Modifier.size(size)) {
         if (photos.isEmpty()) {
@@ -165,7 +168,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = MEAL_TEXT_INDENT, vertical = 5.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         val start = meal.startMgdl
