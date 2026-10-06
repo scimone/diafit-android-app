@@ -22,12 +22,15 @@ import uk.scimone.diafit.ui.theme.InRange
 /** One out-of-range band of the horizon: how deep a reading reaches into it, and how it is tinted. */
 private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Color)
 
-/** Opaque, drawn in order so each deeper band overlays the shallower one: the "very" bands are the full colour. */
+/**
+ * Opaque, drawn in order so each deeper band overlays the shallower one. High/low use the same
+ * colours as the CGM line; the "very" bands are a lighter shade of them.
+ */
 private val HORIZON_BANDS = listOf(
-    HorizonBandStyle({ it.high }, lerp(AboveRange, Color.Black, 0.35f)),
-    HorizonBandStyle({ it.veryHigh }, AboveRange),
-    HorizonBandStyle({ it.low }, lerp(BelowRange, Color.Black, 0.35f)),
-    HorizonBandStyle({ it.veryLow }, BelowRange)
+    HorizonBandStyle({ it.high }, AboveRange),
+    HorizonBandStyle({ it.veryHigh }, lerp(AboveRange, Color.White, 0.45f)),
+    HorizonBandStyle({ it.low }, BelowRange),
+    HorizonBandStyle({ it.veryLow }, lerp(BelowRange, Color.White, 0.45f))
 )
 
 /** Height, as a fraction of the chart, of the green strip that marks "glucose was recorded and in range". */
@@ -42,7 +45,7 @@ fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 52.dp
+    height: Dp = 32.dp
 ) {
     val runs = day.glucose.splitAtGaps()
     Canvas(modifier.fillMaxWidth().height(height)) {

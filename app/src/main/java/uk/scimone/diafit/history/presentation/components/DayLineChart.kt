@@ -37,7 +37,7 @@ fun DayLineChart(
     val runs = day.glucose.splitAtGaps()
     val yMax = max(Y_MAX_FLOOR, (day.glucose.maxOfOrNull { it.mgdl } ?: 0) + 10f)
 
-    Canvas(modifier.fillMaxWidth().height(200.dp)) {
+    Canvas(modifier.fillMaxWidth().height(180.dp)) {
         val plotHeight = size.height
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         fun y(mgdl: Float) = plotHeight - (mgdl - Y_MIN) / (yMax - Y_MIN) * plotHeight
