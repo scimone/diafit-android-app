@@ -1,9 +1,10 @@
 package uk.scimone.diafit.home.presentation.components.util
 
-import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
-import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
-import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
+import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.common.Position
 
 class CustomCgmAxisItemPlacer(
     private val targetLower: Double = 70.0,
@@ -13,44 +14,44 @@ class CustomCgmAxisItemPlacer(
 
     private val lines = listOf(targetLower, targetUpper, extraLine)
 
-    override fun getShiftTopLines(context: CartesianDrawContext): Boolean = true
+    override fun getShiftTopLines(context: CartesianDrawingContext): Boolean = true
 
     override fun getLabelValues(
-        context: CartesianDrawContext,
+        context: CartesianDrawingContext,
         axisHeight: Float,
         maxLabelHeight: Float,
-        position: Position.Vertical
+        position: Axis.Position.Vertical
     ): List<Double> = lines
 
     override fun getWidthMeasurementLabelValues(
-        context: CartesianMeasureContext,
+        context: CartesianMeasuringContext,
         axisHeight: Float,
         maxLabelHeight: Float,
-        position: Position.Vertical
+        position: Axis.Position.Vertical
     ): List<Double> = lines
 
     override fun getHeightMeasurementLabelValues(
-        context: CartesianMeasureContext,
-        position: Position.Vertical
+        context: CartesianMeasuringContext,
+        position: Axis.Position.Vertical
     ): List<Double> = lines
 
     override fun getLineValues(
-        context: CartesianDrawContext,
+        context: CartesianDrawingContext,
         axisHeight: Float,
         maxLabelHeight: Float,
-        position: Position.Vertical
+        position: Axis.Position.Vertical
     ): List<Double> = lines
 
-    override fun getTopVerticalAxisInset(
-        context: CartesianMeasureContext,
-        verticalLabelPosition: VerticalAxis.VerticalLabelPosition,
+    override fun getTopLayerMargin(
+        context: CartesianMeasuringContext,
+        verticalLabelPosition: Position.Vertical,
         maxLabelHeight: Float,
         maxLineThickness: Float
     ): Float = 0f
 
-    override fun getBottomVerticalAxisInset(
-        context: CartesianMeasureContext,
-        verticalLabelPosition: VerticalAxis.VerticalLabelPosition,
+    override fun getBottomLayerMargin(
+        context: CartesianMeasuringContext,
+        verticalLabelPosition: Position.Vertical,
         maxLabelHeight: Float,
         maxLineThickness: Float
     ): Float = 0f

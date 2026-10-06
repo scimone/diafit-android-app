@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
-import coil.compose.rememberAsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.Carbs
 

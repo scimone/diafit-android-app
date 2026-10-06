@@ -15,9 +15,8 @@ import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.core.cartesian.Scroll
-import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.common.Defaults
+import com.patrykandpatrick.vico.compose.cartesian.Scroll
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.home.presentation.components.ComponentCgmChart
@@ -55,9 +54,9 @@ fun HomeScreen(
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     val chartZoomState = rememberVicoZoomState(
         zoomEnabled = true,
-        initialZoom = { _, _, _ -> 2f },
-        minZoom = Zoom.static(1f),
-        maxZoom = Zoom.static(Defaults.MAX_ZOOM)
+        initialZoom = Zoom.fixed(2f),
+        minZoom = Zoom.fixed(1f),
+        maxZoom = Zoom.fixed(10f)
     )
 
     Box(

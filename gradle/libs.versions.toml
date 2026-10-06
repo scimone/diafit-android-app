@@ -1,25 +1,25 @@
 [versions]
-agp = "8.10.1"
-coilCompose = "2.4.0"
-insertKoinKoinAndroidxCompose = "3.4.0"
-koinAndroid = "3.5.6"
-koinAndroidxCompose = "3.5.6"
-koinCore = "3.5.6"
-kotlin = "2.0.21"
-ktor = "2.3.12"
-coreKtx = "1.16.0"
+agp = "9.4.1"
+coilCompose = "3.6.3"
+insertKoinKoinAndroidxCompose = "4.2.2"
+koinAndroid = "4.2.2"
+koinAndroidxCompose = "4.2.2"
+koinCore = "4.2.2"
+kotlin = "2.4.10"
+ktor = "3.6.0"
+coreKtx = "1.19.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.9.0"
-activityCompose = "1.10.1"
-composeBom = "2024.09.03"
+lifecycleRuntimeKtx = "2.11.0"
+activityCompose = "1.13.0"
+composeBom = "2026.09.00"
 preferenceKtx = "1.2.1"
-roomCommonJvm = "2.7.1"
-roomKtx = "2.7.1"
-roomRuntime = "2.7.1"
-roomRuntimeAndroid = "2.7.1"
-workRuntimeKtx = "2.10.1"
+roomCommonJvm = "2.8.5"
+roomKtx = "2.8.5"
+roomRuntime = "2.8.5"
+roomRuntimeAndroid = "2.8.5"
+workRuntimeKtx = "2.12.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -27,7 +27,7 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preferenceKtx" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -57,8 +57,9 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 
 [plugins]
+ksp = { id = "com.google.devtools.ksp", version = "2.3.12" }
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 

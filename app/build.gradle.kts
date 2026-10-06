@@ -1,19 +1,18 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "uk.scimone.diafit"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "uk.scimone.diafit"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -23,10 +22,8 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://gluco.mooo.com\"")
     }
 
-    kapt {
-        arguments {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
 
     buildTypes {
@@ -41,9 +38,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
     }
     buildFeatures {
         compose = true
@@ -85,25 +79,14 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation(libs.androidx.room.runtime)
-    kapt("androidx.room:room-compiler:2.7.1")
+    ksp("androidx.room:room-compiler:2.8.5")
     // if using Kotlin coroutines or RxJava with Room
     implementation(libs.androidx.room.ktx)
 
     implementation(libs.bundles.ktor)
 
-    // Vico Charts
-    val vicoVersion = "2.0.0-alpha.27"
-    // For Jetpack Compose.
-    implementation("com.patrykandpatrick.vico:compose:$vicoVersion")
-
-    // For `compose`. Creates a `ChartStyle` based on an M2 Material Theme.
-    implementation("com.patrykandpatrick.vico:compose-m2:$vicoVersion")
-
-    // For `compose`. Creates a `ChartStyle` based on an M3 Material Theme.
-    implementation("com.patrykandpatrick.vico:compose-m3:$vicoVersion")
-
-    // Houses the core logic for charts and other elements. Included in all other modules.
-    implementation("com.patrykandpatrick.vico:core:$vicoVersion")
+    // Vico Charts (compose + M3 theming; `core` is folded into `compose` since 3.0)
+    implementation("com.patrykandpatrick.vico:compose-m3:3.3.1")
 
     dependencies {
         implementation(libs.androidx.preference.ktx)

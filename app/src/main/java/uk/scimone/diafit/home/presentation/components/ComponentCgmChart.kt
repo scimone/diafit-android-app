@@ -1,44 +1,45 @@
 package uk.scimone.diafit.home.presentation.components
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberPoint
-import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
-import com.patrykandpatrick.vico.core.cartesian.axis.Axis.Position
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
-import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarkerValueFormatter
-import com.patrykandpatrick.vico.core.common.component.LineComponent
-import com.patrykandpatrick.vico.core.common.component.ShapeComponent
-import com.patrykandpatrick.vico.core.common.component.TextComponent
-import com.patrykandpatrick.vico.core.common.shape.Shape
+import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import uk.scimone.diafit.home.presentation.components.util.CustomCgmAxisItemPlacer
 import uk.scimone.diafit.home.presentation.model.CgmChartData
-import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSizeConstraint
-import uk.scimone.diafit.home.presentation.utils.createTimeAxisValueOverrider
+import uk.scimone.diafit.home.presentation.utils.ChartPointSize
+import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
+import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
+import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSize
+import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
 import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
+import uk.scimone.diafit.home.presentation.utils.timeAxisMaxX
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
-import java.text.DecimalFormat
 
 @Composable
 fun ComponentCgmChart(
@@ -50,9 +51,9 @@ fun ComponentCgmChart(
 ) {
     val minY = 40f
     val maxY = 250f
-    val modelProducer = remember { CartesianChartModelProducer.build() }
+    val modelProducer = remember { CartesianChartModelProducer() }
 
-    val (alignedMinTime, alignedMaxTime, realTime) = getTimeAxisBounds(hoursBack = 24)
+    val (alignedMinTime, _, realTime) = getTimeAxisBounds(hoursBack = 24)
 
     val filteredValues = values.filter {
         it.timeLong in alignedMinTime..realTime
@@ -92,62 +93,54 @@ fun ComponentCgmChart(
     }
 
     if (lineColors.isNotEmpty()) {
+        val onSurface = MaterialTheme.colorScheme.onSurface
+        val onBackground = MaterialTheme.colorScheme.onBackground
         val chart = rememberCartesianChart(
             rememberLineCartesianLayer(
                 lineProvider = LineCartesianLayer.LineProvider.series(
-                    lines = lineColors.map { color ->
-                        rememberLine(
+                    lineColors.map { color ->
+                        LineCartesianLayer.rememberLine(
+                            fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
+                            stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 0.dp),
                             pointProvider = LineCartesianLayer.PointProvider.single(
-                                rememberPoint(
-                                    component = ShapeComponent(
-                                        shape = Shape.Pill,
-                                        color = color.toArgb()
-                                    ),
-                                    size = 6.dp
+                                LineCartesianLayer.Point(
+                                    rememberShapeComponent(fill = Fill(color), shape = CircleShape),
+                                    ChartPointSize
                                 )
-                            ),
-                            thickness = 0.dp,
-                            fill = LineCartesianLayer.LineFill.single(fill = fill(Color.Transparent)),
-                            areaFill = LineCartesianLayer.AreaFill.single(fill = fill(Color.Transparent))
+                            )
                         )
                     }
                 ),
-                verticalAxisPosition = Position.Vertical.Start,
-                axisValueOverrider = createTimeAxisValueOverrider(
+                verticalAxisPosition = Axis.Position.Vertical.Start,
+                pointSpacing = ChartPointSpacing,
+                rangeProvider = createTimeAxisRangeProvider(
                     minX = alignedMinTime,
-                    maxX = realTime,
+                    maxX = timeAxisMaxX(realTime),
                     minY = minY.toDouble(),
                     maxY = maxY.toDouble()
                 )
             ),
-            startAxis = rememberStartAxis(
-                guideline = LineComponent(
-                    color = MaterialTheme.colorScheme.onSurface.toArgb(),
-                    thicknessDp = .1f
-                ),
+            startAxis = VerticalAxis.rememberStart(
+                guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
                 itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
-                sizeConstraint = SharedStartAxisSizeConstraint
+                size = SharedStartAxisSize
             ),
             bottomAxis = rememberTimeBottomAxis(),
-            getXStep = { getTimeAxisXStep() },
-
+            layerPadding = { LineChartLayerPadding },
+            getXStep = { _ -> getTimeAxisXStep() },
             marker = rememberDefaultCartesianMarker(
-                label = TextComponent(
-                    color = MaterialTheme.colorScheme.onBackground.toArgb(),
-                    textSizeSp = 10f
-                ),
-                labelPosition = DefaultCartesianMarker.LabelPosition.AbovePoint,
+                label = rememberTextComponent(style = TextStyle(color = onBackground, fontSize = 10.sp)),
+                valueFormatter = remember {
+                    DefaultCartesianMarker.ValueFormatter.default(
+                        decimalCount = 0,
+                        suffix = " mg/dl",
+                        colorCode = false
+                    )
+                },
+                labelPosition = DefaultCartesianMarker.LabelPosition.AroundPoint,
                 indicatorSize = 10.dp,
-                guideline = LineComponent(
-                    color = MaterialTheme.colorScheme.onBackground.toArgb(),
-                    thicknessDp = .5f
-                ),
-                valueFormatter = DefaultCartesianMarkerValueFormatter(
-                    decimalFormat = DecimalFormat("#.## mg/dl"),
-                    colorCode = false
-                )
+                guideline = rememberLineComponent(fill = Fill(onBackground), thickness = 0.5.dp)
             ),
-            horizontalLayout = HorizontalLayout.FullWidth(),
         )
 
         CartesianChartHost(
