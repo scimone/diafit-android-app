@@ -148,7 +148,7 @@ private fun ValueChip(value: String, accent: Color) {
     )
 }
 
-private fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
+fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
     mgdl < target.lowerBound -> BelowRange
     mgdl > target.upperBound -> AboveRange
     else -> InRange

@@ -422,7 +422,7 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
         )
         Legend()
         if (response.readings.isNotEmpty()) {
-            StatRow(meal, response)
+            StatRow(meal, response, state.target)
             Insight(meal, response, state.target, stillAbsorbing)
         }
     }
@@ -449,30 +449,32 @@ private fun LegendDot(color: Color, label: String) {
 }
 
 @Composable
-private fun StatRow(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.usecase.GlucoseResponse) {
+private fun StatRow(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.usecase.GlucoseResponse, target: uk.scimone.diafit.core.domain.model.GlucoseTargetRange) {
+    fun tint(v: Int?) = v?.let { uk.scimone.diafit.journal.presentation.components.glucoseColor(it, target) }
     val atMeal = response.atEvent?.valueMgdl
     val peak = response.peak
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatTile("At meal", atMeal?.toString() ?: "–", null, Modifier.weight(1f))
+        StatTile("At meal", atMeal?.toString() ?: "–", null, Modifier.weight(1f), tint(atMeal))
         StatTile(
             "Peak", peak?.valueMgdl?.toString() ?: "–",
             if (atMeal != null && peak != null && peak.valueMgdl > atMeal) "+${peak.valueMgdl - atMeal}" else null,
-            Modifier.weight(1f)
+            Modifier.weight(1f), tint(peak?.valueMgdl)
         )
-        StatTile("Lowest", response.low?.valueMgdl?.toString() ?: "–", null, Modifier.weight(1f))
-        StatTile("In range", if (meal.hasGlucoseData) "${meal.timeInRange.toInt()}%" else "–", null, Modifier.weight(1f))
+        StatTile("Lowest", response.low?.valueMgdl?.toString() ?: "–", null, Modifier.weight(1f), tint(response.low?.valueMgdl))
+        StatTile("In range", if (meal.hasGlucoseData) "${meal.timeInRange.toInt()}%" else "–", null, Modifier.weight(1f),
+            if (meal.hasGlucoseData) InRange else null)
     }
 }
 
 @Composable
-private fun StatTile(label: String, value: String, delta: String?, modifier: Modifier = Modifier) {
+private fun StatTile(label: String, value: String, delta: String?, modifier: Modifier = Modifier, valueColor: Color? = null) {
     Column(
         modifier
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .padding(horizontal = 10.dp, vertical = 12.dp)
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, color = valueColor ?: Color.Unspecified)
         Text(delta ?: " ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
