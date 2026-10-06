@@ -168,8 +168,8 @@ The only supported way to reach the phone from this server. It works on **Wi-Fi 
 
 - Phone tunnel IP: `10.200.200.2` (server `10.200.200.1` on `wg0`; the phone's peer has `AllowedIPs = 10.200.200.2/32`). Connect with `adb connect 10.200.200.2:5555`; `adb devices -l` must show `device`. This server's adb key is already authorized (no prompt expected; if "Allow USB debugging?" appears, tick "Always allow").
 - **One-time / after every phone reboot** (TCP mode is reset by a reboot): USB debugging on, phone on USB to the laptop, then in PowerShell
-  `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices` (accept the RSA prompt; must say `device`), then
-  `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -d tcpip 5555` → expect `restarting in TCP mode port: 5555`. Unplug; don't reboot; keep WireGuard connected.
+  `adb devices` (accept the RSA prompt; must say `device`), then
+  `adb -d tcpip 5555` → expect `restarting in TCP mode port: 5555`. Unplug; don't reboot; keep WireGuard connected.
 - Port 5555 must only be reachable through the tunnel: never port-forward it or open it on a public interface. Note `adb tcpip` listens on all phone interfaces (only authorized adb keys can use it) — turn USB debugging off when not developing.
 - Commands (export `JAVA_HOME`/`ANDROID_HOME`/`PATH` first, see above):
   ```
