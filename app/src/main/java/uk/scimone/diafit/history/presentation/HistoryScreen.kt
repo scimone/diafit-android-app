@@ -10,10 +10,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -28,9 +26,12 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+private enum class HistoryTab(val label: String) { CHARTS("Charts"), STATS("Stats") }
+
 /**
- * Two weeks at a glance: the (sticky) glucose profile chart, and one compact
- * horizon track per day underneath on a shared 0–24 h axis. Tapping a day opens it in full ([onOpenDay]).
+ * A selectable time frame (1 week to 3 months) at a glance, in two views: the (sticky) glucose profile chart, and one compact
+ * horizon track per day underneath on a shared 0–24 h axis, or the period's statistics with one
+ * stat row per day. Tapping a day opens it in full ([onOpenDay]).
  */
 @Composable
 fun HistoryScreen(
@@ -40,6 +41,7 @@ fun HistoryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val today = remember { LocalDate.now().toEpochDay() }
+    var tab by rememberSaveable { mutableStateOf(HistoryTab.CHARTS) }
 
     Column(Modifier.fillMaxSize()) {
         PeriodHeader(
@@ -48,6 +50,18 @@ fun HistoryScreen(
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
+        RangeSelector(state.range, viewModel::setRange)
+        PrimaryTabRow(selectedTabIndex = tab.ordinal) {
+            HistoryTab.entries.forEach { t ->
+                Tab(
+                    selected = tab == t,
+                    onClick = { tab = t },
+                    text = { Text(t.label) },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -57,6 +71,7 @@ fun HistoryScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
                 else -> Column(Modifier.fillMaxSize()) {
                     ProfileChartPlaceholder(Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
                     Spacer(Modifier.height(10.dp))
@@ -85,11 +100,27 @@ fun HistoryScreen(
 
 private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
 
-/** Two-week window selector: back/forward arrows around the date range. */
+/** Time frame choice: 1 week, 2 weeks, 1 month, 3 months. */
+@Composable
+private fun RangeSelector(selected: HistoryRange, onSelect: (HistoryRange) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+        HistoryRange.entries.forEachIndexed { index, range ->
+            SegmentedButton(
+                selected = range == selected,
+                onClick = { onSelect(range) },
+                shape = SegmentedButtonDefaults.itemShape(index, HistoryRange.entries.size),
+                icon = {},
+                label = { Text(range.label, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+            )
+        }
+    }
+}
+
+/** Period selector: back/forward arrows around the date range. */
 @Composable
 private fun PeriodHeader(days: List<DayHistoryUi>, isLatest: Boolean, onOlder: () -> Unit, onNewer: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous two weeks") }
+        IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             val label = if (days.isEmpty()) "" else {
                 val first = LocalDate.ofEpochDay(days.last().epochDay)
@@ -98,7 +129,7 @@ private fun PeriodHeader(days: List<DayHistoryUi>, isLatest: Boolean, onOlder: (
             }
             Text(label, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
         }
-        IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next two weeks") }
+        IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
     }
 }
 

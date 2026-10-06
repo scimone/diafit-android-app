@@ -1,5 +1,7 @@
 package uk.scimone.diafit.history.presentation.model
 
+import uk.scimone.diafit.core.domain.model.DayGlucoseStats
+import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.history.domain.model.DayHistory
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
@@ -22,7 +24,9 @@ data class DayHistoryUi(
     val dayEndUtc: Long,
     val glucose: List<GlucosePoint>,
     val carbs: List<TreatmentCluster>,
-    val insulin: List<TreatmentCluster>
+    val insulin: List<TreatmentCluster>,
+    /** Null when the day has no readings. */
+    val stats: DayGlucoseStats?
 ) {
     val totalCarbs: Float get() = carbs.sumOf { it.total.toDouble() }.toFloat()
     val totalInsulin: Float get() = insulin.sumOf { it.total.toDouble() }.toFloat()
@@ -44,7 +48,11 @@ fun DayHistory.toUi(
         dayEndUtc = end,
         glucose = points,
         carbs = cluster(meals.map { TreatmentEvent(it.mealTimeUtc, it.carbohydrates.toFloat()) }),
-        insulin = cluster(boluses.map { TreatmentEvent(it.timestampUtc, it.value) })
+        insulin = cluster(boluses.map { TreatmentEvent(it.timestampUtc, it.value) }),
+        stats = DayGlucoseStats.from(
+            readings.sortedBy { it.timestamp }.map { GlucoseSample(it.timestamp, it.valueMgdl) },
+            GlucoseThresholds.from(target)
+        )
     )
 }
 

@@ -232,10 +232,10 @@ private fun SummaryCard(state: DayDetailState) {
     }
 }
 
-private val ZONE_ORDER = listOf(GlucoseZone.VERY_LOW, GlucoseZone.LOW, GlucoseZone.IN_RANGE, GlucoseZone.HIGH, GlucoseZone.VERY_HIGH)
+internal val ZONE_ORDER = listOf(GlucoseZone.VERY_LOW, GlucoseZone.LOW, GlucoseZone.IN_RANGE, GlucoseZone.HIGH, GlucoseZone.VERY_HIGH)
 
 /** Very deep zones get the full colour, the mild ones a lighter tint of it. */
-private fun zoneFill(zone: GlucoseZone): Color = when (zone) {
+internal fun zoneFill(zone: GlucoseZone): Color = when (zone) {
     GlucoseZone.VERY_LOW -> BelowRange
     GlucoseZone.LOW -> BelowRange.copy(alpha = 0.6f)
     GlucoseZone.IN_RANGE -> InRange
@@ -245,7 +245,7 @@ private fun zoneFill(zone: GlucoseZone): Color = when (zone) {
 
 /** Stacked bar of the five zones, low on the left. */
 @Composable
-private fun TimeInRangeBar(stats: DayGlucoseStats) {
+internal fun TimeInRangeBar(stats: DayGlucoseStats) {
     Row(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         ZONE_ORDER.forEach { zone ->
             val share = stats.share(zone)
@@ -292,7 +292,7 @@ private fun ZoneBreakdown(stats: DayGlucoseStats, t: GlucoseThresholds) {
 }
 
 @Composable
-private fun Metric(label: String, value: String, unit: String, modifier: Modifier = Modifier, valueColor: Color? = null) {
+internal fun Metric(label: String, value: String, unit: String, modifier: Modifier = Modifier, valueColor: Color? = null) {
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         Row(verticalAlignment = Alignment.Bottom) {
@@ -317,4 +317,4 @@ private fun Section(contentSpacing: androidx.compose.ui.unit.Dp = 14.dp, content
     }
 }
 
-private fun percent(share: Double): Int = Math.round(share * 100).toInt()
+internal fun percent(share: Double): Int = Math.round(share * 100).toInt()
