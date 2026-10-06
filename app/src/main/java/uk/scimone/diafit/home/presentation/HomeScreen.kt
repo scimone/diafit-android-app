@@ -16,6 +16,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import coil3.compose.rememberAsyncImagePainter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.abs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -65,6 +82,9 @@ fun HomeScreen(
             value = currentMinute()
         }
     }
+    // Time (x) the user is scrubbing on the CGM chart; every chart draws the cursor line, and the
+    // header swaps the live reading for the reading at that time.
+    var selectedTime by remember { mutableStateOf<Long?>(null) }
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     // The Zoom objects MUST be remembered: rememberVicoZoomState keys on them, so fresh lambdas on
     // every recomposition would recreate the state and silently reset the user's zoom (HomeScreen
@@ -100,7 +120,23 @@ fun HomeScreen(
             else -> {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     if (state.cgmUi != null) {
-                        CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.padding(start = 10.dp))
+                        val pastReading = selectedTime?.let { t -> state.cgmHistory.minByOrNull { abs(it.timeLong - t) } }
+                        val pastMeal = selectedTime?.let { t ->
+                            state.carbHistory
+                                .filter { it.imageUri != null && abs(it.timeLong - t) <= MEAL_PREVIEW_WINDOW_MS }
+                                .minByOrNull { abs(it.timeLong - t) }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(84.dp).padding(start = 10.dp, end = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (pastReading != null) {
+                                PastCgmDisplay(reading = pastReading, modifier = Modifier.weight(1f))
+                            } else {
+                                CgmDisplay(cgm = state.cgmUi!!, modifier = Modifier.weight(1f))
+                            }
+                            if (pastMeal != null) MealPreview(pastMeal)
+                        }
                     } else {
                         Text("No CGM data available", modifier = Modifier.padding(start = 10.dp))
                     }
@@ -114,20 +150,24 @@ fun HomeScreen(
                             upper = state.targetRangeUpper,
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
-                            nowMinute = nowMinute
+                            nowMinute = nowMinute,
+                            selectedTime = selectedTime,
+                            onSelectedTimeChange = { selectedTime = it }
                         )
                     }
                     InsulinActivityDisplay(
                         history = state.insulinActivityHistory,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                            nowMinute = nowMinute
+                        nowMinute = nowMinute,
+                        selectedTime = selectedTime
                     )
                     CarbActivityDisplay(
                         history = state.carbHistory,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                            nowMinute = nowMinute
+                        nowMinute = nowMinute,
+                        selectedTime = selectedTime
                     )
 
                 }
@@ -160,6 +200,69 @@ fun CgmDisplay(cgm: CgmEntityUi, modifier: Modifier = Modifier) {
     }
 }
 
+/** Reports [amount] less height than the content measures, so the next sibling overlaps the slack. */
+private fun Modifier.trimBottom(amount: Dp): Modifier = layout { measurable, constraints ->
+    val p = measurable.measure(constraints)
+    layout(p.width, (p.height - amount.roundToPx()).coerceAtLeast(0)) { p.place(0, 0) }
+}
+
+/**
+ * The header reading while scrubbing: deliberately *not* the live look - lighter, italic, muted,
+ * with a "PAST READING" tag and its clock time, so nobody mistakes it for the current glucose.
+ */
+@Composable
+fun PastCgmDisplay(reading: CgmChartData, modifier: Modifier = Modifier) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val time = remember(reading.timeLong) {
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reading.timeLong))
+    }
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "${reading.value}",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Light,
+                fontStyle = FontStyle.Italic,
+                color = muted
+            )
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Default.History, contentDescription = null, tint = muted, modifier = Modifier.size(22.dp))
+        }
+        Text(
+            text = "PAST READING · $time",
+            fontSize = 12.sp,
+            letterSpacing = 0.8.sp,
+            color = muted,
+            modifier = Modifier
+                .border(1.dp, muted.copy(alpha = 0.5f), RoundedCornerShape(50))
+                .padding(horizontal = 8.dp, vertical = 1.dp)
+        )
+    }
+}
+
+/** Enlarged meal photo shown in the header while the cursor is on a meal. */
+@Composable
+fun MealPreview(meal: CarbsChartData) {
+    Box(modifier = Modifier.size(84.dp).clip(RoundedCornerShape(12.dp))) {
+        Image(
+            painter = rememberAsyncImagePainter(meal.imageUri),
+            contentDescription = "Meal photo",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Text(
+            text = "${meal.value} g",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .background(Carbs.copy(alpha = 0.9f), RoundedCornerShape(topStart = 8.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
 @Composable
 fun CgmChartDisplay(
     history: List<CgmChartData>,
@@ -167,11 +270,14 @@ fun CgmChartDisplay(
     upper: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long
+    nowMinute: Long,
+    selectedTime: Long?,
+    onSelectedTimeChange: (Long?) -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .trimBottom(PanelGapTrim)
             .height(115.dp)
     ) {
         ComponentCgmChart(
@@ -180,7 +286,9 @@ fun CgmChartDisplay(
             upperBound = upper,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute
+            nowMinute = nowMinute,
+            selectedTime = selectedTime,
+            onSelectedTimeChange = onSelectedTimeChange
         )
     }
 }
@@ -201,17 +309,21 @@ fun MealImagesRow(meals: List<MealEntityUi>) {
 private val EventPanelHeight = 70.dp
 private val TimeLabelsHeight = 22.dp
 /** Extra plot height in the carb panel so meal-photo bubbles are big enough to recognise. */
-private val PhotoExtraHeight = 12.dp
+private val PhotoExtraHeight = 32.dp
+/** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
+private val PanelGapTrim = 5.dp
+private const val MEAL_PREVIEW_WINDOW_MS = 20 * 60_000L
 
 @Composable
 fun InsulinActivityDisplay(
     history: List<InsulinActivityChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long
+    nowMinute: Long,
+    selectedTime: Long?
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
-    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight)) {
+    Box(modifier = Modifier.fillMaxWidth().trimBottom(PanelGapTrim).height(EventPanelHeight)) {
         ComponentEventActivityChart(
             events = events,
             activityOf = { e, t ->
@@ -223,7 +335,8 @@ fun InsulinActivityDisplay(
             showTimeLabels = false,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute
+            nowMinute = nowMinute,
+            selectedTime = selectedTime
         )
     }
 }
@@ -233,7 +346,8 @@ fun CarbActivityDisplay(
     history: List<CarbsChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long
+    nowMinute: Long,
+    selectedTime: Long?
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes, it.imageUri) } }
     Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + PhotoExtraHeight + TimeLabelsHeight)) {
@@ -246,7 +360,8 @@ fun CarbActivityDisplay(
             showTimeLabels = true,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute
+            nowMinute = nowMinute,
+            selectedTime = selectedTime
         )
     }
 }

@@ -53,3 +53,31 @@ class NowDecoration(
 
     override fun hashCode() = 31 * (31 * nowX.hashCode() + lineColor.hashCode()) + washColor.hashCode()
 }
+
+/**
+ * The scrub cursor: a solid vertical line at [selectedX] spanning the chart's whole height. Every
+ * stacked chart draws one, so together they read as a single line over all panels.
+ */
+class SelectionDecoration(
+    private val selectedX: Double,
+    private val lineColor: Color,
+    private val strokePx: Float = 3f
+) : Decoration {
+    override fun drawOverLayers(context: CartesianDrawingContext) {
+        val bounds = context.layerBounds
+        val dims = context.layerDimensions
+        val ranges = context.ranges
+        val x = bounds.left + dims.startPadding +
+            dims.xSpacing * ((selectedX - ranges.minX) / ranges.xStep).toFloat() - context.scroll
+        if (x < bounds.left || x > bounds.right) return
+        context.canvas.drawLine(
+            Offset(x, bounds.top), Offset(x, bounds.bottom),
+            Paint().apply { color = lineColor; style = PaintingStyle.Stroke; strokeWidth = strokePx }
+        )
+    }
+
+    override fun equals(other: Any?) =
+        other is SelectionDecoration && other.selectedX == selectedX && other.lineColor == lineColor
+
+    override fun hashCode() = 31 * selectedX.hashCode() + lineColor.hashCode()
+}

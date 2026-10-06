@@ -19,8 +19,10 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
+import uk.scimone.diafit.home.presentation.utils.SelectionDecoration
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
@@ -50,6 +52,8 @@ fun ComponentCgmChart(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long,
+    selectedTime: Long?,
+    onSelectedTimeChange: (Long?) -> Unit,
     showTimeLabels: Boolean = false
 ) {
     val minY = 40f
@@ -125,33 +129,32 @@ fun ComponentCgmChart(
             ),
             startAxis = VerticalAxis.rememberStart(
                 guideline = rememberLineComponent(fill = Fill(onSurface), thickness = 0.1.dp),
+                label = rememberAxisLabelComponent(style = TextStyle(color = onSurface.copy(alpha = 0.45f), fontSize = 11.sp)),
                 itemPlacer = remember { CustomCgmAxisItemPlacer(lowerBound.toDouble(), upperBound.toDouble()) },
                 size = SharedStartAxisSize,
                 horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside
             ),
             bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
             layerPadding = { LineChartLayerPadding },
-            decorations = listOf(
+            decorations = listOfNotNull(
                 NowDecoration(
                     nowX = realTime.toDouble(),
                     lineColor = onSurface.copy(alpha = 0.7f),
                     washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
-                )
+                ),
+                selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
             ),
             getXStep = { _ -> getTimeAxisXStep() },
-            marker = rememberDefaultCartesianMarker(
-                label = rememberTextComponent(style = TextStyle(color = onBackground, fontSize = 10.sp)),
-                valueFormatter = remember {
-                    DefaultCartesianMarker.ValueFormatter.default(
-                        decimalCount = 0,
-                        suffix = " mg/dl",
-                        colorCode = false
-                    )
-                },
-                labelPosition = DefaultCartesianMarker.LabelPosition.AroundPoint,
-                indicatorSize = 10.dp,
-                guideline = rememberLineComponent(fill = Fill(onBackground), thickness = 0.5.dp)
-            ),
+            marker = remember { object : CartesianMarker {} },
+            markerVisibilityListener = remember(onSelectedTimeChange) {
+                object : CartesianMarkerVisibilityListener {
+                    override fun onShown(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
+                        onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
+                    override fun onUpdated(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
+                        onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
+                    override fun onHidden(marker: CartesianMarker) = onSelectedTimeChange(null)
+                }
+            },
         )
 
         CartesianChartHost(

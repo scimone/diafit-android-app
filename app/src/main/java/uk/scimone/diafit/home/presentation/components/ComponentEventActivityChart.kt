@@ -19,6 +19,7 @@ import android.graphics.BitmapFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uk.scimone.diafit.home.presentation.utils.NowDecoration
+import uk.scimone.diafit.home.presentation.utils.SelectionDecoration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,6 +85,9 @@ data class ChartEvent(
  */
 private const val VALUE_SCALE = 1e-4
 
+/** Meal-photo bubble diameter (dp): big enough to recognise the food at a glance. */
+private const val PHOTO_DIAMETER = 52.0
+
 private fun decodeValue(y: Double): Double = (y / VALUE_SCALE).coerceAtLeast(0.0)
 
 /** Draws a circle whose bottom sits at the centre y of the rect Vico hands us (rect = 2x diameter). */
@@ -138,7 +142,7 @@ private class EventBubbleProvider(
     // Photo bubbles get a larger floor so the food is recognisable.
     private fun diameter(value: Double, hasPhoto: Boolean): Dp {
         val d = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0)
-        return (if (hasPhoto) d.coerceAtLeast(30.0) + 4 else d).dp
+        return (if (hasPhoto) PHOTO_DIAMETER else d).dp
     }
 
     override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point {
@@ -164,6 +168,7 @@ fun ComponentEventActivityChart(
     bubbleRefValue: Double,
     showTimeLabels: Boolean,
     nowMinute: Long,
+    selectedTime: Long?,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState
 ) {
@@ -268,12 +273,13 @@ fun ComponentEventActivityChart(
         ),
         bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
         layerPadding = { LineChartLayerPadding },
-        decorations = listOf(
+        decorations = listOfNotNull(
             NowDecoration(
                 nowX = realTime.toDouble(),
                 lineColor = onSurface.copy(alpha = 0.7f),
                 washColor = MaterialTheme.colorScheme.background.copy(alpha = 0.55f)
-            )
+            ),
+            selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
         ),
         getXStep = { _ -> getTimeAxisXStep() },
     )
