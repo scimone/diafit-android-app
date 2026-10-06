@@ -11,6 +11,7 @@ interface MealRepository {
     suspend fun updateMealImage(id: Int, imageId: String): Result<Unit>
 
     suspend fun existsBySourceId(sourceId: String): Boolean
+    suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean
 
     suspend fun getMealsByUserId(userId: Int): Result<List<MealEntity>>
 

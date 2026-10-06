@@ -8,7 +8,10 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.home.presentation.utils.currentMinute
 import uk.scimone.diafit.home.presentation.utils.TIME_AXIS_FUTURE_HOURS
 import androidx.compose.material3.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +92,8 @@ fun HomeScreen(
     var openMealId by remember { mutableStateOf<Int?>(null) }
     val openMeal = openMealId?.let { id -> mealGroups.firstOrNull { g -> g.meals.any { it.id == id } } }
     val scope = rememberCoroutineScope()
+    // x (px, in the chart column's coordinates) of the "now" line, reported by the CGM chart.
+    val nowLineX = remember { mutableFloatStateOf(Float.NaN) }
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     // The Zoom objects MUST be remembered: rememberVicoZoomState keys on them, so fresh lambdas on
     // every recomposition would recreate the state and silently reset the user's zoom (HomeScreen
@@ -135,7 +140,8 @@ fun HomeScreen(
                             zoomState = chartZoomState,
                             nowMinute = nowMinute,
                             selectedTime = selectedTime,
-                            onSelectedTimeChange = viewModel::onSelectedTimeChange
+                            onSelectedTimeChange = viewModel::onSelectedTimeChange,
+                            onNowXChange = { nowLineX.floatValue = it }
                         )
                     }
                     // Placeholders for upcoming graphs.
@@ -168,6 +174,20 @@ fun HomeScreen(
                         }
                     )
                     Spacer(Modifier.height(16.dp))
+                }
+                // One dashed "now" line over the whole screen height, not just inside each panel.
+                val nowLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                Canvas(Modifier.fillMaxSize()) {
+                    val x = nowLineX.floatValue
+                    if (!x.isNaN() && x in 0f..size.width) {
+                        drawLine(
+                            color = nowLineColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 2f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                        )
+                    }
                 }
                 openMeal?.let {
                     MealDetailSheet(
@@ -256,7 +276,8 @@ fun CgmChartDisplay(
     zoomState: VicoZoomState,
     nowMinute: Long,
     selectedTime: Long?,
-    onSelectedTimeChange: (Long?) -> Unit
+    onSelectedTimeChange: (Long?) -> Unit,
+    onNowXChange: ((Float) -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -272,7 +293,8 @@ fun CgmChartDisplay(
             zoomState = zoomState,
             nowMinute = nowMinute,
             selectedTime = selectedTime,
-            onSelectedTimeChange = onSelectedTimeChange
+            onSelectedTimeChange = onSelectedTimeChange,
+            onNowXChange = onNowXChange
         )
         PanelTitle("Glucose")
     }

@@ -31,6 +31,8 @@ class CarbBroadcastWorker(
         var inserted = 0
         for (meal in meals) {
             if (meal.sourceId != null && mealRepository.existsBySourceId(meal.sourceId)) continue
+            // The same treatment can arrive twice, once without `_id` (fallback sourceId) and once with it.
+            if (mealRepository.existsImportedAt(meal.mealTimeUtc, meal.carbohydrates)) continue
             if (mealRepository.createMeal(meal).isFailure) return Result.retry()
             inserted++
         }

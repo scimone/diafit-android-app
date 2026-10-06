@@ -55,6 +55,7 @@ fun ComponentCgmChart(
     nowMinute: Long,
     selectedTime: Long?,
     onSelectedTimeChange: (Long?) -> Unit,
+    onNowXChange: ((Float) -> Unit)? = null,
     showTimeLabels: Boolean = false
 ) {
     val minY = 40f
@@ -150,7 +151,9 @@ fun ComponentCgmChart(
                 NowDecoration(
                     nowX = realTime.toDouble(),
                     lineColor = onSurface.copy(alpha = 0.7f),
-                    washColor = Color.Transparent
+                    washColor = Color.Transparent,
+                    drawLine = false,
+                    onPosition = onNowXChange
                 ),
                 selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
             ),

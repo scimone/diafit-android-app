@@ -49,7 +49,9 @@ class HealthReceiver : BroadcastReceiver() {
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
-            WorkManager.getInstance(context).enqueue(workRequest)
+            // Unique + appended: concurrent workers would both pass the duplicate check and insert twice.
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork("carb-ingest", ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest)
             Log.d(TAG, "Enqueued Carb worker for action: $action")
             matched = true
         }

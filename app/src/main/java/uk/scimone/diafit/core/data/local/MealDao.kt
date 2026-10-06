@@ -35,6 +35,10 @@ interface MealDao {
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId = :sourceId")
     suspend fun countBySourceId(sourceId: String): Int
 
+    /** Imported (sourceId-tagged) meals with this exact time and carbs; catches the same entry arriving with a different sourceId. */
+    @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId IS NOT NULL AND mealTimeUtc = :mealTimeUtc AND carbohydrates = :carbohydrates")
+    suspend fun countImportedAt(mealTimeUtc: Long, carbohydrates: Int): Int
+
     @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
 }

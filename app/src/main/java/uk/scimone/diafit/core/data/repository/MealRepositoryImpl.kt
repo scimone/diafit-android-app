@@ -34,6 +34,9 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean =
+        withContext(Dispatchers.IO) { mealDao.countImportedAt(mealTimeUtc, carbohydrates) > 0 }
+
     override suspend fun existsBySourceId(sourceId: String): Boolean =
         withContext(Dispatchers.IO) { mealDao.countBySourceId(sourceId) > 0 }
 

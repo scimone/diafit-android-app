@@ -18,7 +18,11 @@ class NowDecoration(
     private val lineColor: Color,
     private val washColor: Color,
     private val dashPx: Float = 10f,
-    private val strokePx: Float = 2f
+    private val strokePx: Float = 2f,
+    /** Draw the dashed line inside this chart. Off when a screen-wide overlay draws it instead. */
+    private val drawLine: Boolean = true,
+    /** Receives the line's x in pixels (chart coordinates) on every draw, for a screen-wide overlay. */
+    private val onPosition: ((Float) -> Unit)? = null
 ) : Decoration {
     override fun drawOverLayers(context: CartesianDrawingContext) {
         val bounds = context.layerBounds
@@ -26,6 +30,7 @@ class NowDecoration(
         val ranges = context.ranges
         val x = bounds.left + dims.startPadding +
             dims.xSpacing * ((nowX - ranges.minX) / ranges.xStep).toFloat() - context.scroll
+        onPosition?.invoke(x)
         if (x > bounds.right) return
 
         val canvas = context.canvas
@@ -35,7 +40,7 @@ class NowDecoration(
                 Paint().apply { color = washColor; style = PaintingStyle.Fill }
             )
         }
-        if (x >= bounds.left) {
+        if (drawLine && x >= bounds.left) {
             canvas.drawLine(
                 Offset(x, bounds.top), Offset(x, bounds.bottom),
                 Paint().apply {

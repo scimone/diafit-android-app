@@ -241,7 +241,8 @@ fun ComponentEventActivityChart(
             NowDecoration(
                 nowX = realTime.toDouble(),
                 lineColor = onSurface.copy(alpha = 0.7f),
-                washColor = Color.Transparent
+                washColor = Color.Transparent,
+                drawLine = false
             ),
             selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
         ),
