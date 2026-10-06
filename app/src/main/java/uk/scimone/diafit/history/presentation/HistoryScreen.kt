@@ -1,5 +1,6 @@
 package uk.scimone.diafit.history.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,13 +34,29 @@ fun HistoryScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            else -> Column(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-                LazyColumn(Modifier.weight(1f)) {
-                    items(state.days, key = { it.epochDay }) { day ->
-                        DayTrackRow(day, state.thresholds)
+            else -> Column(Modifier.fillMaxSize()) {
+                // Sticky chart placeholder (~30% of the page), full width.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.3f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Chart",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                    HistoryTimeAxis()
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(state.days, key = { it.epochDay }) { day ->
+                            DayTrackRow(day, state.thresholds)
+                        }
                     }
                 }
-                HistoryTimeAxis()
             }
         }
     }
