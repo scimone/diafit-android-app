@@ -154,13 +154,6 @@ The commands in the sections above are Windows/PowerShell. On the headless Ubunt
 adb shell am start -n uk.scimone.diafit/.MainActivity
 ```
 
-**Phone connection (Xiaomi 14, `23127PN0CG`, Android 16) over WireGuard**
-- Phone tunnel IP: `10.200.200.2` (server is `10.200.200.1` on `wg0`). mDNS discovery does not work over the VPN, so always use explicit IP:port.
-- **Reconnect: run `scripts/adb-connect.sh`** (optional arg: phone IP). The connect port changes every time Wireless debugging is toggled or the phone reboots, and mDNS doesn't work over the VPN, so the script port-scans the tunnel IP (~12 s), tries `adb connect` on the open ports, and reports. The phone must be on Wi-Fi with Wireless debugging on. Verified 2026-10-06: after toggling Wireless debugging off/on, the existing pairing was still valid and no re-pair was needed.
-- Re-pairing is only needed if the script reports open ports but every `adb connect` fails (e.g. pairing was revoked in Developer options): phone → Wireless debugging → "Pair device with pairing code", then `adb pair 10.200.200.2:<pairing-port> <6-digit-code>` (the pairing port differs from the connect port, and the code can't be automated), then rerun the script. Verify with `adb devices -l`.
-- If it can't connect: (a) `ping 10.200.200.2` (tunnel up, phone IP in the server-side peer's AllowedIPs); (b) phone's WireGuard peer needs `PersistentKeepalive` so NAT keeps inbound connections alive; (c) phone connected to Wi-Fi, not mobile data only.
-- Fallback: build here, `scp` the APK to a laptop and `adb install -r` it.
-
 **Crash logs**
 ```
 adb logcat -b crash -d                                   # recent crashes
@@ -168,3 +161,22 @@ adb logcat --pid=$(adb shell pidof uk.scimone.diafit)    # live logs for the run
 adb logcat -d | grep -E "AndroidRuntime|uk.scimone.diafit"
 ```
 See also the `HealthReceiver`/`CgmSync*` logcat filter in the Sync source section above.
+
+## Phone connection (Xiaomi 14, `23127PN0CG`, Android 16): classic `adb tcpip` via WireGuard (added 2026-10-06)
+
+The only supported way to reach the phone from this server. It works on **Wi-Fi and mobile data alike**, because adb only talks to the phone's WireGuard tunnel IP; the phone listens on tcp/5555 on every interface. No pairing, no mDNS, no Wireless debugging (which needs Wi-Fi and a new port after every toggle — the old `scripts/adb-connect.sh` port-scan helper was removed). Verified 2026-10-06 with Wi-Fi off, LTE active: `installDebug` ~25 s, app launched, logcat OK.
+
+- Phone tunnel IP: `10.200.200.2` (server `10.200.200.1` on `wg0`; the phone's peer has `AllowedIPs = 10.200.200.2/32`). Connect with `adb connect 10.200.200.2:5555`; `adb devices -l` must show `device`. This server's adb key is already authorized (no prompt expected; if "Allow USB debugging?" appears, tick "Always allow").
+- **One-time / after every phone reboot** (TCP mode is reset by a reboot): USB debugging on, phone on USB to the laptop, then in PowerShell
+  `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices` (accept the RSA prompt; must say `device`), then
+  `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -d tcpip 5555` → expect `restarting in TCP mode port: 5555`. Unplug; don't reboot; keep WireGuard connected.
+- Port 5555 must only be reachable through the tunnel: never port-forward it or open it on a public interface. Note `adb tcpip` listens on all phone interfaces (only authorized adb keys can use it) — turn USB debugging off when not developing.
+- Commands (export `JAVA_HOME`/`ANDROID_HOME`/`PATH` first, see above):
+  ```
+  ./gradlew installDebug
+  adb shell am start -n uk.scimone.diafit/.MainActivity
+  adb logcat -d --pid=$(adb shell pidof uk.scimone.diafit)   # app logs
+  adb logcat -b crash -d                                     # crashes
+  ```
+- **Reconnect:** if `adb devices` doesn't list the phone, run `adb connect 10.200.200.2:5555` again. "Connection refused" ⇒ the phone rebooted (or USB debugging was toggled), so TCP mode is gone: repeat the USB + `adb tcpip 5555` step on the laptop. A timeout ⇒ VPN/routing problem, see below. "offline"/"unauthorized": `adb disconnect`, `adb kill-server`, connect again, re-accept the prompt on the phone.
+- **Troubleshooting order:** (1) `ping 10.200.200.2`; (2) `sudo wg show` on the server — the phone peer needs a recent handshake and `allowed ips: 10.200.200.2/32` (needs a real terminal for sudo); (3) the phone's WireGuard tunnel needs `PersistentKeepalive = 25` (carrier NAT drops idle mappings); (4) exempt the WireGuard app from battery optimization and ideally set it as Always-on VPN; (5) `adb kill-server` and reconnect. No firewall (ufw/iptables) rules blocked tcp/5555 on this server as of 2026-10-06 (`ufw` isn't installed).
