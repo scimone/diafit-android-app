@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,7 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import uk.scimone.diafit.history.presentation.components.DayHistoryCard
+import uk.scimone.diafit.history.presentation.components.DayTrackRow
+import uk.scimone.diafit.history.presentation.components.HistoryTimeAxis
 
 @Composable
 fun HistoryScreen(
@@ -32,14 +34,14 @@ fun HistoryScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            else -> LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(state.days, key = { it.epochDay }) { day ->
-                    DayHistoryCard(day, state.thresholds)
+            else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                LazyColumn(Modifier.weight(1f)) {
+                    items(state.days, key = { it.epochDay }) { day ->
+                        DayTrackRow(day, state.thresholds)
+                    }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HistoryTimeAxis()
             }
         }
     }

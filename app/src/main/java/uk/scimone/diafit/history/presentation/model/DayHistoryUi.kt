@@ -1,6 +1,5 @@
 package uk.scimone.diafit.history.presentation.model
 
-import uk.scimone.diafit.core.domain.util.friendlyDateString
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.history.domain.model.DayHistory
 import uk.scimone.diafit.history.domain.model.GlucoseThresholds
@@ -8,13 +7,17 @@ import uk.scimone.diafit.history.domain.model.TreatmentCluster
 import uk.scimone.diafit.history.domain.model.TreatmentEvent
 import uk.scimone.diafit.history.domain.usecase.ClusterTreatmentsUseCase
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 data class GlucosePoint(val timeUtc: Long, val mgdl: Int)
 
 /** One day, ready to draw: the time window, glucose trace and clustered treatments. */
 data class DayHistoryUi(
     val epochDay: Long,
-    val title: String,
+    val weekday: String,
+    val dayOfMonth: String,
     val dayStartUtc: Long,
     val dayEndUtc: Long,
     val glucose: List<GlucosePoint>,
@@ -37,7 +40,8 @@ fun DayHistory.toUi(
     val inRange = points.count { it.mgdl in target.lowerBound..target.upperBound }
     return DayHistoryUi(
         epochDay = date.toEpochDay(),
-        title = friendlyDateString(start),
+        weekday = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+        dayOfMonth = date.format(DateTimeFormatter.ofPattern("d", Locale.getDefault())),
         dayStartUtc = start,
         dayEndUtc = end,
         glucose = points,

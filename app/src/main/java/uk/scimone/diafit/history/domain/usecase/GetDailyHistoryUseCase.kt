@@ -10,7 +10,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** CGM, bolus and meal data of the last [days] local days, grouped per day, newest day first. Days without data are omitted. */
+/** CGM, bolus and meal data of the last [days] local days, grouped per day, newest day first. Every day is included, empty or not, so the tracks stay a fixed grid. */
 class GetDailyHistoryUseCase(
     private val getAllCgmSince: GetAllCgmSinceUseCase,
     private val getAllBolusSince: GetAllBolusSinceUseCase,
@@ -28,8 +28,9 @@ class GetDailyHistoryUseCase(
             val cgmByDay = cgm.groupBy { dayOf(it.timestamp) }
             val bolusByDay = boluses.groupBy { dayOf(it.timestampUtc) }
             val mealsByDay = meals.filter { it.carbohydrates > 0 }.groupBy { dayOf(it.mealTimeUtc) }
-            (cgmByDay.keys + bolusByDay.keys + mealsByDay.keys)
-                .sortedDescending()
+            val today = LocalDate.now(zone)
+            (0 until days)
+                .map { today.minusDays(it.toLong()) }
                 .map { date ->
                     DayHistory(
                         date = date,

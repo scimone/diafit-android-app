@@ -42,7 +42,7 @@ fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 56.dp
+    height: Dp = 30.dp
 ) {
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val runs = day.glucose.splitAtGaps()
