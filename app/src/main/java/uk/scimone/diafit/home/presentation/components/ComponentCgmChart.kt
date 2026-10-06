@@ -21,9 +21,8 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
-import uk.scimone.diafit.home.presentation.utils.SelectionDecoration
+import uk.scimone.diafit.home.presentation.utils.ChartGeometry
+import uk.scimone.diafit.home.presentation.utils.GeometryProbe
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
@@ -34,7 +33,6 @@ import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.utils.ChartPointSize
 import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
 import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
-import uk.scimone.diafit.home.presentation.utils.NowDecoration
 import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSize
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
@@ -46,6 +44,14 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.home.presentation.utils.TargetRangeDecoration
 import uk.scimone.diafit.ui.theme.InRange
 
+/** Fixed glucose (y) range of the CGM panel, mg/dL. */
+const val CGM_MIN_Y = 40f
+const val CGM_MAX_Y = 250f
+
+/**
+ * The glucose panel. It has no Vico marker: inspecting values is handled by HomeScreen's own gesture
+ * layer (so a drag can pan without also moving a tooltip), which needs [onGeometry] to map x <-> time.
+ */
 @Composable
 fun ComponentCgmChart(
     values: List<CgmChartData>,
@@ -54,13 +60,11 @@ fun ComponentCgmChart(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long,
-    selectedTime: Long?,
-    onSelectedTimeChange: (Long?) -> Unit,
-    onNowXChange: ((Float) -> Unit)? = null,
+    onGeometry: (ChartGeometry) -> Unit,
     showTimeLabels: Boolean = false
 ) {
-    val minY = 40f
-    val maxY = 250f
+    val minY = CGM_MIN_Y
+    val maxY = CGM_MAX_Y
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val (alignedMinTime, _, realTime) = getTimeAxisBounds(nowMinute, hoursBack = 24)
@@ -103,7 +107,6 @@ fun ComponentCgmChart(
     }
 
     if (lineColors.isNotEmpty()) {
-        val onSurface = MaterialTheme.colorScheme.onSurface
         val targetBand = targetRangeBandColor()
         val onBackground = MaterialTheme.colorScheme.onBackground
         val chart = rememberCartesianChart(
@@ -150,26 +153,9 @@ fun ComponentCgmChart(
                     maxY = maxY.toDouble(),
                     color = targetBand
                 ),
-                NowDecoration(
-                    nowX = realTime.toDouble(),
-                    lineColor = onSurface.copy(alpha = 0.7f),
-                    washColor = Color.Transparent,
-                    drawLine = false,
-                    onPosition = onNowXChange
-                ),
-                selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
+                remember(onGeometry) { GeometryProbe(onGeometry) }
             ),
             getXStep = { _ -> getTimeAxisXStep() },
-            marker = remember { object : CartesianMarker {} },
-            markerVisibilityListener = remember(onSelectedTimeChange) {
-                object : CartesianMarkerVisibilityListener {
-                    override fun onShown(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
-                        onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
-                    override fun onUpdated(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
-                        onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
-                    override fun onHidden(marker: CartesianMarker) = onSelectedTimeChange(null)
-                }
-            },
         )
 
         CartesianChartHost(

@@ -2,7 +2,6 @@ package uk.scimone.diafit.home.presentation.components
 
 import androidx.compose.foundation.shape.CircleShape
 import uk.scimone.diafit.home.presentation.utils.NowDecoration
-import uk.scimone.diafit.home.presentation.utils.SelectionDecoration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,8 +22,6 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
@@ -115,8 +112,6 @@ fun ComponentEventActivityChart(
     bubbleRefValue: Double,
     showTimeLabels: Boolean,
     nowMinute: Long,
-    selectedTime: Long?,
-    onSelectedTimeChange: (Long?) -> Unit,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState
 ) {
@@ -243,20 +238,9 @@ fun ComponentEventActivityChart(
                 lineColor = onSurface.copy(alpha = 0.7f),
                 washColor = Color.Transparent,
                 drawLine = false
-            ),
-            selectedTime?.let { SelectionDecoration(it.toDouble(), onSurface.copy(alpha = 0.9f)) }
+            )
         ),
         getXStep = { _ -> getTimeAxisXStep() },
-        marker = remember { object : CartesianMarker {} },
-        markerVisibilityListener = remember(onSelectedTimeChange) {
-            object : CartesianMarkerVisibilityListener {
-                override fun onShown(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
-                    onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
-                override fun onUpdated(marker: CartesianMarker, targets: List<CartesianMarker.Target>) =
-                    onSelectedTimeChange(targets.firstOrNull()?.x?.toLong())
-                override fun onHidden(marker: CartesianMarker) = onSelectedTimeChange(null)
-            }
-        },
     )
 
     CartesianChartHost(

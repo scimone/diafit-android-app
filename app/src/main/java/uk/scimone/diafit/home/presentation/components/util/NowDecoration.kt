@@ -20,9 +20,7 @@ class NowDecoration(
     private val dashPx: Float = 10f,
     private val strokePx: Float = 2f,
     /** Draw the dashed line inside this chart. Off when a screen-wide overlay draws it instead. */
-    private val drawLine: Boolean = true,
-    /** Receives the line's x in pixels (chart coordinates) on every draw, for a screen-wide overlay. */
-    private val onPosition: ((Float) -> Unit)? = null
+    private val drawLine: Boolean = true
 ) : Decoration {
     override fun drawOverLayers(context: CartesianDrawingContext) {
         val bounds = context.layerBounds
@@ -30,7 +28,6 @@ class NowDecoration(
         val ranges = context.ranges
         val x = bounds.left + dims.startPadding +
             dims.xSpacing * ((nowX - ranges.minX) / ranges.xStep).toFloat() - context.scroll
-        onPosition?.invoke(x)
         if (x > bounds.right) return
 
         val canvas = context.canvas
@@ -61,31 +58,48 @@ class NowDecoration(
 }
 
 /**
- * The scrub cursor: a solid vertical line at [selectedX] spanning the chart's whole height. Every
- * stacked chart draws one, so together they read as a single line over all panels.
+ * Where a chart's time axis currently sits on screen (after scroll and zoom), in the chart's pixel
+ * coordinates. Lets Compose overlays (cursor, meal pins, visible-range filter) line up with the
+ * charts without going through Vico's marker system.
  */
-class SelectionDecoration(
-    private val selectedX: Double,
-    private val lineColor: Color,
-    private val strokePx: Float = 3f
-) : Decoration {
+data class ChartGeometry(
+    val minX: Double,
+    /** Pixel x of [minX]. */
+    val originPx: Float,
+    val pxPerMs: Float,
+    val left: Float,
+    val right: Float,
+    val top: Float,
+    val bottom: Float
+) {
+    fun xOf(time: Long): Float = originPx + ((time - minX) * pxPerMs).toFloat()
+    fun timeAt(x: Float): Long = (minX + (x - originPx) / pxPerMs).toLong()
+    val visibleStart: Long get() = timeAt(left)
+    val visibleEnd: Long get() = timeAt(right)
+}
+
+/** Draws nothing; reports the chart's [ChartGeometry] on every frame (scroll and zoom change it). */
+class GeometryProbe(private val onGeometry: (ChartGeometry) -> Unit) : Decoration {
     override fun drawOverLayers(context: CartesianDrawingContext) {
         val bounds = context.layerBounds
         val dims = context.layerDimensions
         val ranges = context.ranges
-        val x = bounds.left + dims.startPadding +
-            dims.xSpacing * ((selectedX - ranges.minX) / ranges.xStep).toFloat() - context.scroll
-        if (x < bounds.left || x > bounds.right) return
-        context.canvas.drawLine(
-            Offset(x, bounds.top), Offset(x, bounds.bottom),
-            Paint().apply { color = lineColor; style = PaintingStyle.Stroke; strokeWidth = strokePx }
+        onGeometry(
+            ChartGeometry(
+                minX = ranges.minX,
+                originPx = bounds.left + dims.startPadding - context.scroll,
+                pxPerMs = (dims.xSpacing / ranges.xStep).toFloat(),
+                left = bounds.left,
+                right = bounds.right,
+                top = bounds.top,
+                bottom = bounds.bottom
+            )
         )
     }
 
-    override fun equals(other: Any?) =
-        other is SelectionDecoration && other.selectedX == selectedX && other.lineColor == lineColor
-
-    override fun hashCode() = 31 * selectedX.hashCode() + lineColor.hashCode()
+    // Stateless apart from the callback, so any two probes are interchangeable for redraw purposes.
+    override fun equals(other: Any?) = other is GeometryProbe
+    override fun hashCode() = GeometryProbe::class.hashCode()
 }
 
 

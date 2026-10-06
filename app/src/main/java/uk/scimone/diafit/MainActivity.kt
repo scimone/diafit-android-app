@@ -127,8 +127,7 @@ class MainActivity : ComponentActivity() {
                             title = {
                                 if (selectedTab == 0) {
                                     val homeState by homeViewModel.state.collectAsStateWithLifecycle()
-                                    val scrubTime by homeViewModel.selectedTime.collectAsStateWithLifecycle()
-                                    HomeTitle(state = homeState, selectedTime = scrubTime)
+                                    HomeTitle(state = homeState)
                                 } else {
                                     Text(if (selectedTab == 2) "Journal" else "Diafit")
                                 }
