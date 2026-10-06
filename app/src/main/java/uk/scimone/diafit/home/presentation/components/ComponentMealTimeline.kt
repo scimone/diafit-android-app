@@ -76,7 +76,7 @@ fun List<MealGroup>.nearest(time: Long?, toleranceMs: Long = 20 * 60_000L): Meal
 private fun formatTime(millis: Long): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(millis))
 
 private fun MealGroup.title(): String = meals.mapNotNull { it.description?.takeIf(String::isNotBlank) }
-    .distinct().joinToString(" · ").ifEmpty { meals.first().mealType.type }
+    .distinct().joinToString(" + ").ifEmpty { meals.first().mealType.type }
 
 /** The sittings that overlap the charts' visible time window [start]..[end]. */
 fun List<MealGroup>.inView(start: Long, end: Long): List<MealGroup> =
@@ -199,15 +199,15 @@ private fun UriMosaic(photos: List<android.net.Uri>) {
     when {
         photos.isEmpty() -> NoPhotoTile(Modifier.fillMaxSize())
         photos.size == 1 -> MealPhoto(photos[0], Modifier.fillMaxSize())
-        photos.size == 2 -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-            MealPhoto(photos[0], Modifier.weight(1f).fillMaxHeight())
-            MealPhoto(photos[1], Modifier.weight(1f).fillMaxHeight())
+        photos.size == 2 -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
+            MealPhoto(photos[0], Modifier.weight(1f).fillMaxWidth())
+            MealPhoto(photos[1], Modifier.weight(1f).fillMaxWidth())
         }
-        else -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-            MealPhoto(photos[0], Modifier.weight(1f).fillMaxHeight())
-            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
-                MealPhoto(photos[1], Modifier.weight(1f).fillMaxWidth())
-                Box(Modifier.weight(1f).fillMaxWidth()) {
+        else -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
+            MealPhoto(photos[0], Modifier.weight(1f).fillMaxWidth())
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                MealPhoto(photos[1], Modifier.weight(1f).fillMaxHeight())
+                Box(Modifier.weight(1f).fillMaxHeight()) {
                     MealPhoto(photos[2], Modifier.fillMaxSize())
                     if (photos.size > 3) {
                         Box(

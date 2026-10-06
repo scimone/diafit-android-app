@@ -23,8 +23,16 @@ data class MealSitting(val courses: List<MealEntity>) {
     /** When the last course should have finished absorbing. */
     val effectEndTime: Long get() = courses.maxOf { it.mealTimeUtc + it.impactType.durationMinutes * 60_000L }
 
+    /** Course titles joined ("Sushi + Tiramisu"); beyond two, the rest collapse into "+N more". */
     val title: String
-        get() = courses.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) } ?: courses.first().mealType.type
+        get() {
+            val names = courses.mapNotNull { it.description?.takeIf(String::isNotBlank) }.distinct()
+            return when {
+                names.isEmpty() -> courses.first().mealType.type
+                names.size <= 2 -> names.joinToString(" + ")
+                else -> names.take(2).joinToString(" + ") + " +${names.size - 2} more"
+            }
+        }
 }
 
 /**
