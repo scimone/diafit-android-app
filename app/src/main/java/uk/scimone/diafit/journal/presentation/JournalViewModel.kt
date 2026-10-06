@@ -31,6 +31,9 @@ import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
+import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
+import uk.scimone.diafit.core.domain.model.MealMatcher
+import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.toBolusEntries
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
@@ -54,6 +57,7 @@ class JournalViewModel(
     private val getMealOutcome: GetMealOutcomeUseCase,
     private val cgmRepository: CgmRepository,
     private val bolusRepository: BolusRepository,
+    private val mergeCarbEntries: MergeCarbEntriesUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,
     private val userId: Int
@@ -76,6 +80,18 @@ class JournalViewModel(
     }
 
     private var observeJob: Job? = null
+
+    /** Suggested (not certain enough to auto-merge) pairings of the latest meal list, by imported entry id. */
+    private var suggestions: Map<Int, MealMatcher.Match> = emptyMap()
+
+    fun mergeSuggestion(importedId: Int) {
+        val match = suggestions[importedId] ?: return
+        viewModelScope.launch { mergeCarbEntries.merge(match).onFailure { Log.e(TAG, "Merge failed", it) } }
+    }
+
+    fun keepSeparate(importedId: Int) {
+        viewModelScope.launch { mergeCarbEntries.keepSeparate(importedId).onFailure { Log.e(TAG, "Keep separate failed", it) } }
+    }
 
     /** Shows the entries of [newRange] only. */
     fun setRange(newRange: JournalRange) {
@@ -107,6 +123,9 @@ class JournalViewModel(
                 }
                 .collect { meals ->
                     val (from, to) = range.boundsUtc()  // re-resolved each time so "last 7 days" rolls over at midnight
+                    // Imported entries that might duplicate a logged meal: offered on the meal's card.
+                    val matches = MealMatcher.findMatches(meals).filter { !it.confident }
+                    suggestions = matches.associateBy { it.imported.id }
                     val entries = withContext(Dispatchers.IO) {
                         mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to)
                     }
@@ -133,7 +152,11 @@ class JournalViewModel(
                     sitting.toUi(context, GlucoseImpact(0.0, 0.0, 0.0))
                 }
             }
-        }.awaitAll()
+        }.awaitAll().map { entry ->
+            val match = suggestions.values.firstOrNull { it.logged.id in entry.courseIds }
+            if (match == null) entry
+            else entry.copy(possibleDuplicate = PossibleDuplicateUi(match.imported.id, match.imported.mealTimeUtc, match.imported.carbohydrates))
+        }
     }
 
     private suspend fun episodeEntries(target: GlucoseTargetRange, from: Long, to: Long): List<GlucoseEpisodeUi> {

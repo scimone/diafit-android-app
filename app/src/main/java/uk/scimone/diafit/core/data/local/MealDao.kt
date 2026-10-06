@@ -26,13 +26,13 @@ interface MealDao {
     @Query("UPDATE MealEntity SET isValid = :isValid WHERE id = :mealId")
     suspend fun setValid(mealId: Int, isValid: Boolean)
 
-    @Query("SELECT * FROM MealEntity WHERE isValid = 1 ORDER BY mealTimeUtc DESC")
+    @Query("SELECT * FROM MealEntity WHERE isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc DESC")
     fun getAllMeals(): Flow<List<MealEntity>>
 
-    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 ORDER BY mealTimeUtc DESC")
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc DESC")
     suspend fun getMealsByUserId(userId: Int): List<MealEntity>
 
-    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 ORDER BY mealTimeUtc DESC")
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc DESC")
     fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
 
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId = :sourceId")
@@ -42,7 +42,14 @@ interface MealDao {
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId IS NOT NULL AND mealTimeUtc = :mealTimeUtc AND carbohydrates = :carbohydrates")
     suspend fun countImportedAt(mealTimeUtc: Long, carbohydrates: Int): Int
 
-    @Query("SELECT * FROM MealEntity WHERE sittingId = :sittingId AND isValid = 1 ORDER BY mealTimeUtc ASC")
+    /** Valid imported/logged rows from [since] on that are still shown as their own meal (merge candidates). */
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND mergedIntoId IS NULL AND mealTimeUtc >= :since ORDER BY mealTimeUtc ASC")
+    suspend fun getUnmergedSince(userId: Int, since: Long): List<MealEntity>
+
+    @Query("SELECT * FROM MealEntity WHERE mergedIntoId = :masterId")
+    suspend fun getMergedInto(masterId: Int): List<MealEntity>
+
+    @Query("SELECT * FROM MealEntity WHERE sittingId = :sittingId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc ASC")
     suspend fun getMealsBySitting(sittingId: String): List<MealEntity>
 
     @Query("UPDATE MealEntity SET sittingId = :sittingId WHERE id = :mealId")
@@ -55,6 +62,6 @@ interface MealDao {
     @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND sourceId IS NULL AND mealTimeUtc <= :now ORDER BY mealTimeUtc DESC LIMIT 1")
     suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity?
 
-    @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId AND isValid = 1 ORDER BY mealTimeUtc ASC")
+    @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
 }

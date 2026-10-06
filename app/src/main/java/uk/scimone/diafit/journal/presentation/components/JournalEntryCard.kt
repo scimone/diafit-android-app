@@ -93,6 +93,10 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                     )
                     Spacer(Modifier.width(4.dp))
                     AbsorptionBadge(meal.impactType)
+                    if (meal.aapsLinked) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("AAPS ✓", style = MaterialTheme.typography.labelSmall, color = Bolus, maxLines = 1, softWrap = false)
+                    }
                 }
                 Text(meal.title, Modifier.padding(start = MEAL_TEXT_INDENT), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 MealOutcomeRow(meal, target)

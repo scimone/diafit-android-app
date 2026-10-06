@@ -12,7 +12,8 @@ import java.util.UUID
 /** Logs a course. Pass the [sittingId] of an existing meal to add it as another course of that meal. */
 class CreateMealUseCase(
     private val mealRepository: MealRepository,
-    private val fileStorageRepository: FileStorageRepository
+    private val fileStorageRepository: FileStorageRepository,
+    private val mergeCarbEntries: MergeCarbEntriesUseCase
 ) {
     suspend operator fun invoke(
         photos: List<MealPhoto>,
@@ -54,6 +55,9 @@ class CreateMealUseCase(
             // Every logged meal gets a sitting so further courses can join it later.
             sittingId = sittingId ?: UUID.randomUUID().toString()
         )
-        return mealRepository.createMeal(meal).map { meal }
+        return mealRepository.createMeal(meal).map { meal }.onSuccess {
+            // The matching AAPS carb entry may already have arrived (dose before photo).
+            runCatching { mergeCarbEntries(userId) }
+        }
     }
 }

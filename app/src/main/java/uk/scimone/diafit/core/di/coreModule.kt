@@ -26,6 +26,7 @@ import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
+import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
 import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
@@ -47,7 +48,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12)
             .build()
     }
 
@@ -61,8 +62,9 @@ val coreModule = module {
 
     // Provide meal repository and use cases
     single<MealRepository> { MealRepositoryImpl(get()) }
-    single { CreateMealUseCase(get(), get()) }
-    single { UpdateMealUseCase(get(), get()) }
+    single { MergeCarbEntriesUseCase(get()) }
+    single { CreateMealUseCase(get(), get(), get()) }
+    single { UpdateMealUseCase(get(), get(), get()) }
     single { SetMealValidUseCase(get()) }
     single { CalculateMealGlucoseImpactUseCase(get(), get()) }
     single { GetMealOutcomeUseCase(get(), get()) }

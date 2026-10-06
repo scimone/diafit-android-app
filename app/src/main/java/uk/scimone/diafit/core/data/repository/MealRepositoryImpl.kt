@@ -82,6 +82,12 @@ class MealRepositoryImpl(
     override suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity? =
         withContext(Dispatchers.IO) { mealDao.getLatestLoggedMeal(userId, now) }
 
+    override suspend fun getUnmergedSince(userId: Int, since: Long): List<MealEntity> =
+        withContext(Dispatchers.IO) { mealDao.getUnmergedSince(userId, since) }
+
+    override suspend fun getMergedInto(masterId: Int): List<MealEntity> =
+        withContext(Dispatchers.IO) { mealDao.getMergedInto(masterId) }
+
     override suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean =
         withContext(Dispatchers.IO) { mealDao.countImportedAt(mealTimeUtc, carbohydrates) > 0 }
 

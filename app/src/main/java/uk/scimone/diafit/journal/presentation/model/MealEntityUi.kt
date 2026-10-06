@@ -45,7 +45,13 @@ data class MealEntityUi(
     /** Glucose at the start of the meal and its highest point afterwards, when known. */
     val startMgdl: Int? = null,
     val peakMgdl: Int? = null,
-    val peakTimeUtc: Long? = null
+    val peakTimeUtc: Long? = null,
+    /** An AAPS carb entry was merged into this meal: [carbohydrates] is what was dosed. */
+    val aapsLinked: Boolean = false,
+    /** The carbs estimated/typed before the dosed amount replaced them (only when they differ). */
+    val estimatedCarbs: Int? = null,
+    /** An imported carb entry that might be the same food, waiting for the user to merge or dismiss it. */
+    val possibleDuplicate: PossibleDuplicateUi? = null
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
     override val timeUtc: Long get() = mealTimeUtc
@@ -55,6 +61,9 @@ data class MealEntityUi(
 
     val courseCount: Int get() = courseIds.size
 }
+
+/** An unmerged imported carb entry that looks like part of a logged meal but wasn't certain enough to merge. */
+data class PossibleDuplicateUi(val importedId: Int, val timeUtc: Long, val carbohydrates: Int)
 
 /** Whether a meal's glucose outcome can be shown yet. */
 enum class GlucoseStatus { READY, TOO_EARLY, NOT_ENOUGH_DATA }
@@ -97,6 +106,9 @@ fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         imageUri = photos.firstOrNull(),
         reasoning = null,
         isImported = courses.all { it.sourceId != null },
+        aapsLinked = courses.any { it.aapsLinked },
+        estimatedCarbs = courses.takeIf { cs -> cs.any { it.estimatedCarbs != null } }
+            ?.sumOf { it.estimatedCarbs ?: it.carbohydrates }?.takeIf { it != totalCarbs },
         timeInRange = impact.timeInRange,
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,
@@ -127,6 +139,8 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         imageUri = imageUri,
         reasoning = reasoning,
         isImported = sourceId != null,
+        aapsLinked = aapsLinked,
+        estimatedCarbs = estimatedCarbs?.takeIf { it != carbohydrates },
         timeInRange = impact.timeInRange,
         timeAboveRange = impact.timeAboveRange,
         timeBelowRange = impact.timeBelowRange,

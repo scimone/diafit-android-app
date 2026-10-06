@@ -26,6 +26,12 @@ interface MealRepository {
 
     suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity?
 
+    /** Meals of [userId] from [since] on that aren't hidden as merged duplicates. */
+    suspend fun getUnmergedSince(userId: Int, since: Long): List<MealEntity>
+
+    /** The imported entries folded into logged meal [masterId]. */
+    suspend fun getMergedInto(masterId: Int): List<MealEntity>
+
     suspend fun existsBySourceId(sourceId: String): Boolean
     suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean
 

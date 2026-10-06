@@ -12,7 +12,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 
 @Database(
     entities = [MealEntity::class, CgmEntity::class, BolusEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -46,6 +46,16 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN sittingId TEXT")
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN extraImageIds TEXT NOT NULL DEFAULT '[]'")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_MealEntity_sittingId ON MealEntity (sittingId)")
+            }
+        }
+
+        /** Merging imported AAPS carb entries into logged meals. */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN mergedIntoId INTEGER")
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN mergeDeclined INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN estimatedCarbs INTEGER")
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN aapsLinked INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

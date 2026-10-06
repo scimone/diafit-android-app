@@ -10,6 +10,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsCarbParser
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
 
@@ -20,6 +21,7 @@ class CarbBroadcastWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     private val mealRepository: MealRepository by inject()
+    private val mergeCarbEntries: MergeCarbEntriesUseCase by inject()
     private val getBolusSourceUseCase: GetBolusSourceUseCase by inject()
 
     override suspend fun doWork(): Result {
@@ -36,6 +38,8 @@ class CarbBroadcastWorker(
             if (mealRepository.createMeal(meal).isFailure) return Result.retry()
             inserted++
         }
+        // Fold the entries into meals already logged in the app (photo + AI estimate).
+        if (inserted > 0) runCatching { mergeCarbEntries(meals.first().userId) }
         Log.d(TAG, "Carb entries parsed=${meals.size}, inserted=$inserted")
         return Result.success()
     }

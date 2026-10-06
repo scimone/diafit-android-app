@@ -11,7 +11,8 @@ import uk.scimone.diafit.core.domain.repository.MealRepository
  */
 class UpdateMealUseCase(
     private val mealRepository: MealRepository,
-    private val fileStorageRepository: FileStorageRepository
+    private val fileStorageRepository: FileStorageRepository,
+    private val mergeCarbEntries: MergeCarbEntriesUseCase
 ) {
     suspend operator fun invoke(meal: MealEntity, photos: List<MealPhoto>): Result<Unit> {
         val previous = mealRepository.getMealById(meal.id)?.photoIds.orEmpty()
@@ -22,6 +23,8 @@ class UpdateMealUseCase(
         val updated = meal.copy(imageId = ids.firstOrNull().orEmpty(), extraImageIds = ids.drop(1))
         return mealRepository.updateMeal(updated).onSuccess {
             (previous - ids.toSet()).forEach { fileStorageRepository.deleteImage(it) }
+            // A corrected carb amount or time can bring the meal in range of an AAPS entry.
+            runCatching { mergeCarbEntries(meal.userId) }
         }
     }
 }

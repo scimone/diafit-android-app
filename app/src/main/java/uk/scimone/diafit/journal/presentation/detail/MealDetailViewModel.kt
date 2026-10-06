@@ -17,6 +17,7 @@ import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
 import uk.scimone.diafit.core.domain.usecase.GlucoseResponse
+import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -52,6 +53,7 @@ class MealDetailViewModel(
     private val getGlucoseResponse: GetGlucoseResponseUseCase,
     private val getTargetRange: GetTargetRangeUseCase,
     private val setMealValid: SetMealValidUseCase,
+    private val mergeCarbEntries: MergeCarbEntriesUseCase,
     private val context: Context,
     private val userId: Int,
     private val mealId: Int
@@ -107,6 +109,14 @@ class MealDetailViewModel(
                         isLoading = false
                     )
                 }
+        }
+    }
+
+    /** Undoes the merge with the AAPS carb entry: it shows up as its own entry again and the estimate is restored. */
+    fun unlinkAaps() {
+        val ids = _state.value.courses.filter { it.aapsLinked }.map { it.id }
+        viewModelScope.launch {
+            ids.forEach { id -> mergeCarbEntries.unlink(id).onFailure { Log.e(TAG, "Unlink failed for $id", it) } }
         }
     }
 

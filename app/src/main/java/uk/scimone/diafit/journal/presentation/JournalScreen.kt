@@ -35,6 +35,8 @@ import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -96,7 +98,12 @@ fun JournalScreen(
                         days.forEach { (day, entries) ->
                             stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries)) }
                             items(entries, key = { "${it.kind}-${it.id}" }) { entry ->
-                                JournalEntryCard(entry, uiState.target, onClick = { onOpenEntry(entry) })
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    JournalEntryCard(entry, uiState.target, onClick = { onOpenEntry(entry) })
+                                    (entry as? MealEntityUi)?.possibleDuplicate?.let {
+                                        PossibleDuplicateStrip(it, onMerge = { viewModel.mergeSuggestion(it.importedId) }, onKeepSeparate = { viewModel.keepSeparate(it.importedId) })
+                                    }
+                                }
                             }
                         }
                     }
@@ -104,6 +111,23 @@ fun JournalScreen(
             }
         }
         SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+/** Under a meal card: an AAPS carb entry that might be the same food, to merge or keep apart. */
+@Composable
+private fun PossibleDuplicateStrip(dup: PossibleDuplicateUi, onMerge: () -> Unit, onKeepSeparate: () -> Unit) {
+    val time = remember(dup.timeUtc) { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(dup.timeUtc)) }
+    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Same meal? AAPS carbs ${dup.carbohydrates} g at $time",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onKeepSeparate) { Text("Separate") }
+            TextButton(onClick = onMerge) { Text("Merge") }
+        }
     }
 }
 

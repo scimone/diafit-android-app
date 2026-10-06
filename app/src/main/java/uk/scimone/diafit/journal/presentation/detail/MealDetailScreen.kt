@@ -102,6 +102,7 @@ fun MealDetailScreen(
                     Text(if (state.isMultiCourse) "Add another course" else "Add a course (dessert, next plate…)")
                 }
             }
+            if (meal.aapsLinked) AapsLinkCard(meal, onUnlink = viewModel::unlinkAaps)
             MealTimelineCard(state, onEditCourse = onEdit)
             GlucoseResponseCard(meal, state)
             NutritionCard(meal, wholeMeal = state.isMultiCourse)
@@ -500,6 +501,23 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
     val note = if (stillAbsorbing) "Still absorbing. This updates as new readings arrive." else null
     (if (lowFirst) listOfNotNull(dip, rise, note) else listOfNotNull(rise, dip, note)).forEach {
         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** The meal's carbs were confirmed by an AAPS entry: shows the dosed amount and lets the user undo the merge. */
+@Composable
+private fun AapsLinkCard(meal: MealEntityUi, onUnlink: () -> Unit) {
+    CardSection("Matched with AAPS") {
+        Text(
+            buildString {
+                append("Dosed in AAPS: ${meal.carbohydrates} g")
+                meal.estimatedCarbs?.let { append(" (estimate was $it g)") }
+                append(". The separate AAPS carb entry is hidden so these carbs aren't counted twice.")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(onClick = onUnlink) { Text("Unlink") }
     }
 }
 

@@ -32,7 +32,17 @@ data class MealEntity(
     val sittingId: String? = null,
     /** Photos beyond the cover [imageId], in display order. */
     @ColumnInfo(defaultValue = "[]")
-    val extraImageIds: List<String> = emptyList()
+    val extraImageIds: List<String> = emptyList(),
+    /** Imported carb entry that was folded into the logged meal with this id; hidden everywhere (see [MealMatcher]). */
+    val mergedIntoId: Int? = null,
+    /** Imported entry the user declined to merge (or unlinked); never matched again. */
+    @ColumnInfo(defaultValue = "0")
+    val mergeDeclined: Boolean = false,
+    /** Logged meal whose carbs were replaced by the dosed amount from AAPS: the original (AI/typed) estimate. */
+    val estimatedCarbs: Int? = null,
+    /** Logged meal that an imported AAPS carb entry was merged into. */
+    @ColumnInfo(defaultValue = "0")
+    val aapsLinked: Boolean = false
 ) {
     /** Every photo of this course, cover first. */
     val photoIds: List<String> get() = (listOf(imageId) + extraImageIds).filter { it.isNotEmpty() }
