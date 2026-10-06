@@ -16,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,15 +24,12 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.history.presentation.components.DayTrackRow
 import uk.scimone.diafit.history.presentation.components.HistoryTimeAxis
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
-import uk.scimone.diafit.ui.theme.Bolus
-import uk.scimone.diafit.ui.theme.Carbs
-import uk.scimone.diafit.ui.theme.InRange
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Two weeks at a glance: period headline numbers, the (sticky) glucose profile chart, and one compact
+ * Two weeks at a glance: the (sticky) glucose profile chart, and one compact
  * horizon track per day underneath on a shared 0–24 h axis. Tapping a day opens it in full ([onOpenDay]).
  */
 @Composable
@@ -62,8 +58,7 @@ fun HistoryScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 else -> Column(Modifier.fillMaxSize()) {
-                    PeriodStats(state.period)
-                    ProfileChartPlaceholder(Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 12.dp))
+                    ProfileChartPlaceholder(Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
                     Spacer(Modifier.height(10.dp))
                     HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
                     LazyColumn(
@@ -101,38 +96,9 @@ private fun PeriodHeader(days: List<DayHistoryUi>, isLatest: Boolean, onOlder: (
                 val last = LocalDate.ofEpochDay(days.first().epochDay)
                 "${first.format(RANGE_FORMAT)} – ${last.format(RANGE_FORMAT)}"
             }
-            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-            Text(
-                if (isLatest) "Last 14 days" else "14 days",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(label, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
         }
         IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next two weeks") }
-    }
-}
-
-/** The window's headline numbers in one row. */
-@Composable
-private fun PeriodStats(period: PeriodSummary?) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        PeriodStat(period?.inRangeShare?.let { "${Math.round(it * 100)}%" }, "in range", if ((period?.inRangeShare ?: 0.0) >= 0.7) InRange else null, Modifier.weight(1f))
-        PeriodStat(period?.meanMgdl?.let { "${it.toInt()}" }, "avg mg/dL", null, Modifier.weight(1f))
-        PeriodStat(period?.carbsPerDay?.let { "${it.toInt()} g" }, "carbs / day", Carbs, Modifier.weight(1f))
-        PeriodStat(period?.insulinPerDay?.let { "%.1f U".format(it) }, "insulin / day", Bolus, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun PeriodStat(value: String?, label: String, accent: Color?, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            value ?: "–",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = accent ?: MaterialTheme.colorScheme.onSurface
-        )
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }
 

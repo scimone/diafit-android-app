@@ -11,9 +11,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import uk.scimone.diafit.history.domain.model.DayGlucoseStats
-import uk.scimone.diafit.history.domain.model.GlucoseSample
-import uk.scimone.diafit.history.domain.model.GlucoseThresholds
+import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.domain.usecase.ClusterTreatmentsUseCase
 import uk.scimone.diafit.history.domain.usecase.GetDailyHistoryUseCase
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
@@ -70,7 +68,6 @@ class HistoryViewModel(
                         HistoryState(
                             days = ui,
                             thresholds = target.toThresholds(),
-                            period = PeriodSummary.of(ui, target.toThresholds()),
                             page = page,
                             isLoading = false
                         )
@@ -88,31 +85,8 @@ class HistoryViewModel(
 data class HistoryState(
     val days: List<DayHistoryUi> = emptyList(),
     val thresholds: GlucoseThresholds = GlucoseThresholds(low = 70, high = 180),
-    val period: PeriodSummary? = null,
     val page: Int = 0,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
-/** Headline numbers for the shown window. Daily averages only count days with any data. */
-data class PeriodSummary(
-    val inRangeShare: Double?,
-    val meanMgdl: Double?,
-    val carbsPerDay: Double?,
-    val insulinPerDay: Double?
-) {
-    companion object {
-        fun of(days: List<DayHistoryUi>, thresholds: GlucoseThresholds): PeriodSummary? {
-            val active = days.filter { it.hasData }
-            if (active.isEmpty()) return null
-            val samples = days.flatMap { d -> d.glucose.map { GlucoseSample(it.timeUtc, it.mgdl) } }.sortedBy { it.timeUtc }
-            val stats = DayGlucoseStats.from(samples, thresholds)
-            return PeriodSummary(
-                inRangeShare = stats?.inRangeShare,
-                meanMgdl = stats?.meanMgdl,
-                carbsPerDay = active.sumOf { it.totalCarbs.toDouble() } / active.size,
-                insulinPerDay = active.sumOf { it.totalInsulin.toDouble() } / active.size
-            )
-        }
-    }
-}

@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealOutcome
 import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.model.MealType
 import java.io.File
@@ -38,7 +39,13 @@ data class MealEntityUi(
     /** The courses this entry stands for (just [id] for a single-course meal). */
     val courseIds: List<Int> = listOf(id),
     /** When the last course was eaten (== [mealTimeUtc] for a single course). */
-    val endTimeUtc: Long = mealTimeUtc
+    val endTimeUtc: Long = mealTimeUtc,
+    /** Insulin given for the meal (see [uk.scimone.diafit.core.domain.model.MealOutcome]); null when not computed. */
+    val insulinUnits: Double? = null,
+    /** Glucose at the start of the meal and its highest point afterwards, when known. */
+    val startMgdl: Int? = null,
+    val peakMgdl: Int? = null,
+    val peakTimeUtc: Long? = null
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
     override val timeUtc: Long get() = mealTimeUtc
@@ -128,3 +135,24 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         photoUris = photos
     )
 }
+
+/** A whole meal as a card: nutrition and photos from the sitting, insulin and glucose from [outcome]. */
+fun MealSitting.toUi(context: Context, outcome: MealOutcome): MealEntityUi =
+    toUi(
+        context,
+        GlucoseImpact(
+            timeInRange = outcome.timeInRange,
+            timeAboveRange = outcome.timeAboveRange,
+            timeBelowRange = outcome.timeBelowRange,
+            status = when (outcome.status) {
+                MealOutcome.Status.READY -> GlucoseStatus.READY
+                MealOutcome.Status.TOO_EARLY -> GlucoseStatus.TOO_EARLY
+                MealOutcome.Status.NOT_ENOUGH_DATA -> GlucoseStatus.NOT_ENOUGH_DATA
+            }
+        )
+    ).copy(
+        insulinUnits = outcome.insulinUnits,
+        startMgdl = outcome.startMgdl,
+        peakMgdl = outcome.peakMgdl,
+        peakTimeUtc = outcome.peakTimeUtc
+    )

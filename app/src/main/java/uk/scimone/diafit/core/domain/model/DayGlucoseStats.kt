@@ -1,6 +1,5 @@
-package uk.scimone.diafit.history.domain.model
+package uk.scimone.diafit.core.domain.model
 
-import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import kotlin.math.min
 import kotlin.math.sqrt
 

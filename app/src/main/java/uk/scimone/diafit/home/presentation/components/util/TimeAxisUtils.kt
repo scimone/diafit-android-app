@@ -53,6 +53,23 @@ fun getTimeAxisBounds(nowMinute: Long, hoursBack: Int = 24): Triple<Long, Long, 
 /** The x-axis maximum shared by all charts: [TIME_AXIS_FUTURE_HOURS] past [realTime]. */
 fun timeAxisMaxX(realTime: Long): Long = realTime + TIME_AXIS_FUTURE_HOURS * 3_600_000L
 
+/**
+ * The x range a stack of time charts shares: [minX]..[maxX]. Data is shown up to [now]; anything
+ * after it (insulin/carb activity tails) is drawn as a faded forecast. Every chart of one stack must
+ * get the same instance, see [getTimeAxisBounds].
+ */
+data class ChartTimeWindow(val minX: Long, val maxX: Long, val now: Long)
+
+/** Home's window: the last 24 h (from a whole hour) up to [nowMinute], plus [TIME_AXIS_FUTURE_HOURS] of headroom. */
+fun homeTimeWindow(nowMinute: Long): ChartTimeWindow {
+    val (minX, _, realTime) = getTimeAxisBounds(nowMinute, hoursBack = 24)
+    return ChartTimeWindow(minX, timeAxisMaxX(realTime), realTime)
+}
+
+/** A whole past (or the current) day: data up to the end of the day, or up to now while it is still running. */
+fun dayTimeWindow(dayStartUtc: Long, dayEndUtc: Long, nowMinute: Long): ChartTimeWindow =
+    ChartTimeWindow(dayStartUtc, dayEndUtc, nowMinute.coerceIn(dayStartUtc, dayEndUtc))
+
 /** Provides a reusable range provider for time-based charts (fixed x range, fixed y range). */
 fun createTimeAxisRangeProvider(
     minX: Long,

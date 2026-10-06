@@ -102,9 +102,7 @@ fun MealDetailScreen(
                     Text(if (state.isMultiCourse) "Add another course" else "Add a course (dessert, next plate…)")
                 }
             }
-            if (state.isMultiCourse || state.boluses.isNotEmpty()) {
-                MealTimelineCard(state, onEditCourse = onEdit)
-            }
+            MealTimelineCard(state, onEditCourse = onEdit)
             GlucoseResponseCard(meal, state)
             NutritionCard(meal, wholeMeal = state.isMultiCourse)
             if (!state.isMultiCourse) {
@@ -217,6 +215,13 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
         var runningCarbs = 0
         var runningUnits = 0.0
         var courseNo = 0
+        if (state.boluses.isEmpty()) {
+            Text(
+                "No insulin logged from 30 min before to 30 min after this meal.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Column {
             items.forEachIndexed { index, item ->
                 when (item) {

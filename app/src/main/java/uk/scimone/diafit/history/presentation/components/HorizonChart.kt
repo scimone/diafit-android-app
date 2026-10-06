@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import uk.scimone.diafit.history.domain.model.BandLevels
-import uk.scimone.diafit.history.domain.model.GlucoseThresholds
+import uk.scimone.diafit.core.domain.model.BandLevels
+import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
 import uk.scimone.diafit.history.presentation.model.GlucosePoint
 import uk.scimone.diafit.ui.theme.AboveRange

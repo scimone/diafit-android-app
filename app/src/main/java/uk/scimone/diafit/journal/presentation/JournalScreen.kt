@@ -18,6 +18,7 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.util.friendlyDateString
 import uk.scimone.diafit.journal.presentation.components.DayHeader
 import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
+import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -78,7 +79,7 @@ fun JournalScreen(
                         days.forEach { (day, entries) ->
                             stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries)) }
                             items(entries, key = { "${it.kind}-${it.id}" }) { entry ->
-                                JournalEntryCard(entry, onClick = { onOpenEntry(entry) })
+                                JournalEntryCard(entry, uiState.target, onClick = { onOpenEntry(entry) })
                             }
                         }
                     }
@@ -89,14 +90,19 @@ fun JournalScreen(
     }
 }
 
-/** "3 meals · 142 g carbs"; extend per kind as new entry types arrive. */
+/** "3 meals · 142 g carbs · 1 low"; extend per kind as new entry types arrive. */
 private fun daySummary(entries: List<JournalEntryUi>): String {
     val meals = entries.filterIsInstance<MealEntityUi>()
+    val episodes = entries.filterIsInstance<GlucoseEpisodeUi>()
+    val lows = episodes.count { it.episode.isLow }
+    val highs = episodes.size - lows
     val parts = buildList {
         if (meals.isNotEmpty()) {
             add("${meals.size} ${if (meals.size == 1) "meal" else "meals"}")  // a multi-course meal counts once
             add("${meals.sumOf { it.carbohydrates }} g carbs")
         }
+        if (lows > 0) add("$lows ${if (lows == 1) "low" else "lows"}")
+        if (highs > 0) add("$highs ${if (highs == 1) "high" else "highs"}")
     }
     return parts.joinToString(" · ")
 }

@@ -4,10 +4,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import uk.scimone.diafit.history.domain.model.DayGlucoseStats
-import uk.scimone.diafit.history.domain.model.GlucoseSample
-import uk.scimone.diafit.history.domain.model.GlucoseThresholds
-import uk.scimone.diafit.history.domain.model.GlucoseZone
+import uk.scimone.diafit.core.domain.model.DayGlucoseStats
+import uk.scimone.diafit.core.domain.model.GlucoseSample
+import uk.scimone.diafit.core.domain.model.GlucoseThresholds
+import uk.scimone.diafit.core.domain.model.GlucoseZone
 
 class DayGlucoseStatsTest {
     private val t = GlucoseThresholds(low = 70, high = 180)

@@ -6,6 +6,7 @@ import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Carbs
 
 /**
@@ -13,13 +14,22 @@ import uk.scimone.diafit.ui.theme.Carbs
  * "new entry" chooser, the filter row and the list can already treat entries generically.
  * To add a kind: add an editor + detail renderer for it and flip [available].
  */
-enum class JournalEntryKind(val label: String, val pluralLabel: String, val accent: Color, val available: Boolean) {
+enum class JournalEntryKind(
+    val label: String,
+    val pluralLabel: String,
+    val accent: Color,
+    val available: Boolean,
+    /** Offered in the "new entry" chooser; false for entries derived from data (lows/highs). */
+    val creatable: Boolean = true
+) {
     MEAL("Meal", "Meals", Carbs, available = true),
+    GLUCOSE("Low or high", "Lows & highs", BelowRange, available = true, creatable = false),
     SLEEP("Sleep", "Sleep", Color(0xFF7986CB), available = false),
     ACTIVITY("Activity", "Activity", Activity, available = false);
 
     companion object {
         val availableKinds: List<JournalEntryKind> get() = entries.filter { it.available }
+        val creatableKinds: List<JournalEntryKind> get() = entries.filter { it.creatable }
     }
 }
 

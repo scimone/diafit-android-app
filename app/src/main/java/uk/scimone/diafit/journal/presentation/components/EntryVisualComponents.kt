@@ -116,7 +116,9 @@ fun AbsorptionBadge(impact: ImpactType, modifier: Modifier = Modifier) {
         Text(
             impact.label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }

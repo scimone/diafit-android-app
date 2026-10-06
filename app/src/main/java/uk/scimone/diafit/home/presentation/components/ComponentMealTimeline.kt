@@ -94,12 +94,14 @@ fun MealTimeline(
     inView: List<MealGroup>,
     highlighted: MealGroup?,
     onGroupClick: (MealGroup) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Shown when there are no meals at all (Home's default invites logging one). */
+    noMealsMessage: String = "No meals in the last 24 h. Tap + to log one with a photo."
 ) {
     Box(modifier = modifier.fillMaxWidth().height(CardSize + 8.dp)) {
         if (inView.isEmpty()) {
             EmptyMealTimeline(
-                if (allGroups.isEmpty()) "No meals in the last 24 h. Tap + to log one with a photo."
+                if (allGroups.isEmpty()) noMealsMessage
                 else "No meals in this part of the chart."
             )
             return@Box

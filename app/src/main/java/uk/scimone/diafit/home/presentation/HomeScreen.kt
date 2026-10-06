@@ -63,6 +63,8 @@ import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
 import uk.scimone.diafit.home.presentation.utils.ChartGeometry
 import uk.scimone.diafit.home.presentation.utils.SHOW_TIME_LABELS
 import uk.scimone.diafit.home.presentation.utils.TIME_AXIS_FUTURE_HOURS
+import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
+import uk.scimone.diafit.home.presentation.utils.homeTimeWindow
 import uk.scimone.diafit.home.presentation.utils.currentMinute
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -108,6 +110,7 @@ fun HomeScreen(
         .takeIf { it.isNotEmpty() }?.let { MealGroup(it) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
+    val window = remember(nowMinute) { homeTimeWindow(nowMinute) }
 
     // Where the shared time axis sits on screen, reported by the CGM chart on every frame. Read only
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
@@ -152,7 +155,7 @@ fun HomeScreen(
     }
 
     fun timeAtX(x: Float): Long? = geometry.value?.let { g ->
-        g.timeAt(x).coerceIn(g.minX.toLong(), nowMinute)
+        g.timeAt(x).coerceIn(g.minX.toLong(), window.now)
     }
 
     fun revealOnCharts(time: Long) {
@@ -235,7 +238,7 @@ fun HomeScreen(
                                         upper = state.targetRangeUpper,
                                         scrollState = chartScrollState,
                                         zoomState = chartZoomState,
-                                        nowMinute = nowMinute,
+                                        window = window,
                                         onGeometry = onGeometry
                                     )
                                 }
@@ -247,14 +250,14 @@ fun HomeScreen(
                                     history = state.insulinActivityHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
-                                    nowMinute = nowMinute
+                                    window = window
                                 )
                                 CarbActivityDisplay(
                                     modifier = Modifier.weight(1f),
                                     history = state.carbHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
-                                    nowMinute = nowMinute
+                                    window = window
                                 )
                             }
                         }
@@ -315,8 +318,8 @@ fun HomeScreen(
     }
 }
 
-private val InspectBarHeight = 40.dp
-private const val TapToggleRadiusPx = 48f
+internal val InspectBarHeight = 40.dp
+internal const val TapToggleRadiusPx = 48f
 
 /**
  * Splits chart touches into three unambiguous gestures, so looking at past values never fights with
@@ -328,7 +331,7 @@ private const val TapToggleRadiusPx = 48f
  * Runs in the Initial pass so it sees events before the charts do; until scrub mode it consumes nothing.
  * Two fingers (pinch) cancel it immediately.
  */
-private fun Modifier.inspectGestures(
+internal fun Modifier.inspectGestures(
     onTap: (Offset) -> Unit,
     onScrubStart: (Offset) -> Unit,
     onScrub: (Offset) -> Unit,
@@ -371,7 +374,7 @@ private fun glucoseColor(value: Int, lower: Int, upper: Int): Color = when {
 
 /** The cursor line through every panel and the pin lane, with a ring on the inspected CGM reading. */
 @Composable
-private fun InspectCursor(
+internal fun InspectCursor(
     cursorTime: Long?,
     reading: CgmChartData?,
     geometry: State<ChartGeometry?>,
@@ -402,7 +405,7 @@ private fun InspectCursor(
  * Its x is read from [geometry] at placement time, so it tracks panning without recomposing.
  */
 @Composable
-private fun InspectReadout(
+internal fun InspectReadout(
     cursorTime: Long,
     geometry: State<ChartGeometry?>,
     reading: CgmChartData?,
@@ -514,7 +517,7 @@ private fun BoxScope.PanelTitle(text: String) {
 
 /** Reserved space (with its heading) for a graph that doesn't exist yet. */
 @Composable
-private fun PlaceholderPanel(title: String, modifier: Modifier = Modifier) {
+internal fun PlaceholderPanel(title: String, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
         PanelTitle(title)
     }
@@ -528,7 +531,7 @@ fun CgmChartDisplay(
     upper: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long,
+    window: ChartTimeWindow,
     onGeometry: (ChartGeometry) -> Unit
 ) {
     Box(
@@ -543,7 +546,7 @@ fun CgmChartDisplay(
             upperBound = upper,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute,
+            window = window,
             onGeometry = onGeometry
         )
         PanelTitle("Glucose")
@@ -551,7 +554,7 @@ fun CgmChartDisplay(
 }
 
 /** The glucose panel's share of the chart height relative to the other panels (1 each). */
-private const val CgmPanelWeight = 1.5f
+internal const val CgmPanelWeight = 1.5f
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp
 
@@ -561,7 +564,7 @@ fun InsulinActivityDisplay(
     history: List<InsulinActivityChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long
+    window: ChartTimeWindow
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
@@ -577,7 +580,7 @@ fun InsulinActivityDisplay(
             showTimeLabels = false,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute
+            window = window
         )
         PanelTitle("Bolus")
     }
@@ -589,7 +592,7 @@ fun CarbActivityDisplay(
     history: List<CarbsChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long
+    window: ChartTimeWindow
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
@@ -603,7 +606,7 @@ fun CarbActivityDisplay(
             showTimeLabels = true,
             scrollState = scrollState,
             zoomState = zoomState,
-            nowMinute = nowMinute
+            window = window
         )
         PanelTitle("Carbohydrates")
     }
@@ -611,16 +614,22 @@ fun CarbActivityDisplay(
 
 private const val DEFAULT_VISIBLE_PAST_HOURS = 6
 
-/** X-range (ms) to show: [pastHours] of history plus the shared future headroom. */
-private fun visibleHoursMillis(pastHours: Int): Double =
-    (pastHours + TIME_AXIS_FUTURE_HOURS) * 3_600_000.0
+/** X-range (ms) to show: [pastHours] of history plus [futureHours] of headroom (Home's shared future by default). */
+internal fun visibleHoursMillis(pastHours: Int, futureHours: Int = TIME_AXIS_FUTURE_HOURS): Double =
+    (pastHours + futureHours) * 3_600_000.0
 
 /**
- * One-tap zoom presets for the shared chart zoom (pinching also works), each followed by a jump back
- * to "now" so the newest data stays in view.
+ * One-tap zoom presets for the shared chart zoom (pinching also works). On Home each is followed by a
+ * jump back to "now" ([scrollToEnd]) so the newest data stays in view.
  */
 @Composable
-fun ChartZoomControls(zoomState: VicoZoomState, scrollState: VicoScrollState, modifier: Modifier = Modifier) {
+fun ChartZoomControls(
+    zoomState: VicoZoomState,
+    scrollState: VicoScrollState,
+    modifier: Modifier = Modifier,
+    futureHours: Int = TIME_AXIS_FUTURE_HOURS,
+    scrollToEnd: Boolean = true
+) {
     val scope = rememberCoroutineScope()
     Row(
         modifier = modifier,
@@ -633,8 +642,8 @@ fun ChartZoomControls(zoomState: VicoZoomState, scrollState: VicoScrollState, mo
             Surface(
                 onClick = {
                     scope.launch {
-                        zoomState.animateZoom(Zoom.x(visibleHoursMillis(hours)))
-                        scrollState.animateScroll(Scroll.Absolute.End)
+                        zoomState.animateZoom(Zoom.x(visibleHoursMillis(hours, futureHours)))
+                        if (scrollToEnd) scrollState.animateScroll(Scroll.Absolute.End)
                     }
                 },
                 shape = RoundedCornerShape(8.dp),

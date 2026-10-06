@@ -67,7 +67,7 @@ fun NewEntrySheet(
                     modifier = Modifier.padding(top = 6.dp, start = 4.dp)
                 )
             }
-            JournalEntryKind.entries.forEach { kind ->
+            JournalEntryKind.creatableKinds.forEach { kind ->
                 KindRow(kind, onClick = { onPick(kind) }, labelOverride = if (kind == JournalEntryKind.MEAL && openMeal != null) "New meal" else null)
             }
         }
@@ -159,4 +159,5 @@ private fun JournalEntryKind.description(): String = when (this) {
     JournalEntryKind.MEAL -> "Photo, carbs and absorption speed"
     JournalEntryKind.SLEEP -> "Bedtime, wake-up and quality"
     JournalEntryKind.ACTIVITY -> "Workouts and how hard they were"
+    JournalEntryKind.GLUCOSE -> "Found in your CGM data"
 }

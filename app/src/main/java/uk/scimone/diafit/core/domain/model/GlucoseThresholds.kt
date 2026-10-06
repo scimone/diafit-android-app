@@ -1,6 +1,5 @@
-package uk.scimone.diafit.history.domain.model
+package uk.scimone.diafit.core.domain.model
 
-import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 
 /**
  * Glucose zones used to layer a horizon chart: [low]..[high] is the user's target, the "very"

@@ -38,10 +38,9 @@ import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
 import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
 import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSize
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
-import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
+import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
 import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
-import uk.scimone.diafit.home.presentation.utils.timeAxisMaxX
 import kotlin.math.sqrt
 
 /** A dose/meal event: [value] is units (insulin) or grams (carbs); [durationMinutes] feeds the curve. */
@@ -128,14 +127,15 @@ fun ComponentEventActivityChart(
     valueUnit: String,
     bubbleRefValue: Double,
     showTimeLabels: Boolean,
-    nowMinute: Long,
+    window: ChartTimeWindow,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val (alignedMinTime, _, realTime) = getTimeAxisBounds(nowMinute, hoursBack = 24)
-    val maxX = timeAxisMaxX(realTime)
+    val alignedMinTime = window.minX
+    val realTime = window.now
+    val maxX = window.maxX
 
     val timeStepMillis = 5 * 60 * 1000L // 5 min
     val timePoints = generateSequence(alignedMinTime) { prev ->

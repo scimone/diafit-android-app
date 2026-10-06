@@ -24,6 +24,7 @@ import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
+import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
@@ -64,6 +65,7 @@ val coreModule = module {
     single { UpdateMealUseCase(get(), get()) }
     single { SetMealValidUseCase(get()) }
     single { CalculateMealGlucoseImpactUseCase(get(), get()) }
+    single { GetMealOutcomeUseCase(get(), get()) }
     single { GetGlucoseResponseUseCase(get(), get()) }
     single { GetAllMealsSinceUseCase(get()) }
     single { GetMealSittingUseCase(get()) }

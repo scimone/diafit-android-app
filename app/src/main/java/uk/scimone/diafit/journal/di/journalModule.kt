@@ -9,7 +9,8 @@ val journalModule = module {
     viewModel {
         JournalViewModel(
             mealRepository = get(),
-            calculateMealGlucoseImpactUseCase = get(),
+            getMealOutcome = get(),
+            cgmRepository = get(),
             getTargetRangeUseCase = get(),
             context = get(),
             userId = get()

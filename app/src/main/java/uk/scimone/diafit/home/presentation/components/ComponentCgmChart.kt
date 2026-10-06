@@ -35,10 +35,9 @@ import uk.scimone.diafit.home.presentation.utils.ChartPointSpacing
 import uk.scimone.diafit.home.presentation.utils.LineChartLayerPadding
 import uk.scimone.diafit.home.presentation.utils.SharedStartAxisSize
 import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
-import uk.scimone.diafit.home.presentation.utils.getTimeAxisBounds
+import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
 import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
-import uk.scimone.diafit.home.presentation.utils.timeAxisMaxX
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.home.presentation.utils.TargetRangeDecoration
@@ -59,7 +58,7 @@ fun ComponentCgmChart(
     upperBound: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    nowMinute: Long,
+    window: ChartTimeWindow,
     onGeometry: (ChartGeometry) -> Unit,
     showTimeLabels: Boolean = false
 ) {
@@ -67,10 +66,8 @@ fun ComponentCgmChart(
     val maxY = CGM_MAX_Y
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val (alignedMinTime, _, realTime) = getTimeAxisBounds(nowMinute, hoursBack = 24)
-
     val filteredValues = values.filter {
-        it.timeLong in alignedMinTime..realTime
+        it.timeLong in window.minX..window.now
     }
 
     val lineColors = mutableListOf<Color>()
@@ -128,8 +125,8 @@ fun ComponentCgmChart(
                 verticalAxisPosition = Axis.Position.Vertical.Start,
                 pointSpacing = ChartPointSpacing,
                 rangeProvider = createTimeAxisRangeProvider(
-                    minX = alignedMinTime,
-                    maxX = timeAxisMaxX(realTime),
+                    minX = window.minX,
+                    maxX = window.maxX,
                     minY = minY.toDouble(),
                     maxY = maxY.toDouble()
                 )

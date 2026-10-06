@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
+import uk.scimone.diafit.core.domain.model.MEAL_DOSE_LEAD_MS
+import uk.scimone.diafit.core.domain.model.MEAL_DOSE_TAIL_MS
 import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
@@ -22,9 +24,6 @@ import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 
-/** Insulin this long before the first course / after the last one counts as dosed for the meal. */
-private const val MEAL_DOSE_LEAD_MS = 30 * 60_000L
-private const val MEAL_DOSE_TAIL_MS = 30 * 60_000L
 
 data class MealDetailState(
     /** The whole meal as one entry (summed for a multi-course meal). */
