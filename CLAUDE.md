@@ -126,3 +126,45 @@ Found during a senior-level code review (2026-10-05); fixed items are already ap
 12. ~~Bolus/carb charts out of time-phase with the CGM/insulin-activity charts~~ (2026-10-06) — fixed by the Vico 3 upgrade plus matched x-spacing/layer padding; see the Charts section.
 
 **Home chart additions (2026-10-06, later):** CGM y labels are drawn *inside* the chart (`HorizontalLabelPosition.Inside`), so `SharedStartAxisSize` is now only 4.dp. `NowDecoration` (`components/util/NowDecoration.kt`, a Vico `Decoration` passed via `decorations`) draws a dashed vertical line at `nowMinute` plus a translucent background wash over everything to its right; Vico's `getVisibleXRange` is internal, so x is computed from `layerDimensions.startPadding + xSpacing*(x-minX)/xStep - scroll` (verified: the line meets the newest CGM point). **Meal photos are no longer drawn inside the charts** (2026-10-06 redesign: in-chart thumbnails crowded the graph, were too small and overlapped). The carb panel shows only bubbles; events within 15 min are merged into one bubble with the summed value (`mergeNearbyEvents`). Photos live in a **meal timeline strip** under the charts (`ComponentMealTimeline.kt`): meals within 15 min are grouped into one sitting (`groupMeals`/`MealGroup`, photo mosaic + "N items" badge + summed carb pill), newest on the right like the chart (`LazyRow` with `reverseLayout = true` + `fillMaxWidth()` + `Arrangement.spacedBy(.., Alignment.End)` — without `fillMaxWidth` the row wraps its content and alignment does nothing). Scrubbing the charts highlights/auto-scrolls the nearest sitting (`nearest`, ±20 min) and dims the rest, plus a header preview (`MealGroupPreview`); tapping a card scrolls the charts to it and opens `MealDetailSheet` (pager per item, macros tiles, absorption chip, AI `reasoning`). Carb-only entries (AAPS) get a tonal placeholder tile. A real 1 g AAPS carb entry (`sourceId` set, no photo) appeared in the device DB, suggesting carb ingestion works.
+
+## Linux server build & device setup (added 2026-10-06)
+
+The commands in the sections above are Windows/PowerShell. On the headless Ubuntu 24.04 dev server (x86_64, no Android Studio) use the equivalents below. Nothing here replaces the Windows setup.
+
+**Toolchain**
+- JDK 17 (Temurin 17.0.20.1, unpacked from Adoptium's tarball, no sudo): `~/jdk/jdk-17.0.20.1+1`. AGP 9.4.1 needs 17+; Gradle 9.8.0 comes from the wrapper.
+- Android SDK at `~/Android/Sdk`: cmdline-tools (`latest`), platform-tools 37.0.1, `platforms;android-37.0` (compileSdk 37), `build-tools;37.0.0`. Licenses accepted. Update/install with `sdkmanager`.
+- Env vars (in `~/.bashrc`, which returns early in non-interactive shells, so export them inline in scripts/Claude Code sessions): `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `PATH` including `$JAVA_HOME/bin`, `$ANDROID_HOME/cmdline-tools/latest/bin`, `$ANDROID_HOME/platform-tools`.
+- `~/.gradle/gradle.properties` (user level, outside the repo, takes precedence over the project file): `org.gradle.java.home` pointing at the JDK above, `org.gradle.jvmargs=-Xmx6g ...`, `kotlin.daemon.jvmargs=-Xmx4g`, parallel + build cache on.
+
+**Machine-specific files**
+- `local.properties` (SDK path) is now untracked and in `.gitignore` (it used to be committed with a Windows `sdk.dir`). On this server it holds `sdk.dir=/home/ascimone/Android/Sdk`. **After pulling the commit that untracks it, the Windows machine's copy is deleted by git** — Android Studio regenerates it, or recreate it with `sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk`. The old Windows file is backed up at `~/local.properties.windows.bak` on the server.
+- `gradle.properties` is tracked (it holds real project settings). The Windows-only `org.gradle.java.home=C:/Program Files/Java/jdk-17` line was removed from it; machine-specific JDK paths belong in the user-level `~/.gradle/gradle.properties` (Windows: `%USERPROFILE%\.gradle\gradle.properties`) — add `org.gradle.java.home=...` there on Windows if Gradle doesn't pick up JDK 17 by itself.
+- `.gradle/`, `build/` and `.idea/caches/` used to be committed; they are untracked and ignored now.
+- `gradle/wrapper/gradle-wrapper.jar` was missing from the repo (blanket `*.jar` ignore); it is now committed via a `!gradle/wrapper/gradle-wrapper.jar` exception in `.gitignore`.
+- `core.fileMode=false` is set locally in the server clone because `gradlew` needed `chmod +x`.
+- `~/.android/debug.keystore` was copied from the Windows machine. The phone's installed app is signed with that key; a key generated on this server fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (the only fix besides this is uninstalling, which wipes app data). Keep it backed up. A backup of the server-generated key is `~/.android/debug.keystore_backup`.
+
+**Commands** (from the repo root, after exporting the env vars)
+```
+./gradlew assembleDebug        # build -> app/build/outputs/apk/debug/app-debug.apk (~2.5 min cold)
+./gradlew test                 # JVM unit tests
+./gradlew lint
+./gradlew installDebug         # build + install on the connected phone (~3 min)
+adb shell am start -n uk.scimone.diafit/.MainActivity
+```
+
+**Phone connection (Xiaomi 14, `23127PN0CG`, Android 16) over WireGuard**
+- Phone tunnel IP: `10.200.200.2` (server is `10.200.200.1` on `wg0`). mDNS discovery does not work over the VPN, so always use explicit IP:port.
+- **Reconnect: run `scripts/adb-connect.sh`** (optional arg: phone IP). The connect port changes every time Wireless debugging is toggled or the phone reboots, and mDNS doesn't work over the VPN, so the script port-scans the tunnel IP (~12 s), tries `adb connect` on the open ports, and reports. The phone must be on Wi-Fi with Wireless debugging on. Verified 2026-10-06: after toggling Wireless debugging off/on, the existing pairing was still valid and no re-pair was needed.
+- Re-pairing is only needed if the script reports open ports but every `adb connect` fails (e.g. pairing was revoked in Developer options): phone → Wireless debugging → "Pair device with pairing code", then `adb pair 10.200.200.2:<pairing-port> <6-digit-code>` (the pairing port differs from the connect port, and the code can't be automated), then rerun the script. Verify with `adb devices -l`.
+- If it can't connect: (a) `ping 10.200.200.2` (tunnel up, phone IP in the server-side peer's AllowedIPs); (b) phone's WireGuard peer needs `PersistentKeepalive` so NAT keeps inbound connections alive; (c) phone connected to Wi-Fi, not mobile data only.
+- Fallback: build here, `scp` the APK to a laptop and `adb install -r` it.
+
+**Crash logs**
+```
+adb logcat -b crash -d                                   # recent crashes
+adb logcat --pid=$(adb shell pidof uk.scimone.diafit)    # live logs for the running app
+adb logcat -d | grep -E "AndroidRuntime|uk.scimone.diafit"
+```
+See also the `HealthReceiver`/`CgmSync*` logcat filter in the Sync source section above.
