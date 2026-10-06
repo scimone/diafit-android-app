@@ -47,9 +47,9 @@ For each component give:
 - confidence: HIGH (clearly visible, standard food), MEDIUM (portion or recipe uncertain), LOW (hidden or ambiguous content, e.g. sauce, filling, oil).
 
 Then give:
-- meal_name: short name for the whole meal.
+- meal_name: a very short title for the whole meal: 2-5 words, max 35 characters, no punctuation or descriptions (e.g. "Pumpkin soup with bread", "Salmon sushi", "Pasta Bolognese").
 - absorption: how long the meal will raise blood sugar: SHORT (mostly fast sugars, drinks, dextrose, up to about 2 h), MEDIUM (ordinary mixed meal, 2-4 h), LONG (high fat/protein or very slow, e.g. pizza, cream sauces, 4 h or more).
-- reasoning: at most 4 sentences, plain language. State how the portions were estimated, the key assumptions (recipe, hidden ingredients, any notes from the person that were applied) and which component is the least certain. End with a one-sentence disclaimer that this is an estimate and should be checked against labels or weighing before dosing insulin.
+- reasoning: very brief, max 2 short sentences (about 200 characters in total). Say how the portions were judged and the key assumption or the least certain component, plus any notes from the person that were applied. Then end with the fixed words "Estimate only, verify before dosing."
 
 Prefer realistic, not conservative, numbers. If a photo shows no food, return an empty components list and explain in the reasoning.
 Respond only with JSON matching the provided schema.
