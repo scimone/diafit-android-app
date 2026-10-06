@@ -12,7 +12,7 @@ class BolusEntryTest {
     private fun bolus(id: Int, hour: Int, minute: Int, units: Float, smb: Boolean) = BolusEntity(
         id = id, userId = 1,
         timestampUtc = ZonedDateTime.of(2026, 10, 5, hour, minute, 0, 0, ZoneOffset.UTC).toInstant().toEpochMilli(),
-        createdAtUtc = 0, updatedAtUtc = 0, value = units, eventType = "", isSmb = smb, pumpType = "", pumpSerial = ""
+        createdAtUtc = 0, updatedAtUtc = 0, value = units, eventType = "", isSmb = smb, pumpType = "", pumpSerial = "", pumpId = 0
     )
 
     @Test
