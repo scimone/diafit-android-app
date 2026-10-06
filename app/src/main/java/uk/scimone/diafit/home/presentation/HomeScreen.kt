@@ -81,7 +81,10 @@ fun HomeScreen(
     // Meals grouped into sittings, shared by the header preview, the meal strip and the detail sheet.
     val mealGroups = remember(state.mealHistory) { groupMeals(state.mealHistory) }
     val focusedMeal = mealGroups.nearest(selectedTime)
-    var openMeal by remember { mutableStateOf<MealGroup?>(null) }
+    // Remember only which meal is open and re-resolve it from the live list, so a photo added from
+    // the sheet shows up immediately.
+    var openMealId by remember { mutableStateOf<Int?>(null) }
+    val openMeal = openMealId?.let { id -> mealGroups.firstOrNull { g -> g.meals.any { it.id == id } } }
     val scope = rememberCoroutineScope()
     val chartScrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End)
     // The Zoom objects MUST be remembered: rememberVicoZoomState keys on them, so fresh lambdas on
@@ -168,14 +171,22 @@ fun HomeScreen(
                         groups = mealGroups,
                         highlighted = focusedMeal,
                         onGroupClick = { group ->
-                            openMeal = group
+                            openMealId = group.meals.first().id
                             // Bring the meal into view on the charts behind the sheet.
                             scope.launch { chartScrollState.animateScroll(Scroll.Absolute.x(group.startTime.toDouble(), 0.5f)) }
                         }
                     )
                     Spacer(Modifier.height(16.dp))
                 }
-                openMeal?.let { MealDetailSheet(group = it, onDismiss = { openMeal = null }) }
+                openMeal?.let {
+                    MealDetailSheet(
+                        group = it,
+                        onDismiss = { openMealId = null },
+                        createCameraUri = viewModel::createCameraUriForMeal,
+                        onCameraResult = viewModel::onCameraPhotoResult,
+                        onPickPhoto = viewModel::attachGalleryPhoto
+                    )
+                }
             }
         }
     }
@@ -275,7 +286,7 @@ fun CgmChartDisplay(
 }
 
 /** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
-private val EventPanelHeight = 70.dp
+private val EventPanelHeight = 90.dp
 private val TimeLabelsHeight = 22.dp
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp

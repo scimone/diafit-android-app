@@ -13,6 +13,7 @@ import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
+import uk.scimone.diafit.settings.domain.usecase.ListAiModelsUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetBolusSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetNightscoutConfigUseCase
@@ -34,6 +35,7 @@ val settingsModule = module {
     single { SetNightscoutConfigUseCase(get()) }
     single { GetAiConfigUseCase(get()) }
     single { SetAiConfigUseCase(get()) }
+    single { ListAiModelsUseCase(get()) }
 
     viewModel {
         SettingsViewModel(
@@ -47,6 +49,7 @@ val settingsModule = module {
             setNightscoutConfig = get(),
             getAiConfig = get(),
             setAiConfig = get(),
+            listAiModels = get(),
             appContext = get()
         )
     }

@@ -12,6 +12,9 @@ data class SettingsState(
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
     val nightscoutConfig: NightscoutConfig = NightscoutConfig(baseUrl = "", apiKey = ""),
     val aiConfig: AiConfig = AiConfig(baseUrl = "", apiKey = ""),
+    val aiModels: List<String> = emptyList(),
+    val isLoadingAiModels: Boolean = false,
+    val aiModelsError: String? = null,
     val isBatteryOptimizationIgnored: Boolean = false,
     val isLoading: Boolean = false
 )

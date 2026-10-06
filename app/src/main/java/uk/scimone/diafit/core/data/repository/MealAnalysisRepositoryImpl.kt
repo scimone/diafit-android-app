@@ -18,6 +18,7 @@ import uk.scimone.diafit.core.domain.model.MealAnalysisResult
 import uk.scimone.diafit.core.domain.model.MealIngredient
 import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 import uk.scimone.diafit.core.domain.util.networking.Result as NetResult
+import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
 
 private const val TAG = "MealAnalysisRepository"
@@ -49,7 +50,6 @@ Output strictly as JSON, e.g.:
 }
 """
 
-private const val DEFAULT_MODEL = "gpt-4o-mini"
 
 class MealAnalysisRepositoryImpl(
     private val context: Context,
@@ -75,7 +75,7 @@ class MealAnalysisRepositoryImpl(
                     val response = openAiApi.analyzeMealPhoto(
                         baseUrl = config.baseUrl,
                         apiKey = config.apiKey,
-                        model = DEFAULT_MODEL,
+                        model = config.model.ifBlank { DEFAULT_AI_MODEL },
                         prompt = MEAL_ANALYSIS_PROMPT,
                         imageBase64 = imageBase64,
                         imageMimeType = "image/jpeg"
@@ -96,6 +96,25 @@ class MealAnalysisRepositoryImpl(
                 Result.failure(e)
             }
         }
+
+    override suspend fun listModels(): Result<List<String>> = withContext(Dispatchers.IO) {
+        try {
+            val config = getAiConfig()
+            if (config.apiKey.isBlank()) {
+                return@withContext Result.failure(IllegalStateException("Enter an API key first."))
+            }
+            when (val response = openAiApi.listModels(config.baseUrl, config.apiKey)) {
+                is NetResult.Success -> Result.success(response.data.data.map { it.id }.sorted())
+                is NetResult.Error -> {
+                    Log.e(TAG, "Listing AI models failed: ${response.error}")
+                    Result.failure(IllegalStateException("Could not load models: ${response.error}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to list AI models", e)
+            Result.failure(e)
+        }
+    }
 
     private fun stringOrNull(obj: JsonObject, key: String): String? {
         val element = obj[key] ?: return null

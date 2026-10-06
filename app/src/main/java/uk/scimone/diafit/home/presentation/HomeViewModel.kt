@@ -2,6 +2,11 @@ package uk.scimone.diafit.home.presentation
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
+import android.util.Log
+import java.util.UUID
+import uk.scimone.diafit.core.domain.repository.FileStorageRepository
+import uk.scimone.diafit.core.domain.repository.MealRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
@@ -31,6 +36,8 @@ class HomeViewModel(
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
     private val application: Application,
+    private val mealRepository: MealRepository,
+    private val fileStorageRepository: FileStorageRepository,
     private val userId: Int,
 ) : ViewModel() {
 
@@ -133,6 +140,35 @@ class HomeViewModel(
     }
 
 
+
+    // Image id of a camera capture in flight (the camera writes into the file behind the Uri we hand out).
+    private var pendingCameraMealId: Int? = null
+    private var pendingCameraImageId: String? = null
+
+    /** Uri for the camera to write a photo for [mealId] into; call [onCameraPhotoResult] afterwards. */
+    fun createCameraUriForMeal(mealId: Int): Uri {
+        val imageId = UUID.randomUUID().toString()
+        pendingCameraMealId = mealId
+        pendingCameraImageId = imageId
+        return fileStorageRepository.createImageUri(imageId)
+    }
+
+    fun onCameraPhotoResult(success: Boolean) {
+        val mealId = pendingCameraMealId ?: return
+        val imageId = pendingCameraImageId ?: return
+        pendingCameraMealId = null
+        pendingCameraImageId = null
+        if (success) viewModelScope.launch { mealRepository.updateMealImage(mealId, imageId) }
+    }
+
+    fun attachGalleryPhoto(mealId: Int, sourceUri: Uri) {
+        viewModelScope.launch {
+            val imageId = UUID.randomUUID().toString()
+            fileStorageRepository.copyGalleryImageToPrivateStorage(sourceUri, imageId)
+                .onSuccess { mealRepository.updateMealImage(mealId, imageId) }
+                .onFailure { Log.e("HomeViewModel", "Failed to copy photo for meal $mealId", it) }
+        }
+    }
 
     private fun observeMealData(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {

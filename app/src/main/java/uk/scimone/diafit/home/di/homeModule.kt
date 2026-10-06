@@ -14,6 +14,8 @@ val homeModule = module {
             getAllMealsSinceUseCase = get(),
             getAllBolusSinceUseCase = get(),
             application = get(),
+            mealRepository = get(),
+            fileStorageRepository = get(),
             userId = userId
         )
     }

@@ -19,6 +19,7 @@ import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
+import uk.scimone.diafit.settings.domain.usecase.ListAiModelsUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetBolusSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetCgmSourceUseCase
@@ -37,6 +38,7 @@ class SettingsViewModel(
     private val setNightscoutConfig: SetNightscoutConfigUseCase,
     private val getAiConfig: GetAiConfigUseCase,
     private val setAiConfig: SetAiConfigUseCase,
+    private val listAiModels: ListAiModelsUseCase,
     private val appContext: Context
 ) : ViewModel() {
 
@@ -109,11 +111,26 @@ class SettingsViewModel(
         }
     }
 
-    fun onAiConfigChanged(baseUrl: String, apiKey: String) {
+    fun onAiConfigChanged(baseUrl: String, apiKey: String, model: String = _state.value.aiConfig.model) {
         viewModelScope.launch {
-            val newConfig = AiConfig(baseUrl, apiKey)
+            val newConfig = AiConfig(baseUrl, apiKey, model)
             setAiConfig(newConfig)
             _state.value = _state.value.copy(aiConfig = newConfig)
+        }
+    }
+
+    fun onAiModelChanged(model: String) {
+        val c = _state.value.aiConfig
+        onAiConfigChanged(c.baseUrl, c.apiKey, model)
+    }
+
+    /** Fetches the model list from the configured endpoint (`GET /models`). */
+    fun loadAiModels() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingAiModels = true, aiModelsError = null)
+            listAiModels()
+                .onSuccess { _state.value = _state.value.copy(aiModels = it, isLoadingAiModels = false) }
+                .onFailure { _state.value = _state.value.copy(aiModelsError = it.message ?: "Failed", isLoadingAiModels = false) }
         }
     }
 

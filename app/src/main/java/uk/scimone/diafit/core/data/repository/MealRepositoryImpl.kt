@@ -24,6 +24,16 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun updateMealImage(id: Int, imageId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.updateImageId(id, imageId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set image for meal $id", e)
+            Result.failure(e)
+        }
+    }
+
     override suspend fun existsBySourceId(sourceId: String): Boolean =
         withContext(Dispatchers.IO) { mealDao.countBySourceId(sourceId) > 0 }
 

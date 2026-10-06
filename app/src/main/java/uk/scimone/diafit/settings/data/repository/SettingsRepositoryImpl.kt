@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import uk.scimone.diafit.BuildConfig
 import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
@@ -66,13 +67,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun getAiConfig(): AiConfig {
         val baseUrl = prefs.getString("ai_base_url", DEFAULT_AI_BASE_URL) ?: DEFAULT_AI_BASE_URL
         val apiKey = prefs.getString("ai_api_key", "") ?: ""
-        return AiConfig(baseUrl = baseUrl, apiKey = apiKey)
+        val model = prefs.getString("ai_model", DEFAULT_AI_MODEL) ?: DEFAULT_AI_MODEL
+        return AiConfig(baseUrl = baseUrl, apiKey = apiKey, model = model)
     }
 
     override suspend fun setAiConfig(config: AiConfig) {
         prefs.edit()
             .putString("ai_base_url", config.baseUrl)
             .putString("ai_api_key", config.apiKey)
+            .putString("ai_model", config.model)
             .apply()
     }
 

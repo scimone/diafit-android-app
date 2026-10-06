@@ -82,20 +82,24 @@ private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
  */
 private const val VALUE_SCALE = 1e-4
 
+/** Approximate height of a panel's plot area and of a bubble's value label, for y-range headroom. */
+private const val PLOT_HEIGHT_DP = 80f
+private const val BUBBLE_LABEL_DP = 14f
+
 /** Bubble y (curve height at the event + value offset) -> the event's value. */
 private class BubbleValues(val byY: Map<Double, Double>) {
     fun decode(y: Double): Double = byY[y] ?: 0.0
 }
+
+private fun bubbleDiameter(value: Double, refValue: Double): Dp = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0).dp
 
 private class EventBubbleProvider(
     private val component: Component,
     private val refValue: Double,
     private val values: BubbleValues
 ) : LineCartesianLayer.PointProvider {
-    private fun diameter(value: Double): Dp = (10 + 6 * sqrt(value / refValue)).coerceIn(10.0, 30.0).dp
-
     override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
-        LineCartesianLayer.Point(component, diameter(values.decode(entry.y)))
+        LineCartesianLayer.Point(component, bubbleDiameter(values.decode(entry.y), refValue))
 
     // Deliberately constant: Vico pads each layer by half its largest point, and every Home chart
     // must end up with identical padding to stay x-aligned.
@@ -153,7 +157,16 @@ fun ComponentEventActivityChart(
 
     val onSurface = MaterialTheme.colorScheme.onSurface
     val maxActivity = (activityPoints.maxOfOrNull { it.second } ?: 0.0).coerceAtLeast(0.001)
-    val maxY = maxActivity * 1.5 // headroom for bubbles + labels sitting on the curve
+    // Vico clips each layer to the plot area, so bubbles centred on the curve would be cut off at the
+    // top (label + upper half) and at the bottom (events at zero activity). Widen the y range so the
+    // biggest bubble fits entirely: reserve its radius below the baseline and radius + label above the peak.
+    val maxBubbleDp = recentEvents.maxOfOrNull { bubbleDiameter(it.value, bubbleRefValue).value } ?: 0f
+    val reserveBelowDp = maxBubbleDp / 2f
+    val reserveAboveDp = if (maxBubbleDp > 0f) maxBubbleDp / 2f + BUBBLE_LABEL_DP else 0f
+    val curveDp = (PLOT_HEIGHT_DP - reserveBelowDp - reserveAboveDp).coerceAtLeast(PLOT_HEIGHT_DP / 3f)
+    val unitsPerDp = maxActivity * 1.1 / curveDp
+    val minY = -reserveBelowDp * unitsPerDp
+    val maxY = maxActivity * 1.1 + reserveAboveDp * unitsPerDp
 
     val curveLayer = rememberLineCartesianLayer(
         lineProvider = LineCartesianLayer.LineProvider.series(
@@ -166,7 +179,7 @@ fun ComponentEventActivityChart(
         pointSpacing = ChartPointSpacing,
         verticalAxisPosition = Axis.Position.Vertical.Start,
         rangeProvider = createTimeAxisRangeProvider(
-            minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxY
+            minX = alignedMinTime, maxX = maxX, minY = minY, maxY = maxY
         )
     )
 
@@ -197,7 +210,7 @@ fun ComponentEventActivityChart(
         ),
         pointSpacing = ChartPointSpacing,
         verticalAxisPosition = Axis.Position.Vertical.Start,
-        rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = 0.0, maxY = maxY)
+        rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = minY, maxY = maxY)
     )
 
     val chart = rememberCartesianChart(

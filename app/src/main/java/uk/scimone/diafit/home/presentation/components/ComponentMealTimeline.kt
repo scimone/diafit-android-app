@@ -1,5 +1,7 @@
 package uk.scimone.diafit.home.presentation.components
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -15,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -292,7 +296,20 @@ private fun EmptyMealTimeline() {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun MealDetailSheet(group: MealGroup, onDismiss: () -> Unit) {
+fun MealDetailSheet(
+    group: MealGroup,
+    onDismiss: () -> Unit,
+    createCameraUri: (mealId: Int) -> android.net.Uri,
+    onCameraResult: (success: Boolean) -> Unit,
+    onPickPhoto: (mealId: Int, uri: android.net.Uri) -> Unit
+) {
+    var galleryMealId by remember { mutableStateOf<Int?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture(), onCameraResult)
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val id = galleryMealId
+        galleryMealId = null
+        if (uri != null && id != null) onPickPhoto(id, uri)
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -315,7 +332,27 @@ fun MealDetailSheet(group: MealGroup, onDismiss: () -> Unit) {
                 val meal = group.meals[page]
                 Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(24.dp))) {
                     if (meal.imageUri != null) MealPhoto(meal.imageUri, Modifier.fillMaxSize())
-                    else NoPhotoTile(Modifier.fillMaxSize(), iconSize = 64.dp)
+                    else {
+                        NoPhotoTile(Modifier.fillMaxSize(), iconSize = 64.dp)
+                        Row(
+                            Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledTonalButton(onClick = { cameraLauncher.launch(createCameraUri(meal.id)) }) {
+                                Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Take photo")
+                            }
+                            FilledTonalButton(onClick = {
+                                galleryMealId = meal.id
+                                galleryLauncher.launch("image/*")
+                            }) {
+                                Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Gallery")
+                            }
+                        }
+                    }
                 }
             }
             if (group.meals.size > 1) {

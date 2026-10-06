@@ -130,6 +130,15 @@ fun SettingsScreen(
                 apiKeyLabel = "API key",
                 onConfigChanged = { baseUrl, apiKey -> viewModel.onAiConfigChanged(baseUrl, apiKey) }
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            ModelPicker(
+                model = state.aiConfig.model,
+                models = state.aiModels,
+                isLoading = state.isLoadingAiModels,
+                error = state.aiModelsError,
+                onModelChanged = viewModel::onAiModelChanged,
+                onLoadModels = viewModel::loadAiModels
+            )
         }
 
         SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {
@@ -260,6 +269,63 @@ fun BatteryOptimizationWarningDialog(
             }
         }
     )
+}
+
+/** Editable model field with a dropdown of the models the endpoint reports (`GET /models`). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModelPicker(
+    model: String,
+    models: List<String>,
+    isLoading: Boolean,
+    error: String?,
+    onModelChanged: (String) -> Unit,
+    onLoadModels: () -> Unit
+) {
+    var text by remember(model) { mutableStateOf(model) }
+    var expanded by remember { mutableStateOf(false) }
+    // Show everything when the field holds an already-chosen model, otherwise filter as you type.
+    val filtered = remember(models, text) {
+        if (text in models) models else models.filter { it.contains(text, ignoreCase = true) }
+    }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = {
+                text = it
+                onModelChanged(it)
+                expanded = true
+            },
+            label = { Text("Model") },
+            singleLine = true,
+            isError = error != null,
+            supportingText = {
+                Text(error ?: if (models.isEmpty()) "Open the dropdown to load available models, or type one." else "${models.size} models available")
+            },
+            trailingIcon = {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                else ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable)
+        )
+        ExposedDropdownMenu(expanded = expanded && filtered.isNotEmpty(), onDismissRequest = { expanded = false }) {
+            filtered.forEach { id ->
+                DropdownMenuItem(
+                    text = { Text(id) },
+                    onClick = {
+                        text = id
+                        onModelChanged(id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+    // Fetch lazily the first time the user opens the dropdown.
+    LaunchedEffect(expanded) {
+        if (expanded && models.isEmpty() && !isLoading) onLoadModels()
+    }
 }
 
 @Composable

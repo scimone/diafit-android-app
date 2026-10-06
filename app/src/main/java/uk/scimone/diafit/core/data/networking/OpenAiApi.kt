@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.data.networking
 
 import io.ktor.client.HttpClient
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -11,6 +12,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import uk.scimone.diafit.core.data.networking.dto.ChatCompletionResponseDto
+import uk.scimone.diafit.core.data.networking.dto.ModelListResponseDto
 import uk.scimone.diafit.core.data.networking.util.safeCall
 import uk.scimone.diafit.core.domain.util.networking.NetworkError
 import uk.scimone.diafit.core.domain.util.networking.Result
@@ -60,4 +62,11 @@ class OpenAiApi(private val client: HttpClient) {
             }
         }
     }
+
+    suspend fun listModels(baseUrl: String, apiKey: String): Result<ModelListResponseDto, NetworkError> =
+        safeCall {
+            client.get(baseUrl.trimEnd('/') + "/models") {
+                header("Authorization", "Bearer $apiKey")
+            }
+        }
 }

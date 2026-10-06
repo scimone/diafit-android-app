@@ -16,3 +16,13 @@ data class ChatCompletionChoiceDto(
 data class ChatCompletionMessageDto(
     val content: String? = null
 )
+
+@Serializable
+data class ModelListResponseDto(
+    val data: List<ModelDto> = emptyList()
+)
+
+@Serializable
+data class ModelDto(
+    val id: String
+)
