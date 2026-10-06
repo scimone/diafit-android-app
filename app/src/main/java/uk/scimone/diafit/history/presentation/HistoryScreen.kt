@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
@@ -46,11 +47,12 @@ fun HistoryScreen(
     Column(Modifier.fillMaxSize()) {
         PeriodHeader(
             days = state.days,
+            range = state.range,
             isLatest = state.page == 0,
+            onRange = viewModel::setRange,
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
-        RangeSelector(state.range, viewModel::setRange)
         PrimaryTabRow(selectedTabIndex = tab.ordinal) {
             HistoryTab.entries.forEach { t ->
                 Tab(
@@ -100,34 +102,38 @@ fun HistoryScreen(
 
 private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
 
-/** Time frame choice: 1 week, 2 weeks, 1 month, 3 months. */
+/** Period selector: back/forward arrows around the date range; tapping the range opens the time frame menu (1 week to 3 months). */
 @Composable
-private fun RangeSelector(selected: HistoryRange, onSelect: (HistoryRange) -> Unit) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-        HistoryRange.entries.forEachIndexed { index, range ->
-            SegmentedButton(
-                selected = range == selected,
-                onClick = { onSelect(range) },
-                shape = SegmentedButtonDefaults.itemShape(index, HistoryRange.entries.size),
-                icon = {},
-                label = { Text(range.label, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
-            )
-        }
-    }
-}
-
-/** Period selector: back/forward arrows around the date range. */
-@Composable
-private fun PeriodHeader(days: List<DayHistoryUi>, isLatest: Boolean, onOlder: () -> Unit, onNewer: () -> Unit) {
+private fun PeriodHeader(
+    days: List<DayHistoryUi>,
+    range: HistoryRange,
+    isLatest: Boolean,
+    onRange: (HistoryRange) -> Unit,
+    onOlder: () -> Unit,
+    onNewer: () -> Unit
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             val label = if (days.isEmpty()) "" else {
                 val first = LocalDate.ofEpochDay(days.last().epochDay)
                 val last = LocalDate.ofEpochDay(days.first().epochDay)
                 "${first.format(RANGE_FORMAT)} – ${last.format(RANGE_FORMAT)}"
             }
-            Text(label, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+            TextButton(onClick = { menuOpen = true }) {
+                Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text("  ${range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.ArrowDropDown, "Change time frame", tint = MaterialTheme.colorScheme.primary)
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                HistoryRange.entries.forEach { r ->
+                    DropdownMenuItem(
+                        text = { Text(r.label, fontWeight = if (r == range) FontWeight.Bold else null) },
+                        onClick = { menuOpen = false; onRange(r) }
+                    )
+                }
+            }
         }
         IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
     }
