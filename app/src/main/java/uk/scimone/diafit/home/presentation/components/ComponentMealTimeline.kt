@@ -26,11 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import uk.scimone.diafit.home.presentation.utils.ChartGeometry
-import kotlin.math.roundToInt
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -39,7 +34,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,68 +84,35 @@ private fun formatTime(millis: Long): String = SimpleDateFormat("HH:mm", Locale.
 private fun MealGroup.title(): String = meals.mapNotNull { it.description?.takeIf(String::isNotBlank) }
     .distinct().joinToString(" · ").ifEmpty { meals.first().mealType.type }
 
-/** Which sittings fall inside the charts' visible time window, and the nearest ones just outside it. */
-data class MealsInView(
-    val groups: List<MealGroup>,
-    val earlier: List<MealGroup>,
-    val later: List<MealGroup>
-)
-
-fun List<MealGroup>.inView(start: Long, end: Long) = MealsInView(
-    groups = filter { it.endTime >= start && it.startTime <= end },
-    earlier = filter { it.endTime < start },
-    later = filter { it.startTime > end }
-)
+/** The sittings that overlap the charts' visible time window [start]..[end]. */
+fun List<MealGroup>.inView(start: Long, end: Long): List<MealGroup> =
+    filter { it.endTime >= start && it.startTime <= end }
 
 /**
- * A horizontal "film strip" of the sittings that are currently visible on the charts above (like the
- * result list under a map: it follows panning and zooming). It reads in the same direction as the
- * charts, newest on the right. Sittings just outside the window are offered as "‹ N earlier" /
- * "N later ›" chips that pan the charts to them ([onReveal]). The sitting under the inspection
- * cursor is highlighted and the rest dims.
+ * A compact "film strip" under the carb panel with the sittings currently visible on the charts
+ * (it follows panning and zooming). It reads in the same direction as the charts, newest on the
+ * right. Each card is just the photo with its carbs and time on top; details open on tap. The sitting
+ * under the inspection cursor is highlighted and the rest dims. Fixed height, so the page doesn't jump.
  */
 @Composable
 fun MealTimeline(
     allGroups: List<MealGroup>,
-    inView: MealsInView,
+    inView: List<MealGroup>,
     highlighted: MealGroup?,
     onGroupClick: (MealGroup) -> Unit,
-    onReveal: (MealGroup) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 16.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Meals in view", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.width(8.dp))
-            if (inView.groups.isNotEmpty()) {
-                Text(
-                    text = "${inView.groups.sumOf { it.totalCarbs }} g",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            inView.earlier.lastOrNull()?.let { RevealChip("‹ ${inView.earlier.size} earlier") { onReveal(it) } }
-            inView.later.firstOrNull()?.let {
-                Spacer(Modifier.width(6.dp))
-                RevealChip("${inView.later.size} later ›") { onReveal(it) }
-            }
-        }
-
-        if (allGroups.isEmpty()) {
-            EmptyMealTimeline("No meals in the last 24 h. Tap + to log one with a photo.")
-            return@Column
-        }
-        if (inView.groups.isEmpty()) {
-            EmptyMealTimeline("No meals in this part of the chart.")
-            return@Column
+    Box(modifier = modifier.fillMaxWidth().height(CardSize + 8.dp)) {
+        if (inView.isEmpty()) {
+            EmptyMealTimeline(
+                if (allGroups.isEmpty()) "No meals in the last 24 h. Tap + to log one with a photo."
+                else "No meals in this part of the chart."
+            )
+            return@Box
         }
 
         // reverseLayout + newest-first: starts at the right edge (newest) and scrolls back in time.
-        val newestFirst = inView.groups.asReversed()
+        val newestFirst = inView.asReversed()
         val listState = rememberLazyListState()
         val highlightIndex = highlighted?.let { h -> newestFirst.indexOfFirst { it.key == h.key } } ?: -1
         LaunchedEffect(highlightIndex) {
@@ -166,9 +127,10 @@ fun MealTimeline(
         LazyRow(
             state = listState,
             reverseLayout = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             itemsIndexed(newestFirst, key = { _, g -> g.key }) { index, group ->
                 MealCard(
@@ -182,160 +144,51 @@ fun MealTimeline(
     }
 }
 
-@Composable
-private fun RevealChip(text: String, onClick: () -> Unit) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-    )
-}
-
-val MealPinSize = 34.dp
-private val PinStem = 6.dp
-val MealPinLaneHeight = PinStem + MealPinSize + 6.dp
-
-/**
- * Meal "map pins" in a lane directly under the charts: every sitting is a small round photo at its
- * exact time on the shared x axis, so it scrolls and zooms with the charts and shows at a glance which
- * meal belongs to which part of the curve. Pins closer than a pin's width are merged (count badge).
- * Positions are read from [geometry] in the layout phase only, so panning doesn't recompose.
- */
-@Composable
-fun MealPinLane(
-    groups: List<MealGroup>,
-    geometry: State<ChartGeometry?>,
-    highlighted: MealGroup?,
-    onPinClick: (MealGroup) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val pinPx = with(LocalDensity.current) { MealPinSize.toPx() }
-    // Only changes while zooming, not while panning.
-    val pxPerMs by remember { derivedStateOf { geometry.value?.pxPerMs } }
-    val clusters = remember(groups, pxPerMs) {
-        val scale = pxPerMs ?: return@remember emptyList()
-        val minGapMs = (pinPx * 1.1f / scale).toLong()
-        val out = mutableListOf<MutableList<MealGroup>>()
-        for (g in groups) {
-            val last = out.lastOrNull()
-            if (last != null && g.startTime - last.first().startTime < minGapMs) last += g else out += mutableListOf(g)
-        }
-        out.map { MealGroup(it.flatMap(MealGroup::meals)) }
-    }
-    Box(modifier.fillMaxWidth().height(MealPinLaneHeight).clipToBounds()) {
-        clusters.forEach { cluster ->
-            key(cluster.key) {
-                val isHighlighted = highlighted != null && cluster.meals.any { it.id == highlighted.key }
-                MealPin(
-                    group = cluster,
-                    highlighted = isHighlighted,
-                    onClick = { onPinClick(cluster) },
-                    modifier = Modifier.offset {
-                        val x = geometry.value?.xOf(cluster.startTime) ?: -1000f
-                        IntOffset((x - pinPx / 2).roundToInt(), 0)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MealPin(group: MealGroup, highlighted: Boolean, onClick: () -> Unit, modifier: Modifier) {
-    val scale by animateFloatAsState(if (highlighted) 1.15f else 1f, label = "pinScale")
-    Column(modifier.width(MealPinSize), horizontalAlignment = Alignment.CenterHorizontally) {
-        // Stem pointing up at the meal's moment on the carb curve.
-        Box(Modifier.width(2.dp).height(PinStem).background(Carbs.copy(alpha = if (highlighted) 1f else 0.6f)))
-        Box(
-            Modifier
-                .size(MealPinSize)
-                .scale(scale)
-                .clip(CircleShape)
-                .border(2.dp, if (highlighted) Carbs else MaterialTheme.colorScheme.surface, CircleShape)
-                .clickable(onClick = onClick)
-                .semantics { contentDescription = "${group.title()}, ${group.totalCarbs} grams of carbs at ${formatTime(group.startTime)}" }
-        ) {
-            val photo = group.photos.firstOrNull()
-            if (photo != null) MealPhoto(photo, Modifier.fillMaxSize()) else NoPhotoTile(Modifier.fillMaxSize(), iconSize = 18.dp)
-            if (group.meals.size > 1) {
-                Text(
-                    text = "${group.meals.size}",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                        .padding(horizontal = 5.dp)
-                )
-            }
-        }
-    }
-}
-
-private val CardWidth = 132.dp
-private val CardShape = RoundedCornerShape(20.dp)
+private val CardSize = 104.dp
+private val CardShape = RoundedCornerShape(18.dp)
 
 @Composable
 private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (highlighted) 1.04f else 1f, label = "cardScale")
     val alpha by animateFloatAsState(if (dimmed) 0.45f else 1f, label = "cardAlpha")
-    val time = formatTime(group.startTime).let { start ->
-        val end = formatTime(group.endTime)
-        if (end != start) "$start–$end" else start
-    }
+    val time = formatTime(group.startTime)
 
-    Column(
+    Box(
         modifier = Modifier
-            .width(CardWidth)
-            .padding(vertical = 4.dp)
+            .size(CardSize)
             .scale(scale)
             .graphicsLayer { this.alpha = alpha }
             .clip(CardShape)
+            .then(if (highlighted) Modifier.border(3.dp, Carbs, CardShape) else Modifier)
             .clickable(onClick = onClick)
             .semantics { contentDescription = "${group.title()}, ${group.totalCarbs} grams of carbs at $time" }
     ) {
-        Box(
-            modifier = Modifier
-                .size(CardWidth)
-                .clip(CardShape)
-                .then(if (highlighted) Modifier.border(3.dp, Carbs, CardShape) else Modifier)
-        ) {
-            PhotoMosaic(group)
-            // Count badge for multi-item sittings
-            if (group.meals.size > 1) {
-                Text(
-                    text = "${group.meals.size} items",
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                )
-            }
-            CarbPill(grams = group.totalCarbs, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
+        PhotoMosaic(group)
+        // Count badge for multi-item sittings
+        if (group.meals.size > 1) {
+            Text(
+                text = "${group.meals.size} items",
+                color = Color.White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                    .padding(horizontal = 6.dp, vertical = 1.dp)
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = group.title(),
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
+        CarbPill(grams = group.totalCarbs, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
         Text(
             text = time,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(6.dp)
+                .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                .padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }
@@ -395,11 +248,11 @@ private fun CarbPill(grams: Int, modifier: Modifier = Modifier) {
     Text(
         text = "$grams g",
         color = Color.Black,
-        fontSize = 13.sp,
+        fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         modifier = modifier
             .background(Carbs, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .padding(horizontal = 7.dp, vertical = 2.dp)
     )
 }
 
@@ -408,7 +261,7 @@ private fun EmptyMealTimeline(message: String) {
     Row(
         modifier = Modifier
             .padding(horizontal = 10.dp)
-            .fillMaxWidth()
+            .fillMaxSize()
             .clip(CardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(16.dp),

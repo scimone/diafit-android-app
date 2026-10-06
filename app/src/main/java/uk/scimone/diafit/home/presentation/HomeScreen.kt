@@ -6,10 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -26,7 +24,6 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -54,10 +51,7 @@ import uk.scimone.diafit.home.presentation.components.ComponentEventActivityChar
 import uk.scimone.diafit.home.presentation.components.ComponentRotatingArrowIcon
 import uk.scimone.diafit.home.presentation.components.MealDetailSheet
 import uk.scimone.diafit.home.presentation.components.MealGroup
-import uk.scimone.diafit.home.presentation.components.MealPinLane
-import uk.scimone.diafit.home.presentation.components.MealPinSize
 import uk.scimone.diafit.home.presentation.components.MealTimeline
-import uk.scimone.diafit.home.presentation.components.MealsInView
 import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.inView
 import uk.scimone.diafit.home.presentation.components.nearest
@@ -134,16 +128,11 @@ fun HomeScreen(
         maxZoom = maxZoom
     )
 
-    // Sittings inside the visible window; only changes when one enters or leaves it. A pin that is
-    // still half visible at an edge counts as in view.
-    val pinHalfWidthPx = with(LocalDensity.current) { (MealPinSize / 2).toPx() }
+    // Sittings inside the visible window; only changes when one enters or leaves it.
     val mealsInView by remember(mealGroups) {
         derivedStateOf {
-            geometry.value?.let {
-                val margin = (pinHalfWidthPx / it.pxPerMs).toLong()
-                mealGroups.inView(it.visibleStart - margin, it.visibleEnd + margin)
-            }
-                ?: MealsInView(mealGroups, emptyList(), emptyList())
+            geometry.value?.let { mealGroups.inView(it.visibleStart, it.visibleEnd) }
+                ?: mealGroups
         }
     }
 
@@ -184,7 +173,8 @@ fun HomeScreen(
             }
 
             else -> {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                // Fixed, non-scrolling page: the panels share whatever height the photo strip leaves.
+                Column(modifier = Modifier.fillMaxSize()) {
                     // Idle: gesture hint + zoom chips. Inspecting: a readout bubble pinned above the cursor.
                     Box(Modifier.fillMaxWidth().height(InspectBarHeight)) {
                         if (selectedTime == null) {
@@ -214,10 +204,10 @@ fun HomeScreen(
                     }
 
                     // The stacked panels share one time axis; the pin lane and cursor overlay follow it.
-                    Box {
-                        Column {
+                    Box(Modifier.weight(1f)) {
+                        Column(Modifier.fillMaxSize()) {
                             Column(
-                                Modifier.inspectGestures(
+                                Modifier.fillMaxSize().inspectGestures(
                                     onTap = { pos ->
                                         val currentX = cursorTime?.let { geometry.value?.xOf(it) }
                                         // Tapping the cursor again closes it; anywhere else moves it there.
@@ -235,6 +225,7 @@ fun HomeScreen(
                             ) {
                                 if (state.cgmUi != null) {
                                     CgmChartDisplay(
+                                        modifier = Modifier.weight(CgmPanelWeight),
                                         history = state.cgmHistory,
                                         lower = state.targetRangeLower,
                                         upper = state.targetRangeUpper,
@@ -245,30 +236,23 @@ fun HomeScreen(
                                     )
                                 }
                                 // Placeholders for upcoming graphs.
-                                PlaceholderPanel("Activity")
-                                PlaceholderPanel("Basal")
+                                PlaceholderPanel("Activity", Modifier.weight(1f))
+                                PlaceholderPanel("Basal", Modifier.weight(1f))
                                 InsulinActivityDisplay(
+                                    modifier = Modifier.weight(1f),
                                     history = state.insulinActivityHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
                                     nowMinute = nowMinute
                                 )
                                 CarbActivityDisplay(
+                                    modifier = Modifier.weight(1f),
                                     history = state.carbHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
                                     nowMinute = nowMinute
                                 )
                             }
-                            MealPinLane(
-                                groups = mealGroups,
-                                geometry = geometry,
-                                highlighted = focusedMeal,
-                                onPinClick = { cluster ->
-                                    openMealIds = cluster.meals.map { it.id }.toSet()
-                                    revealOnCharts(cluster.startTime)
-                                }
-                            )
                         }
                         InspectCursor(
                             cursorTime = cursorTime,
@@ -289,9 +273,8 @@ fun HomeScreen(
                             // Bring the meal into view on the charts behind the sheet.
                             revealOnCharts(group.startTime)
                         },
-                        onReveal = { group -> revealOnCharts(group.startTime) }
+                        modifier = Modifier.padding(top = 6.dp)
                     )
-                    Spacer(Modifier.height(16.dp))
                 }
                 // One dashed "now" line over the whole screen height, not just inside each panel.
                 val nowLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -520,14 +503,15 @@ private fun BoxScope.PanelTitle(text: String) {
 
 /** Reserved space (with its heading) for a graph that doesn't exist yet. */
 @Composable
-private fun PlaceholderPanel(title: String) {
-    Box(modifier = Modifier.fillMaxWidth().trimBottom(PanelGapTrim).height(EventPanelHeight)) {
+private fun PlaceholderPanel(title: String, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
         PanelTitle(title)
     }
 }
 
 @Composable
 fun CgmChartDisplay(
+    modifier: Modifier,
     history: List<CgmChartData>,
     lower: Int,
     upper: Int,
@@ -537,10 +521,10 @@ fun CgmChartDisplay(
     onGeometry: (ChartGeometry) -> Unit
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .trimBottom(PanelGapTrim)
-            .height(115.dp)
+            .fillMaxHeight()
     ) {
         ComponentCgmChart(
             values = history,
@@ -555,22 +539,23 @@ fun CgmChartDisplay(
     }
 }
 
-/** Height of one panel's plot area; the last panel gets extra room for the shared hour labels. */
-private val EventPanelHeight = 90.dp
-private val TimeLabelsHeight = if (SHOW_TIME_LABELS) 22.dp else 0.dp
+/** The glucose panel's share of the chart height relative to the other panels (1 each). */
+private const val CgmPanelWeight = 1.5f
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
 private val PanelGapTrim = 5.dp
 
 @Composable
 fun InsulinActivityDisplay(
+    modifier: Modifier,
     history: List<InsulinActivityChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
-    Box(modifier = Modifier.fillMaxWidth().trimBottom(PanelGapTrim).height(EventPanelHeight)) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
         ComponentEventActivityChart(
+            plotHeightDp = maxHeight.value,
             events = events,
             activityOf = { e, t ->
                 if (t >= e.time) InsulinActivity.calculate(bolusAmount = e.value, bolusTime = e.time, time = t).activity else 0.0
@@ -589,14 +574,16 @@ fun InsulinActivityDisplay(
 
 @Composable
 fun CarbActivityDisplay(
+    modifier: Modifier,
     history: List<CarbsChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     nowMinute: Long
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
-    Box(modifier = Modifier.fillMaxWidth().height(EventPanelHeight + TimeLabelsHeight)) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
         ComponentEventActivityChart(
+            plotHeightDp = maxHeight.value - if (SHOW_TIME_LABELS) 22f else 0f,
             events = events,
             activityOf = { e, t -> CarbActivity.calculate(e.value, e.time, t, e.durationMinutes) },
             color = Carbs,

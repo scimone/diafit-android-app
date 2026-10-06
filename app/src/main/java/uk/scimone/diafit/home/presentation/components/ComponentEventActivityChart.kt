@@ -79,9 +79,10 @@ private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
  */
 private const val VALUE_SCALE = 1e-4
 
-/** Approximate height of a panel's plot area and of a bubble's value label, for y-range headroom. */
-private const val PLOT_HEIGHT_DP = 80f
+/** Approximate height of a bubble's value label, for y-range headroom. */
 private const val BUBBLE_LABEL_DP = 14f
+/** Vico's inset around the plot area of a panel, subtracted from the panel height. */
+private const val PLOT_INSET_DP = 10f
 
 /** Bubble y (curve height at the event + value offset) -> the event's value. */
 private class BubbleValues(val byY: Map<Double, Double>) {
@@ -105,6 +106,8 @@ private class EventBubbleProvider(
 
 @Composable
 fun ComponentEventActivityChart(
+    /** Height of the panel the chart fills, for fitting the bubbles' headroom into the y range. */
+    plotHeightDp: Float,
     events: List<ChartEvent>,
     activityOf: (event: ChartEvent, time: Long) -> Double,
     color: Color,
@@ -165,7 +168,8 @@ fun ComponentEventActivityChart(
     val maxBubbleDp = recentEvents.maxOfOrNull { bubbleDiameter(it.value, bubbleRefValue).value } ?: 0f
     val reserveBelowDp = maxBubbleDp / 2f
     val reserveAboveDp = if (maxBubbleDp > 0f) maxBubbleDp / 2f + BUBBLE_LABEL_DP else 0f
-    val curveDp = (PLOT_HEIGHT_DP - reserveBelowDp - reserveAboveDp).coerceAtLeast(PLOT_HEIGHT_DP / 3f)
+    val plotDp = (plotHeightDp - PLOT_INSET_DP).coerceAtLeast(30f)
+    val curveDp = (plotDp - reserveBelowDp - reserveAboveDp).coerceAtLeast(plotDp / 3f)
     val unitsPerDp = maxActivity * 1.1 / curveDp
     val minY = -reserveBelowDp * unitsPerDp
     val maxY = maxActivity * 1.1 + reserveAboveDp * unitsPerDp
