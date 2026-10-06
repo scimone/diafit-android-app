@@ -485,15 +485,20 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
     val peak = response.peak
     val low = response.low
     fun after(t: Long) = relativeToEvent(t - meal.mealTimeUtc).removeSuffix(" after")
+    val lowBelow = low?.takeIf { it.valueMgdl < target.lowerBound }
+    val lowFirst = lowBelow != null && peak != null && lowBelow.timestamp < peak.timestamp
     val rise = when {
         atMeal == null || peak == null -> null
         peak.valueMgdl <= atMeal + 10 -> "Glucose didn't rise much after the meal."
+        lowFirst -> "Glucose then rose ${peak.valueMgdl - lowBelow!!.valueMgdl} mg/dL from that low, peaking ${after(peak.timestamp)} after the meal."
         else -> "Glucose rose ${peak.valueMgdl - atMeal} mg/dL, peaking ${after(peak.timestamp)} after the meal."
     }
-    val dip = low?.takeIf { it.valueMgdl < target.lowerBound }
-        ?.let { "It then dropped to ${it.valueMgdl} mg/dL, below range, ${after(it.timestamp)} after the meal." }
+    val dip = lowBelow?.let {
+        if (lowFirst) "Glucose first dropped to ${it.valueMgdl} mg/dL, below range, ${after(it.timestamp)} after the meal."
+        else "It then dropped to ${it.valueMgdl} mg/dL, below range, ${after(it.timestamp)} after the meal."
+    }
     val note = if (stillAbsorbing) "Still absorbing. This updates as new readings arrive." else null
-    listOfNotNull(rise, dip, note).forEach {
+    (if (lowFirst) listOfNotNull(dip, rise, note) else listOfNotNull(rise, dip, note)).forEach {
         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
