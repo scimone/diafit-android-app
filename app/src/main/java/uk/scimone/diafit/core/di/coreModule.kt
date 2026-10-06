@@ -26,6 +26,8 @@ import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
+import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
+import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
@@ -44,7 +46,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11)
             .build()
     }
 
@@ -64,6 +66,8 @@ val coreModule = module {
     single { CalculateMealGlucoseImpactUseCase(get(), get()) }
     single { GetGlucoseResponseUseCase(get(), get()) }
     single { GetAllMealsSinceUseCase(get()) }
+    single { GetMealSittingUseCase(get()) }
+    single { GetOpenSittingUseCase(get(), get()) }
 
     // Provide CGM repository and use cases
     single<CgmRepository> { CgmRepositoryImpl(get()) }

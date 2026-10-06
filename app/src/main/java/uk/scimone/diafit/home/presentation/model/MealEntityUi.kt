@@ -21,15 +21,20 @@ data class MealEntityUi(
     val description: String?,
     val imageUri: Uri?,
     val reasoning: String? = null,
+    /** Every photo of this course, cover ([imageUri]) first. */
+    val photoUris: List<Uri> = listOfNotNull(imageUri),
+    val sittingId: String? = null,
+    val isImported: Boolean = false,
 )
 
 fun MealEntity.toMealEntityUi(context: Context
 ): MealEntityUi {
 
-    val imageFile = File(context.filesDir, "meal_images/$imageId.jpg")
-    val imageUri = if (imageId.isNotEmpty() && imageFile.exists()) {
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
-    } else null
+    val photos = photoIds.mapNotNull { id ->
+        val imageFile = File(context.filesDir, "meal_images/$id.jpg")
+        if (imageFile.exists()) FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile) else null
+    }
+    val imageUri = photos.firstOrNull()
 
     return MealEntityUi(
         id = this.id,
@@ -42,6 +47,9 @@ fun MealEntity.toMealEntityUi(context: Context
         mealType = this.mealType,
         description = description,
         imageUri = imageUri,
-        reasoning = reasoning
+        reasoning = reasoning,
+        photoUris = photos,
+        sittingId = sittingId,
+        isImported = sourceId != null
     )
 }

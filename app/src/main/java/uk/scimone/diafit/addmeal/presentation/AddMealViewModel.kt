@@ -8,14 +8,19 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.MealDish
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
+import uk.scimone.diafit.core.domain.model.MealPhoto
+import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.model.MealType
+import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
+import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase
 import uk.scimone.diafit.core.domain.util.localDateTimeToInstant
@@ -25,13 +30,21 @@ import java.util.*
 
 private const val TAG = "AddMealViewModel"
 
-/** Drives the meal editor, both for logging a new meal and for editing an existing one. */
+/** A course added this long after the meal's last one defaults to "now"; older meals get last + this. */
+private const val COURSE_DEFAULT_GAP_MS = 10 * 60_000L
+private const val RECENT_MEAL_MS = 3 * 60 * 60_000L
+
+/**
+ * Drives the meal editor: logging a new meal, adding a course to an existing meal, and editing a course.
+ */
 class AddMealViewModel(
     private val createMealUseCase: CreateMealUseCase,
     private val updateMealUseCase: UpdateMealUseCase,
     private val setMealValidUseCase: SetMealValidUseCase,
     private val analyzeMealUseCase: AnalyzeMealUseCase,
+    private val getMealSitting: GetMealSittingUseCase,
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
+    private val bolusRepository: BolusRepository,
     private val fileStorageRepository: FileStorageRepository,  // TODO: Use usecase instead of repository
     private val userId: Int,
     application: Application
@@ -40,18 +53,23 @@ class AddMealViewModel(
     private val _uiState = MutableStateFlow(AddMealState())
     val uiState = _uiState.asStateFlow()
 
-    /** File id for a photo taken/picked in this session (always fresh, so replacing never clobbers the saved photo). */
-    private var imageId: String = UUID.randomUUID().toString()
-    private var pendingPhoto = false
-    private var photoRemoved = false
+    /** Photo files created in this session and not saved yet; deleted if the editor is left without saving. */
+    private val unsavedPhotoIds = mutableSetOf<String>()
+    private var pendingCamera: MealPhoto? = null
     private var editing: MealEntity? = null
+    /** The meal a new course joins (its courses), or null for a brand-new meal. */
+    private var targetSitting: MealSitting? = null
     private var baseline: AddMealState = AddMealState()
 
-    fun startNewMeal() {
+    private fun reset() {
         editing = null
-        pendingPhoto = false
-        photoRemoved = false
-        imageId = UUID.randomUUID().toString()
+        targetSitting = null
+        pendingCamera = null
+        unsavedPhotoIds.clear()
+    }
+
+    fun startNewMeal() {
+        reset()
         val now = LocalDateTime.now()
         _uiState.value = AddMealState(
             mealTime = localDateTimeToInstant(now).toEpochMilli(),
@@ -61,7 +79,31 @@ class AddMealViewModel(
         baseline = _uiState.value.formFields()
     }
 
+    /** A new course for the meal that [mealId] belongs to. */
+    fun startAddingCourse(mealId: Int) {
+        reset()
+        viewModelScope.launch {
+            val sitting = getMealSitting(mealId)
+            if (sitting == null) {
+                startNewMeal()
+                return@launch
+            }
+            targetSitting = sitting
+            val now = System.currentTimeMillis()
+            val time = if (now - sitting.endTime < RECENT_MEAL_MS) now else sitting.endTime + COURSE_DEFAULT_GAP_MS
+            _uiState.value = AddMealState(
+                mealTime = time,
+                mealType = sitting.courses.first().mealType,
+                mealTypeAuto = false,
+                description = "",
+                sitting = sittingContext(sitting, excludeId = null)
+            )
+            baseline = _uiState.value.formFields()
+        }
+    }
+
     fun startEditing(mealId: Int) {
+        reset()
         viewModelScope.launch {
             val meal = mealRepository.getMealById(mealId)
             if (meal == null) {
@@ -69,12 +111,10 @@ class AddMealViewModel(
                 return@launch
             }
             editing = meal
-            pendingPhoto = false
-            photoRemoved = false
-            imageId = UUID.randomUUID().toString()
+            val sitting = getMealSitting(mealId)?.takeIf { it.isExtended }
             _uiState.value = AddMealState(
                 editingMealId = meal.id,
-                imageUri = meal.imageId.takeIf { it.isNotEmpty() }?.let { fileStorageRepository.getFileProviderUri(it) },
+                photos = meal.photoIds.mapNotNull { id -> fileStorageRepository.getFileProviderUri(id)?.let { MealPhoto(id, it) } },
                 description = meal.description.orEmpty(),
                 mealTime = meal.mealTimeUtc,
                 carbohydrates = meal.carbohydrates,
@@ -85,75 +125,134 @@ class AddMealViewModel(
                 impactAuto = false,
                 mealType = meal.mealType,
                 mealTypeAuto = false,
-                reasoning = meal.reasoning
+                reasoning = meal.reasoning,
+                sitting = sitting?.let { sittingContext(it, excludeId = meal.id) }
             )
             baseline = _uiState.value.formFields()
         }
+    }
+
+    private suspend fun sittingContext(sitting: MealSitting, excludeId: Int?): SittingContext {
+        val insulin = runCatching {
+            bolusRepository.getBolusBetween(sitting.startTime - 30 * 60_000L, System.currentTimeMillis(), userId).sumOf { it.value.toDouble() }
+        }.onFailure { Log.e(TAG, "Couldn't load insulin for the meal", it) }.getOrDefault(0.0)
+        return SittingContext(
+            title = sitting.title,
+            startTime = sitting.startTime,
+            otherCourses = sitting.courses.filter { it.id != excludeId }.mapIndexed { i, c ->
+                CourseSummary(
+                    id = c.id,
+                    time = c.mealTimeUtc,
+                    carbs = c.carbohydrates,
+                    title = c.description?.takeIf { it.isNotBlank() } ?: "Course ${i + 1}",
+                    photo = c.photoIds.firstOrNull()?.let { fileStorageRepository.getFileProviderUri(it) }
+                )
+            },
+            insulinUnits = insulin
+        )
     }
 
     fun isDirty(): Boolean = _uiState.value.formFields() != baseline
 
     /** Called when the editor is left without saving. */
     fun discard() {
-        if (pendingPhoto) viewModelScope.launch { fileStorageRepository.deleteImage(imageId) }
-        pendingPhoto = false
+        val orphans = unsavedPhotoIds.toList()
+        unsavedPhotoIds.clear()
+        if (orphans.isNotEmpty()) viewModelScope.launch { orphans.forEach { fileStorageRepository.deleteImage(it) } }
     }
 
     fun resetSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
     }
 
+    /** Uri for the camera to write the next photo into; report back with [onCameraResult]. */
     fun createCameraImageUri(): Uri {
-        return fileStorageRepository.createImageUri(imageId)
+        val id = UUID.randomUUID().toString()
+        val uri = fileStorageRepository.createImageUri(id)
+        pendingCamera = MealPhoto(id, uri)
+        unsavedPhotoIds += id
+        return uri
     }
 
-    fun copyGalleryImageToPrivateStorage(sourceUri: Uri) {
-        viewModelScope.launch {
-            fileStorageRepository.copyGalleryImageToPrivateStorage(sourceUri, imageId)
-                .onSuccess { uri ->
-                    pendingPhoto = true
-                    _uiState.update { it.copy(imageUri = uri) }
-                }
-                .onFailure { _uiState.update { it.copy(snackbarMessage = "Failed to copy image") } }
+    fun onCameraResult(success: Boolean) {
+        val photo = pendingCamera ?: return
+        pendingCamera = null
+        if (success) addPhotos(listOf(photo))
+        else {
+            unsavedPhotoIds -= photo.imageId
+            viewModelScope.launch { fileStorageRepository.deleteImage(photo.imageId) }
         }
     }
 
-    fun onImageSelected(uri: Uri) {
-        pendingPhoto = true
-        _uiState.update { it.copy(imageUri = uri) }
+    /** Copies picked gallery images into private storage and adds them, up to [MAX_PHOTOS_PER_COURSE]. */
+    fun onGalleryImagesPicked(sourceUris: List<Uri>) {
+        val room = MAX_PHOTOS_PER_COURSE - _uiState.value.photos.size
+        if (sourceUris.isEmpty() || room <= 0) return
+        viewModelScope.launch {
+            val copied = sourceUris.take(room).mapNotNull { source ->
+                val id = UUID.randomUUID().toString()
+                fileStorageRepository.copyGalleryImageToPrivateStorage(source, id)
+                    .onFailure { Log.e(TAG, "Failed to copy $source", it) }
+                    .getOrNull()
+                    ?.let { MealPhoto(id, it).also { unsavedPhotoIds += id } }
+            }
+            addPhotos(copied)
+            when {
+                copied.size < sourceUris.take(room).size -> _uiState.update { it.copy(snackbarMessage = "Some photos couldn't be added") }
+                sourceUris.size > room -> _uiState.update { it.copy(snackbarMessage = "A course holds up to $MAX_PHOTOS_PER_COURSE photos") }
+            }
+        }
     }
 
-    fun onRemovePhoto() {
-        if (pendingPhoto) {
+    private fun addPhotos(photos: List<MealPhoto>) {
+        if (photos.isEmpty()) return
+        _uiState.update { it.copy(photos = (it.photos + photos).take(MAX_PHOTOS_PER_COURSE)) }
+    }
+
+    fun onRemovePhoto(imageId: String) {
+        // Files of saved photos are only deleted when the edit is saved, so cancelling keeps them.
+        if (imageId in unsavedPhotoIds) {
+            unsavedPhotoIds -= imageId
             viewModelScope.launch { fileStorageRepository.deleteImage(imageId) }
-            pendingPhoto = false
-            imageId = UUID.randomUUID().toString()
         }
-        photoRemoved = true
-        _uiState.update { it.copy(imageUri = null, reasoning = null) }
+        _uiState.update { s ->
+            val remaining = s.photos.filterNot { it.imageId == imageId }
+            s.copy(photos = remaining, reasoning = if (remaining.isEmpty()) null else s.reasoning)
+        }
     }
 
+    /** Makes [imageId] the cover photo (shown in lists and on Home). */
+    fun onMakeCover(imageId: String) {
+        _uiState.update { s ->
+            val photo = s.photos.firstOrNull { it.imageId == imageId } ?: return@update s
+            s.copy(photos = listOf(photo) + (s.photos - photo))
+        }
+    }
+
+    /** Estimates nutrition for all of this course's photos in one request. */
     fun analyzeMeal() {
+        val photos = uiState.value.photos
+        if (photos.isEmpty() || uiState.value.isAnalyzing) return
         viewModelScope.launch {
-            val uri = uiState.value.imageUri ?: return@launch
             _uiState.update { it.copy(isAnalyzing = true) }
 
-            analyzeMealUseCase(uri)
+            analyzeMealUseCase(photos.map { it.uri })
                 .onSuccess { analysis ->
                     _uiState.update {
                         it.copy(
                             dishName = analysis.dishName,
-                            description = it.description.takeUnless { desc -> desc.isNullOrBlank() }
-                                ?: analysis.dishName,
+                            analyzedPhotoIds = photos.map { p -> p.imageId },
+                            // Re-analysing replaces a name the AI suggested before, but never one the user typed.
+                            description = if (it.description.isNullOrBlank() || it.description == it.dishName) analysis.dishName else it.description,
                             carbohydrates = analysis.carbohydrates ?: it.carbohydrates,
                             proteins = analysis.protein ?: it.proteins,
                             fats = analysis.fat ?: it.fats,
                             calories = analysis.calories ?: it.calories,
                             impactType = analysis.impactType,
                             impactAuto = false,
-                            reasoning = analysis.reasoning,
+                            reasoning = reasoningWithDishes(analysis.reasoning, analysis.dishes),
                             isAnalyzing = false,
-                            snackbarMessage = "AI analysis complete — review the estimated values"
+                            snackbarMessage = "AI estimate ready. Check the values before saving"
                         )
                     }
                 }
@@ -169,6 +268,13 @@ class AddMealViewModel(
         }
     }
 
+    /** Keeps the per-dish split with the course (it is what makes a sushi round checkable later). */
+    private fun reasoningWithDishes(reasoning: String?, dishes: List<MealDish>): String? {
+        if (dishes.size < 2) return reasoning
+        val split = dishes.joinToString("\n") { d -> "• ${d.name}" + (d.carbohydrates?.let { " · $it g" } ?: "") }
+        return listOfNotNull(split, reasoning?.takeIf { it.isNotBlank() }).joinToString("\n\n")
+    }
+
     fun saveMeal() {
         val state = uiState.value
         if (!state.canSave || state.isLoading) return
@@ -177,15 +283,15 @@ class AddMealViewModel(
             val original = editing
             val result: Result<*> = if (original == null) {
                 createMealUseCase(
-                    imageUri = state.imageUri,
+                    photos = state.photos,
                     description = state.description?.trim(),
                     userId = userId,
+                    sittingId = targetSitting?.let { ensureSittingId(it) },
                     mealTimeUtc = state.mealTime ?: Instant.now().toEpochMilli(),
                     carbohydrates = state.carbohydrates ?: 0,
                     proteins = state.proteins,
                     fats = state.fats,
                     calories = state.calories,
-                    imageId = imageId,
                     impactType = state.impactType,
                     mealType = state.mealType,
                     reasoning = state.reasoning
@@ -202,17 +308,14 @@ class AddMealViewModel(
                     mealType = state.mealType,
                     reasoning = state.reasoning
                 )
-                updateMealUseCase(
-                    meal = edited,
-                    newImageUri = if (pendingPhoto) state.imageUri else null,
-                    newImageId = if (pendingPhoto) imageId else null,
-                    removeImage = photoRemoved && !pendingPhoto && original.imageId.isNotEmpty()
-                )
+                updateMealUseCase(meal = edited, photos = state.photos)
             }
 
             if (result.isSuccess) {
-                pendingPhoto = false
-                _uiState.update { it.copy(isLoading = false, finished = EditorResult.Saved(wasNew = original == null)) }
+                unsavedPhotoIds.clear()
+                _uiState.update {
+                    it.copy(isLoading = false, finished = EditorResult.Saved(wasNew = original == null, addedCourse = targetSitting != null))
+                }
             } else {
                 Log.e(TAG, "Saving meal failed", result.exceptionOrNull())
                 _uiState.update { it.copy(isLoading = false, snackbarMessage = "Couldn't save the meal") }
@@ -220,7 +323,15 @@ class AddMealViewModel(
         }
     }
 
-    /** Soft-deletes the meal being edited. */
+    /** Meals logged before courses existed have no sitting id yet: give their courses one now. */
+    private suspend fun ensureSittingId(sitting: MealSitting): String {
+        sitting.sittingId?.let { return it }
+        val id = UUID.randomUUID().toString()
+        sitting.courses.forEach { mealRepository.setSittingId(it.id, id) }
+        return id
+    }
+
+    /** Soft-deletes the course being edited. */
     fun deleteMeal() {
         val id = editing?.id ?: return
         viewModelScope.launch {

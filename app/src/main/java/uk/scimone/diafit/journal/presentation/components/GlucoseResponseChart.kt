@@ -52,6 +52,8 @@ fun GlucoseResponseChart(
     target: GlucoseTargetRange,
     eventColor: Color,
     modifier: Modifier = Modifier,
+    /** Later courses of a multi-course meal, marked like the event but lighter. */
+    laterEventTimesUtc: List<Long> = emptyList(),
     nowUtc: Long = System.currentTimeMillis()
 ) {
     val readings = response.readings
@@ -163,6 +165,12 @@ fun GlucoseResponseChart(
             drawLine(eventColor, Offset(effX0, 0f), Offset(effX0, plotH), 2.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
             drawCircle(eventColor, 6.dp.toPx(), Offset(effX0, 8.dp.toPx()))
+            laterEventTimesUtc.forEach { t ->
+                val x = xOf(t)
+                drawLine(eventColor.copy(alpha = 0.55f), Offset(x, 0f), Offset(x, plotH), 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f)))
+                drawCircle(eventColor, 4.dp.toPx(), Offset(x, 8.dp.toPx()))
+            }
 
             // Insulin: small triangles on the baseline, size grows with the dose
             response.boluses.forEach { b ->

@@ -81,6 +81,7 @@ private const val EVENT_NEAR_MS = 15 * 60_000L
 @Composable
 fun HomeScreen(
     userId: Int,
+    onAddCourse: (mealId: Int) -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -296,7 +297,11 @@ fun HomeScreen(
                         onDismiss = { openMealIds = emptySet() },
                         createCameraUri = viewModel::createCameraUriForMeal,
                         onCameraResult = viewModel::onCameraPhotoResult,
-                        onPickPhoto = viewModel::attachGalleryPhoto
+                        onPickPhoto = viewModel::attachGalleryPhoto,
+                        onAddCourse = { mealId ->
+                            openMealIds = emptySet()
+                            onAddCourse(mealId)
+                        }
                     )
                 }
             }

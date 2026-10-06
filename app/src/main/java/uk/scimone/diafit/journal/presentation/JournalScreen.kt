@@ -94,7 +94,7 @@ private fun daySummary(entries: List<JournalEntryUi>): String {
     val meals = entries.filterIsInstance<MealEntityUi>()
     val parts = buildList {
         if (meals.isNotEmpty()) {
-            add("${meals.size} ${if (meals.size == 1) "meal" else "meals"}")
+            add("${meals.size} ${if (meals.size == 1) "meal" else "meals"}")  // a multi-course meal counts once
             add("${meals.sumOf { it.carbohydrates }} g carbs")
         }
     }

@@ -50,6 +50,7 @@ private fun MealEntryCard(meal: MealEntityUi, onClick: () -> Unit, modifier: Mod
                         append(meal.mealType.type)
                         append(" · ")
                         append(meal.timeFormatted)
+                        if (meal.courseCount > 1) append(" · ${meal.courseCount} courses")
                         if (meal.isImported) append(" · Imported")
                     },
                     style = MaterialTheme.typography.bodySmall,

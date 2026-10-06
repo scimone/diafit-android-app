@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
+import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
 import uk.scimone.diafit.core.domain.usecase.GlucoseResponse
@@ -20,15 +22,30 @@ import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 
+/** Insulin this long before the first course / after the last one counts as dosed for the meal. */
+private const val MEAL_DOSE_LEAD_MS = 30 * 60_000L
+private const val MEAL_DOSE_TAIL_MS = 30 * 60_000L
+
 data class MealDetailState(
+    /** The whole meal as one entry (summed for a multi-course meal). */
     val meal: MealEntityUi? = null,
+    /** Its courses, oldest first; a single element for an ordinary meal. */
+    val courses: List<MealEntityUi> = emptyList(),
+    /** Boluses delivered around the meal, oldest first. */
+    val boluses: List<BolusEntity> = emptyList(),
     val response: GlucoseResponse? = null,
+    /** When the last course should have been absorbed. */
+    val effectEndUtc: Long = 0L,
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
     val isLoading: Boolean = true,
     /** The meal no longer exists or was deleted. */
     val isGone: Boolean = false
-)
+) {
+    val isMultiCourse: Boolean get() = courses.size > 1
+    val totalInsulin: Double get() = boluses.sumOf { it.value.toDouble() }
+}
 
+/** The meal that course [mealId] belongs to: every course, the insulin around it and the glucose response. */
 class MealDetailViewModel(
     private val mealRepository: MealRepository,
     private val getGlucoseResponse: GetGlucoseResponseUseCase,
@@ -44,23 +61,28 @@ class MealDetailViewModel(
 
     init {
         viewModelScope.launch {
-            // Observing the list (not a one-shot read) keeps the page current after an edit.
+            // Observing the list (not a one-shot read) keeps the page current after an edit or a new course.
             mealRepository.observeMealsByUserId(userId)
                 .catch { Log.e(TAG, "Failed to observe meal $mealId", it) }
                 .collect { meals ->
-                    val meal = meals.firstOrNull { it.id == mealId }
-                    if (meal == null) {
+                    val anchor = meals.firstOrNull { it.id == mealId }
+                    if (anchor == null) {
                         _state.update { it.copy(isLoading = false, isGone = true) }
                         return@collect
                     }
+                    val courses = anchor.sittingId
+                        ?.let { id -> meals.filter { it.sittingId == id } }
+                        ?.sortedBy { it.mealTimeUtc }
+                        ?: listOf(anchor)
+                    val sitting = MealSitting(courses)
+
                     val target = runCatching { getTargetRange().toCore() }.getOrDefault(_state.value.target)
+                    val durationMinutes = ((sitting.effectEndTime - sitting.startTime) / 60_000L).toInt()
                     val response = runCatching {
-                        getGlucoseResponse(userId, meal.mealTimeUtc, meal.impactType.durationMinutes)
+                        getGlucoseResponse(userId, sitting.startTime, durationMinutes)
                     }.onFailure { Log.e(TAG, "Glucose response failed", it) }.getOrNull()
 
-                    val inWindow = response?.readings.orEmpty().filter {
-                        it.timestamp in meal.mealTimeUtc..(meal.mealTimeUtc + meal.impactType.durationMinutes * 60_000L)
-                    }
+                    val inWindow = response?.readings.orEmpty().filter { it.timestamp in sitting.startTime..sitting.effectEndTime }
                     val impact = if (inWindow.isEmpty()) GlucoseImpact(0.0, 0.0, 0.0) else {
                         val n = inWindow.size.toDouble()
                         GlucoseImpact(
@@ -69,9 +91,13 @@ class MealDetailViewModel(
                             timeBelowRange = inWindow.count { it.valueMgdl < target.lowerBound } / n * 100
                         )
                     }
+                    val doseWindow = (sitting.startTime - MEAL_DOSE_LEAD_MS)..(sitting.endTime + MEAL_DOSE_TAIL_MS)
                     _state.value = MealDetailState(
-                        meal = meal.toUi(context, impact),
+                        meal = sitting.toUi(context, impact),
+                        courses = courses.map { it.toUi(context, GlucoseImpact(0.0, 0.0, 0.0)) },
+                        boluses = response?.boluses.orEmpty().filter { it.timestampUtc in doseWindow }.sortedBy { it.timestampUtc },
                         response = response,
+                        effectEndUtc = sitting.effectEndTime,
                         target = target,
                         isLoading = false
                     )
@@ -79,12 +105,13 @@ class MealDetailViewModel(
         }
     }
 
-    /** Soft-deletes the meal (it stays in the DB, flagged invalid, so the delete can be undone). */
-    fun delete(onDone: () -> Unit) {
+    /** Soft-deletes every course of the meal (kept in the DB, flagged invalid, so the delete can be undone). */
+    fun delete(onDone: (List<Int>) -> Unit) {
+        val ids = _state.value.courses.map { it.id }.ifEmpty { listOf(mealId) }
         viewModelScope.launch {
-            setMealValid(mealId, false)
-                .onSuccess { onDone() }
-                .onFailure { Log.e(TAG, "Failed to delete meal $mealId", it) }
+            setMealValid(ids, false)
+                .onSuccess { onDone(ids) }
+                .onFailure { Log.e(TAG, "Failed to delete meal $ids", it) }
         }
     }
 

@@ -3,6 +3,7 @@ package uk.scimone.diafit.core.domain.usecase
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 
 class CalculateMealGlucoseImpactUseCase(
@@ -17,10 +18,15 @@ class CalculateMealGlucoseImpactUseCase(
     )
 
     suspend operator fun invoke(meal: MealEntity, targetRange: GlucoseTargetRange): Result {
-        val impactDurationMinutes = meal.impactType.durationMinutes
         val start = meal.mealTimeUtc
-        val end = start + impactDurationMinutes * 60 * 1000 // convert minutes to millis
+        return invoke(start, start + meal.impactType.durationMinutes * 60_000L, targetRange)
+    }
 
+    /** Over a whole meal: from its first course until the last one has been absorbed. */
+    suspend operator fun invoke(sitting: MealSitting, targetRange: GlucoseTargetRange): Result =
+        invoke(sitting.startTime, sitting.effectEndTime, targetRange)
+
+    suspend operator fun invoke(start: Long, end: Long, targetRange: GlucoseTargetRange): Result {
         val entries = cgmRepository.getEntriesBetween(start, end, userId)
         if (entries.isEmpty()) return Result(0.0, 0.0, 0.0)
 

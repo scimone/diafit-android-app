@@ -1,6 +1,8 @@
 package uk.scimone.diafit.core.data.repository
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
@@ -12,9 +14,11 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import java.io.ByteArrayOutputStream
 import uk.scimone.diafit.core.data.networking.OpenAiApi
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealAnalysisResult
+import uk.scimone.diafit.core.domain.model.MealDish
 import uk.scimone.diafit.core.domain.model.MealIngredient
 import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 import uk.scimone.diafit.core.domain.util.networking.Result as NetResult
@@ -22,25 +26,32 @@ import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
 
 private const val TAG = "MealAnalysisRepository"
+private const val MAX_UPLOAD_EDGE_PX = 1280
+private const val UPLOAD_JPEG_QUALITY = 85
 
 private const val MEAL_ANALYSIS_PROMPT = """
-You are a highly accurate and detailed food recognition and nutrition analysis expert.
+You are a highly accurate and detailed food recognition and nutrition analysis expert, helping a person with type 1 diabetes count carbohydrates.
 
-Given the following image of a meal, provide a structured JSON output containing the following information:
+You get one or more photos of food that is eaten together, as one course. Photos may show different dishes (e.g. a main dish and a dessert, or several small plates) or the same dish from different angles: count every food exactly once and never double count a dish that appears in more than one photo. Give totals for everything shown.
 
-1. Dish Name: (Most likely name of the entire meal, e.g., "Chicken Caesar Salad", "Pasta Bolognese", or "Mixed Vegetable Curry"). Be as specific as possible.
+Provide a structured JSON output containing:
 
-2. Ingredients: (A list of all identifiable ingredients in the image, including sauces/seasonings/garnishes, as granular as possible, each with an estimated quantity/weight).
+1. Dish Name: a short name for everything shown together (e.g. "Chicken Caesar Salad", "Salmon nigiri and California maki", "Pasta Bolognese with tiramisu"). Be as specific as possible.
 
-3. Macronutrient Breakdown (per serving): Calories (kcal), Protein (g), Carbohydrates (g), Fat (g), Fiber (g), Sugar (g), Sodium (mg).
+2. Dishes: each distinct dish or plate with its own carbohydrate estimate in grams (one entry if there is only one dish).
 
-4. Reasoning: a precise and analytical breakdown of the carb calculation.
+3. Ingredients: all identifiable ingredients, including sauces/seasonings/garnishes, as granular as possible, each with an estimated quantity/weight.
 
-5. Meal impact duration: "SHORT" (e.g. dextrose/juice), "MEDIUM", or "LONG" (e.g. a cheesy pizza) — an estimate of how long the meal will affect blood sugar.
+4. Macronutrient Breakdown (total for everything shown): Calories (kcal), Protein (g), Carbohydrates (g), Fat (g), Fiber (g), Sugar (g), Sodium (mg). Carbohydrates must equal the sum of the dishes.
+
+5. Reasoning: a precise and analytical breakdown of the carb calculation.
+
+6. Meal impact duration: "SHORT" (e.g. dextrose/juice), "MEDIUM", or "LONG" (e.g. a cheesy pizza): an estimate of how long the food will affect blood sugar.
 
 Output strictly as JSON, e.g.:
 {
   "dish_name": "",
+  "dishes": [{"name": "", "carbohydrates": 0}],
   "ingredients": [{"name": "", "quantity": ""}],
   "macronutrients": {
     "calories": 0, "protein": 0, "carbohydrates": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0
@@ -57,7 +68,7 @@ class MealAnalysisRepositoryImpl(
     private val getAiConfig: GetAiConfigUseCase
 ) : MealAnalysisRepository {
 
-    override suspend fun analyzeMealPhoto(imageUri: Uri): Result<MealAnalysisResult> =
+    override suspend fun analyzeMealPhotos(imageUris: List<Uri>): Result<MealAnalysisResult> =
         withContext(Dispatchers.IO) {
             try {
                 val config = getAiConfig()
@@ -67,9 +78,14 @@ class MealAnalysisRepositoryImpl(
                     )
                 }
 
-                val imageBytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
-                    ?: return@withContext Result.failure(IllegalStateException("Could not read meal photo."))
-                val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+                if (imageUris.isEmpty()) {
+                    return@withContext Result.failure(IllegalArgumentException("No photos to analyse."))
+                }
+                val images = imageUris.map { uri ->
+                    val bytes = encodeForUpload(uri)
+                        ?: return@withContext Result.failure(IllegalStateException("Could not read a meal photo."))
+                    Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
 
                 when (
                     val response = openAiApi.analyzeMealPhoto(
@@ -77,8 +93,7 @@ class MealAnalysisRepositoryImpl(
                         apiKey = config.apiKey,
                         model = config.model.ifBlank { DEFAULT_AI_MODEL },
                         prompt = MEAL_ANALYSIS_PROMPT,
-                        imageBase64 = imageBase64,
-                        imageMimeType = "image/jpeg"
+                        imagesBase64 = images
                     )
                 ) {
                     is NetResult.Success -> {
@@ -116,6 +131,28 @@ class MealAnalysisRepositoryImpl(
         }
     }
 
+    /**
+     * Camera photos are several MB each; a few of them would make the request huge and slow, and the
+     * model doesn't need the detail. Decodes (honouring EXIF rotation, any format incl. HEIC) scaled
+     * so the long edge is at most [MAX_UPLOAD_EDGE_PX], and re-encodes as JPEG.
+     */
+    private fun encodeForUpload(uri: Uri): ByteArray? = runCatching {
+        val source = ImageDecoder.createSource(context.contentResolver, uri)
+        val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            val longEdge = maxOf(info.size.width, info.size.height)
+            if (longEdge > MAX_UPLOAD_EDGE_PX) {
+                val scale = MAX_UPLOAD_EDGE_PX.toFloat() / longEdge
+                decoder.setTargetSize((info.size.width * scale).toInt(), (info.size.height * scale).toInt())
+            }
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        }
+        ByteArrayOutputStream().use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, UPLOAD_JPEG_QUALITY, out)
+            bitmap.recycle()
+            out.toByteArray()
+        }
+    }.onFailure { Log.e(TAG, "Couldn't decode $uri", it) }.getOrNull()
+
     private fun stringOrNull(obj: JsonObject, key: String): String? {
         val element = obj[key] ?: return null
         if (element is JsonNull) return null
@@ -143,6 +180,12 @@ class MealAnalysisRepositoryImpl(
             )
         } ?: emptyList()
 
+        val dishes = (json["dishes"] as? JsonArray)?.mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val name = stringOrNull(obj, "name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            MealDish(name = name, carbohydrates = intOrNull(obj, "carbohydrates"))
+        } ?: emptyList()
+
         val macros = json["macronutrients"] as? JsonObject
 
         val impactType = when (stringOrNull(json, "meal_impact_duration")?.uppercase()) {
@@ -153,6 +196,7 @@ class MealAnalysisRepositoryImpl(
 
         return MealAnalysisResult(
             dishName = stringOrNull(json, "dish_name"),
+            dishes = dishes,
             ingredients = ingredients,
             calories = intOrNull(macros, "calories"),
             protein = intOrNull(macros, "protein"),

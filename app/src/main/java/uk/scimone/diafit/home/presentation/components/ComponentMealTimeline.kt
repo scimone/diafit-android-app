@@ -16,6 +16,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -39,22 +40,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import uk.scimone.diafit.core.domain.model.ImpactType
+import uk.scimone.diafit.core.domain.model.groupIntoSittings
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.Carbs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Meals logged within this window of each other are one sitting (e.g. main + drink), shown as one card. */
-const val MEAL_GROUP_WINDOW_MS = 15 * 60_000L
-
-/** One sitting: one or more meals close together in time, sorted oldest first. */
+/** One sitting: the courses of one meal (plus untagged entries close to it), sorted oldest first. */
 data class MealGroup(val meals: List<MealEntityUi>) {
     val startTime: Long get() = meals.first().mealTimeUtc
     val endTime: Long get() = meals.last().mealTimeUtc
     val totalCarbs: Int get() = meals.sumOf { it.carbohydrates }
-    val photos get() = meals.mapNotNull { it.imageUri }
+    val photos get() = meals.flatMap { it.photoUris }
     val key: Int get() = meals.first().id
+    /** A course the user logged here (not imported), which "add a course" can attach to. */
+    val loggedCourse: MealEntityUi? get() = meals.lastOrNull { !it.isImported }
 
     /** Distance from [time] to this sitting (0 if it falls inside it). */
     fun distanceTo(time: Long): Long = when {
@@ -64,16 +65,9 @@ data class MealGroup(val meals: List<MealEntityUi>) {
     }
 }
 
-/** Chains meals into sittings: a meal joins the current group if it's within the window of the previous one. */
-fun groupMeals(meals: List<MealEntityUi>, windowMs: Long = MEAL_GROUP_WINDOW_MS): List<MealGroup> {
-    val groups = mutableListOf<MutableList<MealEntityUi>>()
-    for (meal in meals.sortedBy { it.mealTimeUtc }) {
-        val current = groups.lastOrNull()
-        if (current != null && meal.mealTimeUtc - current.last().mealTimeUtc <= windowMs) current += meal
-        else groups += mutableListOf(meal)
-    }
-    return groups.map { MealGroup(it) }
-}
+/** Courses of one meal form a sitting; untagged entries (imported carbs) join one if close in time. */
+fun groupMeals(meals: List<MealEntityUi>): List<MealGroup> =
+    groupIntoSittings(meals, { it.mealTimeUtc }, { it.sittingId }).map { MealGroup(it) }
 
 /** The sitting closest to [time], if one is within [toleranceMs]. */
 fun List<MealGroup>.nearest(time: Long?, toleranceMs: Long = 20 * 60_000L): MealGroup? =
@@ -167,7 +161,7 @@ private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, on
         // Count badge for multi-item sittings
         if (group.meals.size > 1) {
             Text(
-                text = "${group.meals.size} items",
+                text = "${group.meals.size} courses",
                 color = Color.White,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -193,10 +187,12 @@ private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, on
     }
 }
 
+@Composable
+private fun PhotoMosaic(group: MealGroup) = UriMosaic(group.photos)
+
 /** 1 photo fills the tile; 2 split it; 3+ show one large and two stacked, with "+N" on the last. */
 @Composable
-private fun PhotoMosaic(group: MealGroup) {
-    val photos = group.photos
+private fun UriMosaic(photos: List<android.net.Uri>) {
     val gap = 2.dp
     when {
         photos.isEmpty() -> NoPhotoTile(Modifier.fillMaxSize())
@@ -288,7 +284,8 @@ fun MealDetailSheet(
     onDismiss: () -> Unit,
     createCameraUri: (mealId: Int) -> android.net.Uri,
     onCameraResult: (success: Boolean) -> Unit,
-    onPickPhoto: (mealId: Int, uri: android.net.Uri) -> Unit
+    onPickPhoto: (mealId: Int, uri: android.net.Uri) -> Unit,
+    onAddCourse: (mealId: Int) -> Unit
 ) {
     var galleryMealId by remember { mutableStateOf<Int?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture(), onCameraResult)
@@ -303,13 +300,24 @@ fun MealDetailSheet(
     ) {
         val pagerState = rememberPagerState { group.meals.size }
         Column(Modifier.padding(bottom = 24.dp)) {
-            if (group.meals.size > 1) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp).padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "${group.meals.size} items · ${group.totalCarbs} g carbs in total",
+                    text = if (group.meals.size > 1) "${group.meals.size} courses · ${group.totalCarbs} g carbs in total"
+                    else "${group.totalCarbs} g carbs",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp)
+                    modifier = Modifier.weight(1f)
                 )
+                group.loggedCourse?.let { course ->
+                    TextButton(onClick = { onAddCourse(course.id) }) {
+                        Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Add course")
+                    }
+                }
             }
             HorizontalPager(
                 state = pagerState,
@@ -318,7 +326,7 @@ fun MealDetailSheet(
             ) { page ->
                 val meal = group.meals[page]
                 Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(24.dp))) {
-                    if (meal.imageUri != null) MealPhoto(meal.imageUri, Modifier.fillMaxSize())
+                    if (meal.photoUris.isNotEmpty()) UriMosaic(meal.photoUris)
                     else {
                         NoPhotoTile(Modifier.fillMaxSize(), iconSize = 64.dp)
                         Row(

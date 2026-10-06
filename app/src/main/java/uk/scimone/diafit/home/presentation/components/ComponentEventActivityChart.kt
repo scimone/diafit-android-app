@@ -51,8 +51,13 @@ data class ChartEvent(
     val durationMinutes: Int = 0
 )
 
-/** Within this distance events share one bubble (drawn at the first one's time). */
+/**
+ * Within this distance of the previous event, events share one bubble (drawn at the first one's
+ * time). Chained, so a long meal with a plate and a small bolus every 10 minutes becomes one
+ * labelled bubble; each individual event stays visible as a small tick dot on the curve.
+ */
 private const val BUBBLE_MERGE_WINDOW_MS = 15 * 60_000L
+private val TickDotSize = 5.dp
 
 private fun mergeNearbyEvents(events: List<ChartEvent>): List<ChartEvent> {
     val merged = mutableListOf<ChartEvent>()
@@ -104,6 +109,15 @@ private class EventBubbleProvider(
     override fun getLargestPoint(extraStore: ExtraStore) = LineCartesianLayer.Point(component, ChartPointSize)
 }
 
+/** Small dots marking each individual event under a merged bubble. */
+private class TickProvider(private val component: Component) : LineCartesianLayer.PointProvider {
+    override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
+        LineCartesianLayer.Point(component, TickDotSize)
+
+    // Constant and equal to the other layers', see EventBubbleProvider.getLargestPoint.
+    override fun getLargestPoint(extraStore: ExtraStore) = LineCartesianLayer.Point(component, ChartPointSize)
+}
+
 @Composable
 fun ComponentEventActivityChart(
     /** Height of the panel the chart fills, for fitting the bubbles' headroom into the y range. */
@@ -133,7 +147,10 @@ fun ComponentEventActivityChart(
     fun activityAt(t: Long) = events.sumOf { activityOf(it, t) }
     // Events close together (a meal and its drink, a split bolus) become one bubble with their summed
     // value, so bubbles and labels never pile up on top of each other.
-    val recentEvents = mergeNearbyEvents(events.filter { it.time in alignedMinTime..realTime })
+    val rawRecentEvents = events.filter { it.time in alignedMinTime..realTime }.sortedBy { it.time }
+    val recentEvents = mergeNearbyEvents(rawRecentEvents)
+    // Only worth drawing when some bubble stands for more than one event.
+    val tickEvents = if (recentEvents.size < rawRecentEvents.size) rawRecentEvents else emptyList()
 
     // Each bubble sits on the curve: y = curve height at the event time, nudged by a tiny
     // value-proportional offset so the value survives Vico's y-only point/label callbacks.
@@ -146,11 +163,16 @@ fun ComponentEventActivityChart(
     val pastPoints = activityPoints.filter { it.first < realTime } + nowPoint
     val futurePoints = listOf(nowPoint) + activityPoints.filter { it.first > realTime }
 
-    LaunchedEffect(activityPoints, recentEvents) {
+    LaunchedEffect(activityPoints, recentEvents, tickEvents) {
         modelProducer.runTransaction {
             lineSeries {
                 series(x = pastPoints.map { it.first }, y = pastPoints.map { it.second })
                 series(x = futurePoints.map { it.first }, y = futurePoints.map { it.second })
+            }
+            if (tickEvents.isNotEmpty()) {
+                lineSeries {
+                    series(x = tickEvents.map { it.time }, y = tickEvents.map { activityAt(it.time) })
+                }
             }
             if (recentEvents.isNotEmpty()) {
                 lineSeries {
@@ -224,8 +246,32 @@ fun ComponentEventActivityChart(
         rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = minY, maxY = maxY)
     )
 
+    val tickComponent = rememberShapeComponent(
+        fill = Fill(MaterialTheme.colorScheme.surface),
+        shape = CircleShape,
+        strokeFill = Fill(color),
+        strokeThickness = 1.5.dp
+    )
+    val tickLayer = rememberLineCartesianLayer(
+        lineProvider = LineCartesianLayer.LineProvider.series(
+            LineCartesianLayer.rememberLine(
+                fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
+                stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 0.dp),
+                pointProvider = remember(tickComponent) { TickProvider(tickComponent) }
+            )
+        ),
+        pointSpacing = ChartPointSpacing,
+        verticalAxisPosition = Axis.Position.Vertical.Start,
+        rangeProvider = createTimeAxisRangeProvider(minX = alignedMinTime, maxX = maxX, minY = minY, maxY = maxY)
+    )
+
+    // Layer order must match the model's lineSeries order above.
     val chart = rememberCartesianChart(
-        *listOfNotNull(curveLayer, bubbleLayer.takeIf { recentEvents.isNotEmpty() }).toTypedArray(),
+        *listOfNotNull(
+            curveLayer,
+            tickLayer.takeIf { tickEvents.isNotEmpty() },
+            bubbleLayer.takeIf { recentEvents.isNotEmpty() }
+        ).toTypedArray(),
         startAxis = VerticalAxis.rememberStart(
             label = null,
             tick = null,

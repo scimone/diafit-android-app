@@ -1,9 +1,16 @@
 package uk.scimone.diafit.core.domain.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity
+/**
+ * One **course**: food that arrived/was eaten at one moment, with its own time, nutrition and absorption.
+ * Courses sharing a [sittingId] form one **meal** (a sitting, e.g. starter + main + dessert, or the
+ * plates of an all-you-can-eat sushi dinner), see [MealSitting]. A meal with one course is the common case.
+ */
+@Entity(indices = [Index(value = ["sittingId"])])
 data class MealEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userId: Int,
@@ -20,8 +27,17 @@ data class MealEntity(
     val imageId: String,
     val recommendation: String?,       // AI recommendation text
     val reasoning: String?,              // AI reasoning text
-    val sourceId: String? = null
+    val sourceId: String? = null,
+    /** Groups the courses of one meal; null for imported entries and meals logged before courses existed. */
+    val sittingId: String? = null,
+    /** Photos beyond the cover [imageId], in display order. */
+    @ColumnInfo(defaultValue = "[]")
+    val extraImageIds: List<String> = emptyList()
 ) {
+    /** Every photo of this course, cover first. */
+    val photoIds: List<String> get() = (listOf(imageId) + extraImageIds).filter { it.isNotEmpty() }
+
+
     companion object {
         fun inferImpactType(carbs: Int?, proteins: Int?, fats: Int?): ImpactType {
             return if (carbs == null || proteins == null || fats == null) {

@@ -25,8 +25,8 @@ class OpenAiApi(private val client: HttpClient) {
         apiKey: String,
         model: String,
         prompt: String,
-        imageBase64: String,
-        imageMimeType: String
+        /** One or more base64 JPEGs, all analysed together in a single request. */
+        imagesBase64: List<String>
     ): Result<ChatCompletionResponseDto, NetworkError> {
         val url = baseUrl.trimEnd('/') + "/chat/completions"
 
@@ -35,18 +35,19 @@ class OpenAiApi(private val client: HttpClient) {
             put("messages", JsonArray(listOf(
                 buildJsonObject {
                     put("role", "user")
-                    put("content", JsonArray(listOf(
-                        buildJsonObject {
+                    put("content", JsonArray(
+                        listOf(buildJsonObject {
                             put("type", "text")
                             put("text", prompt)
-                        },
-                        buildJsonObject {
-                            put("type", "image_url")
-                            put("image_url", buildJsonObject {
-                                put("url", JsonPrimitive("data:$imageMimeType;base64,$imageBase64"))
-                            })
+                        }) + imagesBase64.map { image ->
+                            buildJsonObject {
+                                put("type", "image_url")
+                                put("image_url", buildJsonObject {
+                                    put("url", JsonPrimitive("data:image/jpeg;base64,$image"))
+                                })
+                            }
                         }
-                    )))
+                    ))
                 }
             )))
             // Structured outputs: "json_schema" is accepted by both OpenAI and LM Studio (which rejects
@@ -90,6 +91,10 @@ private fun objectSchema(vararg props: Pair<String, kotlinx.serialization.json.J
 
 private val MEAL_ANALYSIS_SCHEMA = objectSchema(
     "dish_name" to stringProp(),
+    "dishes" to buildJsonObject {
+        put("type", "array")
+        put("items", objectSchema("name" to stringProp(), "carbohydrates" to numberProp()))
+    },
     "ingredients" to buildJsonObject {
         put("type", "array")
         put("items", objectSchema("name" to stringProp(), "quantity" to stringProp()))

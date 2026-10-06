@@ -7,6 +7,6 @@ import uk.scimone.diafit.core.domain.repository.MealAnalysisRepository
 class AnalyzeMealUseCase(
     private val repository: MealAnalysisRepository
 ) {
-    suspend operator fun invoke(imageUri: Uri): Result<MealAnalysisResult> =
-        repository.analyzeMealPhoto(imageUri)
+    suspend operator fun invoke(imageUris: List<Uri>): Result<MealAnalysisResult> =
+        repository.analyzeMealPhotos(imageUris)
 }

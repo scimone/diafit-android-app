@@ -2,6 +2,9 @@ package uk.scimone.diafit.journal.presentation.detail
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -9,7 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -21,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
@@ -35,8 +41,9 @@ import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.InRange
 
 /**
- * Full-page view of one meal: what it was, what it did to glucose, and the controls to edit or delete it.
- * [onDeleted] is called after the soft delete so the host can offer an Undo.
+ * Full-page view of one meal (all of its courses): what it was, the insulin given for it, what it did
+ * to glucose, and the controls to edit, extend or delete it. [onDeleted] gets the soft-deleted course
+ * ids so the host can offer an Undo.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +52,8 @@ fun MealDetailScreen(
     mealId: Int,
     onBack: () -> Unit,
     onEdit: (Int) -> Unit,
-    onDeleted: (Int) -> Unit,
+    onAddCourse: (Int) -> Unit,
+    onDeleted: (List<Int>) -> Unit,
     viewModel: MealDetailViewModel = koinViewModel(key = "meal-detail-$mealId", parameters = { parametersOf(userId, mealId) })
 ) {
     val state by viewModel.state.collectAsState()
@@ -62,8 +70,11 @@ fun MealDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
-                    IconButton(onClick = { onEdit(mealId) }, enabled = state.meal != null) {
-                        Icon(Icons.Filled.Edit, "Edit meal")
+                    // A multi-course meal is edited course by course, from its timeline.
+                    if (!state.isMultiCourse) {
+                        IconButton(onClick = { onEdit(mealId) }, enabled = state.meal != null) {
+                            Icon(Icons.Filled.Edit, "Edit meal")
+                        }
                     }
                 }
             )
@@ -84,10 +95,24 @@ fun MealDetailScreen(
         ) {
             Hero(meal)
             TitleBlock(meal)
+            if (!meal.isImported) {
+                FilledTonalButton(onClick = { onAddCourse(mealId) }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (state.isMultiCourse) "Add another course" else "Add a course (dessert, next plate…)")
+                }
+            }
+            if (state.isMultiCourse || state.boluses.isNotEmpty()) {
+                MealTimelineCard(state, onEditCourse = onEdit)
+            }
             GlucoseResponseCard(meal, state)
-            NutritionCard(meal)
-            AbsorptionCard(meal)
-            meal.reasoning?.takeIf { it.isNotBlank() }?.let { AiNotesCard(it) }
+            NutritionCard(meal, wholeMeal = state.isMultiCourse)
+            if (!state.isMultiCourse) {
+                AbsorptionCard(meal)
+                meal.reasoning?.takeIf { it.isNotBlank() }?.let { AiNotesCard(it) }
+            } else {
+                state.courses.filter { !it.reasoning.isNullOrBlank() }.takeIf { it.isNotEmpty() }?.let { CourseNotesCard(it) }
+            }
 
             OutlinedButton(
                 onClick = { confirmDelete = true },
@@ -97,7 +122,7 @@ fun MealDetailScreen(
             ) {
                 Icon(Icons.Filled.DeleteOutline, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Delete meal")
+                Text(if (state.isMultiCourse) "Delete whole meal" else "Delete meal")
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -107,12 +132,17 @@ fun MealDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete this meal?") },
-            text = { Text("It will be removed from your journal and the Home graphs. You can undo right after.") },
+            text = {
+                Text(
+                    (if (state.isMultiCourse) "All ${state.courses.size} courses will be removed" else "It will be removed") +
+                        " from your journal and the Home graphs. You can undo right after."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirmDelete = false
-                        viewModel.delete { onDeleted(mealId) }
+                        viewModel.delete(onDeleted)
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Delete") }
@@ -125,13 +155,32 @@ fun MealDetailScreen(
 @Composable
 private fun Hero(meal: MealEntityUi) {
     val shape = RoundedCornerShape(28.dp)
-    if (meal.imageUri != null) {
-        AsyncImage(
-            model = meal.imageUri,
-            contentDescription = meal.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(shape)
-        )
+    val photos = meal.photoUris
+    if (photos.isNotEmpty()) {
+        // Every photo of every course, swipeable; one photo looks exactly like before.
+        val pagerState = rememberPagerState { photos.size }
+        Box {
+            HorizontalPager(state = pagerState, pageSpacing = 8.dp) { page ->
+                AsyncImage(
+                    model = photos[page],
+                    contentDescription = meal.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(shape)
+                )
+            }
+            if (photos.size > 1) {
+                Text(
+                    "${pagerState.currentPage + 1} / ${photos.size}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                )
+            }
+        }
     } else {
         Box(
             Modifier
@@ -146,13 +195,155 @@ private fun Hero(meal: MealEntityUi) {
     }
 }
 
+/**
+ * Courses and insulin in the order they happened, with running totals. This is what keeps a long
+ * meal with many small boluses readable: each dose sits next to the plate it was for.
+ */
+@Composable
+private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit) {
+    val fmt = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
+    val items = remember(state.courses, state.boluses) {
+        (state.courses.map { TimelineItem.Course(it) } + state.boluses.map { TimelineItem.Dose(it) }).sortedBy { it.time }
+    }
+    val carbs = state.courses.sumOf { it.carbohydrates }
+    val insulin = state.totalInsulin
+    CardSection(
+        title = if (state.isMultiCourse) "Courses & insulin" else "Insulin for this meal",
+        subtitle = buildString {
+            append("$carbs g carbs · ${formatUnits(insulin)} U insulin")
+            if (insulin > 0.05 && carbs > 0) append(" · ${"%.0f".format(carbs / insulin)} g per U")
+        }
+    ) {
+        var runningCarbs = 0
+        var runningUnits = 0.0
+        var courseNo = 0
+        Column {
+            items.forEachIndexed { index, item ->
+                when (item) {
+                    is TimelineItem.Course -> {
+                        runningCarbs += item.meal.carbohydrates
+                        courseNo++
+                        CourseRow(
+                            meal = item.meal,
+                            label = if (state.isMultiCourse) "Course $courseNo" else null,
+                            time = fmt.format(java.util.Date(item.time)),
+                            running = if (state.isMultiCourse && courseNo > 1) "$runningCarbs g total" else null,
+                            isLast = index == items.lastIndex,
+                            onClick = if (state.isMultiCourse && !item.meal.isImported) ({ onEditCourse(item.meal.id) }) else null
+                        )
+                    }
+                    is TimelineItem.Dose -> {
+                        runningUnits += item.bolus.value
+                        DoseRow(
+                            units = item.bolus.value.toDouble(),
+                            isSmb = item.bolus.isSmb,
+                            time = fmt.format(java.util.Date(item.time)),
+                            running = "${formatUnits(runningUnits)} U total",
+                            isLast = index == items.lastIndex
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private sealed interface TimelineItem {
+    val time: Long
+    data class Course(val meal: MealEntityUi) : TimelineItem { override val time get() = meal.mealTimeUtc }
+    data class Dose(val bolus: uk.scimone.diafit.core.domain.model.BolusEntity) : TimelineItem { override val time get() = bolus.timestampUtc }
+}
+
+private fun formatUnits(units: Double): String {
+    val r = Math.round(units * 10) / 10.0
+    return if (r % 1.0 == 0.0) r.toInt().toString() else r.toString()
+}
+
+/** Left rail: a dot per item joined by a line, so the list reads as a timeline. */
+@Composable
+private fun TimelineRail(color: Color, isLast: Boolean, dotSize: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
+    val railColor = MaterialTheme.colorScheme.outlineVariant
+    Box(Modifier.width(20.dp).height(height), contentAlignment = Alignment.TopCenter) {
+        if (!isLast) Box(Modifier.padding(top = height / 2).width(2.dp).fillMaxHeight().background(railColor))
+        Box(Modifier.padding(top = height / 2 - dotSize / 2).size(dotSize).background(color, CircleShape))
+    }
+}
+
+@Composable
+private fun CourseRow(meal: MealEntityUi, label: String?, time: String, running: String?, isLast: Boolean, onClick: (() -> Unit)?) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TimelineRail(Carbs, isLast, 12.dp, 64.dp)
+        Spacer(Modifier.width(6.dp))
+        MealAvatar(meal, size = 48.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                listOfNotNull(time, label).joinToString(" · "),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(meal.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (meal.photoUris.size > 1) {
+                Text("${meal.photoUris.size} photos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            CarbPill(meal.carbohydrates)
+            running?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (onClick != null) {
+            Icon(Icons.Filled.ChevronRight, "Edit course", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun DoseRow(units: Double, isSmb: Boolean, time: String, running: String, isLast: Boolean) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TimelineRail(Bolus, isLast, 8.dp, 34.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(time, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(48.dp))
+        Text(
+            "${formatUnits(units)} U" + if (isSmb) " · SMB" else " bolus",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = Bolus,
+            modifier = Modifier.weight(1f)
+        )
+        Text(running, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(24.dp))
+    }
+}
+
+@Composable
+private fun CourseNotesCard(courses: List<MealEntityUi>) {
+    CardSection("AI estimates") {
+        courses.forEach { course ->
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${course.timeFormatted} · ${course.title}", style = MaterialTheme.typography.titleSmall)
+                Text(course.reasoning.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
 
 @Composable
 private fun TitleBlock(meal: MealEntityUi) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(meal.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            InfoChip(meal.mealType.type, painterResource(meal.mealType.iconRes), meal.mealType.accent)
+            InfoChip(
+                if (meal.courseCount > 1) "${meal.mealType.type} · ${meal.courseCount} courses" else meal.mealType.type,
+                painterResource(meal.mealType.iconRes), meal.mealType.accent
+            )
             Text(
                 "${friendlyDateString(meal.mealTimeUtc)}, ${meal.timeFormatted}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -201,11 +392,12 @@ private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: 
 @Composable
 private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
     val response = state.response
-    val effectEnd = meal.mealTimeUtc + meal.impactType.durationMinutes * 60_000L
+    val effectEnd = state.effectEndUtc
     val stillAbsorbing = System.currentTimeMillis() < effectEnd
     CardSection(
         title = "Glucose response",
-        subtitle = "mg/dL · ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h"
+        subtitle = if (state.isMultiCourse) "mg/dL · from the first course until the last one is absorbed"
+        else "mg/dL · ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h"
     ) {
         if (response == null) {
             Text("Couldn't load glucose data.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -216,7 +408,8 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
             eventTimeUtc = meal.mealTimeUtc,
             effectEndUtc = effectEnd,
             target = state.target,
-            eventColor = Carbs
+            eventColor = Carbs,
+            laterEventTimesUtc = state.courses.drop(1).map { it.mealTimeUtc }
         )
         Legend()
         if (response.readings.isNotEmpty()) {
@@ -295,8 +488,8 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
 }
 
 @Composable
-private fun NutritionCard(meal: MealEntityUi) {
-    CardSection("Nutrition") {
+private fun NutritionCard(meal: MealEntityUi, wholeMeal: Boolean) {
+    CardSection("Nutrition", subtitle = if (wholeMeal) "All courses together" else null) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MacroTile("Carbs", meal.carbohydrates.toString(), "g", Carbs, Modifier.weight(1f))
             MacroTile("Protein", meal.proteins?.toString(), "g", null, Modifier.weight(1f))

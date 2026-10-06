@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.toSittings
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.CalculateMealGlucoseImpactUseCase
 import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
@@ -59,10 +60,11 @@ class JournalViewModel(
                 }
                 .collect { meals ->
 
-                    val mealUiList = meals.map { meal ->
+                    // One entry per meal: the courses of a long dinner are shown (and opened) together.
+                    val mealUiList = meals.toSittings().map { sitting ->
                         viewModelScope.async(Dispatchers.IO) {
                             val impact = try {
-                                val result = calculateMealGlucoseImpactUseCase(meal, getTargetRangeUseCase().toCore())
+                                val result = calculateMealGlucoseImpactUseCase(sitting, getTargetRangeUseCase().toCore())
                                 GlucoseImpact(
                                     timeInRange = result.timeInRange,
                                     timeAboveRange = result.timeAboveRange,
@@ -72,7 +74,7 @@ class JournalViewModel(
                                 Log.e("JournalViewModel", "Error calculating glucose impact", e)
                                 GlucoseImpact(0.0, 0.0, 0.0)
                             }
-                            meal.toUi(context, impact)
+                            sitting.toUi(context, impact)
                         }
                     }.awaitAll()
 

@@ -56,6 +56,32 @@ class MealRepositoryImpl(
         }
     }
 
+    override suspend fun setMealsValid(ids: List<Int>, isValid: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.setValid(ids, isValid)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set meals $ids valid=$isValid", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getMealsBySitting(sittingId: String): List<MealEntity> =
+        withContext(Dispatchers.IO) { mealDao.getMealsBySitting(sittingId) }
+
+    override suspend fun setSittingId(mealId: Int, sittingId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            mealDao.setSittingId(mealId, sittingId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set sitting of meal $mealId", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity? =
+        withContext(Dispatchers.IO) { mealDao.getLatestLoggedMeal(userId, now) }
+
     override suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean =
         withContext(Dispatchers.IO) { mealDao.countImportedAt(mealTimeUtc, carbohydrates) > 0 }
 

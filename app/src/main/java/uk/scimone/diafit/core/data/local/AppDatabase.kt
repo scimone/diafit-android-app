@@ -3,6 +3,7 @@ package uk.scimone.diafit.core.data.local
 import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import uk.scimone.diafit.core.domain.model.BolusEntity
@@ -11,7 +12,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 
 @Database(
     entities = [MealEntity::class, CgmEntity::class, BolusEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -24,6 +25,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 //        AutoMigration(from = 10, to = 11)
 //    ]
 )
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mealDao(): MealDao
     abstract fun cgmDao(): CgmDao
@@ -35,6 +37,15 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE MealEntity ADD COLUMN sourceId TEXT"
                 )
+            }
+        }
+
+        /** Courses: meals sharing a sittingId form one extended meal; extra photos per course. */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN sittingId TEXT")
+                db.execSQL("ALTER TABLE MealEntity ADD COLUMN extraImageIds TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_MealEntity_sittingId ON MealEntity (sittingId)")
             }
         }
     }

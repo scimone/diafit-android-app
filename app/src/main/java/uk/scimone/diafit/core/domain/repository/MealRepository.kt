@@ -1,7 +1,6 @@
 package uk.scimone.diafit.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
-import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 
 interface MealRepository {
@@ -16,6 +15,16 @@ interface MealRepository {
     suspend fun setMealValid(id: Int, isValid: Boolean): Result<Unit>
 
     suspend fun updateMealImage(id: Int, imageId: String): Result<Unit>
+
+    /** Soft delete / restore several courses at once (a whole meal). */
+    suspend fun setMealsValid(ids: List<Int>, isValid: Boolean): Result<Unit>
+
+    /** The valid courses of one meal, oldest first. */
+    suspend fun getMealsBySitting(sittingId: String): List<MealEntity>
+
+    suspend fun setSittingId(mealId: Int, sittingId: String): Result<Unit>
+
+    suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity?
 
     suspend fun existsBySourceId(sourceId: String): Boolean
     suspend fun existsImportedAt(mealTimeUtc: Long, carbohydrates: Int): Boolean

@@ -22,6 +22,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import uk.scimone.diafit.addmeal.presentation.MealEditorScreen
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.journal.presentation.components.NewEntrySheet
+import uk.scimone.diafit.journal.presentation.components.OpenMealSummary
+import uk.scimone.diafit.core.domain.repository.FileStorageRepository
+import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
 import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -57,6 +60,8 @@ class MainActivity : ComponentActivity() {
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
     private val cgmServiceManager: CgmServiceManager by inject()
     private val setMealValid: SetMealValidUseCase by inject()
+    private val getOpenSitting: GetOpenSittingUseCase by inject()
+    private val fileStorage: FileStorageRepository by inject()
     private val settingsViewModel: SettingsViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel { parametersOf(userId) }
     private val userId = 1 // replace with real user ID from your auth system
@@ -106,18 +111,20 @@ class MainActivity : ComponentActivity() {
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
 
-                // Soft-deleted entries can be brought back from the snackbar.
-                val onMealDeleted: (Int) -> Unit = { mealId ->
+                // Soft-deleted entries (a course, or every course of a meal) can be brought back from the snackbar.
+                val onMealsDeleted: (List<Int>, String) -> Unit = { mealIds, message ->
                     overlays.clear()
                     scope.launch {
                         val result = snackbarHostState.showSnackbar(
-                            message = "Meal deleted",
+                            message = message,
                             actionLabel = "Undo",
                             duration = SnackbarDuration.Long
                         )
-                        if (result == SnackbarResult.ActionPerformed) setMealValid(mealId, true)
+                        if (result == SnackbarResult.ActionPerformed) setMealValid(mealIds, true)
                     }
                 }
+                val onMealDeleted: (Int) -> Unit = { mealId -> onMealsDeleted(listOf(mealId), "Deleted") }
+                val addCourse: (Int) -> Unit = { mealId -> overlays.add(Overlay.MealEditor(mealId = null, addToMealId = mealId)) }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -176,7 +183,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         when (selectedTab) {
-                            0 -> HomeScreen(userId = userId)
+                            0 -> HomeScreen(userId = userId, onAddCourse = addCourse)
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(
                                 userId = userId,
@@ -199,11 +206,31 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (showNewEntrySheet) {
+                    // A meal still in progress is offered first, so the next plate becomes a course of it.
+                    val openMeal by produceState<OpenMealSummary?>(null) {
+                        value = runCatching { getOpenSitting(userId) }.getOrNull()?.let { sitting ->
+                            OpenMealSummary(
+                                anchorMealId = sitting.courses.last().id,
+                                title = sitting.title,
+                                courseCount = sitting.courses.size,
+                                totalCarbs = sitting.totalCarbs,
+                                startTime = sitting.startTime,
+                                coverPhoto = sitting.courses.firstNotNullOfOrNull { c ->
+                                    c.photoIds.firstOrNull()?.let(fileStorage::getFileProviderUri)
+                                }
+                            )
+                        }
+                    }
                     NewEntrySheet(
                         onDismiss = { showNewEntrySheet = false },
                         onPick = { kind ->
                             showNewEntrySheet = false
                             if (kind == JournalEntryKind.MEAL) overlays.add(Overlay.MealEditor(null))
+                        },
+                        openMeal = openMeal,
+                        onAddCourse = { mealId ->
+                            showNewEntrySheet = false
+                            addCourse(mealId)
                         }
                     )
                 }
@@ -221,17 +248,23 @@ class MainActivity : ComponentActivity() {
                                     mealId = overlay.mealId,
                                     onBack = { overlays.remove(overlay) },
                                     onEdit = { overlays.add(Overlay.MealEditor(it)) },
-                                    onDeleted = onMealDeleted
+                                    onAddCourse = addCourse,
+                                    onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
                                 )
                                 is Overlay.MealEditor -> MealEditorScreen(
                                     userId = userId,
                                     mealId = overlay.mealId,
+                                    addToMealId = overlay.addToMealId,
                                     onClose = { overlays.remove(overlay) },
-                                    onSaved = { wasNew ->
+                                    onSaved = { result ->
                                         overlays.remove(overlay)
-                                        if (wasNew) {
-                                            selectedTab = 2
-                                            scope.launch { snackbarHostState.showSnackbar("Meal added") }
+                                        when {
+                                            // Stay where the user is: they'll likely add more plates.
+                                            result.addedCourse -> scope.launch { snackbarHostState.showSnackbar("Course added to the meal") }
+                                            result.wasNew -> {
+                                                selectedTab = 2
+                                                scope.launch { snackbarHostState.showSnackbar("Meal added") }
+                                            }
                                         }
                                     },
                                     onDeleted = onMealDeleted
@@ -262,8 +295,8 @@ class MainActivity : ComponentActivity() {
 /** A full-screen page shown above the tabs. */
 private sealed interface Overlay {
     data class MealDetail(val mealId: Int) : Overlay
-    /** [mealId] == null creates a new meal. */
-    data class MealEditor(val mealId: Int?) : Overlay
+    /** [mealId] == null creates a new meal, or a new course of [addToMealId]'s meal when that is set. */
+    data class MealEditor(val mealId: Int?, val addToMealId: Int? = null) : Overlay
 }
 
 @Composable

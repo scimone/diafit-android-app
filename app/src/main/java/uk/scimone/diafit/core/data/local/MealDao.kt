@@ -42,6 +42,19 @@ interface MealDao {
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId IS NOT NULL AND mealTimeUtc = :mealTimeUtc AND carbohydrates = :carbohydrates")
     suspend fun countImportedAt(mealTimeUtc: Long, carbohydrates: Int): Int
 
+    @Query("SELECT * FROM MealEntity WHERE sittingId = :sittingId AND isValid = 1 ORDER BY mealTimeUtc ASC")
+    suspend fun getMealsBySitting(sittingId: String): List<MealEntity>
+
+    @Query("UPDATE MealEntity SET sittingId = :sittingId WHERE id = :mealId")
+    suspend fun setSittingId(mealId: Int, sittingId: String)
+
+    @Query("UPDATE MealEntity SET isValid = :isValid WHERE id IN (:mealIds)")
+    suspend fun setValid(mealIds: List<Int>, isValid: Boolean)
+
+    /** Newest logged (not imported) course at or before [now]. */
+    @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND sourceId IS NULL AND mealTimeUtc <= :now ORDER BY mealTimeUtc DESC LIMIT 1")
+    suspend fun getLatestLoggedMeal(userId: Int, now: Long): MealEntity?
+
     @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId AND isValid = 1 ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
 }
