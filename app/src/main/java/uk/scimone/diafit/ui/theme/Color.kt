@@ -78,3 +78,8 @@ val Activity = Color(0xFFAB47BC)     // Softened vibrant pink-purple (modern mag
 // Additional Colors
 val Black = Color(0xFF000000)
 val White = Color(0xFFFFFFFF)
+
+/** Shared fill of the glucose target-range band on every chart (Home and History); kept very subtle. */
+@androidx.compose.runtime.Composable
+fun targetRangeBandColor(): Color =
+    androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)

@@ -19,6 +19,7 @@ import uk.scimone.diafit.history.presentation.model.DayHistoryUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
+import uk.scimone.diafit.ui.theme.targetRangeBandColor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -35,7 +36,7 @@ fun DayLineChart(
 ) {
     val labelStyle = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
     val textMeasurer = rememberTextMeasurer()
-    val targetBandColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val targetBandColor = targetRangeBandColor()
     val yMax = max(Y_MAX_FLOOR, (day.glucose.maxOfOrNull { it.mgdl } ?: 0) + 10f)
 
     Canvas(modifier.fillMaxWidth().height(180.dp).background(stripBackground())) {

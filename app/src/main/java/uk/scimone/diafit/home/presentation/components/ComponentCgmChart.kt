@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import uk.scimone.diafit.ui.theme.targetRangeBandColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,6 +104,7 @@ fun ComponentCgmChart(
 
     if (lineColors.isNotEmpty()) {
         val onSurface = MaterialTheme.colorScheme.onSurface
+        val targetBand = targetRangeBandColor()
         val onBackground = MaterialTheme.colorScheme.onBackground
         val chart = rememberCartesianChart(
             rememberLineCartesianLayer(
@@ -146,7 +148,7 @@ fun ComponentCgmChart(
                     upper = upperBound.toDouble(),
                     minY = minY.toDouble(),
                     maxY = maxY.toDouble(),
-                    color = onSurface.copy(alpha = 0.12f)
+                    color = targetBand
                 ),
                 NowDecoration(
                     nowX = realTime.toDouble(),
