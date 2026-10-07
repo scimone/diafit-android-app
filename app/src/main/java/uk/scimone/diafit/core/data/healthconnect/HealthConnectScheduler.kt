@@ -26,7 +26,10 @@ class HealthConnectSyncWorker(
 
     override suspend fun doWork(): Result {
         if (!settings.isHealthConnectEnabled()) return Result.success()
-        val backfill = inputData.getBoolean(KEY_BACKFILL, false)
+        // A routine run also backfills when no 14-day import has completed yet (the connect-time one can be
+        // lost, e.g. the app was killed): the summary of the last successful import records its length.
+        val done = HealthConnectImportSummary.decode(settings.getHealthConnectSummary())
+        val backfill = inputData.getBoolean(KEY_BACKFILL, false) || done == null || done.days < HealthConnectSyncer.BACKFILL_DAYS
         Log.d(TAG, "Health Connect import (backfill=$backfill)")
         syncer.syncActivity(if (backfill) HealthConnectSyncer.BACKFILL_DAYS else HealthConnectSyncer.RECENT_DAYS)
         return Result.success()

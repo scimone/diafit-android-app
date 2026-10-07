@@ -140,6 +140,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 ActivityDisplay(
                     modifier = Modifier.weight(ActivityPanelWeight),
                     data = state.activity,
+                    connected = state.activityConnected,
                     window = window,
                     geometry = geometry
                 )

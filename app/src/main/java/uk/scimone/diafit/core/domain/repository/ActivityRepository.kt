@@ -2,6 +2,7 @@ package uk.scimone.diafit.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.ActivityOverview
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
@@ -13,6 +14,9 @@ interface ActivityRepository {
 
     /** Only sleep and exercise sessions (no heart rate or steps), cheap enough for long ranges. */
     fun observeSessionsSince(start: Long, userId: Int): Flow<ActivityData>
+
+    /** Sleep, workouts and elevated-activity ranges (see [uk.scimone.diafit.core.domain.model.ElevatedActivity]) from [start] on. */
+    fun observeOverviewSince(start: Long, userId: Int): Flow<ActivityOverview>
 
     suspend fun getSessionsBetween(start: Long, end: Long, userId: Int): ActivityData
 

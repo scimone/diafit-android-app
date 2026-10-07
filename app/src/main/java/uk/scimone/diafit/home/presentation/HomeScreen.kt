@@ -256,6 +256,7 @@ fun HomeScreen(
                                 ActivityDisplay(
                                     modifier = Modifier.weight(ActivityPanelWeight),
                                     data = state.activity,
+                                    connected = state.activityConnected,
                                     window = window,
                                     geometry = geometry
                                 )
@@ -567,6 +568,7 @@ internal fun PlaceholderPanel(title: String, modifier: Modifier = Modifier) {
 internal fun ActivityDisplay(
     modifier: Modifier,
     data: ActivityData,
+    connected: Boolean,
     window: ChartTimeWindow,
     geometry: State<ChartGeometry?>
 ) {
@@ -575,7 +577,7 @@ internal fun ActivityDisplay(
         PanelTitle("Activity")
         if (data.isEmpty) {
             Text(
-                "No activity data yet · connect Health Connect in Settings",
+                if (connected) "No activity data in this period" else "No activity data · connect Health Connect in Settings",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.Center)
@@ -585,7 +587,7 @@ internal fun ActivityDisplay(
 }
 
 /** The activity panel is a little taller than the others: a compact heart-rate plot plus the sleep/exercise lane. */
-internal const val ActivityPanelWeight = 1.15f
+internal const val ActivityPanelWeight = 1.0f
 
 @Composable
 fun CgmChartDisplay(

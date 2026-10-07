@@ -12,6 +12,7 @@ val homeModule = module {
             getAllCgmSinceUseCase = get(),
             getTargetRangeUseCase = get(),
             observeActivitySinceUseCase = get(),
+            settingsRepository = get(),
             getAllMealsSinceUseCase = get(),
             getAllBolusSinceUseCase = get(),
             application = get(),

@@ -1,6 +1,7 @@
 package uk.scimone.diafit.settings.presentation
 
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
 import uk.scimone.diafit.settings.domain.model.AiConfig
 import uk.scimone.diafit.settings.domain.model.BolusSource
@@ -31,6 +32,8 @@ data class HealthConnectUiState(
     val glucoseGranted: Boolean = false,
     val backgroundGranted: Boolean = false,
     val lastSync: Long? = null,
+    /** What the last import found, per data type. */
+    val summary: HealthConnectImportSummary? = null,
     val sync: HealthConnectSyncStatus = HealthConnectSyncStatus.Idle
 ) {
     /** Importing activity data: switched on and Health Connect still lets us read it. */

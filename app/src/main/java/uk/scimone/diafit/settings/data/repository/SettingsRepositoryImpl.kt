@@ -92,6 +92,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         prefs.edit().putLong("health_connect_last_sync", time ?: 0L).apply()
     }
 
+    override suspend fun getHealthConnectSummary(): String? = prefs.getString("health_connect_summary", null)
+
+    override suspend fun setHealthConnectSummary(summary: String?) {
+        prefs.edit().putString("health_connect_summary", summary).apply()
+    }
+
     private companion object {
         const val DEFAULT_AI_BASE_URL = "https://api.openai.com/v1"
     }

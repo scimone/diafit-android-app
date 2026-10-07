@@ -49,6 +49,6 @@ fun DayTrackRow(
         Spacer(Modifier.height(1.dp))
         TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
         Spacer(Modifier.height(1.dp))
-        ActivityStrip(day.activity, day.dayStartUtc, day.dayEndUtc)
+        ActivityStrip(day.activity, day.elevatedActivity, day.dayStartUtc, day.dayEndUtc)
     }
 }

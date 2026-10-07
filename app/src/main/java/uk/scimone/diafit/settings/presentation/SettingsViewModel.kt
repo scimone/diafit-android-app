@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectManager
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectPermissions
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler
@@ -84,7 +85,8 @@ class SettingsViewModel(
                         activityGranted = HealthConnectPermissions.activity.all { p -> p in granted },
                         glucoseGranted = HealthConnectPermissions.glucose.all { p -> p in granted },
                         backgroundGranted = HealthConnectPermissions.BACKGROUND in granted,
-                        lastSync = lastSync
+                        lastSync = lastSync,
+                        summary = HealthConnectImportSummary.decode(settingsRepository.getHealthConnectSummary())
                     )
                 )
             }

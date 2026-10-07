@@ -156,3 +156,6 @@ data class ActivityDayStats(
         }
     }
 }
+
+/** What the History overview draws per range: sleep and logged workouts, plus elevated-activity ranges found in heart rate and steps. */
+data class ActivityOverview(val sessions: ActivityData = ActivityData(), val elevated: List<ActivitySpan> = emptyList())

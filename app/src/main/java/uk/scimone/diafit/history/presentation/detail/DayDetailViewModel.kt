@@ -44,6 +44,7 @@ import uk.scimone.diafit.home.presentation.model.MealEntityUi as TimelineMeal
 class DayDetailViewModel(
     private val getDayDetail: GetDayDetailUseCase,
     private val getTargetRange: GetTargetRangeUseCase,
+    private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository,
     private val context: Context,
     private val userId: Int,
     epochDay: Long
@@ -64,8 +65,9 @@ class DayDetailViewModel(
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
             val target = getTargetRange().toCore()
+            val connected = settingsRepository.isHealthConnectEnabled()
             getDayDetail(userId, date)
-                .map { it.toState(target) }
+                .map { it.toState(target).copy(activityConnected = connected) }
                 .flowOn(Dispatchers.IO)
                 .catch { e ->
                     Log.e(TAG, "Failed to load $date", e)
@@ -133,6 +135,7 @@ data class DayDetailState(
     /** Charts tab: heart rate, steps, sleep and exercise. */
     val activity: ActivityData = ActivityData(),
     val activityStats: ActivityDayStats? = null,
+    val activityConnected: Boolean = false,
     /** Charts tab: courses for the meal photo strip under the panels. */
     val timelineMeals: List<TimelineMeal> = emptyList(),
     /** Journal tab: meal and low/high cards, oldest first. */

@@ -27,4 +27,8 @@ interface SettingsRepository {
     /** Epoch ms of the last successful Health Connect import, or null if there was none. */
     suspend fun getHealthConnectLastSync(): Long?
     suspend fun setHealthConnectLastSync(time: Long?)
+
+    /** What the last Health Connect import found, encoded by the importer; null if none ran yet. */
+    suspend fun getHealthConnectSummary(): String?
+    suspend fun setHealthConnectSummary(summary: String?)
 }

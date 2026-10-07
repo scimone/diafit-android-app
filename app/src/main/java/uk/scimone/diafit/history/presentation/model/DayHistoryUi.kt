@@ -1,6 +1,7 @@
 package uk.scimone.diafit.history.presentation.model
 
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.ActivitySpan
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
@@ -28,6 +29,7 @@ data class DayHistoryUi(
     val insulin: List<TreatmentCluster>,
     /** Sleep and exercise overlapping the day. */
     val activity: ActivityData,
+    val elevatedActivity: List<ActivitySpan>,
     /** Null when the day has no readings. */
     val stats: DayGlucoseStats?
 ) {
@@ -53,6 +55,7 @@ fun DayHistory.toUi(
         carbs = cluster(meals.map { TreatmentEvent(it.mealTimeUtc, it.carbohydrates.toFloat()) }),
         insulin = cluster(boluses.map { TreatmentEvent(it.timestampUtc, it.value) }),
         activity = activity,
+        elevatedActivity = elevatedActivity,
         stats = DayGlucoseStats.from(
             readings.sortedBy { it.timestamp }.map { GlucoseSample(it.timestamp, it.valueMgdl) },
             GlucoseThresholds.from(target)

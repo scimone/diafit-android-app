@@ -29,7 +29,7 @@ class GetDailyHistoryUseCase(
             getAllCgmSince(start, userId),
             getAllBolusSince(start, userId),
             getAllMealsSince(start, userId),
-            activityRepository.observeSessionsSince(start, userId)
+            activityRepository.observeOverviewSince(start, userId)
         ) { cgm, boluses, meals, activity ->
             val cgmByDay = cgm.groupBy { dayOf(it.timestamp) }
             val bolusByDay = boluses.groupBy { dayOf(it.timestampUtc) }
@@ -45,9 +45,10 @@ class GetDailyHistoryUseCase(
                         boluses = bolusByDay[date].orEmpty(),
                         meals = mealsByDay[date].orEmpty(),
                         activity = ActivityData(
-                            sleep = activity.sleep.filter { it.sessionEndUtc > dayStart && it.sessionStartUtc < dayEnd },
-                            exercise = activity.exercise.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
-                        )
+                            sleep = activity.sessions.sleep.filter { it.sessionEndUtc > dayStart && it.sessionStartUtc < dayEnd },
+                            exercise = activity.sessions.exercise.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
+                        ),
+                        elevatedActivity = activity.elevated.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
                     )
                 }
         }

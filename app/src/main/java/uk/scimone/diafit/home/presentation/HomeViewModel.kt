@@ -36,6 +36,7 @@ class HomeViewModel(
     private val getAllBolusSinceUseCase: GetAllBolusSinceUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val observeActivitySinceUseCase: ObserveActivitySinceUseCase,
+    private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository,
     private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
     private val application: Application,
     private val mealRepository: MealRepository,
@@ -205,6 +206,8 @@ class HomeViewModel(
 
     private fun observeActivity(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
+            val connected = settingsRepository.isHealthConnectEnabled()
+            _state.update { it.copy(activityConnected = connected) }
             observeActivitySinceUseCase(nowMinus24h, userId)
                 .catch { e -> Log.e("HomeViewModel", "Failed to load activity data", e) }
                 .collect { activity -> _state.update { it.copy(activity = activity) } }

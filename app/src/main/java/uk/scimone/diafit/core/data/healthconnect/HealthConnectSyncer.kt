@@ -34,6 +34,19 @@ sealed interface HealthConnectSyncStatus {
     data class Failed(val message: String) : HealthConnectSyncStatus
 }
 
+/** How many records the last import found in Health Connect, per type (before de-duplication into rows). */
+data class HealthConnectImportSummary(val heartRate: Int, val steps: Int, val sleep: Int, val exercise: Int, val days: Int) {
+    fun encode() = "$heartRate,$steps,$sleep,$exercise,$days"
+    val nothingFound: Boolean get() = heartRate + steps + sleep + exercise == 0
+
+    companion object {
+        fun decode(text: String?): HealthConnectImportSummary? {
+            val p = text?.split(',')?.mapNotNull { it.toIntOrNull() } ?: return null
+            return if (p.size == 5) HealthConnectImportSummary(p[0], p[1], p[2], p[3], p[4]) else null
+        }
+    }
+}
+
 /**
  * Reads heart rate, steps, sleep, exercise (and blood glucose when it is the CGM source) from Health
  * Connect into Room. Every import re-reads a window of recent days and upserts by a natural key
@@ -57,6 +70,7 @@ class HealthConnectSyncer(
         runCatching {
             val granted = manager.grantedPermissions()
             val now = Instant.now()
+            var heartRate = 0; var steps = 0; var sleep = 0; var exercise = 0
             val dayChunks = (days downTo 1).map { daysAgo ->
                 val end = now.minus(Duration.ofDays(daysAgo - 1L))
                 end.minus(Duration.ofDays(1)) to end
@@ -64,12 +78,15 @@ class HealthConnectSyncer(
             dayChunks.forEachIndexed { i, (start, end) ->
                 _status.value = HealthConnectSyncStatus.Syncing(i / dayChunks.size.toFloat())
                 if (HealthConnectPermissions.activity.all { it in granted }) {
-                    readHeartRate(start, end)
-                    readSteps(start, end)
-                    readSleep(start, end)
-                    readExercise(start, end)
+                    heartRate += readHeartRate(start, end)
+                    steps += readSteps(start, end)
+                    sleep += readSleep(start, end)
+                    exercise += readExercise(start, end)
                 }
             }
+            val summary = HealthConnectImportSummary(heartRate, steps, sleep, exercise, days)
+            Log.i(TAG, "Imported ${days}d: $heartRate heart-rate samples, $steps step slots, $sleep sleep sessions, $exercise workouts")
+            settings.setHealthConnectSummary(summary.encode())
             settings.setHealthConnectLastSync(System.currentTimeMillis())
             _status.value = HealthConnectSyncStatus.Idle
         }.onFailure {
@@ -133,7 +150,7 @@ class HealthConnectSyncer(
         entities.size
     }
 
-    private suspend fun readHeartRate(start: Instant, end: Instant) {
+    private suspend fun readHeartRate(start: Instant, end: Instant): Int {
         val perMinute = HashMap<Long, MutableList<Long>>()
         var pageToken: String? = null
         do {
@@ -158,9 +175,10 @@ class HealthConnectSyncer(
             HeartRateEntity(userId = userId, timestamp = minute * 60_000L, bpm = bpms.average().roundToInt())
         }
         activityRepository.saveHeartRate(rows)
+        return perMinute.values.sumOf { it.size }
     }
 
-    private suspend fun readSteps(start: Instant, end: Instant) {
+    private suspend fun readSteps(start: Instant, end: Instant): Int {
         // Aggregating (rather than reading raw records) lets Health Connect drop the duplicates from
         // the phone and a watch counting the same walk.
         val bucketMs = StepsEntity.STEP_BUCKET_MS
@@ -177,9 +195,10 @@ class HealthConnectSyncer(
             if (count <= 0) null else StepsEntity(userId = userId, startUtc = group.startTime.toEpochMilli(), count = count.toInt())
         }
         activityRepository.saveSteps(rows)
+        return rows.size
     }
 
-    private suspend fun readSleep(start: Instant, end: Instant) {
+    private suspend fun readSleep(start: Instant, end: Instant): Int {
         val rows = mutableListOf<SleepStageEntity>()
         val sessionIds = mutableListOf<String>()
         var pageToken: String? = null
@@ -215,9 +234,10 @@ class HealthConnectSyncer(
             pageToken = response.pageToken
         } while (pageToken != null)
         if (sessionIds.isNotEmpty()) activityRepository.saveSleep(sessionIds, rows)
+        return sessionIds.size
     }
 
-    private suspend fun readExercise(start: Instant, end: Instant) {
+    private suspend fun readExercise(start: Instant, end: Instant): Int {
         val rows = mutableListOf<ExerciseEntity>()
         var pageToken: String? = null
         do {
@@ -242,6 +262,7 @@ class HealthConnectSyncer(
             pageToken = response.pageToken
         } while (pageToken != null)
         activityRepository.saveExercise(rows)
+        return rows.size
     }
 
     private fun exerciseName(type: Int): String =

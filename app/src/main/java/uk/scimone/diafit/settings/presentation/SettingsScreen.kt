@@ -296,7 +296,8 @@ private fun HealthConnectCard(
             OutlinedButton(onClick = onInstall) { Text(if (update) "Update Health Connect" else "Get Health Connect") }
         }
         HealthConnectAvailability.AVAILABLE -> {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf("Heart rate", "Steps", "Sleep", "Exercise").forEach {
                     AssistChip(
                         onClick = {},
@@ -345,6 +346,26 @@ private fun HealthConnectCard(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
+                    }
+                }
+                state.summary?.let { sum ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Found in Health Connect (last ${sum.days} days): ${"%,d".format(sum.heartRate)} heart-rate readings · ${"%,d".format(sum.steps)} step periods · ${sum.sleep} sleep sessions · ${sum.exercise} workouts",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val missing = listOfNotNull(
+                        "heart rate".takeIf { sum.heartRate == 0 }, "steps".takeIf { sum.steps == 0 },
+                        "sleep".takeIf { sum.sleep == 0 }, "workouts".takeIf { sum.exercise == 0 }
+                    )
+                    if (missing.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        // Red only when nothing at all came through; one missing type is often just "no such data" (no workouts logged).
+                        Text(
+                            "No ${missing.joinToString(", ")} data found. Diafit shows what other apps (your watch or fitness app) write to Health Connect; see Manage in Health Connect → Data and access.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (missing.size == 4) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
                 if (!state.backgroundGranted) {

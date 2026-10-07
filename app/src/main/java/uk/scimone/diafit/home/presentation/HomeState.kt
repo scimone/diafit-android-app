@@ -17,6 +17,8 @@ data class HomeState(
     val carbHistory: List<CarbsChartData> = emptyList(),
     val mealHistory: List<MealEntityUi> = emptyList(),
     val activity: ActivityData = ActivityData(),
+    /** Health Connect import switched on (decides which "no activity data" message to show). */
+    val activityConnected: Boolean = false,
     val targetRangeLower: Int = 70,
     val targetRangeUpper: Int = 180,
     val isLoading: Boolean = true,

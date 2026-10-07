@@ -26,6 +26,7 @@ val historyModule = module {
         DayDetailViewModel(
             getDayDetail = get(),
             getTargetRange = get(),
+            settingsRepository = get(),
             context = get(),
             userId = userId,
             epochDay = epochDay

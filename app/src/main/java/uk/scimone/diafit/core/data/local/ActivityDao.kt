@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
+import uk.scimone.diafit.core.domain.model.HeartRateBucket
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
@@ -60,4 +61,8 @@ interface ActivityDao {
 
     @Query("SELECT * FROM ExerciseEntity WHERE userId == :userId AND endUtc > :start AND startUtc < :end ORDER BY startUtc ASC")
     suspend fun getExerciseBetween(start: Long, end: Long, userId: Int): List<ExerciseEntity>
+
+    /** Heart rate averaged per 5-minute slot: compact enough to scan months of data for elevated activity. */
+    @Query("SELECT (timestamp / 300000) * 300000 AS startUtc, AVG(bpm) AS bpm FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start GROUP BY startUtc ORDER BY startUtc ASC")
+    fun observeHeartRateBucketsSince(start: Long, userId: Int): Flow<List<HeartRateBucket>>
 }
