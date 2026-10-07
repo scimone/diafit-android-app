@@ -9,6 +9,13 @@ class PumpEventRepositoryImpl(private val dao: PumpEventDao) : PumpEventReposito
 
     override fun observeLatest(eventType: String, limit: Int, userId: Int) = dao.observeLatest(eventType, limit, userId)
 
+    override suspend fun getById(id: Int) = dao.getById(id)
+
+    override suspend fun getBefore(eventType: String, before: Long, limit: Int, userId: Int) =
+        dao.getBefore(eventType, before, limit, userId)
+
+    override fun observeCount(userId: Int) = dao.observeCount(userId)
+
     override suspend fun setDeleted(id: Int, deleted: Boolean) = dao.setDeleted(id, deleted)
 
     override suspend fun getBetween(start: Long, end: Long, userId: Int): List<PumpEventEntity> =

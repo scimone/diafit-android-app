@@ -50,6 +50,7 @@ import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
+import uk.scimone.diafit.ui.theme.Device
 import uk.scimone.diafit.ui.theme.InRange
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -366,10 +367,10 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
     EntrySurface(onClick, modifier) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                Modifier.size(48.dp).background(Device.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Build, null, tint = Bolus, modifier = Modifier.size(24.dp))
+                Icon(Icons.Filled.Build, null, tint = Device, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

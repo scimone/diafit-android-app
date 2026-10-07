@@ -6,7 +6,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.scimone.diafit.core.domain.model.AapsProfile
+import uk.scimone.diafit.core.domain.model.ProfileStep
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
+import uk.scimone.diafit.core.domain.model.ScheduleChange
+import uk.scimone.diafit.core.domain.model.diffSchedules
+import uk.scimone.diafit.core.domain.model.effectiveProfileAt
 import uk.scimone.diafit.core.domain.model.summary
 import uk.scimone.diafit.core.domain.model.toProfileSwitch
 import uk.scimone.diafit.core.domain.model.valueAt
@@ -56,6 +60,32 @@ class AapsProfileTest {
     @Test fun otherEventsAreNotProfileSwitches() {
         assertNull(event(type = "Site Change", raw = "{}").toProfileSwitch())
         assertEquals("note", event(type = "Note", raw = "{}").copy(notes = "note").summary())
+    }
+
+    @Test fun diffFindsOnlyTheChangedStretchesAndMergesNeighbours() {
+        val before = listOf(ProfileStep(0, 1.0), ProfileStep(6 * 3600, 1.0), ProfileStep(12 * 3600, 2.0))
+        val after = listOf(ProfileStep(0, 1.0), ProfileStep(4 * 3600, 1.5), ProfileStep(8 * 3600, 1.5), ProfileStep(12 * 3600, 2.0))
+        val changes = diffSchedules(before, after)
+        assertEquals(1, changes.size)
+        assertEquals(4 * 3600, changes[0].startSeconds)
+        assertEquals(12 * 3600, changes[0].endSeconds)  // 4-8 h and 8-12 h merge into one stretch
+        assertEquals(1.0, changes[0].before, 0.0)
+        assertEquals(1.5, changes[0].after, 0.0)
+    }
+
+    @Test fun identicalSchedulesHaveNoDiff() {
+        val s = listOf(ProfileStep(0, 1.0), ProfileStep(43200, 2.0))
+        assertEquals(emptyList<ScheduleChange>(), diffSchedules(s, s))
+        assertEquals(emptyList<ScheduleChange>(), diffSchedules(emptyList(), s))
+    }
+
+    @Test fun endedTemporarySwitchCountsAsFullPercentageBefore() {
+        val raw = """{"percentage":90,"duration":10,"profile":"Anna (90%)","originalProfileName":"Anna","profileJson":${org.json.JSONObject.quote(profileJson)}}"""
+        val sw = event(raw = raw).toProfileSwitch()!!  // starts at 1_000_000, ends 10 min later
+        val during = sw.effectiveProfileAt(1_000_000L + 5 * 60_000L)!!
+        val after = sw.effectiveProfileAt(1_000_000L + 20 * 60_000L)!!
+        assertEquals(0.45, during.basal.first().value, 1e-9)
+        assertEquals(0.5, after.basal.first().value, 1e-9)
     }
 
     @Test fun garbageProfileIsNull() {

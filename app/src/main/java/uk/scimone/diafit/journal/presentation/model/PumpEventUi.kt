@@ -11,6 +11,9 @@ data class PumpEventUi(
     val notes: String?
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.DEVICE
+
+    /** Opens the before/after detail page instead of the plain dialog. */
+    val isProfileSwitch: Boolean get() = title.equals("Profile Switch", ignoreCase = true)
 }
 
 fun PumpEventEntity.toUi() = PumpEventUi(id, timestampUtc, eventType, summary())

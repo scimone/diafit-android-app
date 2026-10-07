@@ -9,6 +9,12 @@ interface PumpEventRepository {
 
     fun observeLatest(eventType: String, limit: Int, userId: Int): Flow<List<PumpEventEntity>>
 
+    suspend fun getById(id: Int): PumpEventEntity?
+
+    suspend fun getBefore(eventType: String, before: Long, limit: Int, userId: Int): List<PumpEventEntity>
+
+    fun observeCount(userId: Int): Flow<Int>
+
     suspend fun setDeleted(id: Int, deleted: Boolean)
 
     suspend fun getBetween(start: Long, end: Long, userId: Int): List<PumpEventEntity>

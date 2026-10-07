@@ -104,7 +104,10 @@ fun JournalScreen(
                                     JournalEntryCard(
                                         entry,
                                         uiState.target,
-                                        onClick = { if (entry is PumpEventUi) selectedEvent = entry else onOpenEntry(entry) }
+                                        onClick = {
+                                            // Profile switches get a before/after page; other device events a small dialog.
+                                            if (entry is PumpEventUi && !entry.isProfileSwitch) selectedEvent = entry else onOpenEntry(entry)
+                                        }
                                     )
                                     (entry as? MealEntityUi)?.possibleDuplicate?.let {
                                         PossibleDuplicateStrip(it, onMerge = { viewModel.mergeSuggestion(it.importedId) }, onKeepSeparate = { viewModel.keepSeparate(it.importedId) })

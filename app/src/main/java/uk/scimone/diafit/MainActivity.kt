@@ -29,6 +29,7 @@ import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.profile.presentation.ProfileScreen
+import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailScreen
 import androidx.compose.material.icons.filled.Person
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
@@ -211,7 +212,9 @@ class MainActivity : ComponentActivity() {
                                     when (entry) {
                                         is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
                                         // A low or high opens its day in History, where the trace around it is visible.
-                                        is BolusEntryUi, is PumpEventUi -> Unit
+                                        is BolusEntryUi -> Unit
+                                        // Only profile switches reach here; other device events open a dialog in the Journal.
+                                        is PumpEventUi -> overlays.add(Overlay.ProfileSwitchDetail(entry.id))
                                         is GlucoseEpisodeUi -> overlays.add(
                                             Overlay.DayDetail(
                                                 java.time.Instant.ofEpochMilli(entry.timeUtc)
@@ -266,7 +269,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.ProfileSwitchDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -280,6 +283,12 @@ class MainActivity : ComponentActivity() {
                                     onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
                                 )
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
+                                is Overlay.ProfileSwitchDetail -> ProfileSwitchDetailScreen(
+                                    userId = userId,
+                                    eventId = overlay.eventId,
+                                    onBack = { overlays.remove(overlay) },
+                                    onDeleted = { overlays.remove(overlay) }
+                                )
                                 is Overlay.DayDetail -> DayDetailScreen(
                                     userId = userId,
                                     initialEpochDay = overlay.epochDay,
@@ -331,6 +340,8 @@ class MainActivity : ComponentActivity() {
 private sealed interface Overlay {
     /** The insulin profile AAPS is running (read-only). */
     data object Profile : Overlay
+    /** One Profile Switch as a before/after diff. */
+    data class ProfileSwitchDetail(val eventId: Int) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
     /** One day of History in full; swipeable to neighbouring days. */
     data class DayDetail(val epochDay: Long) : Overlay

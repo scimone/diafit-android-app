@@ -73,6 +73,7 @@ val Carbs = Color(0xFFFFD54F)        // Muted but warm yellow, less saturated
 val Bolus = Color(0xFF42A5F5)        // Clean bright blue, friendly and clear
 val Basal = Color(0xFF1976D2)        // Deep, calm blue (fits dark theme better)
 val Activity = Color(0xFFAB47BC)     // Softened vibrant pink-purple (modern magenta)
+val Device = Color(0xFF90A4AE)       // Neutral blue-grey for device/therapy events, distinct from every data colour
 
 
 // Additional Colors

@@ -116,7 +116,7 @@ class JournalViewModel(
                     delay(REFRESH_MS)
                 }
             }
-            combine(mealRepository.observeMealsByUserId(userId), ticks) { meals, _ -> meals }
+            combine(mealRepository.observeMealsByUserId(userId), ticks, pumpEventRepository.observeCount(userId)) { meals, _, _ -> meals }
                 .catch { e ->
                     _uiState.update {
                         it.copy(

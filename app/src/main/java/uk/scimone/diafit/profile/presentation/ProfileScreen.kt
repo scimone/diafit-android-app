@@ -54,8 +54,8 @@ import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 
-private val IsfColor = AboveRange
-private val TargetColor = InRange
+internal val IsfColor = AboveRange
+internal val TargetColor = InRange
 
 /**
  * The profile AAPS is running (read-only, imported from its latest Profile Switch): who/what percentage
@@ -78,14 +78,14 @@ fun ProfileScreen(userId: Int, onBack: () -> Unit, viewModel: ProfileViewModel =
             when {
                 !state.loaded -> Unit
                 current == null -> EmptyProfile()
-                else -> ProfileContent(current, state.switches, state.nowUtc)
+                else -> ProfileContent(current, state.nowUtc)
             }
         }
     }
 }
 
 @Composable
-private fun ProfileContent(current: ProfileSwitch, switches: List<ProfileSwitch>, nowUtc: Long) {
+private fun ProfileContent(current: ProfileSwitch, nowUtc: Long) {
     val base = current.profile ?: return
     val active = current.isActive(nowUtc)
     val hasScaling = current.percentage != 100
@@ -118,21 +118,21 @@ private fun ProfileContent(current: ProfileSwitch, switches: List<ProfileSwitch>
                 title = "Basal",
                 subtitle = "Background insulin, ${fmt(shown.totalDailyBasal, 2)} U per day",
                 color = Bolus
-            ) { StepChart(shown.basal, Bolus, nowSecond, { fmt(it, 2) }) }
+            ) { StepChart(shown.basal, Bolus, nowSecond, { fmt(it, 2) }, "U/h") }
         }
         item {
             ScheduleCard(
                 title = "Insulin sensitivity",
                 subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}",
                 color = IsfColor
-            ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }) }
+            ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U") }
         }
         item {
             ScheduleCard(
                 title = "Carb ratio",
                 subtitle = "1 U covers this many grams of carbs",
                 color = Carbs
-            ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }) }
+            ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }, "g per U") }
         }
         item { TargetCard(shown, nowSecond) }
 
@@ -147,9 +147,6 @@ private fun ProfileContent(current: ProfileSwitch, switches: List<ProfileSwitch>
             }
         }
 
-        if (switches.size > 1) {
-            item { RecentSwitches(switches) }
-        }
         item {
             Text(
                 "Read-only. This is imported from AAPS whenever you do a profile switch there; change it in AAPS.",
@@ -244,7 +241,7 @@ private fun NowTile(label: String, value: String?, unit: String, color: Color, m
 }
 
 @Composable
-private fun ScheduleCard(title: String, subtitle: String, color: Color, chart: @Composable () -> Unit) {
+internal fun ScheduleCard(title: String, subtitle: String, color: Color, chart: @Composable () -> Unit) {
     Card {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -278,34 +275,14 @@ private fun TargetCard(profile: AapsProfile, nowSecond: Int) {
                         color = if (isNow) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = if (isNow) FontWeight.SemiBold else FontWeight.Normal
                     )
+                    if (isNow) Text("now  ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         if (high != step.value) "${fmt(step.value, 0)}–${fmt(high, 0)}" else fmt(step.value, 0),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TargetColor
                     )
-                    if (isNow) Text("  now", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecentSwitches(switches: List<ProfileSwitch>) {
-    val fmt = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Recent switches", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        switches.forEach { sw ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(fmt.format(Date(sw.startUtc)), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    buildString {
-                        append(sw.label)
-                        if (sw.durationMinutes > 0) append(" · ").append(formatDurationMinutes(sw.durationMinutes))
-                    },
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
         }
     }
@@ -327,7 +304,7 @@ private fun EmptyProfile() {
 }
 
 @Composable
-private fun Card(color: Color = MaterialTheme.colorScheme.surface, content: @Composable () -> Unit) {
+internal fun Card(color: Color = MaterialTheme.colorScheme.surface, content: @Composable () -> Unit) {
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -337,8 +314,8 @@ private fun Card(color: Color = MaterialTheme.colorScheme.surface, content: @Com
     )
 }
 
-private fun clock(seconds: Int): String = "%02d:%02d".format((seconds / 3600) % 24, (seconds / 60) % 60)
+internal fun clock(seconds: Int): String = "%02d:%02d".format((seconds / 3600) % 24, (seconds / 60) % 60)
 
 /** [decimals] places, trailing zeros trimmed ("0.5", "84", "13"). */
-private fun fmt(v: Double, decimals: Int): String =
+internal fun fmt(v: Double, decimals: Int): String =
     "%.${decimals}f".format(Locale.US, v).let { if (it.contains('.')) it.trimEnd('0').trimEnd('.') else it }
