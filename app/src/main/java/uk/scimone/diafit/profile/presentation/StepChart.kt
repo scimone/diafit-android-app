@@ -56,7 +56,9 @@ fun StepChart(
     modifier: Modifier = Modifier,
     previous: List<ProfileStep>? = null,
     height: Dp = 124.dp,
-    scrubState: ScrubState = rememberScrubState()
+    scrubState: ScrubState = rememberScrubState(),
+    /** Parts of the day (seconds) to shade, e.g. the time a profile switch was in force. */
+    highlight: List<Pair<Int, Int>> = emptyList()
 ) {
     if (steps.isEmpty()) return
     val measurer = rememberTextMeasurer()
@@ -102,6 +104,10 @@ fun StepChart(
             for (h in 0..24 step 6) {
                 val gx = x(h * 3600)
                 drawLine(grid, Offset(gx, topPad), Offset(gx, size.height), strokeWidth = 1.dp.toPx())
+            }
+
+            highlight.forEach { (hs, he) ->
+                drawRect(scrubColor.copy(alpha = 0.10f), Offset(x(hs), topPad), Size(x(he) - x(hs), plotH))
             }
 
             fun stepPath(list: List<ProfileStep>, closeFill: Boolean): Path {

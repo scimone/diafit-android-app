@@ -94,6 +94,8 @@ data class ProfileSwitch(
     /** The profile's own name, e.g. "Anna". */
     val baseName: String,
     val percentage: Int,
+    /** AAPS time shift in hours (0 = none). */
+    val timeShiftHours: Int = 0,
     /** 0 = until the next switch. */
     val durationMinutes: Int,
     val profile: AapsProfile?
@@ -114,6 +116,7 @@ fun PumpEventEntity.toProfileSwitch(): ProfileSwitch? {
             label = label,
             baseName = o.optString("originalProfileName", "").ifEmpty { label.substringBefore(" (") },
             percentage = o.optInt("percentage", 100),
+            timeShiftHours = o.optInt("timeshift", 0),
             durationMinutes = o.optInt("duration", 0),
             profile = o.optString("profileJson", "").takeIf { it.isNotEmpty() }?.let(AapsProfile::fromJson)
         )

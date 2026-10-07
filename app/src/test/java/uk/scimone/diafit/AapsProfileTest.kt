@@ -9,6 +9,10 @@ import uk.scimone.diafit.core.domain.model.AapsProfile
 import uk.scimone.diafit.core.domain.model.ProfileStep
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
 import uk.scimone.diafit.core.domain.model.ScheduleChange
+import uk.scimone.diafit.core.domain.model.DayWindow
+import uk.scimone.diafit.core.domain.model.atTimeShift
+import uk.scimone.diafit.core.domain.model.basalInsulin
+import uk.scimone.diafit.core.domain.model.clipChanges
 import uk.scimone.diafit.core.domain.model.diffSchedules
 import uk.scimone.diafit.core.domain.model.effectiveProfileAt
 import uk.scimone.diafit.core.domain.model.summary
@@ -91,5 +95,23 @@ class AapsProfileTest {
     @Test fun garbageProfileIsNull() {
         assertNull(AapsProfile.fromJson("not json"))
         assertNull(AapsProfile.fromJson("{}"))
+    }
+
+    @Test fun timeShiftMovesSchedulesLater() {
+        val p = AapsProfile.fromJson(profileJson)!!.atTimeShift(2)
+        assertEquals(0.5, p.basal.valueAt(13 * 3600)!!, 0.0)  // 12:00 step (1.0) now starts at 14:00
+        assertEquals(1.0, p.basal.valueAt(15 * 3600)!!, 0.0)
+        assertEquals(1.0, p.basal.valueAt(1 * 3600)!!, 0.0)   // wraps: the late-day value arrives after midnight
+    }
+
+    @Test fun changesAreClippedToTheWindowAndInsulinIsIntegrated() {
+        val c = listOf(ScheduleChange(0, 6 * 3600, 1.0, 2.0))
+        val clipped = clipChanges(c, DayWindow(5 * 3600, 3600))
+        assertEquals(1, clipped.size)
+        assertEquals(5 * 3600, clipped[0].startSeconds)
+        assertEquals(6 * 3600, clipped[0].endSeconds)
+        assertEquals(emptyList<ScheduleChange>(), clipChanges(c, DayWindow(7 * 3600, 3600)))
+        assertEquals(2, DayWindow(23 * 3600, 2 * 3600).intervals.size)
+        assertEquals(1.0, basalInsulin(listOf(ProfileStep(0, 2.0)), 0, 1800), 1e-9)
     }
 }

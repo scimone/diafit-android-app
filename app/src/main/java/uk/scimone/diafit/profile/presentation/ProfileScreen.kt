@@ -45,6 +45,7 @@ import uk.scimone.diafit.core.domain.model.ProfileStep
 import uk.scimone.diafit.core.domain.model.ProfileSwitch
 import uk.scimone.diafit.core.domain.model.formatDurationMinutes
 import uk.scimone.diafit.core.domain.model.valueAt
+import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.InRange
@@ -54,6 +55,7 @@ import java.util.Date
 import java.util.Locale
 
 internal val IsfColor = Bolus
+
 internal val TargetColor = InRange
 
 /**
@@ -108,8 +110,8 @@ private fun ProfileContent(current: ProfileSwitch) {
                 ScheduleCard(
                     title = "Basal",
                     subtitle = "Background insulin, ${fmt(shown.totalDailyBasal, 2)} U per day",
-                    color = Bolus
-                ) { StepChart(shown.basal, Bolus, nowSecond, { fmt(it, 2) }, "U/h", scrubState = scrub) }
+                    color = Basal
+                ) { StepChart(shown.basal, Basal, nowSecond, { fmt(it, 2) }, "U/h", scrubState = scrub) }
             }
             item {
                 ScheduleCard(
@@ -173,7 +175,7 @@ private fun NowRow(profile: AapsProfile, nowSecond: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Right now", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NowTile("Basal", profile.basal.valueAt(nowSecond)?.let { fmt(it, 2) }, "U/h", Bolus, Modifier.weight(1f))
+            NowTile("Basal", profile.basal.valueAt(nowSecond)?.let { fmt(it, 2) }, "U/h", Basal, Modifier.weight(1f))
             NowTile("Sensitivity", profile.isf.valueAt(nowSecond)?.let { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U", IsfColor, Modifier.weight(1f))
             NowTile("Carb ratio", profile.carbRatio.valueAt(nowSecond)?.let { fmt(it, 1) }, "g per U", Carbs, Modifier.weight(1f))
             NowTile("Target", target, if (mmol) "mmol/L" else "mg/dL", TargetColor, Modifier.weight(1f))
