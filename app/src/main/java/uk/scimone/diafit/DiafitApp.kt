@@ -13,6 +13,7 @@ import uk.scimone.diafit.history.di.historyModule
 import uk.scimone.diafit.home.di.homeModule
 import uk.scimone.diafit.journal.di.journalModule
 import uk.scimone.diafit.settings.di.settingsModule
+import uk.scimone.diafit.profile.di.profileModule
 import uk.scimone.diafit.core.di.syncModule
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +32,8 @@ class DiafitApp : Application() {
                     homeModule,
                     historyModule,
                     syncModule,
-                    settingsModule
+                    settingsModule,
+                    profileModule
                 )
             )
         }

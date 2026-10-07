@@ -1,6 +1,7 @@
 package uk.scimone.diafit.journal.presentation.model
 
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
+import uk.scimone.diafit.core.domain.model.summary
 
 /** A device or therapy milestone from AAPS (pod/site change, profile switch, note, ...). */
 data class PumpEventUi(
@@ -12,4 +13,4 @@ data class PumpEventUi(
     override val kind: JournalEntryKind get() = JournalEntryKind.DEVICE
 }
 
-fun PumpEventEntity.toUi() = PumpEventUi(id, timestampUtc, eventType, notes)
+fun PumpEventEntity.toUi() = PumpEventUi(id, timestampUtc, eventType, summary())

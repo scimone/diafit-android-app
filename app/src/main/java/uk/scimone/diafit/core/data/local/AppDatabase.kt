@@ -13,7 +13,7 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
 
 @Database(
     entities = [MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class],
-    version = 15,
+    version = 16,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -86,6 +86,13 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_PumpEventEntity_sourceId` ON `PumpEventEntity` (`sourceId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_PumpEventEntity_timestampUtc` ON `PumpEventEntity` (`timestampUtc`)")
+            }
+        }
+
+        /** Device events can be removed by the user (soft delete). */
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE PumpEventEntity ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

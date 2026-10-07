@@ -28,6 +28,8 @@ import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
 import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
+import uk.scimone.diafit.profile.presentation.ProfileScreen
+import androidx.compose.material.icons.filled.Person
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -161,6 +163,14 @@ class MainActivity : ComponentActivity() {
                                     onDismissRequest = { overflowMenuExpanded = false }
                                 ) {
                                     DropdownMenuItem(
+                                        text = { Text("Profile") },
+                                        leadingIcon = { Icon(imageVector = Icons.Filled.Person, contentDescription = null) },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            overlays.add(Overlay.Profile)
+                                        }
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text("Settings") },
                                         leadingIcon = {
                                             Icon(
@@ -256,7 +266,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -269,6 +279,7 @@ class MainActivity : ComponentActivity() {
                                     onAddCourse = addCourse,
                                     onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
                                 )
+                                is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.DayDetail -> DayDetailScreen(
                                     userId = userId,
                                     initialEpochDay = overlay.epochDay,
@@ -318,6 +329,8 @@ class MainActivity : ComponentActivity() {
 
 /** A full-screen page shown above the tabs. */
 private sealed interface Overlay {
+    /** The insulin profile AAPS is running (read-only). */
+    data object Profile : Overlay
     data class MealDetail(val mealId: Int) : Overlay
     /** One day of History in full; swipeable to neighbouring days. */
     data class DayDetail(val epochDay: Long) : Overlay

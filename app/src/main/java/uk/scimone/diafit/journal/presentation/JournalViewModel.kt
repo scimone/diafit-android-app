@@ -193,6 +193,18 @@ class JournalViewModel(
         emptyList()
     }
 
+    /** Removes a device event from the journal (soft delete, so AAPS re-sending it doesn't bring it back). */
+    fun deletePumpEvent(id: Int) {
+        viewModelScope.launch {
+            try {
+                pumpEventRepository.setDeleted(id, true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting pump event", e)
+            }
+            observeEntries()
+        }
+    }
+
     fun refreshMeals() {
         _uiState.update { it.copy(isLoading = true) }
         observeEntries()

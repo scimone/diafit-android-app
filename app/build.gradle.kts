@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.room.runtime.android)
     implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20250517") // org.json is only a stub in Android unit tests
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

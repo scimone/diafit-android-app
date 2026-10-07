@@ -26,7 +26,9 @@ data class PumpEventEntity(
     /** Temp basal rate in U/h. */
     val rate: Double? = null,
     val sourceId: String,
-    val rawJson: String
+    val rawJson: String,
+    /** Removed by the user: kept (not hard-deleted) so a repeated broadcast of the same treatment is not re-imported. */
+    val isDeleted: Boolean = false
 ) {
     /** Worth a journal entry (a device/therapy milestone), as opposed to routine loop chatter such as temp basals. */
     val isMilestone: Boolean

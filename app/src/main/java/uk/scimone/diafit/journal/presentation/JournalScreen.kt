@@ -33,6 +33,7 @@ import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
 import uk.scimone.diafit.journal.presentation.components.formatUnits
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
+import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
@@ -54,6 +55,7 @@ fun JournalScreen(
     }
 
     var filter by remember { mutableStateOf<JournalEntryKind?>(null) }
+    var selectedEvent by remember { mutableStateOf<PumpEventUi?>(null) }
     val kinds = JournalEntryKind.availableKinds
     val visible = remember(uiState.entries, filter) {
         uiState.entries.filter { filter == null || it.kind == filter }
@@ -99,7 +101,11 @@ fun JournalScreen(
                             stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries)) }
                             items(entries, key = { "${it.kind}-${it.id}" }) { entry ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    JournalEntryCard(entry, uiState.target, onClick = { onOpenEntry(entry) })
+                                    JournalEntryCard(
+                                        entry,
+                                        uiState.target,
+                                        onClick = { if (entry is PumpEventUi) selectedEvent = entry else onOpenEntry(entry) }
+                                    )
                                     (entry as? MealEntityUi)?.possibleDuplicate?.let {
                                         PossibleDuplicateStrip(it, onMerge = { viewModel.mergeSuggestion(it.importedId) }, onKeepSeparate = { viewModel.keepSeparate(it.importedId) })
                                     }
@@ -111,7 +117,38 @@ fun JournalScreen(
             }
         }
         SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+        selectedEvent?.let { event ->
+            DeviceEventDialog(event, onDismiss = { selectedEvent = null }, onDelete = {
+                viewModel.deletePumpEvent(event.id)
+                selectedEvent = null
+            })
+        }
     }
+}
+
+/** Details of a device event, with the option to remove it from the journal. */
+@Composable
+private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    val time = remember(event.timeUtc) {
+        java.text.SimpleDateFormat("EEE d MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(event.timeUtc))
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(event.title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(time, style = MaterialTheme.typography.bodyMedium)
+                event.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                Text(
+                    "Imported from AAPS. Deleting only removes it from Diafit.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Close") } }
+    )
 }
 
 /** Under a meal card: an AAPS carb entry that might be the same food, to merge or keep apart. */
