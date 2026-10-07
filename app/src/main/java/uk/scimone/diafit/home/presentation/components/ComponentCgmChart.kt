@@ -91,13 +91,18 @@ fun ComponentCgmChart(
         lineColors.add(AboveRange)
     }
 
+    // Without a single reading there would be no chart, so no geometry for the panels that are drawn
+    // through it (activity); a hidden point keeps the time axis alive on days with no glucose data.
+    if (lineColors.isEmpty()) {
+        lineData.add(Pair(listOf(window.minX), listOf(minY.toInt())))
+        lineColors.add(Color.Transparent)
+    }
+
     LaunchedEffect(filteredValues) {
-        if (filteredValues.isNotEmpty()) {
-            modelProducer.runTransaction {
-                lineSeries {
-                    lineData.forEach { (x, y) ->
-                        series(x, y)
-                    }
+        modelProducer.runTransaction {
+            lineSeries {
+                lineData.forEach { (x, y) ->
+                    series(x, y)
                 }
             }
         }
