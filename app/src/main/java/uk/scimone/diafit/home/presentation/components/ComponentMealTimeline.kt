@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import uk.scimone.diafit.core.domain.util.friendlyDateString
+import uk.scimone.diafit.journal.presentation.components.MealMetaRow
 import androidx.compose.ui.res.painterResource
 import uk.scimone.diafit.journal.presentation.model.accent
 import uk.scimone.diafit.journal.presentation.model.iconRes
@@ -87,6 +89,27 @@ private fun MealGroup.title(): String = meals.firstNotNullOfOrNull { it.sittingN
     ?: meals.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) }
     ?: meals.first().mealType.type
 
+/**
+ * Every sitting a bubble under the cursor stands for: those near [time], plus any chained to them
+ * within [chainMs] (the charts merge events into one bubble the same way).
+ */
+fun List<MealGroup>.caughtBy(time: Long?, toleranceMs: Long = 20 * 60_000L, chainMs: Long = 15 * 60_000L): List<MealGroup> {
+    if (time == null) return emptyList()
+    val caught = filter { it.distanceTo(time) <= toleranceMs }.toMutableList()
+    if (caught.isEmpty()) return emptyList()
+    var changed = true
+    while (changed) {
+        changed = false
+        for (g in this) {
+            if (g in caught) continue
+            if (caught.any { c -> g.distanceTo(c.startTime) <= chainMs || g.distanceTo(c.endTime) <= chainMs }) {
+                caught += g; changed = true
+            }
+        }
+    }
+    return caught
+}
+
 /** The sittings that overlap the charts' visible time window [start]..[end]. */
 fun List<MealGroup>.inView(start: Long, end: Long): List<MealGroup> =
     filter { it.endTime >= start && it.startTime <= end }
@@ -101,7 +124,7 @@ fun List<MealGroup>.inView(start: Long, end: Long): List<MealGroup> =
 fun MealTimeline(
     allGroups: List<MealGroup>,
     inView: List<MealGroup>,
-    highlighted: MealGroup?,
+    highlighted: List<MealGroup>,
     onGroupClick: (MealGroup) -> Unit,
     modifier: Modifier = Modifier,
     /** Shown when there are no meals at all (Home's default invites logging one). */
@@ -119,7 +142,8 @@ fun MealTimeline(
         // reverseLayout + newest-first: starts at the right edge (newest) and scrolls back in time.
         val newestFirst = inView.asReversed()
         val listState = rememberLazyListState()
-        val highlightIndex = highlighted?.let { h -> newestFirst.indexOfFirst { it.key == h.key } } ?: -1
+        val highlightKeys = highlighted.map { it.key }.toSet()
+        val highlightIndex = newestFirst.indexOfFirst { it.key in highlightKeys }
         LaunchedEffect(highlightIndex) {
             if (highlightIndex < 0) return@LaunchedEffect
             // Only move the strip if the card isn't already fully on screen: no needless motion.
@@ -140,8 +164,8 @@ fun MealTimeline(
             itemsIndexed(newestFirst, key = { _, g -> g.key }) { index, group ->
                 MealCard(
                     group = group,
-                    highlighted = index == highlightIndex,
-                    dimmed = highlightIndex >= 0 && index != highlightIndex,
+                    highlighted = group.key in highlightKeys,
+                    dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
                     onClick = { onGroupClick(group) }
                 )
             }
@@ -407,20 +431,10 @@ fun MealDetailSheet(
 @Composable
 private fun MealDetails(meal: MealEntityUi) {
     Column(Modifier.padding(horizontal = 20.dp).padding(top = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painterResource(meal.mealType.iconRes), contentDescription = null,
-                tint = meal.mealType.accent, modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                "${formatTime(meal.mealTimeUtc)} · ${meal.mealType.type}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.weight(1f))
-            AbsorptionChip(meal.impactType)
-        }
+        MealMetaRow(
+            "${friendlyDateString(meal.mealTimeUtc)}, ${formatTime(meal.mealTimeUtc)}",
+            meal.mealType, meal.impactType
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             text = meal.description?.takeIf { it.isNotBlank() } ?: meal.mealType.type,
@@ -434,29 +448,6 @@ private fun MealDetails(meal: MealEntityUi) {
             MacroTile("Fat", meal.fats?.toString(), "g", modifier = Modifier.weight(1f))
             MacroTile("Energy", meal.calories?.toString(), "kcal", modifier = Modifier.weight(1f))
         }
-    }
-}
-
-@Composable
-private fun AbsorptionChip(impact: ImpactType) {
-    val label = when (impact) {
-        ImpactType.SHORT -> "Fast"
-        ImpactType.MEDIUM -> "Medium"
-        ImpactType.LONG -> "Slow"
-    }
-    Row(
-        Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(painterResource(impact.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(5.dp))
-        Text(
-            text = "$label absorption · ${impact.durationMinutes / 60} h",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

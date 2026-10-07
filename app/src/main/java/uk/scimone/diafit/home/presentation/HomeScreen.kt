@@ -56,6 +56,7 @@ import uk.scimone.diafit.home.presentation.components.MealGroup
 import uk.scimone.diafit.home.presentation.components.MealTimeline
 import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.inView
+import uk.scimone.diafit.home.presentation.components.caughtBy
 import uk.scimone.diafit.home.presentation.components.nearest
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.CgmChartData
@@ -277,7 +278,7 @@ fun HomeScreen(
                     MealTimeline(
                         allGroups = mealGroups,
                         inView = mealsInView,
-                        highlighted = focusedMeal,
+                        highlighted = mealGroups.caughtBy(selectedTime),
                         onGroupClick = { group ->
                             openMealIds = group.meals.map { it.id }.toSet()
                             // Bring the meal into view on the charts behind the sheet.

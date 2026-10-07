@@ -333,32 +333,12 @@ private fun DoseRow(units: Double, isSmb: Boolean, time: String, running: String
 private fun TitleBlock(meal: MealEntityUi) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(meal.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            InfoChip(
-                if (meal.courseCount > 1) "${meal.mealType.type} · ${meal.courseCount} courses" else meal.mealType.type,
-                painterResource(meal.mealType.iconRes), meal.mealType.accent
-            )
-            Text(
-                "${friendlyDateString(meal.mealTimeUtc)}, ${meal.timeFormatted}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MealMetaRow("${friendlyDateString(meal.mealTimeUtc)}, ${meal.timeFormatted}", meal.mealType, meal.impactType)
             if (meal.isImported) {
-                Text("· AAPS", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("  · AAPS", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-    }
-}
-
-@Composable
-private fun InfoChip(text: String, icon: androidx.compose.ui.graphics.painter.Painter, accent: Color) {
-    Row(
-        Modifier.background(accent.copy(alpha = 0.16f), CircleShape).padding(start = 8.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(text, style = MaterialTheme.typography.labelLarge)
     }
 }
 

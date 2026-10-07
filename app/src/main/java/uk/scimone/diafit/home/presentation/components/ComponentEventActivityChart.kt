@@ -304,7 +304,7 @@ fun ComponentEventActivityChart(
                     val caught = rawRecentEvents.any { it.time >= bubble.time && it.time < end && abs(it.time - cursor) <= HIGHLIGHT_NEAR_MS }
                     if (caught) Triple(bubble.time, bubbleYs[i], bubbleDiameter(bubble.value, bubbleRefValue).value) else null
                 }
-                BubbleHighlightDecoration(rings, minY, maxY, onSurface, MaterialTheme.colorScheme.background, density)
+                BubbleHighlightDecoration(rings, minY, maxY, color, MaterialTheme.colorScheme.background, density)
             },
             NowDecoration(
                 nowX = realTime.toDouble(),

@@ -27,7 +27,7 @@ import uk.scimone.diafit.home.presentation.TapToggleRadiusPx
 import uk.scimone.diafit.home.presentation.components.MealTimeline
 import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.inView
-import uk.scimone.diafit.home.presentation.components.nearest
+import uk.scimone.diafit.home.presentation.components.caughtBy
 import uk.scimone.diafit.home.presentation.inspectGestures
 import uk.scimone.diafit.home.presentation.utils.ChartGeometry
 import uk.scimone.diafit.home.presentation.utils.currentMinute
@@ -160,7 +160,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
         MealTimeline(
             allGroups = mealGroups,
             inView = mealsInView,
-            highlighted = mealGroups.nearest(selectedTime),
+            highlighted = mealGroups.caughtBy(selectedTime),
             onGroupClick = { group -> onOpenMeal(group.meals.first().id) },
             modifier = Modifier.padding(top = 6.dp),
             noMealsMessage = "No meals on this day."
