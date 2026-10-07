@@ -116,8 +116,10 @@ private fun ZoneShareLine(stats: DayGlucoseStats) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(8.dp).background(zoneFill(zone), RoundedCornerShape(2.dp)))
                 Text(
-                    " ${zoneName(zone)} ${percent(stats.share(zone))}%",
+                    " ${zoneShortName(zone)} ${percent(stats.share(zone))}%",
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -125,12 +127,12 @@ private fun ZoneShareLine(stats: DayGlucoseStats) {
     }
 }
 
-private fun zoneName(zone: GlucoseZone) = when (zone) {
-    GlucoseZone.VERY_LOW -> "Very low"
+private fun zoneShortName(zone: GlucoseZone) = when (zone) {
+    GlucoseZone.VERY_LOW -> "V. low"
     GlucoseZone.LOW -> "Low"
     GlucoseZone.IN_RANGE -> "In range"
     GlucoseZone.HIGH -> "High"
-    GlucoseZone.VERY_HIGH -> "Very high"
+    GlucoseZone.VERY_HIGH -> "V. high"
 }
 
 @Composable

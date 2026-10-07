@@ -65,21 +65,15 @@ fun JournalScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Row(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // A kind filter only earns its space once there is more than one kind of entry to filter by.
-                    if (kinds.size > 1) {
-                        FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
-                        kinds.forEach { kind ->
-                            FilterChip(selected = filter == kind, onClick = { filter = kind }, label = { Text(kind.pluralLabel) })
-                        }
+                // A kind filter only earns its space once there is more than one kind of entry to filter by.
+                if (kinds.size > 1) {
+                    FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
+                    kinds.forEach { kind ->
+                        FilterChip(selected = filter == kind, onClick = { filter = kind }, label = { Text(kind.pluralLabel) })
                     }
                 }
                 RangeChip(uiState.range, viewModel::setRange)

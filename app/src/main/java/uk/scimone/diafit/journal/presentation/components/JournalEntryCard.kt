@@ -37,6 +37,7 @@ import coil3.compose.AsyncImage
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.GlucoseEpisode
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
+import uk.scimone.diafit.core.domain.model.MEAL_OUTCOME_WINDOW_MS
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
@@ -119,6 +120,12 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             }
         }
     }
+}
+
+/** "Result in 1h 20m": what is left of the 4 h outcome window. */
+private fun resultInText(remainingMs: Long): String {
+    val mins = ((remainingMs + 59_999L) / 60_000L).toInt().coerceAtLeast(1)
+    return "Result in " + if (mins >= 60) "${mins / 60}h ${mins % 60}m" else "${mins}m"
 }
 
 @Composable
@@ -210,7 +217,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
         }
         when {
             meal.glucoseStatus == GlucoseStatus.TOO_EARLY ->
-                Text("Result in 4 h", style = labelStyle, color = muted)
+                Text(resultInText(meal.mealTimeUtc + MEAL_OUTCOME_WINDOW_MS - System.currentTimeMillis()), style = labelStyle, color = muted)
             meal.glucoseStatus == GlucoseStatus.NOT_ENOUGH_DATA || !meal.hasGlucoseData ->
                 Text("Not enough sensor data after this meal", style = labelStyle, color = muted)
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
