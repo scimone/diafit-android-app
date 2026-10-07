@@ -69,9 +69,10 @@ fun MacroTile(
     unit: String,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    style: TextStyle = MaterialTheme.typography.titleMedium
+    style: TextStyle = MaterialTheme.typography.titleMedium,
+    background: Color = MaterialTheme.colorScheme.surface
 ) {
-    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = modifier) {
+    Surface(shape = RoundedCornerShape(14.dp), color = background, modifier = modifier) {
         Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             InlineNumberField(value = value, onValueChange = onValueChange, unit = unit, style = style, color = color)

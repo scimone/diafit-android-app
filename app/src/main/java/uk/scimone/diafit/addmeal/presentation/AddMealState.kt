@@ -45,10 +45,17 @@ data class AddMealState(
     /** Set once a save/delete finished; the screen consumes it and closes. */
     val finished: EditorResult? = null
 ) {
-    /** Energy shown and saved: the foods' energy when the AI split the meal up, else from the macros. */
+    /** Sum of the AI foods, or null without any. */
+    val foodTotals get() = components.takeIf { it.isNotEmpty() }?.totals()
+
+    /** The user typed totals that differ from the sum of the foods: theirs are used. */
+    val totalsOverridden: Boolean
+        get() = foodTotals?.let { it.carbs != (carbohydrates ?: 0) || it.protein != (proteins ?: 0) || it.fat != (fats ?: 0) } ?: false
+
+    /** Energy shown and saved: the foods' energy when their sum is used, else derived from the macros. */
     val totalCalories: Int?
         get() = when {
-            components.isNotEmpty() -> components.totals().calories
+            components.isNotEmpty() && !totalsOverridden -> components.totals().calories
             carbohydrates == null && proteins == null && fats == null -> null
             else -> kcalOf((carbohydrates ?: 0).toDouble(), (proteins ?: 0).toDouble(), (fats ?: 0).toDouble()).roundToInt()
         }

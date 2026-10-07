@@ -304,6 +304,9 @@ class AddMealViewModel(
         list.mapIndexed { i, c -> if (i == index) c.withWeight(weightG) else c }
     }
 
+    /** Drops typed totals and uses the sum of the foods again. */
+    fun onUseFoodTotals() = updateComponents { it }
+
     /** Edits one food's macros (null = unchanged); its energy and the meal totals follow. */
     fun onComponentMacrosChanged(index: Int, carbs: Double? = null, protein: Double? = null, fat: Double? = null) = updateComponents { list ->
         list.mapIndexed { i, c ->

@@ -16,25 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.ImpactType
-import uk.scimone.diafit.core.domain.model.MealType
-import uk.scimone.diafit.journal.presentation.model.accent
 import uk.scimone.diafit.journal.presentation.model.durationLabel
 import uk.scimone.diafit.journal.presentation.model.iconRes
 import uk.scimone.diafit.journal.presentation.model.label
-
-/** Breakfast / Lunch / Dinner / Snack as one compact row, each in its own accent colour. */
-@Composable
-fun MealTypeSelector(selected: MealType, onSelected: (MealType) -> Unit, modifier: Modifier = Modifier) {
-    ChoiceTiles(
-        options = MealType.entries,
-        selected = selected,
-        onSelected = onSelected,
-        accent = { it.accent },
-        icon = { it.iconRes },
-        label = { it.type },
-        modifier = modifier
-    )
-}
 
 /** Fast / Medium / Slow carb absorption, each with its curve glyph and how long it acts for. */
 @Composable

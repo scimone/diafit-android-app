@@ -52,9 +52,15 @@ fun FoodItemRow(
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val uncertain = component.confidence == ComponentConfidence.LOW
 
-    Column(modifier.fillMaxWidth().animateContentSize()) {
+    // Each food is its own card, so its expanded nutrients clearly belong to it.
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = if (expanded) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.fillMaxWidth()
+    ) {
+    Column(Modifier.fillMaxWidth().animateContentSize().padding(horizontal = 10.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(36.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, modifier = Modifier.size(36.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text(component.emoji, fontSize = 18.sp) }
             }
             Spacer(Modifier.width(10.dp))
@@ -96,7 +102,7 @@ fun FoodItemRow(
         }
 
         AnimatedVisibility(expanded) {
-            Column(Modifier.fillMaxWidth().padding(start = 46.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val small = MaterialTheme.typography.titleSmall
                     MacroTile("Carbs", component.carbsG.roundToInt(), { onMacrosChange(it.toDoubleOrNull() ?: 0.0, null, null) }, "g", Modifier.weight(1f), Carbs, small)
@@ -129,13 +135,14 @@ fun FoodItemRow(
             }
         }
     }
+    }
 }
 
 /** The portion as a small pill to type into; keeps its own text so it can be cleared while typing. */
 @Composable
 private fun WeightField(weightG: Double, onChange: (Double) -> Unit) {
     var text by remember(weightG.roundToInt()) { mutableStateOf(weightG.roundToInt().toString()) }
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = text,

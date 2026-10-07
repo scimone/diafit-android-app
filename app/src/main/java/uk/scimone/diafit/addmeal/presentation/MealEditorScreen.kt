@@ -40,7 +40,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -122,14 +126,18 @@ fun MealEditorScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                // The entry's name is the title, typed in place; the small line above says what is being done.
                 title = {
-                    Text(
-                        when {
+                    TitleField(
+                        overline = when {
                             uiState.isAddingCourse -> "Add course"
                             uiState.isEditing && extendedCourse -> "Edit course"
                             uiState.isEditing -> "Edit meal"
                             else -> "New meal"
-                        }
+                        } + if (!uiState.dishName.isNullOrBlank() && uiState.description == uiState.dishName) " · named by AI" else "",
+                        value = uiState.description.orEmpty(),
+                        placeholder = if (uiState.isAddingCourse) "What arrived?" else "What did you eat?",
+                        onValueChange = viewModel::onDescriptionChanged
                     )
                 },
                 navigationIcon = {
@@ -153,16 +161,15 @@ fun MealEditorScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            EditorCard("When") {
-                MealDateTimePicker(
-                    value = uiState.mealTime?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() },
-                    onValueChange = viewModel::onMealTimeChanged
-                )
+            WhenRow(
+                value = uiState.mealTime?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() },
+                onValueChange = viewModel::onMealTimeChanged,
                 // Courses inherit the meal's type; only the meal as a whole has one.
-                if (!extendedCourse) MealTypeSelector(uiState.mealType, viewModel::onMealTypeChanged)
-            }
+                mealType = uiState.mealType.takeIf { !extendedCourse },
+                onMealTypeChange = viewModel::onMealTypeChanged
+            )
 
             uiState.sitting?.let {
                 CourseContextCard(it, uiState.isAddingCourse, uiState.mealName, viewModel::onMealNameChanged)
@@ -181,25 +188,12 @@ fun MealEditorScreen(
                 AiRequestCard(uiState, viewModel::onAiNotesChanged, viewModel::analyzeMeal)
             }
 
-            EditorCard(if (uiState.isAddingCourse) "What arrived?" else "What did you eat?") {
-                OutlinedTextField(
-                    value = uiState.description.orEmpty(),
-                    onValueChange = viewModel::onDescriptionChanged,
-                    placeholder = { Text("e.g. Chicken wrap and an apple") },
-                    supportingText = if (!uiState.dishName.isNullOrBlank() && uiState.description == uiState.dishName) {
-                        { Text("Named by the AI. Tap to change.") }
-                    } else null,
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                )
-            }
-
             TotalsCard(
                 state = uiState,
                 onCarbs = viewModel::onCarbsChanged,
                 onProtein = viewModel::onProteinChanged,
-                onFat = viewModel::onFatChanged
+                onFat = viewModel::onFatChanged,
+                onUseFoodTotals = viewModel::onUseFoodTotals
             )
 
             if (uiState.components.isNotEmpty() && !uiState.isAnalyzing) {
@@ -415,69 +409,77 @@ private fun formatUnits(units: Double): String {
 
 /**
  * The meal's totals: the main thing to check, so it is the most prominent card. Carbs, protein and fat
- * in one row (carbs largest); energy is derived from them. Typed directly when there are no AI foods,
- * otherwise the sum of the foods below (edit those instead).
+ * each in their own card (carbs largest); energy is derived. They start as the sum of the AI foods and
+ * can be typed over, which then wins (said so, with a way back).
  */
 @Composable
 private fun TotalsCard(
     state: AddMealState,
     onCarbs: (String) -> Unit,
     onProtein: (String) -> Unit,
-    onFat: (String) -> Unit
+    onFat: (String) -> Unit,
+    onUseFoodTotals: () -> Unit
 ) {
-    val editable = state.components.isEmpty()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = Carbs.copy(alpha = 0.10f),
         border = BorderStroke(1.dp, Carbs.copy(alpha = 0.35f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionLabel(if (state.sitting != null) "This course" else "Total", Modifier.weight(1f))
-                Text(
-                    state.totalCalories?.let { "$it kcal" } ?: "– kcal",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(state.totalCalories?.let { "$it kcal" } ?: "– kcal", style = MaterialTheme.typography.labelMedium, color = muted)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                TotalValue("Carbs", state.carbohydrates, onCarbs, editable, Carbs, MaterialTheme.typography.displaySmall, Modifier.weight(1.4f))
-                TotalValue("Protein", state.proteins, onProtein, editable, MaterialTheme.colorScheme.onSurface, MaterialTheme.typography.headlineSmall, Modifier.weight(1f))
-                TotalValue("Fat", state.fats, onFat, editable, MaterialTheme.colorScheme.onSurface, MaterialTheme.typography.headlineSmall, Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MacroTile("Carbs", state.carbohydrates, onCarbs, "g", Modifier.weight(1.3f), Carbs, MaterialTheme.typography.headlineMedium)
+                MacroTile("Protein", state.proteins, onProtein, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+                MacroTile("Fat", state.fats, onFat, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
             }
-            val hint = when {
-                state.sitting != null -> "Meal total ${state.sitting.otherCarbs + (state.carbohydrates ?: 0)} g carbs"
-                !editable -> "Sum of the foods below. Adjust them to change it."
-                else -> null
+            val foods = state.foodTotals
+            when {
+                foods != null && state.totalsOverridden -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Info, null, tint = muted, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Your values replace the foods' sum (${foods.carbs} g carbs · ${foods.protein} P · ${foods.fat} F).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = muted,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onUseFoodTotals, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Use sum") }
+                }
+                foods != null -> Text("Sum of the foods below. Type here to override it.", style = MaterialTheme.typography.bodySmall, color = muted)
             }
-            hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            state.sitting?.let {
+                Text("Meal total ${it.otherCarbs + (state.carbohydrates ?: 0)} g carbs", style = MaterialTheme.typography.bodySmall, color = muted)
+            }
         }
     }
 }
 
+/** The entry's name as the screen title: a small context line over an inline text field. */
 @Composable
-private fun TotalValue(
-    label: String,
-    value: Int?,
-    onValueChange: (String) -> Unit,
-    editable: Boolean,
-    color: Color,
-    style: TextStyle,
-    modifier: Modifier
-) {
-    Column(modifier) {
-        if (editable) {
-            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                InlineNumberField(value, onValueChange, "g", style, color, Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+private fun TitleField(overline: String, value: String, placeholder: String, onValueChange: (String) -> Unit) {
+    val style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+    Column {
+        Text(overline, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = style,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                Box {
+                    if (value.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                    inner()
+                }
             }
-        } else {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("${value ?: 0}", style = style, fontWeight = FontWeight.Bold, color = color, maxLines = 1)
-                Text(" g", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
-            }
-        }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = if (editable) 10.dp else 0.dp, top = 2.dp))
+        )
     }
 }
 
@@ -556,9 +558,8 @@ private fun FoodsCard(
             }
         }
     ) {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             state.components.forEachIndexed { index, component ->
-                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 key(component.name, index) {
                     FoodItemRow(
                         component = component,
