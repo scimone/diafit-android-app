@@ -35,6 +35,13 @@ data class MealComponent(
     }
 }
 
+/** Energy from the macros (Atwater factors: 4 kcal/g carbs and protein, 9 kcal/g fat). */
+fun kcalOf(carbsG: Double, proteinG: Double, fatG: Double): Double = 4 * carbsG + 4 * proteinG + 9 * fatG
+
+/** The same food with edited macros; its energy is recalculated from them. */
+fun MealComponent.withMacros(carbsG: Double = this.carbsG, proteinG: Double = this.proteinG, fatG: Double = this.fatG) =
+    copy(carbsG = carbsG, proteinG = proteinG, fatG = fatG, calories = kcalOf(carbsG, proteinG, fatG))
+
 data class ComponentTotals(val calories: Int, val carbs: Int, val protein: Int, val fat: Int)
 
 fun List<MealComponent>.totals() = ComponentTotals(

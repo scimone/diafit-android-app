@@ -54,15 +54,22 @@ data class MealEntity(
 
 
     companion object {
+        /**
+         * Absorption speed from the macro mix: the energy from fat and protein relative to the carbs
+         * slows digestion (pizza, burgers), so the ratio decides rather than absolute amounts. It is
+         * scale-invariant, so adjusting a portion doesn't flip the suggestion.
+         */
         fun inferImpactType(carbs: Int?, proteins: Int?, fats: Int?): ImpactType {
-            return if (carbs == null || proteins == null || fats == null) {
-                ImpactType.MEDIUM
-            } else {
-                when {
-                    carbs >= 60 && proteins >= 30 && fats >= 20 -> ImpactType.LONG
-                    carbs >= 40 -> ImpactType.MEDIUM
-                    else -> ImpactType.SHORT
-                }
+            val c = carbs ?: 0
+            if (c <= 0) return ImpactType.MEDIUM
+            val f = fats ?: 0
+            val p = proteins ?: 0
+            if (f >= 35) return ImpactType.LONG
+            val ratio = (9.0 * f + 4.0 * p) / (4.0 * c)
+            return when {
+                ratio < 0.4 -> ImpactType.SHORT
+                ratio < 1.0 -> ImpactType.MEDIUM
+                else -> ImpactType.LONG
             }
         }
 

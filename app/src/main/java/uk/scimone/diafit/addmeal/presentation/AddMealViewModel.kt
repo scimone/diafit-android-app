@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.totals
+import uk.scimone.diafit.core.domain.model.withMacros
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
@@ -215,7 +216,28 @@ class AddMealViewModel(
 
     private fun addPhotos(photos: List<MealPhoto>) {
         if (photos.isEmpty()) return
-        _uiState.update { it.copy(photos = (it.photos + photos).take(MAX_PHOTOS_PER_COURSE)) }
+        _uiState.update { it.withoutEstimate().copy(photos = (it.photos + photos).take(MAX_PHOTOS_PER_COURSE)) }
+    }
+
+    /**
+     * Changed photos invalidate the AI estimate: its foods, totals, reasoning and suggested name are
+     * dropped so nothing from the old photos lingers. Values the user typed without AI are kept.
+     */
+    private fun AddMealState.withoutEstimate(): AddMealState {
+        if (components.isEmpty() && reasoning == null) return this
+        val hadFoods = components.isNotEmpty()
+        return copy(
+            components = emptyList(),
+            reasoning = null,
+            description = if (description == dishName) "" else description,
+            dishName = null,
+            carbohydrates = if (hadFoods) null else carbohydrates,
+            proteins = if (hadFoods) null else proteins,
+            fats = if (hadFoods) null else fats,
+            calories = if (hadFoods) null else calories,
+            impactType = if (impactAuto || hadFoods) ImpactType.MEDIUM else impactType,
+            impactAuto = impactAuto || hadFoods
+        )
     }
 
     fun onRemovePhoto(imageId: String) {
@@ -225,16 +247,7 @@ class AddMealViewModel(
             viewModelScope.launch { fileStorageRepository.deleteImage(imageId) }
         }
         _uiState.update { s ->
-            val remaining = s.photos.filterNot { it.imageId == imageId }
-            s.copy(photos = remaining, reasoning = if (remaining.isEmpty()) null else s.reasoning)
-        }
-    }
-
-    /** Makes [imageId] the cover photo (shown in lists and on Home). */
-    fun onMakeCover(imageId: String) {
-        _uiState.update { s ->
-            val photo = s.photos.firstOrNull { it.imageId == imageId } ?: return@update s
-            s.copy(photos = listOf(photo) + (s.photos - photo))
+            s.withoutEstimate().copy(photos = s.photos.filterNot { it.imageId == imageId })
         }
     }
 
@@ -243,27 +256,34 @@ class AddMealViewModel(
         val photos = uiState.value.photos
         if (photos.isEmpty() || uiState.value.isAnalyzing) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isAnalyzing = true) }
+            val notes = uiState.value.aiNotes
+            // The note is only context for this request; it isn't shown again afterwards.
+            _uiState.update { it.copy(isAnalyzing = true, aiNotes = "") }
 
-            analyzeMealUseCase(photos.map { it.uri }, uiState.value.aiNotes)
+            analyzeMealUseCase(photos.map { it.uri }, notes)
                 .onSuccess { analysis ->
+                    if (analysis.components.isEmpty()) {
+                        // Nothing usable: leave the form as it was instead of filling in "No food detected".
+                        _uiState.update { it.copy(isAnalyzing = false, snackbarMessage = "The AI found no food in the photos") }
+                        return@onSuccess
+                    }
                     val totals = analysis.totals
                     _uiState.update {
                         it.copy(
                             dishName = analysis.mealName,
-                            analyzedPhotoIds = photos.map { p -> p.imageId },
                             // Re-analysing replaces a name the AI suggested before, but never one the user typed.
                             description = if (it.description.isNullOrBlank() || it.description == it.dishName) analysis.mealName else it.description,
                             components = analysis.components,
-                            carbohydrates = if (analysis.components.isEmpty()) it.carbohydrates else totals.carbs,
-                            proteins = if (analysis.components.isEmpty()) it.proteins else totals.protein,
-                            fats = if (analysis.components.isEmpty()) it.fats else totals.fat,
-                            calories = if (analysis.components.isEmpty()) it.calories else totals.calories,
+                            carbohydrates = totals.carbs,
+                            proteins = totals.protein,
+                            fats = totals.fat,
+                            calories = totals.calories,
+                            // Still "suggested": it follows later edits of the values until the user picks one.
                             impactType = analysis.impactType,
-                            impactAuto = false,
+                            impactAuto = true,
                             reasoning = analysis.reasoning,
                             isAnalyzing = false,
-                            snackbarMessage = if (analysis.components.isEmpty()) "The AI found no food in the photos" else "AI estimate ready. Check the values before saving"
+                            snackbarMessage = "AI estimate ready. Check the values before saving"
                         )
                     }
                 }
@@ -284,8 +304,12 @@ class AddMealViewModel(
         list.mapIndexed { i, c -> if (i == index) c.withWeight(weightG) else c }
     }
 
-    /** Replaces manually typed totals with the sum of the foods again. */
-    fun onUseComponentTotals() = updateComponents { it }
+    /** Edits one food's macros (null = unchanged); its energy and the meal totals follow. */
+    fun onComponentMacrosChanged(index: Int, carbs: Double? = null, protein: Double? = null, fat: Double? = null) = updateComponents { list ->
+        list.mapIndexed { i, c ->
+            if (i == index) c.withMacros(carbs ?: c.carbsG, protein ?: c.proteinG, fat ?: c.fatG) else c
+        }
+    }
 
     fun onComponentRemoved(index: Int) = updateComponents { list -> list.filterIndexed { i, _ -> i != index } }
 
@@ -322,7 +346,7 @@ class AddMealViewModel(
                     carbohydrates = state.carbohydrates ?: 0,
                     proteins = state.proteins,
                     fats = state.fats,
-                    calories = state.calories,
+                    calories = state.totalCalories,
                     impactType = state.impactType,
                     mealType = state.mealType,
                     reasoning = state.reasoning,
@@ -335,7 +359,7 @@ class AddMealViewModel(
                     carbohydrates = state.carbohydrates ?: 0,
                     proteins = state.proteins,
                     fats = state.fats,
-                    calories = state.calories,
+                    calories = state.totalCalories,
                     impactType = state.impactType,
                     mealType = state.mealType,
                     reasoning = state.reasoning,
@@ -413,10 +437,6 @@ class AddMealViewModel(
             val next = change(it)
             if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next
         }
-    }
-
-    fun onCaloriesChanged(value: String) {
-        _uiState.update { it.copy(calories = value.toIntOrNull()) }
     }
 
     fun onImpactTypeChanged(impactType: ImpactType) {

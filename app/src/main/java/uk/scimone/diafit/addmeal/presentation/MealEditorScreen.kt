@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -154,26 +155,30 @@ fun MealEditorScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            EditorCard("When") {
+                MealDateTimePicker(
+                    value = uiState.mealTime?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() },
+                    onValueChange = viewModel::onMealTimeChanged
+                )
+                // Courses inherit the meal's type; only the meal as a whole has one.
+                if (!extendedCourse) MealTypeSelector(uiState.mealType, viewModel::onMealTypeChanged)
+            }
+
             uiState.sitting?.let {
                 CourseContextCard(it, uiState.isAddingCourse, uiState.mealName, viewModel::onMealNameChanged)
             }
 
             PhotoSection(
-                state = uiState,
+                photos = uiState.photos,
+                canAddPhoto = uiState.canAddPhoto,
                 onTakePhoto = takePhoto,
                 onPickPhoto = pickPhoto,
-                onRemove = viewModel::onRemovePhoto,
-                onMakeCover = viewModel::onMakeCover
+                onRemove = viewModel::onRemovePhoto
             )
 
-            if (uiState.photos.isNotEmpty()) {
-                AiEstimateCard(
-                    state = uiState,
-                    onNotesChanged = viewModel::onAiNotesChanged,
-                    onAnalyze = viewModel::analyzeMeal,
-                    onComponentWeightChanged = viewModel::onComponentWeightChanged,
-                    onComponentRemoved = viewModel::onComponentRemoved
-                )
+            // Asking the AI; once it answered, its foods appear under the totals instead.
+            if (uiState.photos.isNotEmpty() && (uiState.components.isEmpty() || uiState.isAnalyzing)) {
+                AiRequestCard(uiState, viewModel::onAiNotesChanged, viewModel::analyzeMeal)
             }
 
             EditorCard(if (uiState.isAddingCourse) "What arrived?" else "What did you eat?") {
@@ -190,22 +195,21 @@ fun MealEditorScreen(
                 )
             }
 
-            NutritionCard(
+            TotalsCard(
                 state = uiState,
                 onCarbs = viewModel::onCarbsChanged,
                 onProtein = viewModel::onProteinChanged,
-                onFat = viewModel::onFatChanged,
-                onCalories = viewModel::onCaloriesChanged,
-                onUseFoodTotals = viewModel::onUseComponentTotals
+                onFat = viewModel::onFatChanged
             )
 
-            EditorCard("When") {
-                MealDateTimePicker(
-                    value = uiState.mealTime?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() },
-                    onValueChange = viewModel::onMealTimeChanged
+            if (uiState.components.isNotEmpty() && !uiState.isAnalyzing) {
+                FoodsCard(
+                    state = uiState,
+                    onRedo = viewModel::analyzeMeal,
+                    onWeightChange = viewModel::onComponentWeightChanged,
+                    onMacrosChange = viewModel::onComponentMacrosChanged,
+                    onRemove = viewModel::onComponentRemoved
                 )
-                // Courses inherit the meal's type; only the meal as a whole has one.
-                if (!extendedCourse) MealTypeSelector(uiState.mealType, viewModel::onMealTypeChanged)
             }
 
             EditorCard(
@@ -213,7 +217,11 @@ fun MealEditorScreen(
                 trailing = if (uiState.impactAuto) { { SuggestedTag("Suggested") } } else null
             ) {
                 AbsorptionSelector(uiState.impactType, viewModel::onImpactTypeChanged)
-                Text(uiState.impactType.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    uiState.impactType.hint + if (uiState.impactAuto) " Follows the macros until you pick one." else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -405,74 +413,80 @@ private fun formatUnits(units: Double): String {
     return if (r % 1.0 == 0.0) r.toInt().toString() else r.toString()
 }
 
-/** Carbs first and large (they drive the dose), then the other macros as small tiles. */
+/**
+ * The meal's totals: the main thing to check, so it is the most prominent card. Carbs, protein and fat
+ * in one row (carbs largest); energy is derived from them. Typed directly when there are no AI foods,
+ * otherwise the sum of the foods below (edit those instead).
+ */
 @Composable
-private fun NutritionCard(
+private fun TotalsCard(
     state: AddMealState,
     onCarbs: (String) -> Unit,
     onProtein: (String) -> Unit,
-    onFat: (String) -> Unit,
-    onCalories: (String) -> Unit,
-    onUseFoodTotals: () -> Unit
+    onFat: (String) -> Unit
 ) {
-    EditorCard("Nutrition") {
-        Surface(shape = RoundedCornerShape(18.dp), color = Carbs.copy(alpha = 0.12f)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(if (state.sitting != null) "Carbs in this course" else "Carbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    val sub = state.sitting?.let { "Meal total ${it.otherCarbs + (state.carbohydrates ?: 0)} g" }
-                        ?: if (state.components.isNotEmpty() && state.componentCarbsHint == null) "Sum of the foods above" else "What you dose for"
-                    Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                InlineNumberField(
-                    value = state.carbohydrates,
-                    onValueChange = onCarbs,
-                    unit = "g",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Carbs,
-                    align = TextAlign.End,
-                    modifier = Modifier.width(150.dp)
-                )
-            }
-        }
-        state.componentCarbsHint?.let { sum ->
+    val editable = state.components.isEmpty()
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Carbs.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, Carbs.copy(alpha = 0.35f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel(if (state.sitting != null) "This course" else "Total", Modifier.weight(1f))
                 Text(
-                    "The foods add up to $sum g. Your value is used.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
+                    state.totalCalories?.let { "$it kcal" } ?: "– kcal",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                TextButton(onClick = onUseFoodTotals) { Text("Use $sum g") }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MacroTile("Protein", state.proteins, onProtein, "g", Modifier.weight(1f))
-            MacroTile("Fat", state.fats, onFat, "g", Modifier.weight(1f))
-            MacroTile("Energy", state.calories, onCalories, "kcal", Modifier.weight(1.2f))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                TotalValue("Carbs", state.carbohydrates, onCarbs, editable, Carbs, MaterialTheme.typography.displaySmall, Modifier.weight(1.4f))
+                TotalValue("Protein", state.proteins, onProtein, editable, MaterialTheme.colorScheme.onSurface, MaterialTheme.typography.headlineSmall, Modifier.weight(1f))
+                TotalValue("Fat", state.fats, onFat, editable, MaterialTheme.colorScheme.onSurface, MaterialTheme.typography.headlineSmall, Modifier.weight(1f))
+            }
+            val hint = when {
+                state.sitting != null -> "Meal total ${state.sitting.otherCarbs + (state.carbohydrates ?: 0)} g carbs"
+                !editable -> "Sum of the foods below. Adjust them to change it."
+                else -> null
+            }
+            hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
 
-/**
- * Everything AI in one place: an optional note, the estimate button, then the foods it found as an
- * editable list (portion changes re-sum the totals) and, folded away, why it chose these numbers.
- */
 @Composable
-private fun AiEstimateCard(
-    state: AddMealState,
-    onNotesChanged: (String) -> Unit,
-    onAnalyze: () -> Unit,
-    onComponentWeightChanged: (Int, Double) -> Unit,
-    onComponentRemoved: (Int) -> Unit
+private fun TotalValue(
+    label: String,
+    value: Int?,
+    onValueChange: (String) -> Unit,
+    editable: Boolean,
+    color: Color,
+    style: TextStyle,
+    modifier: Modifier
 ) {
+    Column(modifier) {
+        if (editable) {
+            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                InlineNumberField(value, onValueChange, "g", style, color, Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+            }
+        } else {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${value ?: 0}", style = style, fontWeight = FontWeight.Bold, color = color, maxLines = 1)
+                Text(" g", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
+            }
+        }
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = if (editable) 10.dp else 0.dp, top = 2.dp))
+    }
+}
+
+/** Asking the AI: an optional note (only until it is sent), the button, then progress. */
+@Composable
+private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit, onAnalyze: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val hasResult = state.components.isNotEmpty()
     val n = state.photos.size
     var showNotes by rememberSaveable { mutableStateOf(false) }
-    var showReasoning by rememberSaveable { mutableStateOf(false) }
-
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = primary.copy(alpha = 0.06f),
@@ -486,51 +500,16 @@ private fun AiEstimateCard(
                 Column(Modifier.weight(1f)) {
                     Text("AI estimate", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
-                        when {
-                            state.isAnalyzing -> if (n > 1) "Looking at $n photos…" else "Looking at your photo…"
-                            hasResult -> "${state.components.size} ${if (state.components.size == 1) "food" else "foods"} · tap one to adjust"
-                            else -> "Finds each food in your ${if (n > 1) "$n photos" else "photo"} and estimates its nutrients"
-                        },
+                        if (state.isAnalyzing) { if (n > 1) "Looking at $n photos…" else "Looking at your photo…" }
+                        else "Finds each food in your ${if (n > 1) "$n photos" else "photo"} and estimates its nutrients",
                         style = MaterialTheme.typography.bodySmall,
-                        color = muted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (hasResult && !state.isAnalyzing) {
-                    TextButton(onClick = onAnalyze) {
-                        Icon(Icons.Filled.Refresh, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Redo")
-                    }
-                }
             }
-
-            if (state.isAnalyzing) LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
-
-            if (hasResult && state.analysisOutdated && !state.isAnalyzing) {
-                Text(
-                    "The photos changed since this estimate. Tap Redo to update it.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            if (hasResult) {
-                Column {
-                    state.components.forEachIndexed { index, component ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        key(component.name, index) {
-                            FoodItemRow(
-                                component = component,
-                                onWeightChange = { onComponentWeightChanged(index, it) },
-                                onRemove = { onComponentRemoved(index) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // The note is sent with the next estimate, so it stays available after a result (for Redo).
-            if (!state.isAnalyzing) {
+            if (state.isAnalyzing) {
+                LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
+            } else {
                 if (showNotes || state.aiNotes.isNotBlank()) {
                     OutlinedTextField(
                         value = state.aiNotes,
@@ -547,47 +526,78 @@ private fun AiEstimateCard(
                         leadingIcon = { Icon(Icons.Outlined.EditNote, null, Modifier.size(18.dp)) }
                     )
                 }
-            }
-
-            if (!hasResult && !state.isAnalyzing) {
-                Button(onClick = onAnalyze, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Button(onClick = { showNotes = false; onAnalyze() }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                     Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Estimate nutrition")
-                }
-            }
-
-            state.reasoning?.takeIf { hasResult && it.isNotBlank() }?.let { reasoning ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { showReasoning = !showReasoning }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("How the AI estimated this", style = MaterialTheme.typography.labelLarge, color = primary, modifier = Modifier.weight(1f))
-                    Icon(if (showReasoning) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = primary)
-                }
-                if (showReasoning) {
-                    Text(reasoning, style = MaterialTheme.typography.bodySmall, color = muted)
                 }
             }
         }
     }
 }
 
+/** The foods the AI found, each editable, and how it arrived at them (always shown). */
+@Composable
+private fun FoodsCard(
+    state: AddMealState,
+    onRedo: () -> Unit,
+    onWeightChange: (Int, Double) -> Unit,
+    onMacrosChange: (Int, Double?, Double?, Double?) -> Unit,
+    onRemove: (Int) -> Unit
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    EditorCard(
+        "Foods · AI estimate",
+        trailing = {
+            TextButton(onClick = onRedo, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Icon(Icons.Filled.Refresh, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Redo")
+            }
+        }
+    ) {
+        Column {
+            state.components.forEachIndexed { index, component ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                key(component.name, index) {
+                    FoodItemRow(
+                        component = component,
+                        onWeightChange = { onWeightChange(index, it) },
+                        onMacrosChange = { c, p, f -> onMacrosChange(index, c, p, f) },
+                        onRemove = { onRemove(index) }
+                    )
+                }
+            }
+        }
+        state.reasoning?.takeIf { it.isNotBlank() }?.let { reasoning ->
+            Surface(shape = RoundedCornerShape(16.dp), color = primary.copy(alpha = 0.06f)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.AutoAwesome, null, tint = primary, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("How the AI estimated this", style = MaterialTheme.typography.labelLarge, color = primary)
+                    }
+                    Text(reasoning, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * No photo: two big buttons. With photos: one split view (1 = full, 2 = side by side, 3 = one big +
+ * two stacked, 4+ = grid with "+N"), each photo removable, add buttons on top. The first is the cover.
+ */
 @Composable
 private fun PhotoSection(
-    state: AddMealState,
+    photos: List<MealPhoto>,
+    canAddPhoto: Boolean,
     onTakePhoto: () -> Unit,
     onPickPhoto: () -> Unit,
-    onRemove: (imageId: String) -> Unit,
-    onMakeCover: (imageId: String) -> Unit
+    onRemove: (imageId: String) -> Unit
 ) {
-    val photos = state.photos
-    when {
-        photos.isEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (photos.isEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PhotoSourceTile(Icons.Outlined.CameraAlt, "Take photo", onTakePhoto, Modifier.weight(1f))
                 PhotoSourceTile(Icons.Outlined.PhotoLibrary, "Gallery", onPickPhoto, Modifier.weight(1f))
@@ -599,89 +609,56 @@ private fun PhotoSection(
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
-        photos.size == 1 -> Box {
-            AsyncImage(
-                model = photos[0].uri,
-                contentDescription = "Meal photo",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(24.dp))
-            )
-            Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        return
+    }
+    val gap = 3.dp
+    Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(24.dp))) {
+        @Composable
+        fun Tile(i: Int, modifier: Modifier, more: Int = 0) = PhotoTile(photos[i], modifier, more) { onRemove(photos[i].imageId) }
+        when (photos.size) {
+            1 -> Tile(0, Modifier.fillMaxSize())
+            2 -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                Tile(0, Modifier.weight(1f).fillMaxHeight())
+                Tile(1, Modifier.weight(1f).fillMaxHeight())
+            }
+            3 -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                Tile(0, Modifier.weight(1f).fillMaxHeight())
+                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                    Tile(1, Modifier.weight(1f).fillMaxWidth())
+                    Tile(2, Modifier.weight(1f).fillMaxWidth())
+                }
+            }
+            else -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    Tile(0, Modifier.weight(1f).fillMaxHeight())
+                    Tile(1, Modifier.weight(1f).fillMaxHeight())
+                }
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    Tile(2, Modifier.weight(1f).fillMaxHeight())
+                    Tile(3, Modifier.weight(1f).fillMaxHeight(), more = photos.size - 4)
+                }
+            }
+        }
+        if (canAddPhoto) {
+            Row(Modifier.align(Alignment.BottomEnd).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ScrimButton(Icons.Outlined.CameraAlt, "Add another photo", onTakePhoto)
                 ScrimButton(Icons.Outlined.PhotoLibrary, "Add photos from gallery", onPickPhoto)
-                ScrimButton(Icons.Filled.Close, "Remove photo", onClick = { onRemove(photos[0].imageId) })
             }
-        }
-        else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(photos, key = { _, p -> p.imageId }) { index, photo ->
-                    PhotoThumb(
-                        photo = photo,
-                        isCover = index == 0,
-                        onRemove = { onRemove(photo.imageId) },
-                        onMakeCover = { onMakeCover(photo.imageId) }
-                    )
-                }
-                if (state.canAddPhoto) {
-                    item(key = "add") {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallAddTile(Icons.Outlined.CameraAlt, "Take another photo", onTakePhoto)
-                            SmallAddTile(Icons.Outlined.PhotoLibrary, "Add photos from gallery", onPickPhoto)
-                        }
-                    }
-                }
-            }
-            Text(
-                "${photos.size} photos · tap one to make it the cover",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
         }
     }
 }
 
-private val ThumbSize = 140.dp
-
 @Composable
-private fun PhotoThumb(photo: MealPhoto, isCover: Boolean, onRemove: () -> Unit, onMakeCover: () -> Unit) {
-    Box(
-        Modifier
-            .size(ThumbSize)
-            .clip(RoundedCornerShape(20.dp))
-            .then(if (isCover) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier)
-            .clickable(enabled = !isCover, onClickLabel = "Make cover photo", onClick = onMakeCover)
-    ) {
+private fun PhotoTile(photo: MealPhoto, modifier: Modifier, more: Int, onRemove: () -> Unit) {
+    Box(modifier) {
         AsyncImage(model = photo.uri, contentDescription = "Meal photo", contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-        Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) {
+        if (more > 0) {
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                Text("+$more", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+        }
+        Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
             ScrimButton(Icons.Filled.Close, "Remove photo", onRemove, size = 30.dp)
-        }
-        if (isCover) {
-            Text(
-                "Cover",
-                color = Color.White,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(6.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    .padding(horizontal = 7.dp, vertical = 1.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SmallAddTile(icon: ImageVector, description: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(width = 56.dp, height = (ThumbSize - 8.dp) / 2),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, description, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         }
     }
 }

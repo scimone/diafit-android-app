@@ -10,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
@@ -22,30 +20,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uk.scimone.diafit.core.domain.model.ComponentConfidence
 import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.ui.theme.Carbs
-import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Step of the portion stepper: 10 g, or 5 g for small portions. */
-private fun stepFor(weightG: Double) = if (weightG < 50) 5.0 else 10.0
-
 /**
- * One food the AI identified, as a compact list row: emoji, name, portion and its carbs (what the
- * dose is based on). Tap to expand: adjust the portion (nutrients scale with it), see the other
- * nutrients, what the AI assumed, and remove it.
+ * One food the AI identified, as a compact row: emoji, name, its carbs, and the portion (editable
+ * right here; the nutrients scale with it). The chevron opens its carbs/protein/fat for editing
+ * (energy follows), what the AI assumed, and removing it.
  */
 @Composable
 fun FoodItemRow(
     component: MealComponent,
     onWeightChange: (Double) -> Unit,
+    onMacrosChange: (carbs: Double?, protein: Double?, fat: Double?) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,19 +53,17 @@ fun FoodItemRow(
     val uncertain = component.confidence == ComponentConfidence.LOW
 
     Column(modifier.fillMaxWidth().animateContentSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .clickable(onClickLabel = if (expanded) "Collapse" else "Adjust portion") { expanded = !expanded }
-                .padding(vertical = 8.dp, horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(40.dp)) {
-                Box(contentAlignment = Alignment.Center) { Text(component.emoji, fontSize = 20.sp) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(36.dp)) {
+                Box(contentAlignment = Alignment.Center) { Text(component.emoji, fontSize = 18.sp) }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
+            Spacer(Modifier.width(10.dp))
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClickLabel = if (expanded) "Hide nutrients" else "Edit nutrients") { expanded = !expanded }
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         component.name,
@@ -82,45 +78,45 @@ fun FoodItemRow(
                         Icon(Icons.Outlined.ErrorOutline, "Uncertain estimate", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                     }
                 }
-                Text("${component.weightG.roundToInt()} g", style = MaterialTheme.typography.bodySmall, color = muted)
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = Carbs, fontWeight = FontWeight.SemiBold)) { append("${component.carbsG.roundToInt()} g carbs") }
+                        append(" · ${component.proteinG.roundToInt()} P · ${component.fatG.roundToInt()} F")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = muted,
+                    maxLines = 1
+                )
             }
-            Text(
-                "${component.carbsG.roundToInt()} g",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Carbs
-            )
-            Icon(
-                Icons.Filled.ExpandMore, null,
-                tint = muted,
-                modifier = Modifier.padding(start = 4.dp).size(20.dp).rotate(rotation)
-            )
+            Spacer(Modifier.width(8.dp))
+            WeightField(component.weightG, onWeightChange)
+            IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Filled.ExpandMore, if (expanded) "Hide nutrients" else "Edit nutrients", tint = muted, modifier = Modifier.rotate(rotation))
+            }
         }
 
         AnimatedVisibility(expanded) {
-            Column(
-                Modifier.fillMaxWidth().padding(start = 56.dp, end = 4.dp, bottom = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PortionStepper(component.weightG, onWeightChange)
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onRemove) {
-                        Icon(Icons.Outlined.DeleteOutline, "Remove ${component.name}", tint = muted)
-                    }
+            Column(Modifier.fillMaxWidth().padding(start = 46.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val small = MaterialTheme.typography.titleSmall
+                    MacroTile("Carbs", component.carbsG.roundToInt(), { onMacrosChange(it.toDoubleOrNull() ?: 0.0, null, null) }, "g", Modifier.weight(1f), Carbs, small)
+                    MacroTile("Protein", component.proteinG.roundToInt(), { onMacrosChange(null, it.toDoubleOrNull() ?: 0.0, null) }, "g", Modifier.weight(1f), style = small)
+                    MacroTile("Fat", component.fatG.roundToInt(), { onMacrosChange(null, null, it.toDoubleOrNull() ?: 0.0) }, "g", Modifier.weight(1f), style = small)
                 }
-                Text(
-                    "${component.proteinG.roundToInt()} g protein · ${component.fatG.roundToInt()} g fat · ${component.calories.roundToInt()} kcal" +
-                        if (component.sugarG >= 1) " · ${component.sugarG.roundToInt()} g sugar" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = muted
-                )
-                component.basis?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = muted)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        listOfNotNull("${component.calories.roundToInt()} kcal", component.basis?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = muted,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Outlined.DeleteOutline, "Remove ${component.name}", tint = muted, modifier = Modifier.size(20.dp))
+                    }
                 }
                 when {
                     uncertain -> Text(
-                        "Low confidence: hidden or unclear content. Please check the portion.",
+                        "Low confidence: hidden or unclear content. Please check.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -135,15 +131,12 @@ fun FoodItemRow(
     }
 }
 
-/** − [ 150 g ] + : steps the portion, or type an exact weight. */
+/** The portion as a small pill to type into; keeps its own text so it can be cleared while typing. */
 @Composable
-private fun PortionStepper(weightG: Double, onChange: (Double) -> Unit) {
-    var text by remember(weightG) { mutableStateOf(weightG.roundToInt().toString()) }
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHighest) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onChange(max(1.0, weightG - stepFor(weightG))) }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.Remove, "Less", Modifier.size(18.dp))
-            }
+private fun WeightField(weightG: Double, onChange: (Double) -> Unit) {
+    var text by remember(weightG.roundToInt()) { mutableStateOf(weightG.roundToInt().toString()) }
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = text,
                 onValueChange = { v ->
@@ -159,12 +152,9 @@ private fun PortionStepper(weightG: Double, onChange: (Double) -> Unit) {
                 ),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.width(40.dp)
+                modifier = Modifier.width(36.dp)
             )
             Text(" g", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            IconButton(onClick = { onChange(weightG + stepFor(weightG)) }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.Add, "More", Modifier.size(18.dp))
-            }
         }
     }
 }

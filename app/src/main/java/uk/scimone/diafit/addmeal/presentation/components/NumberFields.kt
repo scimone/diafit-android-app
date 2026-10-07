@@ -60,19 +60,21 @@ fun InlineNumberField(
     )
 }
 
-/** A small tile with a label on top and an inline number below, for the secondary macros. */
+/** A small tile with a label on top and an inline number below. */
 @Composable
-fun MacroTile(label: String, value: Int?, onValueChange: (String) -> Unit, unit: String, modifier: Modifier = Modifier) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+fun MacroTile(
+    label: String,
+    value: Int?,
+    onValueChange: (String) -> Unit,
+    unit: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    style: TextStyle = MaterialTheme.typography.titleMedium
+) {
+    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = modifier) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            InlineNumberField(
-                value = value,
-                onValueChange = onValueChange,
-                unit = unit,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            InlineNumberField(value = value, onValueChange = onValueChange, unit = unit, style = style, color = color)
         }
     }
 }

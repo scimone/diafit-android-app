@@ -3,7 +3,9 @@ package uk.scimone.diafit.addmeal.presentation
 import android.net.Uri
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealComponent
+import uk.scimone.diafit.core.domain.model.kcalOf
 import uk.scimone.diafit.core.domain.model.totals
+import kotlin.math.roundToInt
 import uk.scimone.diafit.core.domain.model.MealPhoto
 import uk.scimone.diafit.core.domain.model.MealType
 
@@ -32,8 +34,6 @@ data class AddMealState(
     /** Name of the whole meal (only edited when [sitting] is set); starts as the meal's current title. */
     val mealName: String = "",
     val dishName: String? = null,
-    /** Photo ids the last AI analysis looked at; differs from [photos] once photos are added/removed. */
-    val analyzedPhotoIds: List<String>? = null,
     val reasoning: String? = null,
     /** Optional context sent to the AI together with the photos, e.g. "I only ate half". */
     val aiNotes: String = "",
@@ -45,9 +45,13 @@ data class AddMealState(
     /** Set once a save/delete finished; the screen consumes it and closes. */
     val finished: EditorResult? = null
 ) {
-    /** Set when the typed totals differ from the sum of the components (the manual value wins). */
-    val componentCarbsHint: Int?
-        get() = components.takeIf { it.isNotEmpty() }?.totals()?.carbs?.takeIf { it != carbohydrates }
+    /** Energy shown and saved: the foods' energy when the AI split the meal up, else from the macros. */
+    val totalCalories: Int?
+        get() = when {
+            components.isNotEmpty() -> components.totals().calories
+            carbohydrates == null && proteins == null && fats == null -> null
+            else -> kcalOf((carbohydrates ?: 0).toDouble(), (proteins ?: 0).toDouble(), (fats ?: 0).toDouble()).roundToInt()
+        }
 
     val isEditing: Boolean get() = editingMealId != null
 
@@ -56,10 +60,6 @@ data class AddMealState(
 
     val canAddPhoto: Boolean get() = photos.size < MAX_PHOTOS_PER_COURSE
 
-    /** Photos changed since the last AI estimate, so it may no longer match. */
-    val analysisOutdated: Boolean
-        get() = analyzedPhotoIds != null && analyzedPhotoIds != photos.map { it.imageId }
-
     /** A course needs at least something to identify it: a photo, a description or carbs. */
     val canSave: Boolean
         get() = photos.isNotEmpty() || !description.isNullOrBlank() || (carbohydrates ?: 0) > 0
@@ -67,7 +67,7 @@ data class AddMealState(
     /** The user-editable fields only, for unsaved-changes detection. */
     fun formFields() = copy(
         isAnalyzing = false, isLoading = false, snackbarMessage = null, finished = null, dishName = null,
-        analyzedPhotoIds = null, sitting = null, aiNotes = ""
+        sitting = null, aiNotes = ""
     )
 }
 
