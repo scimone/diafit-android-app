@@ -15,8 +15,8 @@ import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 
 /**
- * One day on the shared 24 h scale, using the full width: one rounded track made of three bands
- * (glucose horizon with high/low mountains, carbs, bolus) with the date as a caption in its corner.
+ * One day on the shared 24 h scale, using the full width: one rounded track made of four bands
+ * (glucose horizon with high/low mountains, carbs, bolus, sleep & exercise) with the date as a caption in its corner.
  * Tapping opens the day.
  */
 @Composable
@@ -48,5 +48,7 @@ fun DayTrackRow(
         TreatmentStrip(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)
         Spacer(Modifier.height(1.dp))
         TreatmentStrip(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
+        Spacer(Modifier.height(1.dp))
+        ActivityStrip(day.activity, day.dayStartUtc, day.dayEndUtc)
     }
 }

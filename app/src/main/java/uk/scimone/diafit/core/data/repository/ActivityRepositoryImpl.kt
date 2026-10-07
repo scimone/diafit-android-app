@@ -19,6 +19,19 @@ class ActivityRepositoryImpl(private val dao: ActivityDao) : ActivityRepository 
         dao.observeExerciseSince(start, userId)
     ) { heartRate, steps, sleep, exercise -> ActivityData(heartRate, steps, sleep, exercise) }
 
+    override fun observeSessionsSince(start: Long, userId: Int): Flow<ActivityData> = combine(
+        dao.observeSleepSince(start, userId),
+        dao.observeExerciseSince(start, userId)
+    ) { sleep, exercise -> ActivityData(sleep = sleep, exercise = exercise) }
+
+    override suspend fun getSessionsBetween(start: Long, end: Long, userId: Int) = ActivityData(
+        sleep = dao.getSleepBetween(start, end, userId),
+        exercise = dao.getExerciseBetween(start, end, userId)
+    )
+
+    override suspend fun getHeartRateBetween(start: Long, end: Long, userId: Int) =
+        dao.getHeartRateBetween(start, end, userId)
+
     override suspend fun getBetween(start: Long, end: Long, userId: Int) = ActivityData(
         heartRate = dao.getHeartRateBetween(start, end, userId),
         steps = dao.getStepsBetween(start, end, userId),

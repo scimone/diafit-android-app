@@ -10,6 +10,7 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.Device
+import uk.scimone.diafit.ui.theme.Sleep
 
 /**
  * The kinds of entry the journal can hold. Only [MEAL] is implemented; the others exist so the
@@ -28,8 +29,8 @@ enum class JournalEntryKind(
     GLUCOSE("Low or high", "Lows & highs", BelowRange, available = true, creatable = false),
     BOLUS("Insulin", "Insulin", Bolus, available = true, creatable = false),
     DEVICE("Device", "Device events", Device, available = true, creatable = false),
-    SLEEP("Sleep", "Sleep", Color(0xFF7986CB), available = false),
-    ACTIVITY("Activity", "Activity", Activity, available = false);
+    SLEEP("Sleep", "Sleep", Sleep, available = true, creatable = false),
+    ACTIVITY("Exercise", "Exercise", Activity, available = true, creatable = false);
 
     companion object {
         val availableKinds: List<JournalEntryKind> get() = entries.filter { it.available }

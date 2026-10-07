@@ -27,7 +27,9 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.toSittings
 import uk.scimone.diafit.core.domain.model.MEAL_DOSE_LEAD_MS
 import uk.scimone.diafit.core.domain.model.standalone
+import uk.scimone.diafit.core.domain.repository.ActivityRepository
 import uk.scimone.diafit.core.domain.repository.BolusRepository
+import uk.scimone.diafit.journal.presentation.model.toUi as activityToUi
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.repository.PumpEventRepository
@@ -63,6 +65,7 @@ class JournalViewModel(
     private val cgmRepository: CgmRepository,
     private val bolusRepository: BolusRepository,
     private val pumpEventRepository: PumpEventRepository,
+    private val activityRepository: ActivityRepository,
     private val mergeCarbEntries: MergeCarbEntriesUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,
@@ -118,7 +121,10 @@ class JournalViewModel(
                     delay(REFRESH_MS)
                 }
             }
-            combine(mealRepository.observeMealsByUserId(userId), ticks, pumpEventRepository.observeCount(userId)) { meals, _, _ -> meals }
+            combine(
+                mealRepository.observeMealsByUserId(userId), ticks, pumpEventRepository.observeCount(userId),
+                activityRepository.observeSessionsSince(range.boundsUtc().first, userId)
+            ) { meals, _, _, _ -> meals }
                 .catch { e ->
                     _uiState.update {
                         it.copy(
@@ -133,7 +139,7 @@ class JournalViewModel(
                     val matches = MealMatcher.findMatches(meals).filter { !it.confident }
                     suggestions = matches.associateBy { it.imported.id }
                     val entries = withContext(Dispatchers.IO) {
-                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to) + pumpEventEntries(from, to)
+                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to) + pumpEventEntries(from, to) + activityEntries(from, to)
                     }
                     _uiState.update {
                         it.copy(
@@ -195,6 +201,19 @@ class JournalViewModel(
         milestones.filter { it.id !in pairedTargetIds }.map { it.pumpEventToUi(pairs[it.id]?.toTemporaryTarget()) }
     } catch (e: Exception) {
         Log.e(TAG, "Error loading pump events", e)
+        emptyList()
+    }
+
+    /** Sleep (listed on the day the user woke up) and workouts in the range, from Health Connect. */
+    private suspend fun activityEntries(from: Long, to: Long): List<JournalEntryUi> = try {
+        val data = activityRepository.getSessionsBetween(from, to, userId)
+        val sleep = data.sleepSessions.filter { it.endUtc in from..to }.map { it.activityToUi() }
+        val exercise = data.exercise.filter { it.startUtc in from..to }.map {
+            it.activityToUi(activityRepository.getHeartRateBetween(it.startUtc, it.endUtc, userId))
+        }
+        sleep + exercise
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading activity", e)
         emptyList()
     }
 

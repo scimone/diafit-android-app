@@ -584,8 +584,8 @@ internal fun ActivityDisplay(
     }
 }
 
-/** The activity panel is a little taller than the others: heart-rate plot plus the sleep/exercise lane. */
-internal const val ActivityPanelWeight = 1.3f
+/** The activity panel is a little taller than the others: a compact heart-rate plot plus the sleep/exercise lane. */
+internal const val ActivityPanelWeight = 1.15f
 
 @Composable
 fun CgmChartDisplay(

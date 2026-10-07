@@ -13,6 +13,7 @@ val journalModule = module {
             cgmRepository = get(),
             bolusRepository = get(),
             pumpEventRepository = get(),
+            activityRepository = get(),
             mergeCarbEntries = get(),
             getTargetRangeUseCase = get(),
             context = get(),

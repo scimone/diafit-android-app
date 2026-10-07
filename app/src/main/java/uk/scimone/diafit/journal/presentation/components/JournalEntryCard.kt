@@ -8,7 +8,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Vaccines
@@ -45,6 +47,9 @@ import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
+import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
+import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
+import uk.scimone.diafit.core.domain.model.SleepStage
 import uk.scimone.diafit.journal.presentation.model.accent
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -53,6 +58,8 @@ import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.core.domain.model.formatDurationMinutes
 import uk.scimone.diafit.ui.theme.Device
+import uk.scimone.diafit.ui.theme.Sleep
+import uk.scimone.diafit.ui.theme.Activity
 import uk.scimone.diafit.ui.theme.InRange
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,6 +73,8 @@ fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick:
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
         is BolusEntryUi -> BolusCard(entry, onClick, modifier)
         is PumpEventUi -> PumpEventCard(entry, onClick, modifier)
+        is SleepEntryUi -> SleepCard(entry, onClick, modifier)
+        is ExerciseEntryUi -> ExerciseCard(entry, onClick, modifier)
     }
 }
 
@@ -407,5 +416,94 @@ private fun SwitchValue(value: String, unit: String, color: Color) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
         Spacer(Modifier.width(3.dp))
         Text(unit, style = MaterialTheme.typography.labelSmall, color = color, modifier = Modifier.padding(bottom = 2.dp))
+    }
+}
+
+private fun SleepStage.color(): Color = when (this) {
+    SleepStage.AWAKE -> uk.scimone.diafit.ui.theme.SleepAwake
+    SleepStage.REM -> uk.scimone.diafit.ui.theme.SleepRem
+    SleepStage.LIGHT -> uk.scimone.diafit.ui.theme.SleepLight
+    SleepStage.DEEP -> uk.scimone.diafit.ui.theme.SleepDeep
+    SleepStage.SLEEPING -> uk.scimone.diafit.ui.theme.Sleep
+}
+
+/** A night's sleep: when, how long, and how it split into stages. */
+@Composable
+fun SleepCard(entry: SleepEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    EntrySurface(onClick, modifier) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(48.dp).background(Sleep.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Filled.Bedtime, null, tint = Sleep, modifier = Modifier.size(24.dp)) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "${clock.format(Date(entry.startUtc))} – ${clock.format(Date(entry.endUtc))}",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("Sleep", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(formatDuration(entry.asleepMs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Sleep)
+                    Text(" asleep", style = MaterialTheme.typography.labelSmall, color = Sleep, modifier = Modifier.padding(bottom = 2.dp))
+                }
+            }
+            if (entry.hasStages) {
+                val total = entry.stageMs.values.sum().coerceAtLeast(1L)
+                Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // Deep first, awake last: the shape of a good night at a glance.
+                    listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).forEach { stage ->
+                        val ms = entry.stageMs[stage] ?: return@forEach
+                        Box(Modifier.weight(ms / total.toFloat()).fillMaxHeight().background(stage.color()))
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).forEach { stage ->
+                        val ms = entry.stageMs[stage] ?: return@forEach
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(8.dp).background(stage.color(), CircleShape))
+                            Spacer(Modifier.width(4.dp))
+                            Text("${stage.label} ${formatDuration(ms)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A workout: type, when, how long and the heart rate it showed. */
+@Composable
+fun ExerciseCard(entry: ExerciseEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    EntrySurface(onClick, modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).background(Activity.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.AutoMirrored.Filled.DirectionsRun, null, tint = Activity, modifier = Modifier.size(24.dp)) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "${clock.format(Date(entry.timeUtc))} – ${clock.format(Date(entry.endUtc))}",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(formatDuration(entry.durationMs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Activity)
+                }
+                if (entry.avgBpm != null) {
+                    Text(
+                        "avg ${entry.avgBpm}" + (entry.maxBpm?.let { " · max $it" } ?: "") + " bpm",
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

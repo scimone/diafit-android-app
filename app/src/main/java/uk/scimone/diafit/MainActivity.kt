@@ -222,7 +222,7 @@ class MainActivity : ComponentActivity() {
                                     when (entry) {
                                         is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
                                         // A low or high opens its day in History, where the trace around it is visible.
-                                        is BolusEntryUi -> Unit
+                                        is BolusEntryUi, is uk.scimone.diafit.journal.presentation.model.SleepEntryUi, is uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi -> Unit
                                         // Only profile switches reach here; other device events open a dialog in the Journal.
                                         is PumpEventUi -> overlays.add(Overlay.ProfileSwitchDetail(entry.id))
                                         is GlucoseEpisodeUi -> overlays.add(

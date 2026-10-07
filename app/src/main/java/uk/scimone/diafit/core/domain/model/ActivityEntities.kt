@@ -106,3 +106,53 @@ data class SleepSession(val stages: List<SleepStageEntity>) {
     val asleepMs: Long get() = stages.filter { it.sleepStage != SleepStage.AWAKE }.sumOf { it.endUtc - it.startUtc }
     val hasStages: Boolean get() = stages.any { it.sleepStage != SleepStage.SLEEPING }
 }
+
+/**
+ * One local day's activity numbers. Sleep belongs to the day the user woke up on (a session counts
+ * where it ends), exercise to the day it started, steps and heart rate to the clock day.
+ */
+data class ActivityDayStats(
+    val steps: Int,
+    /** Time asleep (awake time excluded) of the sessions ending on this day. */
+    val sleepMs: Long,
+    val awakeMs: Long,
+    /** Time per stage over those sessions (stages that never occurred are absent). */
+    val stageMs: Map<SleepStage, Long>,
+    val exerciseCount: Int,
+    val exerciseMs: Long,
+    val avgBpm: Int?,
+    /** Mean of the lowest 5 % of the day's per-minute heart rates. */
+    val restingBpm: Int?,
+    val maxBpm: Int?
+) {
+    val hasSleep: Boolean get() = sleepMs > 0
+    val hasHeartRate: Boolean get() = avgBpm != null
+
+    companion object {
+        /** Null when [data] holds nothing that belongs to the day [dayStartUtc, dayEndUtc). */
+        fun from(data: ActivityData, dayStartUtc: Long, dayEndUtc: Long): ActivityDayStats? {
+            val day = dayStartUtc until dayEndUtc
+            val bpms = data.heartRate.filter { it.timestamp in day }.map { it.bpm }
+            val steps = data.steps.filter { it.startUtc in day }.sumOf { it.count }
+            val sessions = data.sleepSessions.filter { it.endUtc in day }
+            val exercises = data.exercise.filter { it.startUtc in day }
+            if (bpms.isEmpty() && steps == 0 && sessions.isEmpty() && exercises.isEmpty()) return null
+
+            val stageMs = HashMap<SleepStage, Long>()
+            sessions.flatMap { it.stages }.forEach { stageMs.merge(it.sleepStage, it.endUtc - it.startUtc, Long::plus) }
+            val sorted = bpms.sorted()
+            val lowest = sorted.take(maxOf(1, sorted.size / 20))
+            return ActivityDayStats(
+                steps = steps,
+                sleepMs = stageMs.filterKeys { it != SleepStage.AWAKE }.values.sum(),
+                awakeMs = stageMs[SleepStage.AWAKE] ?: 0L,
+                stageMs = stageMs,
+                exerciseCount = exercises.size,
+                exerciseMs = exercises.sumOf { it.durationMs },
+                avgBpm = bpms.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it).toInt() },
+                restingBpm = lowest.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it).toInt() },
+                maxBpm = sorted.lastOrNull()
+            )
+        }
+    }
+}

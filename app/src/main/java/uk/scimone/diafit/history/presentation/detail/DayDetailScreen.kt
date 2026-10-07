@@ -33,8 +33,18 @@ import uk.scimone.diafit.journal.presentation.components.formatDuration
 import uk.scimone.diafit.journal.presentation.components.formatUnits
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
+import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
+import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.core.domain.model.ActivityDayStats
+import uk.scimone.diafit.core.domain.model.SleepStage
+import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.Sleep
+import uk.scimone.diafit.ui.theme.SleepAwake
+import uk.scimone.diafit.ui.theme.SleepDeep
+import uk.scimone.diafit.ui.theme.SleepLight
+import uk.scimone.diafit.ui.theme.SleepRem
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
@@ -140,14 +150,17 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
 
     when {
         state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        state.isEmpty -> EmptyNote(state.errorMessage ?: "No glucose readings, meals or insulin on this day.")
+        state.isEmpty -> EmptyNote(state.errorMessage ?: "No glucose readings, meals, insulin or activity on this day.")
         else -> when (tab) {
             DayTab.STATS -> LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp)
-            ) { item { SummaryCard(state) } }
+            ) {
+                item { SummaryCard(state) }
+                state.activityStats?.let { stats -> item { Spacer(Modifier.height(14.dp)); ActivityCard(stats) } }
+            }
             DayTab.CHARTS -> DayCharts(state, onOpenMeal)
-            DayTab.JOURNAL -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows or highs on this day.") else LazyColumn(
+            DayTab.JOURNAL -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows, highs, sleep or exercise on this day.") else LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -158,7 +171,7 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
                         state.target,
                         onClick = when (entry) {
                             is MealEntityUi -> ({ onOpenMeal(entry.id) })
-                            is GlucoseEpisodeUi, is BolusEntryUi, is PumpEventUi -> null
+                            is GlucoseEpisodeUi, is BolusEntryUi, is PumpEventUi, is SleepEntryUi, is ExerciseEntryUi -> null
                         }
                     )
                 }
@@ -320,3 +333,55 @@ private fun Section(contentSpacing: androidx.compose.ui.unit.Dp = 14.dp, content
 }
 
 internal fun percent(share: Double): Int = Math.round(share * 100).toInt()
+
+
+// ---------------------------------------------------------------- activity
+
+/** Steps, sleep, exercise and heart rate of the day (from Health Connect). */
+@Composable
+private fun ActivityCard(stats: ActivityDayStats) {
+    Section {
+        Text("Activity", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth()) {
+            Metric("Steps", "%,d".format(stats.steps), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.steps > 0 })
+            Metric(if (stats.exerciseCount > 1) "Exercise · ${stats.exerciseCount}×" else "Exercise", if (stats.exerciseCount == 0) "–" else formatDuration(stats.exerciseMs), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.exerciseCount > 0 })
+            Metric("Sleep", if (stats.hasSleep) formatDuration(stats.sleepMs) else "–", "", Modifier.weight(1f), valueColor = Sleep.takeIf { stats.hasSleep })
+        }
+        if (stats.hasHeartRate) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Row(Modifier.fillMaxWidth()) {
+                Metric("Heart rate · avg", "${stats.avgBpm}", "bpm", Modifier.weight(1f))
+                Metric("Resting", "${stats.restingBpm}", "bpm", Modifier.weight(1f))
+                Metric("Max", "${stats.maxBpm}", "bpm", Modifier.weight(1f))
+            }
+        }
+        if (stats.hasSleep && stats.stageMs.keys.any { it != SleepStage.SLEEPING }) {
+            val order = listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE)
+            val total = order.sumOf { stats.stageMs[it] ?: 0L }.coerceAtLeast(1L)
+            Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                order.forEach { stage ->
+                    val ms = stats.stageMs[stage] ?: return@forEach
+                    Box(Modifier.weight(ms / total.toFloat()).fillMaxHeight().background(stageColor(stage)))
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                order.forEach { stage ->
+                    val ms = stats.stageMs[stage] ?: return@forEach
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).background(stageColor(stage), RoundedCornerShape(2.dp)))
+                        Spacer(Modifier.width(4.dp))
+                        Text("${stage.label} ${formatDuration(ms)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+internal fun stageColor(stage: SleepStage): Color = when (stage) {
+    SleepStage.AWAKE -> SleepAwake
+    SleepStage.REM -> SleepRem
+    SleepStage.LIGHT -> SleepLight
+    SleepStage.DEEP -> SleepDeep
+    SleepStage.SLEEPING -> Sleep
+}

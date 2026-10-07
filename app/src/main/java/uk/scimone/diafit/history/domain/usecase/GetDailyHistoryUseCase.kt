@@ -2,6 +2,8 @@ package uk.scimone.diafit.history.domain.usecase
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.repository.ActivityRepository
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllCgmSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
@@ -14,7 +16,8 @@ import java.time.ZoneId
 class GetDailyHistoryUseCase(
     private val getAllCgmSince: GetAllCgmSinceUseCase,
     private val getAllBolusSince: GetAllBolusSinceUseCase,
-    private val getAllMealsSince: GetAllMealsSinceUseCase
+    private val getAllMealsSince: GetAllMealsSinceUseCase,
+    private val activityRepository: ActivityRepository
 ) {
     operator fun invoke(userId: Int, days: Int, page: Int = 0, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayHistory>> {
         // Page 0 ends today; each further page steps back by [days] days.
@@ -25,19 +28,26 @@ class GetDailyHistoryUseCase(
         return combine(
             getAllCgmSince(start, userId),
             getAllBolusSince(start, userId),
-            getAllMealsSince(start, userId)
-        ) { cgm, boluses, meals ->
+            getAllMealsSince(start, userId),
+            activityRepository.observeSessionsSince(start, userId)
+        ) { cgm, boluses, meals, activity ->
             val cgmByDay = cgm.groupBy { dayOf(it.timestamp) }
             val bolusByDay = boluses.groupBy { dayOf(it.timestampUtc) }
             val mealsByDay = meals.filter { it.carbohydrates > 0 }.groupBy { dayOf(it.mealTimeUtc) }
             (0 until days)
                 .map { lastDay.minusDays(it.toLong()) }
                 .map { date ->
+                    val dayStart = date.atStartOfDay(zone).toInstant().toEpochMilli()
+                    val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
                     DayHistory(
                         date = date,
                         readings = cgmByDay[date].orEmpty(),
                         boluses = bolusByDay[date].orEmpty(),
-                        meals = mealsByDay[date].orEmpty()
+                        meals = mealsByDay[date].orEmpty(),
+                        activity = ActivityData(
+                            sleep = activity.sleep.filter { it.sessionEndUtc > dayStart && it.sessionStartUtc < dayEnd },
+                            exercise = activity.exercise.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
+                        )
                     )
                 }
         }

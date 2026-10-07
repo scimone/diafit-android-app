@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -30,6 +31,7 @@ import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
 import uk.scimone.diafit.core.domain.model.SleepSession
 import uk.scimone.diafit.core.domain.model.SleepStage
+import uk.scimone.diafit.core.domain.model.StepsEntity
 import uk.scimone.diafit.home.presentation.utils.ChartGeometry
 import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
 import uk.scimone.diafit.ui.theme.Activity
@@ -44,25 +46,29 @@ import kotlin.math.min
 
 /** Heart-rate axis: [HR_MIN] at the bottom of the plot, [HR_DEFAULT_MAX] (or the day's peak) at the top. */
 private const val HR_MIN = 40
-private const val HR_DEFAULT_MAX = 150
+private const val HR_DEFAULT_MAX = 170
 /** A heart-rate gap longer than this breaks the line instead of bridging missing data. */
 private const val HR_GAP_MS = 8 * 60_000L
-/** The faint reference line (and its label) in the heart-rate plot. */
-private const val HR_REFERENCE = 100
+/** The line is a 5-minute moving mean of the per-minute values: calmer, same shape. */
+private const val HR_SMOOTH_POINTS = 5
 /** A 15-minute step bucket this full reaches the maximum bar height (brisk walking, ~80 steps/min). */
 private const val STEPS_FULL = 1200
-private const val STEPS_BAR_FRACTION = 0.3f
+private const val STEPS_BAR_FRACTION = 0.45f
 /** Exercise intensity colouring is relative to this heart-rate span. */
 private const val INTENSITY_LOW_BPM = 85
 private const val INTENSITY_HIGH_BPM = 150
 private const val EXERCISE_SLICE_MS = 3 * 60_000L
 
-private val LaneHeight = 18.dp
-private val LaneGap = 3.dp
-private val PlotTopInset = 4.dp
+/** Space under the panel title, then the heart-rate plot, then the sleep/exercise lane. */
+private val PlotTopInset = 12.dp
+private val PlotMaxHeight = 40.dp
+private val LaneLabelHeight = 11.dp
+private val LaneBlockHeight = 20.dp
+private val LaneHeight = LaneLabelHeight + LaneBlockHeight + 2.dp
+private val LaneGap = 4.dp
 
 /** An exercise session cut into slices, each with the intensity (0..1) its heart rate showed. */
-private class ExerciseDrawing(val exercise: ExerciseEntity, val slices: List<Triple<Long, Long, Float>>)
+private class ExerciseDrawing(val exercise: ExerciseEntity, val slices: List<Triple<Long, Long, Float>>, val avgBpm: Int?)
 
 private fun stageColor(stage: SleepStage): Color = when (stage) {
     SleepStage.AWAKE -> SleepAwake
@@ -88,13 +94,13 @@ internal fun formatDuration(ms: Long): String {
 
 /**
  * The activity panel, drawn straight onto a Canvas through the shared [geometry] of the CGM chart so
- * it pans, zooms and aligns exactly with the Vico panels without being a Vico chart itself:
- *  - **heart rate** as a line (gaps in the data break it) in the upper part, with a faint 100 bpm guide;
- *  - **steps** as soft bars along the bottom of that area;
- *  - **sleep** as a tinted wash behind the heart rate plus a hypnogram (awake / REM / light / deep rows)
- *    in the lane underneath, labelled with its length;
- *  - **exercise** as a bar in the same lane, shaded by the intensity the heart rate showed, labelled
- *    with its type and length, plus a faint wash behind the heart rate so the spikes line up with it.
+ * it pans, zooms and aligns exactly with the Vico panels without being a Vico chart itself.
+ * Two parts, top to bottom:
+ *  - a compact **heart-rate plot** (smoothed line with a soft fill, gaps in the data break it) with
+ *    **steps** as faint bars along its bottom;
+ *  - a **sleep / exercise lane**, each item a labelled capsule: sleep as a hypnogram (awake / REM /
+ *    light / deep rows, so the night's shape is visible), exercise as an intensity profile (one bar per
+ *    few minutes, as tall as the heart rate was high) with its type, length and average heart rate.
  * Nothing is drawn after [ChartTimeWindow.now].
  */
 @Composable
@@ -105,14 +111,22 @@ fun ComponentActivityChart(
     modifier: Modifier = Modifier
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
-    val guide = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
 
     val heartTimes = remember(data.heartRate) { LongArray(data.heartRate.size) { data.heartRate[it].timestamp } }
     val heartBpm = remember(data.heartRate) { IntArray(data.heartRate.size) { data.heartRate[it].bpm } }
-    val hrMax = remember(data.heartRate) {
-        val peak = data.heartRate.maxOfOrNull { it.bpm } ?: HR_DEFAULT_MAX
+    // Moving mean over neighbouring readings, never across a gap in the data.
+    val smoothBpm = remember(heartTimes, heartBpm) {
+        FloatArray(heartBpm.size) { i ->
+            var sum = 0f; var n = 0
+            for (j in (i - HR_SMOOTH_POINTS / 2)..(i + HR_SMOOTH_POINTS / 2)) {
+                if (j in heartBpm.indices && kotlin.math.abs(heartTimes[j] - heartTimes[i]) <= HR_SMOOTH_POINTS * 60_000L) { sum += heartBpm[j]; n++ }
+            }
+            sum / n
+        }
+    }
+    val hrMax = remember(smoothBpm) {
+        val peak = smoothBpm.maxOrNull()?.toInt() ?: HR_DEFAULT_MAX
         max(HR_DEFAULT_MAX, (ceil(peak / 10.0) * 10).toInt())
     }
     val sessions = remember(data.sleep) { data.sleepSessions }
@@ -129,7 +143,8 @@ fun ComponentActivityChart(
                 } else 0.5f
                 Triple(s, e, intensity)
             }.toList()
-            ExerciseDrawing(ex, slices)
+            val during = lowerBound(heartTimes, ex.startUtc) until lowerBound(heartTimes, ex.endUtc)
+            ExerciseDrawing(ex, slices, if (during.isEmpty()) null else during.sumOf { heartBpm[it] } / during.count())
         }
     }
 
@@ -141,42 +156,17 @@ fun ComponentActivityChart(
 
         val laneH = LaneHeight.toPx()
         val laneTop = size.height - laneH
-        val plotTop = PlotTopInset.toPx()
         val plotBottom = laneTop - LaneGap.toPx()
+        // The heart-rate plot stays small however tall the panel is; the lane sits right under it.
+        val plotTop = max(PlotTopInset.toPx(), plotBottom - PlotMaxHeight.toPx())
+        val plotHeight = plotBottom - plotTop
+        fun yOf(bpm: Float) = plotBottom - ((bpm - HR_MIN) / (hrMax - HR_MIN)).coerceIn(0f, 1f) * plotHeight
 
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
-            // Lane track.
-            drawRoundRect(track, Offset(g.left, laneTop), Size(clipRight - g.left, laneH), CornerRadius(4.dp.toPx()))
-
-            // Sleep: wash behind the plot.
-            sessions.forEach { s ->
-                val x0 = g.xOf(s.startUtc); val x1 = g.xOf(s.endUtc)
-                if (x1 >= g.left && x0 <= clipRight) {
-                    drawRect(Sleep.copy(alpha = 0.10f), Offset(x0, 0f), Size(x1 - x0, plotBottom + LaneGap.toPx() / 2))
-                }
-            }
-            // Exercise: faint wash so the lane block and the heart-rate spikes read as one thing.
-            exercises.forEach { e ->
-                val x0 = g.xOf(e.exercise.startUtc); val x1 = g.xOf(e.exercise.endUtc)
-                if (x1 >= g.left && x0 <= clipRight) {
-                    drawRect(Activity.copy(alpha = 0.09f), Offset(x0, 0f), Size(x1 - x0, plotBottom + LaneGap.toPx() / 2))
-                }
-            }
-
-            // Reference line.
-            val plotHeight = plotBottom - plotTop
-            fun yOf(bpm: Int) = plotBottom - ((bpm - HR_MIN).toFloat() / (hrMax - HR_MIN)).coerceIn(0f, 1f) * plotHeight
-            val refY = yOf(HR_REFERENCE)
-            drawLine(guide, Offset(g.left, refY), Offset(clipRight, refY), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f)))
-            drawText(
-                textMeasurer, "$HR_REFERENCE", Offset(g.left + 3.dp.toPx(), refY - 11.dp.toPx()),
-                style = TextStyle(color = labelColor.copy(alpha = 0.7f), fontSize = 9.sp)
-            )
-
             // Steps.
             val barMax = plotHeight * STEPS_BAR_FRACTION
             data.steps.forEach { st ->
-                val x0 = g.xOf(st.startUtc); val x1 = g.xOf(st.startUtc + uk.scimone.diafit.core.domain.model.StepsEntity.STEP_BUCKET_MS)
+                val x0 = g.xOf(st.startUtc); val x1 = g.xOf(st.startUtc + StepsEntity.STEP_BUCKET_MS)
                 if (x1 < g.left || x0 > clipRight) return@forEach
                 val h = barMax * min(1f, st.count / STEPS_FULL.toFloat()).coerceAtLeast(0.08f)
                 drawRect(Activity.copy(alpha = 0.28f), Offset(x0 + 0.5f, plotBottom - h), Size(max(1f, x1 - x0 - 1f), h))
@@ -186,61 +176,88 @@ fun ComponentActivityChart(
             if (heartTimes.isNotEmpty()) {
                 val first = max(0, lowerBound(heartTimes, g.timeAt(g.left - 40f)) - 1)
                 val last = min(heartTimes.size - 1, lowerBound(heartTimes, g.timeAt(clipRight + 40f)))
-                val path = Path()
+                val line = Path()
+                val area = Path()
                 var prevTime = Long.MIN_VALUE
+                var segmentStartX = 0f
+                var prevX = 0f
+                fun closeArea() { if (prevTime != Long.MIN_VALUE) { area.lineTo(prevX, plotBottom); area.lineTo(segmentStartX, plotBottom); area.close() } }
                 for (i in first..last) {
-                    val x = g.xOf(heartTimes[i]); val y = yOf(heartBpm[i])
-                    if (prevTime == Long.MIN_VALUE || heartTimes[i] - prevTime > HR_GAP_MS) path.moveTo(x, y) else path.lineTo(x, y)
-                    prevTime = heartTimes[i]
+                    val x = g.xOf(heartTimes[i]); val y = yOf(smoothBpm[i])
+                    if (prevTime == Long.MIN_VALUE || heartTimes[i] - prevTime > HR_GAP_MS) {
+                        closeArea()
+                        line.moveTo(x, y); area.moveTo(x, y); segmentStartX = x
+                    } else { line.lineTo(x, y); area.lineTo(x, y) }
+                    prevTime = heartTimes[i]; prevX = x
                 }
-                drawPath(path, Activity, style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                closeArea()
+                drawPath(area, Brush.verticalGradient(listOf(Activity.copy(alpha = 0.22f), Color.Transparent), startY = plotTop, endY = plotBottom))
+                drawPath(line, Activity, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
 
-            // Sleep: hypnogram in the lane + label.
-            val rowH = laneH / 4f
-            sessions.forEach { s -> drawSleepLane(s, g, laneTop, rowH, plotTop, textMeasurer) }
-            // Exercise: intensity-shaded bar in the lane + label.
-            exercises.forEach { drawExerciseLane(it, g, laneTop, laneH, textMeasurer) }
+            // Lane: one capsule per sleep session / workout.
+            sessions.forEach { s -> drawSleepCapsule(s, g, laneTop, track, textMeasurer) }
+            exercises.forEach { drawExerciseCapsule(it, g, laneTop, track, textMeasurer) }
         }
     }
 }
 
-private fun DrawScope.drawSleepLane(s: SleepSession, g: ChartGeometry, laneTop: Float, rowH: Float, labelTop: Float, textMeasurer: TextMeasurer) {
-    val corner = CornerRadius(1.5.dp.toPx())
-    s.stages.forEach { st ->
-        val x0 = g.xOf(st.startUtc); val x1 = g.xOf(st.endUtc)
-        if (x1 < g.left || x0 > g.right) return@forEach
-        val stage = st.sleepStage
-        val row = stageRow(stage)
-        // Sleep without stage detail is one flat bar through the middle rows.
-        val top = laneTop + row * rowH + 0.5f
-        val height = if (stage == SleepStage.SLEEPING) rowH * 2 - 1f else rowH - 1f
-        drawRoundRect(stageColor(stage), Offset(x0, top), Size(max(1.5f, x1 - x0), height), corner)
+/** Sleep as a capsule holding a hypnogram: awake on top, then REM, light, deep at the bottom. */
+private fun DrawScope.drawSleepCapsule(s: SleepSession, g: ChartGeometry, laneTop: Float, track: Color, textMeasurer: TextMeasurer) {
+    val x0 = g.xOf(s.startUtc); val x1 = g.xOf(s.endUtc)
+    if (x1 < g.left || x0 > g.right) return
+    val labelH = LaneLabelHeight.toPx()
+    val blockH = LaneBlockHeight.toPx()
+    val capsule = RoundRect(x0, laneTop + labelH, max(x1, x0 + 3f), laneTop + labelH + blockH, CornerRadius(5.dp.toPx()))
+    drawPath(Path().apply { addRoundRect(capsule) }, Sleep.copy(alpha = 0.14f))
+    val rowH = (blockH - 4.dp.toPx()) / 4f
+    val inset = 2.dp.toPx()
+    clipPath(Path().apply { addRoundRect(capsule) }) {
+        s.stages.forEach { st ->
+            val sx0 = g.xOf(st.startUtc); val sx1 = g.xOf(st.endUtc)
+            if (sx1 < g.left || sx0 > g.right) return@forEach
+            val stage = st.sleepStage
+            val top = laneTop + labelH + inset + stageRow(stage) * rowH
+            val h = if (stage == SleepStage.SLEEPING) rowH * 2 else rowH
+            drawRoundRect(stageColor(stage), Offset(sx0, top + 0.5f), Size(max(1.5f, sx1 - sx0), h - 1f), CornerRadius(1.5.dp.toPx()))
+        }
     }
-    val x0 = max(g.xOf(s.startUtc), g.left)
-    val label = "Sleep ${formatDuration(s.asleepMs)}"
-    val layout = textMeasurer.measure(label, TextStyle(color = Sleep, fontSize = 9.sp, fontWeight = FontWeight.SemiBold))
-    if (g.xOf(s.endUtc) - x0 > layout.size.width + 8.dp.toPx()) {
-        drawText(layout, topLeft = Offset(x0 + 4.dp.toPx(), labelTop))
-    }
+    drawCapsuleLabel("Sleep ${formatDuration(s.asleepMs)}", Sleep, maxOf(x0, g.left), x1, laneTop, labelH, textMeasurer)
 }
 
-private fun DrawScope.drawExerciseLane(e: ExerciseDrawing, g: ChartGeometry, laneTop: Float, laneH: Float, textMeasurer: TextMeasurer) {
+/** Exercise as a capsule holding an intensity profile: a bar per few minutes, as tall as the heart rate was high. */
+private fun DrawScope.drawExerciseCapsule(e: ExerciseDrawing, g: ChartGeometry, laneTop: Float, track: Color, textMeasurer: TextMeasurer) {
     val x0 = g.xOf(e.exercise.startUtc); val x1 = g.xOf(e.exercise.endUtc)
     if (x1 < g.left || x0 > g.right) return
-    val shape = Path().apply {
-        addRoundRect(RoundRect(x0, laneTop, max(x1, x0 + 3f), laneTop + laneH, CornerRadius(4.dp.toPx())))
-    }
-    clipPath(shape) {
+    val labelH = LaneLabelHeight.toPx()
+    val blockH = LaneBlockHeight.toPx()
+    val capsule = RoundRect(x0, laneTop + labelH, max(x1, x0 + 3f), laneTop + labelH + blockH, CornerRadius(5.dp.toPx()))
+    drawPath(Path().apply { addRoundRect(capsule) }, Activity.copy(alpha = 0.16f))
+    val inset = 2.dp.toPx()
+    clipPath(Path().apply { addRoundRect(capsule) }) {
         e.slices.forEach { (s, t, intensity) ->
-            drawRect(Activity.copy(alpha = 0.4f + 0.6f * intensity), Offset(g.xOf(s), laneTop), Size(max(1f, g.xOf(t) - g.xOf(s) + 1f), laneH))
+            val h = (blockH - 2 * inset) * (0.25f + 0.75f * intensity)
+            val bx0 = g.xOf(s); val bx1 = g.xOf(t)
+            drawRect(Activity, Offset(bx0, laneTop + labelH + blockH - inset - h), Size(max(1f, bx1 - bx0 - 0.5f), h))
         }
     }
-    val label = "${e.exercise.title ?: "Exercise"} ${formatDuration(e.exercise.durationMs)}"
-    val layout = textMeasurer.measure(label, TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
-    val visibleX0 = max(x0, g.left)
-    if (x1 - visibleX0 > layout.size.width + 8.dp.toPx()) {
-        drawText(layout, topLeft = Offset(visibleX0 + 5.dp.toPx(), laneTop + (laneH - layout.size.height) / 2))
+    val title = e.exercise.title ?: "Exercise"
+    val label = "$title ${formatDuration(e.exercise.durationMs)}" + (e.avgBpm?.let { " · $it bpm" } ?: "")
+    // Fall back to the short form when the full label doesn't fit above the capsule.
+    drawCapsuleLabel(label, Activity, maxOf(x0, g.left), x1, laneTop, labelH, textMeasurer, fallback = "$title ${formatDuration(e.exercise.durationMs)}")
+}
+
+private fun DrawScope.drawCapsuleLabel(
+    text: String, color: Color, x0: Float, x1: Float, laneTop: Float, labelH: Float, textMeasurer: TextMeasurer, fallback: String? = null
+) {
+    val style = TextStyle(color = color, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+    val room = x1 - x0
+    for (candidate in listOfNotNull(text, fallback)) {
+        val layout = textMeasurer.measure(candidate, style, maxLines = 1)
+        if (room >= layout.size.width + 4.dp.toPx()) {
+            drawText(layout, topLeft = Offset(x0 + 2.dp.toPx(), laneTop + (labelH - layout.size.height) / 2))
+            return
+        }
     }
 }
 

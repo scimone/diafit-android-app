@@ -10,7 +10,7 @@ import uk.scimone.diafit.history.presentation.detail.DayDetailViewModel
 
 val historyModule = module {
     single { ClusterTreatmentsUseCase() }
-    single { GetDailyHistoryUseCase(get(), get(), get()) }
+    single { GetDailyHistoryUseCase(get(), get(), get(), get()) }
     single { GetDayDetailUseCase(get(), get(), get(), get()) }
 
     viewModel { (userId: Int) ->

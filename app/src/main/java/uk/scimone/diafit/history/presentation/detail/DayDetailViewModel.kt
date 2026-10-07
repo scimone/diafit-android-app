@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.ActivityDayStats
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
@@ -99,9 +100,15 @@ class DayDetailViewModel(
             carbs = meals.map { CarbsChartData(it.mealTimeUtc, it.carbohydrates, it.impactType.durationMinutes) },
             activity = activity,
             timelineMeals = meals.map { it.toMealEntityUi(context) },
-            entries = (mealCards + episodeCards + bolusCards).sortedBy { it.timeUtc }
+            activityStats = ActivityDayStats.from(activity, dayStartUtc, dayEndUtc),
+            entries = (mealCards + episodeCards + bolusCards + activityCards(activity, dayStartUtc, dayEndUtc)).sortedBy { it.timeUtc }
         )
     }
+
+    /** Sleep that ended on this day and workouts that started on it. */
+    private fun activityCards(activity: ActivityData, start: Long, end: Long): List<JournalEntryUi> =
+        activity.sleepSessions.filter { it.endUtc in start until end }.map { it.toUi() } +
+            activity.exercise.filter { it.startUtc in start until end }.map { it.toUi(activity.heartRate) }
 
     private companion object {
         const val TAG = "DayDetailViewModel"
@@ -125,6 +132,7 @@ data class DayDetailState(
     val carbs: List<CarbsChartData> = emptyList(),
     /** Charts tab: heart rate, steps, sleep and exercise. */
     val activity: ActivityData = ActivityData(),
+    val activityStats: ActivityDayStats? = null,
     /** Charts tab: courses for the meal photo strip under the panels. */
     val timelineMeals: List<TimelineMeal> = emptyList(),
     /** Journal tab: meal and low/high cards, oldest first. */
@@ -132,5 +140,5 @@ data class DayDetailState(
     val errorMessage: String? = null
 ) {
     val totalInsulin: Double get() = bolusUnits + smbUnits
-    val isEmpty: Boolean get() = cgm.isEmpty() && totalInsulin == 0.0 && entries.isEmpty()
+    val isEmpty: Boolean get() = cgm.isEmpty() && totalInsulin == 0.0 && entries.isEmpty() && activity.isEmpty
 }

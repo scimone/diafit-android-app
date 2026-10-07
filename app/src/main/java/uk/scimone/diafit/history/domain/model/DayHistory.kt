@@ -1,5 +1,6 @@
 package uk.scimone.diafit.history.domain.model
 
+import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
@@ -10,5 +11,7 @@ data class DayHistory(
     val date: LocalDate,
     val readings: List<CgmEntity>,
     val boluses: List<BolusEntity>,
-    val meals: List<MealEntity>
+    val meals: List<MealEntity>,
+    /** Sleep and exercise overlapping the day (no heart rate or steps: too heavy for long ranges). */
+    val activity: ActivityData = ActivityData()
 )
