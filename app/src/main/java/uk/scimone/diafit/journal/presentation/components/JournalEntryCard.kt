@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Vaccines
@@ -43,6 +44,7 @@ import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.accent
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -60,6 +62,7 @@ fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick:
         is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier)
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
         is BolusEntryUi -> BolusCard(entry, onClick, modifier)
+        is PumpEventUi -> PumpEventCard(entry, onClick, modifier)
     }
 }
 
@@ -353,5 +356,29 @@ fun formatDuration(ms: Long): String {
         h == 0 -> "$m min"
         m == 0 -> "$h h"
         else -> "$h h %02d".format(m)
+    }
+}
+
+/** A device or therapy milestone (pod/site change, profile switch, note...). */
+@Composable
+fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    EntrySurface(onClick, modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Build, null, tint = Bolus, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(clock.format(Date(entry.timeUtc)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (!entry.notes.isNullOrBlank()) {
+                    Text(entry.notes, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                }
+            }
+        }
     }
 }

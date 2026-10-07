@@ -12,6 +12,9 @@ import uk.scimone.diafit.core.data.local.AppDatabase
 import uk.scimone.diafit.core.data.local.BolusDao
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
+import uk.scimone.diafit.core.data.local.PumpEventDao
+import uk.scimone.diafit.core.data.repository.PumpEventRepositoryImpl
+import uk.scimone.diafit.core.domain.repository.PumpEventRepository
 import uk.scimone.diafit.core.data.networking.util.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.networking.OpenAiApi
@@ -48,7 +51,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15)
             .build()
     }
 
@@ -56,6 +59,8 @@ val coreModule = module {
     single<MealDao> { get<AppDatabase>().mealDao() }
     single<CgmDao> { get<AppDatabase>().cgmDao() }
     single<BolusDao> { get<AppDatabase>().bolusDao() }
+    single<PumpEventDao> { get<AppDatabase>().pumpEventDao() }
+    single<PumpEventRepository> { PumpEventRepositoryImpl(get()) }
 
     // Provide file storage
     single<FileStorageRepository> { FileStorageRepositoryImpl(get()) }

@@ -9,10 +9,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.PumpEventEntity
 
 @Database(
-    entities = [MealEntity::class, CgmEntity::class, BolusEntity::class],
-    version = 14,
+    entities = [MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class],
+    version = 15,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -30,6 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealDao(): MealDao
     abstract fun cgmDao(): CgmDao
     abstract fun bolusDao(): BolusDao
+    abstract fun pumpEventDao(): PumpEventDao
 
     companion object {
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -70,6 +72,20 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE MealEntity ADD COLUMN sittingName TEXT")
+            }
+        }
+
+        /** Non-bolus AAPS treatments (pod/site changes, temp basals, ...). */
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `PumpEventEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `timestampUtc` INTEGER NOT NULL, `createdAtUtc` INTEGER NOT NULL, " +
+                        "`eventType` TEXT NOT NULL, `notes` TEXT, `durationMinutes` REAL, `rate` REAL, " +
+                        "`sourceId` TEXT NOT NULL, `rawJson` TEXT NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_PumpEventEntity_sourceId` ON `PumpEventEntity` (`sourceId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_PumpEventEntity_timestampUtc` ON `PumpEventEntity` (`timestampUtc`)")
             }
         }
     }

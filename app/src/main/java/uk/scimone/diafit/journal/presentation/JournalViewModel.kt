@@ -30,6 +30,9 @@ import uk.scimone.diafit.core.domain.model.standalone
 import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.core.domain.repository.PumpEventRepository
+import uk.scimone.diafit.journal.presentation.model.PumpEventUi
+import uk.scimone.diafit.journal.presentation.model.toUi as pumpEventToUi
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.model.MealMatcher
@@ -57,6 +60,7 @@ class JournalViewModel(
     private val getMealOutcome: GetMealOutcomeUseCase,
     private val cgmRepository: CgmRepository,
     private val bolusRepository: BolusRepository,
+    private val pumpEventRepository: PumpEventRepository,
     private val mergeCarbEntries: MergeCarbEntriesUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,
@@ -127,7 +131,7 @@ class JournalViewModel(
                     val matches = MealMatcher.findMatches(meals).filter { !it.confident }
                     suggestions = matches.associateBy { it.imported.id }
                     val entries = withContext(Dispatchers.IO) {
-                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to)
+                        mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to) + pumpEventEntries(from, to)
                     }
                     _uiState.update {
                         it.copy(
@@ -178,6 +182,14 @@ class JournalViewModel(
         bolusRepository.getBolusBetween(from, to, userId).standalone(meals.toSittings()).toBolusEntries()
     } catch (e: Exception) {
         Log.e(TAG, "Error loading boluses", e)
+        emptyList()
+    }
+
+    /** Device milestones (pod/site changes, ...) in the range; routine temp basals stay out of the journal. */
+    private suspend fun pumpEventEntries(from: Long, to: Long): List<PumpEventUi> = try {
+        pumpEventRepository.getBetween(from, to, userId).filter { it.isMilestone }.map { it.pumpEventToUi() }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading pump events", e)
         emptyList()
     }
 

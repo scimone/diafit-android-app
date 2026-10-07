@@ -26,6 +26,7 @@ enum class JournalEntryKind(
     MEAL("Meal", "Meals", Carbs, available = true),
     GLUCOSE("Low or high", "Lows & highs", BelowRange, available = true, creatable = false),
     BOLUS("Insulin", "Insulin", Bolus, available = true, creatable = false),
+    DEVICE("Device", "Device events", Bolus, available = true, creatable = false),
     SLEEP("Sleep", "Sleep", Color(0xFF7986CB), available = false),
     ACTIVITY("Activity", "Activity", Activity, available = false);
 

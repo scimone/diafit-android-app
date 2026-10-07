@@ -32,6 +32,7 @@ import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
 import uk.scimone.diafit.journal.presentation.components.formatDuration
 import uk.scimone.diafit.journal.presentation.components.formatUnits
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
+import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.ui.theme.AboveRange
@@ -157,7 +158,7 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
                         state.target,
                         onClick = when (entry) {
                             is MealEntityUi -> ({ onOpenMeal(entry.id) })
-                            is GlucoseEpisodeUi, is BolusEntryUi -> null
+                            is GlucoseEpisodeUi, is BolusEntryUi, is PumpEventUi -> null
                         }
                     )
                 }

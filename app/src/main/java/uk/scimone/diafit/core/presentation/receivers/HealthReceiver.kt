@@ -8,6 +8,7 @@ import androidx.work.*
 import uk.scimone.diafit.core.data.worker.BolusBroadcastWorker
 import uk.scimone.diafit.core.data.worker.CarbBroadcastWorker
 import uk.scimone.diafit.core.data.worker.CgmBroadcastWorker
+import uk.scimone.diafit.core.data.worker.PumpEventBroadcastWorker
 import java.util.concurrent.TimeUnit
 
 class HealthReceiver : BroadcastReceiver() {
@@ -53,6 +54,16 @@ class HealthReceiver : BroadcastReceiver() {
             WorkManager.getInstance(context)
                 .enqueueUniqueWork("carb-ingest", ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest)
             Log.d(TAG, "Enqueued Carb worker for action: $action")
+            matched = true
+        }
+        if (action in Intents.PUMP_EVENT_ACTIONS) {
+            val workRequest = OneTimeWorkRequestBuilder<PumpEventBroadcastWorker>()
+                .setInputData(intent.toWorkData())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            WorkManager.getInstance(context).enqueue(workRequest)
+            Log.d(TAG, "Enqueued Pump event worker for action: $action")
             matched = true
         }
         if (!matched) {

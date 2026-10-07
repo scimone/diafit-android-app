@@ -31,6 +31,10 @@ interface Intents {
             NSCLIENT_NEW_FOOD,
         )
 
+        val PUMP_EVENT_ACTIONS = setOf(
+            NSCLIENT_NEW_FOOD,
+        )
+
         val CARBS_ACTIONS = setOf(
             NSCLIENT_NEW_FOOD,
         )
