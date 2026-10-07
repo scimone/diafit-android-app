@@ -45,7 +45,6 @@ import uk.scimone.diafit.core.domain.model.ProfileStep
 import uk.scimone.diafit.core.domain.model.ProfileSwitch
 import uk.scimone.diafit.core.domain.model.formatDurationMinutes
 import uk.scimone.diafit.core.domain.model.valueAt
-import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.InRange
@@ -54,7 +53,7 @@ import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 
-internal val IsfColor = AboveRange
+internal val IsfColor = Bolus
 internal val TargetColor = InRange
 
 /**
@@ -78,131 +77,88 @@ fun ProfileScreen(userId: Int, onBack: () -> Unit, viewModel: ProfileViewModel =
             when {
                 !state.loaded -> Unit
                 current == null -> EmptyProfile()
-                else -> ProfileContent(current, state.nowUtc)
+                else -> ProfileContent(current)
             }
         }
     }
 }
 
 @Composable
-private fun ProfileContent(current: ProfileSwitch, nowUtc: Long) {
-    val base = current.profile ?: return
-    val active = current.isActive(nowUtc)
-    val hasScaling = current.percentage != 100
-    // A temporary switch that has ended means AAPS is back at 100 %; show that, with the scaled view one tap away.
-    var showScaled by remember(current.eventId) { mutableStateOf(active && hasScaling) }
-    val shown = if (showScaled && hasScaling) base.atPercentage(current.percentage) else base
-    val nowSecond = remember(nowUtc) { LocalTime.now().toSecondOfDay() }
+private fun ProfileContent(current: ProfileSwitch) {
+    // Always the profile as saved in AAPS (100 %), whatever temporary percentage switch was done recently.
+    val shown = current.profile ?: return
+    val nowSecond = remember { LocalTime.now().toSecondOfDay() }
     val mmol = shown.isMmol
+    val scrub = rememberScrubState()
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item { HeaderCard(current, active, nowUtc) }
-
-        if (hasScaling) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FilterChip(selected = !showScaled, onClick = { showScaled = false }, label = { Text("Profile as saved") })
-                    FilterChip(selected = showScaled, onClick = { showScaled = true }, label = { Text("At ${current.percentage}%") })
-                }
+    Column(Modifier.fillMaxSize()) {
+        // Sticky: the profile name and the values in force right now.
+        Surface(tonalElevation = 2.dp, shadowElevation = 2.dp) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                TitleRow(current.baseName)
+                NowRow(shown, nowSecond)
             }
         }
-
-        item { NowRow(shown, nowSecond) }
-
-        item {
-            ScheduleCard(
-                title = "Basal",
-                subtitle = "Background insulin, ${fmt(shown.totalDailyBasal, 2)} U per day",
-                color = Bolus
-            ) { StepChart(shown.basal, Bolus, nowSecond, { fmt(it, 2) }, "U/h") }
-        }
-        item {
-            ScheduleCard(
-                title = "Insulin sensitivity",
-                subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}",
-                color = IsfColor
-            ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U") }
-        }
-        item {
-            ScheduleCard(
-                title = "Carb ratio",
-                subtitle = "1 U covers this many grams of carbs",
-                color = Carbs
-            ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }, "g per U") }
-        }
-        item { TargetCard(shown, nowSecond) }
-
-        shown.diaHours?.let { dia ->
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             item {
-                Text(
-                    "Insulin action time (DIA): ${fmt(dia, 1)} h",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                ScheduleCard(
+                    title = "Basal",
+                    subtitle = "Background insulin, ${fmt(shown.totalDailyBasal, 2)} U per day",
+                    color = Bolus
+                ) { StepChart(shown.basal, Bolus, nowSecond, { fmt(it, 2) }, "U/h", scrubState = scrub) }
             }
-        }
+            item {
+                ScheduleCard(
+                    title = "Insulin sensitivity",
+                    subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}",
+                    color = IsfColor
+                ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U", scrubState = scrub) }
+            }
+            item {
+                ScheduleCard(
+                    title = "Carb ratio",
+                    subtitle = "1 U covers this many grams of carbs",
+                    color = Carbs
+                ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }, "g per U", scrubState = scrub) }
+            }
+            item { TargetCard(shown, nowSecond) }
 
-        item {
-            Text(
-                "Read-only. This is imported from AAPS whenever you do a profile switch there; change it in AAPS.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun HeaderCard(sw: ProfileSwitch, active: Boolean, nowUtc: Long) {
-    val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val day = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
-    Card(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp)) }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sw.baseName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    if (sw.percentage != 100) {
-                        Spacer(Modifier.width(8.dp))
-                        Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)) {
-                            Text(
-                                "${sw.percentage}%",
-                                Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-                val end = sw.endUtc
-                Text(
-                    when {
-                        end == null -> "Active since ${day.format(Date(sw.startUtc))}"
-                        active -> "Temporary switch, ${formatDurationMinutes(sw.durationMinutes)} · until ${clock.format(Date(end))}"
-                        else -> "Temporary switch ended ${clock.format(Date(end))}; AAPS is back at 100%"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (end != null && active) {
+            shown.diaHours?.let { dia ->
+                item {
                     Text(
-                        "Switched ${day.format(Date(sw.startUtc))}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "Insulin action time (DIA): ${fmt(dia, 1)} h",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }
+
+            item {
+                Text(
+                    "Read-only. This is imported from AAPS whenever you do a profile switch there; change it in AAPS.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun TitleRow(name: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), RoundedCornerShape(11.dp)),
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Filled.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) }
+        Spacer(Modifier.width(12.dp))
+        Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }
 

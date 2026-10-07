@@ -107,8 +107,11 @@ fun ProfileSwitchDetailScreen(
 @Composable
 private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
     val after = current.profile?.atPercentage(current.percentage)
-    val before = previous?.effectiveProfileAt(current.startUtc)
-    val beforePercentage = previous?.let { if (it.endUtc?.let { end -> end <= current.startUtc } == true) 100 else it.percentage }
+    // What AAPS ran before: the previous switch's profile, or else this same profile at 100 %.
+    val before = previous?.effectiveProfileAt(current.startUtc) ?: current.profile
+    val beforePercentage = previous?.let { if (it.endUtc?.let { end -> end <= current.startUtc } == true) 100 else it.percentage } ?: 100
+    val beforeName = previous?.baseName ?: current.baseName
+    val scrub = rememberScrubState()
     val nowSecond = remember { LocalTime.now().toSecondOfDay() }
     val day = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
 
@@ -126,8 +129,7 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
                         Text("For ${formatDurationMinutes(current.durationMinutes)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(
-                        if (previous != null) "Compared with ${previous.baseName}${if (beforePercentage != 100) " at $beforePercentage%" else ""}, which was running before"
-                        else "No earlier profile switch to compare with",
+                        "Compared with $beforeName${if (beforePercentage != 100) " at $beforePercentage%" else " at 100%"}, which was running before",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -140,13 +142,13 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
             return@LazyColumn
         }
 
-        item { SummaryCard(previous, beforePercentage, current, before, after) }
+        item { SummaryCard(beforeName, beforePercentage, current, before, after) }
 
         item {
             val changes = before?.let { diffSchedules(it.basal, after.basal) }.orEmpty()
             ScheduleDiffCard(
                 title = "Basal", color = Bolus, unit = "U/h", decimals = 2,
-                after = after.basal, before = before?.basal, changes = changes, nowSecond = nowSecond,
+                after = after.basal, before = before?.basal, changes = changes, nowSecond = nowSecond, scrub = scrub,
                 subtitle = if (before != null && changes.isNotEmpty())
                     "Per day: ${fmt(before.totalDailyBasal, 2)} → ${fmt(after.totalDailyBasal, 2)} U"
                 else "${fmt(after.totalDailyBasal, 2)} U per day"
@@ -156,14 +158,14 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
             val mmol = after.isMmol
             ScheduleDiffCard(
                 title = "Insulin sensitivity", color = IsfColor, unit = if (mmol) "mmol/L per U" else "mg/dL per U", decimals = if (mmol) 1 else 0,
-                after = after.isf, before = before?.isf, changes = before?.let { diffSchedules(it.isf, after.isf) }.orEmpty(), nowSecond = nowSecond,
+                after = after.isf, before = before?.isf, changes = before?.let { diffSchedules(it.isf, after.isf) }.orEmpty(), nowSecond = nowSecond, scrub = scrub,
                 subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}"
             )
         }
         item {
             ScheduleDiffCard(
                 title = "Carb ratio", color = Carbs, unit = "g per U", decimals = 1,
-                after = after.carbRatio, before = before?.carbRatio, changes = before?.let { diffSchedules(it.carbRatio, after.carbRatio) }.orEmpty(), nowSecond = nowSecond,
+                after = after.carbRatio, before = before?.carbRatio, changes = before?.let { diffSchedules(it.carbRatio, after.carbRatio) }.orEmpty(), nowSecond = nowSecond, scrub = scrub,
                 subtitle = "1 U covers this many grams of carbs"
             )
         }
@@ -173,10 +175,10 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
 
 /** The headline of the diff: profile, percentage and insulin action time, before → after. */
 @Composable
-private fun SummaryCard(previous: ProfileSwitch?, beforePercentage: Int?, current: ProfileSwitch, before: AapsProfile?, after: AapsProfile) {
+private fun SummaryCard(beforeName: String, beforePercentage: Int, current: ProfileSwitch, before: AapsProfile?, after: AapsProfile) {
     val rows = buildList {
-        if (previous != null && previous.baseName != current.baseName) add("Profile" to "${previous.baseName} → ${current.baseName}")
-        if (beforePercentage != null && beforePercentage != current.percentage) add("Percentage" to "$beforePercentage% → ${current.percentage}%")
+        if (beforeName != current.baseName) add("Profile" to "$beforeName → ${current.baseName}")
+        if (beforePercentage != current.percentage) add("Percentage" to "$beforePercentage% → ${current.percentage}%")
         val dBefore = before?.diaHours
         val dAfter = after.diaHours
         if (dBefore != null && dAfter != null && abs(dBefore - dAfter) > 1e-6) add("Insulin action time" to "${fmt(dBefore, 1)} h → ${fmt(dAfter, 1)} h")
@@ -184,9 +186,7 @@ private fun SummaryCard(previous: ProfileSwitch?, beforePercentage: Int?, curren
     Card {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("What changed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            if (previous == null) {
-                Text("This is the first switch Diafit has seen, so the values below are just what it sets.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if (rows.isEmpty()) {
+            if (rows.isEmpty()) {
                 Text("Same profile and percentage as before; see the schedules below.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             rows.forEach { (label, change) ->
@@ -195,13 +195,11 @@ private fun SummaryCard(previous: ProfileSwitch?, beforePercentage: Int?, curren
                     Text(change, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
-            if (previous != null) {
-                Text(
-                    "Values compare what AAPS actually runs, with the percentage applied.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                "Values compare what AAPS actually runs, with the percentage applied.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -216,11 +214,12 @@ private fun ScheduleDiffCard(
     after: List<ProfileStep>,
     before: List<ProfileStep>?,
     changes: List<ScheduleChange>,
-    nowSecond: Int
+    nowSecond: Int,
+    scrub: ScrubState
 ) {
     val unchanged = before != null && changes.isEmpty()
     ScheduleCard(title + if (unchanged) " · no change" else "", subtitle, color) {
-        StepChart(after, color, nowSecond, { fmt(it, decimals) }, unit, previous = before.takeIf { !unchanged })
+        StepChart(after, color, nowSecond, { fmt(it, decimals) }, unit, previous = before.takeIf { !unchanged }, scrubState = scrub)
         if (changes.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Dashed line = before", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

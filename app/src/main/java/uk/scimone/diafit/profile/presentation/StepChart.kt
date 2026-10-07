@@ -34,6 +34,12 @@ import uk.scimone.diafit.core.domain.model.AapsProfile
 import uk.scimone.diafit.core.domain.model.ProfileStep
 import uk.scimone.diafit.core.domain.model.valueAt
 
+/** The scrub position (fraction of the day) shared between charts so one scrub line shows on all of them. */
+class ScrubState { val position = mutableStateOf<Float?>(null) }
+
+@Composable
+fun rememberScrubState(): ScrubState = remember { ScrubState() }
+
 /**
  * A 24 h step chart of one daily schedule (basal, ISF, carb ratio): filled steps and a dashed marker with a
  * dot at the current time of day. Touch or drag on it to scrub: a solid line follows the finger and a tooltip
@@ -49,7 +55,8 @@ fun StepChart(
     unit: String,
     modifier: Modifier = Modifier,
     previous: List<ProfileStep>? = null,
-    height: Dp = 124.dp
+    height: Dp = 124.dp,
+    scrubState: ScrubState = rememberScrubState()
 ) {
     if (steps.isEmpty()) return
     val measurer = rememberTextMeasurer()
@@ -62,8 +69,8 @@ fun StepChart(
     val sorted = steps.sortedBy { it.startSeconds }
     val sortedPrevious = previous?.sortedBy { it.startSeconds }?.takeIf { it.isNotEmpty() }
     val maxValue = (maxOf(sorted.maxOf { it.value }, sortedPrevious?.maxOf { it.value } ?: 0.0) * 1.25).coerceAtLeast(0.001)
-    // The scrub position as a fraction of the day (null = none).
-    var scrub by remember { mutableStateOf<Float?>(null) }
+    // The scrub position as a fraction of the day (null = none); shared by every chart given the same state.
+    var scrub by scrubState.position
 
     Column(modifier) {
         Canvas(
