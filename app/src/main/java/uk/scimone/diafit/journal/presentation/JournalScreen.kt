@@ -105,8 +105,8 @@ fun JournalScreen(
                                         entry,
                                         uiState.target,
                                         onClick = {
-                                            // Profile switches get a before/after page; other device events a small dialog.
-                                            if (entry is PumpEventUi && !entry.isProfileSwitch) selectedEvent = entry else onOpenEntry(entry)
+                                            // Profile switches and temporary targets get a detail page; other device events a small dialog.
+                                            if (entry is PumpEventUi && !entry.hasDetailPage) selectedEvent = entry else onOpenEntry(entry)
                                         }
                                     )
                                     (entry as? MealEntityUi)?.possibleDuplicate?.let {

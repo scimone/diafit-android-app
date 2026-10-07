@@ -50,6 +50,8 @@ import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
+import uk.scimone.diafit.ui.theme.Basal
+import uk.scimone.diafit.core.domain.model.formatDurationMinutes
 import uk.scimone.diafit.ui.theme.Device
 import uk.scimone.diafit.ui.theme.InRange
 import java.text.SimpleDateFormat
@@ -374,21 +376,36 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(clock.format(Date(entry.timeUtc)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    clock.format(Date(entry.timeUtc)) + (entry.durationMinutes?.let { " · ${formatDurationMinutes(it)}" } ?: ""),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (!entry.notes.isNullOrBlank()) {
                     Text(entry.notes, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 }
-                entry.target?.let { t ->
-                    Surface(Modifier.padding(top = 6.dp), shape = RoundedCornerShape(50), color = InRange.copy(alpha = 0.16f)) {
-                        Text(
-                            "Target ${t.valueText}" + if (t.reason.isNotEmpty()) " · ${t.reason}" else "",
-                            Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelMedium, color = InRange
-                        )
+            }
+            // The values of a profile switch / target, right-aligned like the numbers on meal cards, coloured like their charts.
+            val hasValues = entry.percentage != null || entry.timeShiftHours != null || entry.target != null
+            if (hasValues) {
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    entry.target?.let { t ->
+                        SwitchValue(t.valueText.substringBefore(' '), t.unit, InRange)
                     }
+                    entry.percentage?.let { SwitchValue("$it", "%", Basal) }
+                    entry.timeShiftHours?.let { SwitchValue("${if (it > 0) "+" else "−"}${kotlin.math.abs(it)}", "h shift", MaterialTheme.colorScheme.tertiary) }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SwitchValue(value: String, unit: String, color: Color) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+        Spacer(Modifier.width(3.dp))
+        Text(unit, style = MaterialTheme.typography.labelSmall, color = color, modifier = Modifier.padding(bottom = 2.dp))
     }
 }

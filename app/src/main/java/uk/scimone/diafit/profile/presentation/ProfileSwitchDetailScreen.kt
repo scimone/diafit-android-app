@@ -86,7 +86,7 @@ fun ProfileSwitchDetailScreen(
                 title = { Text("Profile switch") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
-                    if (state.current != null) {
+                    if (state.current != null || state.target != null) {
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Delete") }
                     }
                 }
@@ -97,8 +97,9 @@ fun ProfileSwitchDetailScreen(
             val current = state.current
             when {
                 !state.loaded -> Unit
-                current == null -> Text("This event is no longer available.", Modifier.padding(24.dp))
-                else -> DiffContent(current, state.previous, state.target)
+                current != null -> DiffContent(current, state.previous, state.target)
+                state.target != null -> TargetOnlyContent(state.target!!, state.previous)
+                else -> Text("This event is no longer available.", Modifier.padding(24.dp))
             }
         }
     }
@@ -174,45 +175,81 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
             return@LazyColumn
         }
 
-        item { SummaryCard(beforeName, beforePercentage, beforeShift, current, before, after, window, lengthSeconds) }
+        val basalChanges = clipChanges(diffSchedules(before.basal, after.basal), window)
+        val isfChanges = clipChanges(diffSchedules(before.isf, after.isf), window)
+        val carbChanges = clipChanges(diffSchedules(before.carbRatio, after.carbRatio), window)
+        val targetChanged = clipChanges(diffSchedules(before.targetLow, after.targetLow), window).isNotEmpty() ||
+            clipChanges(diffSchedules(before.targetHigh, after.targetHigh), window).isNotEmpty()
+        val nothingElse = basalChanges.isEmpty() && isfChanges.isEmpty() && carbChanges.isEmpty() && !targetChanged
 
-        item {
-            val changes = clipChanges(diffSchedules(before.basal, after.basal), window)
-            ScheduleDiffCard(
-                title = "Basal", color = Basal, unit = "U/h", decimals = 2,
-                after = after.basal, before = before.basal, changes = changes, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                subtitle = "Rate in force; the shaded part is when this switch applied"
-            )
+        // Only the parts this switch actually touches are shown.
+        if (!nothingElse || target == null) {
+            item { SummaryCard(beforeName, beforePercentage, beforeShift, current, before, after, window, lengthSeconds, showInsulin = basalChanges.isNotEmpty()) }
         }
-        item {
-            val mmol = after.isMmol
-            ScheduleDiffCard(
-                title = "Insulin sensitivity", color = IsfColor, unit = if (mmol) "mmol/L per U" else "mg/dL per U", decimals = if (mmol) 1 else 0,
-                after = after.isf, before = before.isf, changes = clipChanges(diffSchedules(before.isf, after.isf), window), nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}"
-            )
+        if (target != null) item { TemporaryTargetCard(target, before, current.startUtc, lengthSeconds) }
+        if (basalChanges.isNotEmpty()) {
+            item {
+                ScheduleDiffCard(
+                    title = "Basal", color = Basal, unit = "U/h", decimals = 2,
+                    after = after.basal, before = before.basal, changes = basalChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
+                    subtitle = "Rate in force; the shaded part is when this switch applied"
+                )
+            }
         }
-        item {
-            ScheduleDiffCard(
-                title = "Carb ratio", color = Carbs, unit = "g per U", decimals = 1,
-                after = after.carbRatio, before = before.carbRatio, changes = clipChanges(diffSchedules(before.carbRatio, after.carbRatio), window), nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                subtitle = "1 U covers this many grams of carbs"
-            )
+        if (isfChanges.isNotEmpty()) {
+            item {
+                val mmol = after.isMmol
+                ScheduleDiffCard(
+                    title = "Insulin sensitivity", color = IsfColor, unit = if (mmol) "mmol/L per U" else "mg/dL per U", decimals = if (mmol) 1 else 0,
+                    after = after.isf, before = before.isf, changes = isfChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
+                    subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}"
+                )
+            }
         }
-        item {
-            if (target != null) TemporaryTargetCard(target, before, current.startUtc, lengthSeconds)
-            else TargetDiffCard(before, after, window)
+        if (carbChanges.isNotEmpty()) {
+            item {
+                ScheduleDiffCard(
+                    title = "Carb ratio", color = Carbs, unit = "g per U", decimals = 1,
+                    after = after.carbRatio, before = before.carbRatio, changes = carbChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
+                    subtitle = "1 U covers this many grams of carbs"
+                )
+            }
         }
+        if (target == null && targetChanged) item { TargetDiffCard(before, after, window) }
+    }
+}
+
+/** A temporary target on its own: the same page, with only the target card (and what AAPS was running at the time for the "before" value). */
+@Composable
+private fun TargetOnlyContent(target: TemporaryTarget, context: ProfileSwitch?) {
+    val day = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val before = context?.effectiveProfileAt(target.startUtc)
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Card(Device.copy(alpha = 0.12f)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(day.format(Date(target.startUtc)), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(context?.baseName ?: "Profile switch", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Row(Modifier.padding(vertical = 4.dp)) { TypeChip("Target ${target.valueText}") }
+                    Text(
+                        if (target.durationMinutes > 0) "In force for ${formatDurationMinutes(target.durationMinutes)}" else "No end time recorded",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("Only the glucose target changed; percentage and schedules stay as they were.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item { TemporaryTargetCard(target, before, target.startUtc, (if (target.durationMinutes > 0) target.durationMinutes else 24 * 60) * 60) }
     }
 }
 
 @Composable
-private fun TemporaryTargetCard(target: TemporaryTarget, before: AapsProfile, startUtc: Long, lengthSeconds: Int) {
+private fun TemporaryTargetCard(target: TemporaryTarget, before: AapsProfile?, startUtc: Long, lengthSeconds: Int) {
     val zone = java.time.ZoneId.systemDefault()
     val start = java.time.Instant.ofEpochMilli(startUtc).atZone(zone)
     val startSecond = start.toLocalTime().toSecondOfDay()
-    val profileLow = before.targetLow.valueAt(startSecond)
-    val profileHigh = before.targetHigh.valueAt(startSecond) ?: profileLow
+    val profileLow = before?.targetLow?.valueAt(startSecond)
+    val profileHigh = before?.targetHigh?.valueAt(startSecond) ?: profileLow
     val profileText = profileLow?.let { if (profileHigh != null && profileHigh != it) "${fmt(it, 0)}–${fmt(profileHigh, 0)}" else fmt(it, 0) }
     val delta = profileLow?.let { target.low - it }
     val fmtClock = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
@@ -256,7 +293,7 @@ private fun TypeChip(text: String) {
 @Composable
 private fun SummaryCard(
     beforeName: String, beforePercentage: Int, beforeShift: Int,
-    current: ProfileSwitch, before: AapsProfile, after: AapsProfile, window: DayWindow, lengthSeconds: Int
+    current: ProfileSwitch, before: AapsProfile, after: AapsProfile, window: DayWindow, lengthSeconds: Int, showInsulin: Boolean
 ) {
     val rows = buildList {
         if (beforeName != current.baseName) add("Profile" to "$beforeName → ${current.baseName}")
@@ -282,7 +319,7 @@ private fun SummaryCard(
                     Text(change, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (showInsulin) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Basal insulin over ${formatDurationMinutes(total / 60)}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     if (abs(delta) < 0.005) "${fmt(insulinAfter, 2)} U, unchanged"
@@ -290,7 +327,7 @@ private fun SummaryCard(
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Basal
                 )
             }
-            Text(
+            if (showInsulin) Text(
                 "Compares what AAPS actually runs, with percentage and time shift applied, only for the time the switch was in force. Temporary basals and boluses are not included.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

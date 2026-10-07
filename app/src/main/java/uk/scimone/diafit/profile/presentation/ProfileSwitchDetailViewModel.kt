@@ -26,17 +26,23 @@ class ProfileSwitchDetailViewModel(
 
     init {
         viewModelScope.launch {
-            val current = repository.getById(eventId)?.toProfileSwitch()
-            val previous = current?.let {
-                repository.getBefore("Profile Switch", it.startUtc, 10, userId).mapNotNull { e -> e.toProfileSwitch() }
+            val event = repository.getById(eventId)
+            val asSwitch = event?.toProfileSwitch()
+            if (asSwitch != null) {
+                val previous = repository.getBefore("Profile Switch", asSwitch.startUtc, 10, userId).mapNotNull { e -> e.toProfileSwitch() }
                     .firstOrNull { sw -> sw.profile != null }
+                val nearby = repository.getBetween(asSwitch.startUtc - TARGET_PAIR_WINDOW_MS, asSwitch.startUtc + TARGET_PAIR_WINDOW_MS, userId)
+                val target = pairTemporaryTargets(nearby + listOfNotNull(event).filter { e -> nearby.none { it.id == e.id } })[eventId]
+                targetEventId = target?.id
+                _state.update { ProfileSwitchDetailState(loaded = true, current = asSwitch, previous = previous, target = target?.toTemporaryTarget()) }
+            } else {
+                // A target without a profile switch: the profile in force at that time gives the "before" target.
+                val target = event?.toTemporaryTarget()
+                val context = target?.let {
+                    repository.getBefore("Profile Switch", it.startUtc + 1, 10, userId).mapNotNull { e -> e.toProfileSwitch() }.firstOrNull { sw -> sw.profile != null }
+                }
+                _state.update { ProfileSwitchDetailState(loaded = true, previous = context, target = target) }
             }
-            val target = current?.let {
-                repository.getBetween(it.startUtc - TARGET_PAIR_WINDOW_MS, it.startUtc + TARGET_PAIR_WINDOW_MS, userId)
-                    .let { events -> pairTemporaryTargets(events + listOfNotNull(repository.getById(eventId)).filter { e -> events.none { x -> x.id == e.id } }) }[eventId]
-            }
-            targetEventId = target?.id
-            _state.update { ProfileSwitchDetailState(loaded = true, current = current, previous = previous, target = target?.toTemporaryTarget()) }
         }
     }
 
@@ -55,6 +61,7 @@ data class ProfileSwitchDetailState(
     val loaded: Boolean = false,
     val current: ProfileSwitch? = null,
     /** The newest earlier switch that carries a profile, if any. */
+    /** The switch before this one (for a target-only entry: the switch whose profile was in force). */
     val previous: ProfileSwitch? = null,
     /** The temporary target that came with this switch, if any. */
     val target: TemporaryTarget? = null
