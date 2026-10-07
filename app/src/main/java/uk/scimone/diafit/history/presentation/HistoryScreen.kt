@@ -67,7 +67,7 @@ fun HistoryScreen(
                 )
                 tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
                 else -> Column(Modifier.fillMaxSize()) {
-                    ProfileChartPlaceholder(Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
+                    AgpCard(state.agp, state.thresholds, Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
                     Spacer(Modifier.height(10.dp))
                     HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
                     LazyColumn(
@@ -138,33 +138,3 @@ private fun PeriodHeader(
     }
 }
 
-/** Space reserved for the ambulatory glucose profile (median and percentile bands over the window). */
-@Composable
-private fun ProfileChartPlaceholder(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    ) {
-        Box(Modifier.fillMaxSize().padding(14.dp)) {
-            Column(Modifier.align(Alignment.TopStart)) {
-                Text("Glucose profile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("AGP · median and percentile bands", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.ShowChart,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(32.dp)
-                )
-                Text(
-                    "Placeholder Chart",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-            }
-        }
-    }
-}

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
@@ -76,8 +77,14 @@ class HistoryViewModel(
                 .map { days ->
                     val ui = days.map { it.toUi(target, clusterTreatments) }
                     val samples = ui.asReversed().flatMap { day -> day.glucose.map { GlucoseSample(it.timeUtc, it.mgdl) } }
+                    val agp = AgpProfile.builder().also { b ->
+                        ui.forEach { day ->
+                            day.glucose.forEach { b.add(((it.timeUtc - day.dayStartUtc) / 60_000L).toInt().coerceIn(0, 1439), it.mgdl) }
+                        }
+                    }.build()
                     HistoryState(
                         days = ui,
+                        agp = agp,
                         thresholds = thresholds,
                         range = range,
                         page = page,
@@ -105,6 +112,8 @@ data class HistoryState(
     val page: Int = 0,
     /** Glucose statistics over the whole period (time-weighted across all days); null without readings. */
     val periodStats: DayGlucoseStats? = null,
+    /** Ambulatory glucose profile over the whole period; null without readings. */
+    val agp: AgpProfile? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
