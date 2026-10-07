@@ -58,6 +58,12 @@ import uk.scimone.diafit.home.presentation.components.groupMeals
 import uk.scimone.diafit.home.presentation.components.inView
 import uk.scimone.diafit.home.presentation.components.caughtBy
 import uk.scimone.diafit.home.presentation.components.nearest
+import uk.scimone.diafit.home.presentation.components.ActivityReadout
+import uk.scimone.diafit.home.presentation.components.ComponentActivityChart
+import uk.scimone.diafit.home.presentation.components.readoutAt
+import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.Sleep
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.CgmChartData
 import uk.scimone.diafit.home.presentation.model.InsulinActivityChartData
@@ -203,6 +209,7 @@ fun HomeScreen(
                                 cursorTime = cursorTime,
                                 geometry = geometry,
                                 reading = inspectedReading,
+                                activity = state.activity.readoutAt(cursorTime),
                                 bolusUnits = state.insulinActivityHistory
                                     .filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value.toDouble() },
                                 carbGrams = state.carbHistory
@@ -246,8 +253,13 @@ fun HomeScreen(
                                         onGeometry = onGeometry
                                     )
                                 }
-                                // Placeholders for upcoming graphs.
-                                PlaceholderPanel("Activity", Modifier.weight(1f))
+                                ActivityDisplay(
+                                    modifier = Modifier.weight(ActivityPanelWeight),
+                                    data = state.activity,
+                                    window = window,
+                                    geometry = geometry
+                                )
+                                // Placeholder for an upcoming graph.
                                 PlaceholderPanel("Basal", Modifier.weight(1f))
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -433,6 +445,7 @@ internal fun InspectReadout(
     cursorTime: Long,
     geometry: State<ChartGeometry?>,
     reading: CgmChartData?,
+    activity: ActivityReadout? = null,
     bolusUnits: Double,
     carbGrams: Int,
     lower: Int,
@@ -468,6 +481,8 @@ internal fun InspectReadout(
                     } else {
                         Text("no reading", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    activity?.bpm?.let { ReadoutEvent(Activity, "$it bpm") }
+                    activity?.label?.let { ReadoutEvent(Sleep.takeIf { _ -> it.startsWith("Sleep") || it == "Asleep" } ?: Activity, it) }
                     if (bolusUnits > 0) ReadoutEvent(Bolus, formatAmount(bolusUnits) + " U")
                     if (carbGrams > 0) ReadoutEvent(Carbs, "$carbGrams g")
                     Spacer(Modifier.width(4.dp))
@@ -546,6 +561,31 @@ internal fun PlaceholderPanel(title: String, modifier: Modifier = Modifier) {
         PanelTitle(title)
     }
 }
+
+/** Heart rate, steps, sleep and exercise (from Health Connect) on the shared time axis. */
+@Composable
+internal fun ActivityDisplay(
+    modifier: Modifier,
+    data: ActivityData,
+    window: ChartTimeWindow,
+    geometry: State<ChartGeometry?>
+) {
+    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
+        ComponentActivityChart(data = data, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
+        PanelTitle("Activity")
+        if (data.isEmpty) {
+            Text(
+                "No activity data yet · connect Health Connect in Settings",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+    }
+}
+
+/** The activity panel is a little taller than the others: heart-rate plot plus the sleep/exercise lane. */
+internal const val ActivityPanelWeight = 1.3f
 
 @Composable
 fun CgmChartDisplay(

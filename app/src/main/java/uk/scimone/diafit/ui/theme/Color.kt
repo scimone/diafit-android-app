@@ -76,6 +76,13 @@ val Activity = Color(0xFFAB47BC)     // Softened vibrant pink-purple (modern mag
 val Device = Color(0xFF90A4AE)       // Neutral blue-grey for device/therapy events, distinct from every data colour
 
 
+// Sleep stages (hypnogram), all indigo-ish except awake so a night reads as one family
+val SleepAwake = Color(0xFFFFB74D)
+val SleepRem = Color(0xFFB39DDB)
+val SleepLight = Color(0xFF7E8CE0)
+val SleepDeep = Color(0xFF3949AB)
+val Sleep = Color(0xFF7986CB)         // generic sleep colour (wash, labels, sleep without stage data)
+
 // Additional Colors
 val Black = Color(0xFF000000)
 val White = Color(0xFFFFFFFF)

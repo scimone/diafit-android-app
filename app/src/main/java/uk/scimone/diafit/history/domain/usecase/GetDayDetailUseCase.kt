@@ -4,9 +4,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.repository.ActivityRepository
 import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
@@ -23,7 +25,9 @@ data class DayDetail(
     /** Boluses of the day, plus a margin either side so a meal near midnight still finds its insulin. */
     val boluses: List<BolusEntity>,
     /** Every valid course eaten that day. */
-    val meals: List<MealEntity>
+    val meals: List<MealEntity>,
+    /** Heart rate, steps, sleep and exercise overlapping the day (from Health Connect). */
+    val activity: ActivityData = ActivityData()
 )
 
 /**
@@ -33,7 +37,8 @@ data class DayDetail(
 class GetDayDetailUseCase(
     private val cgmRepository: CgmRepository,
     private val bolusRepository: BolusRepository,
-    private val getAllMealsSince: GetAllMealsSinceUseCase
+    private val getAllMealsSince: GetAllMealsSinceUseCase,
+    private val activityRepository: ActivityRepository
 ) {
     operator fun invoke(userId: Int, date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<DayDetail> {
         val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -52,7 +57,8 @@ class GetDayDetailUseCase(
                 dayEndUtc = end,
                 readings = cgmRepository.getEntriesBetween(start, end + OUTCOME_TAIL_MS, userId),
                 boluses = bolusRepository.getBolusBetween(start - BOLUS_MARGIN_MS, end + BOLUS_MARGIN_MS, userId),
-                meals = meals.filter { it.mealTimeUtc in start until end }
+                meals = meals.filter { it.mealTimeUtc in start until end },
+                activity = activityRepository.getBetween(start, end, userId)
             )
         }
     }

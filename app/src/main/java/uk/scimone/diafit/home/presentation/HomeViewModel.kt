@@ -22,6 +22,7 @@ import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
 
 import kotlinx.coroutines.delay
+import uk.scimone.diafit.core.domain.usecase.ObserveActivitySinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
 import uk.scimone.diafit.home.presentation.model.BolusChartData
@@ -34,6 +35,7 @@ class HomeViewModel(
     private val getAllCgmSinceUseCase: GetAllCgmSinceUseCase,
     private val getAllBolusSinceUseCase: GetAllBolusSinceUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
+    private val observeActivitySinceUseCase: ObserveActivitySinceUseCase,
     private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
     private val application: Application,
     private val mealRepository: MealRepository,
@@ -64,6 +66,7 @@ class HomeViewModel(
         observeCgmHistory()
         observeBolusHistory()
         observeMealData()
+        observeActivity()
         loadTargetRange()
     }
 
@@ -197,6 +200,14 @@ class HomeViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    private fun observeActivity(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
+        viewModelScope.launch {
+            observeActivitySinceUseCase(nowMinus24h, userId)
+                .catch { e -> Log.e("HomeViewModel", "Failed to load activity data", e) }
+                .collect { activity -> _state.update { it.copy(activity = activity) } }
         }
     }
 

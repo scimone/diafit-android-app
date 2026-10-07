@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
@@ -96,6 +97,7 @@ class DayDetailViewModel(
             // Boluses from just before midnight still show their activity at the start of the day.
             insulin = boluses.filter { it.timestampUtc < dayEndUtc }.map { it.toInsulinActivityChartData() },
             carbs = meals.map { CarbsChartData(it.mealTimeUtc, it.carbohydrates, it.impactType.durationMinutes) },
+            activity = activity,
             timelineMeals = meals.map { it.toMealEntityUi(context) },
             entries = (mealCards + episodeCards + bolusCards).sortedBy { it.timeUtc }
         )
@@ -121,6 +123,8 @@ data class DayDetailState(
     val cgm: List<CgmChartData> = emptyList(),
     val insulin: List<InsulinActivityChartData> = emptyList(),
     val carbs: List<CarbsChartData> = emptyList(),
+    /** Charts tab: heart rate, steps, sleep and exercise. */
+    val activity: ActivityData = ActivityData(),
     /** Charts tab: courses for the meal photo strip under the panels. */
     val timelineMeals: List<TimelineMeal> = emptyList(),
     /** Journal tab: meal and low/high cards, oldest first. */

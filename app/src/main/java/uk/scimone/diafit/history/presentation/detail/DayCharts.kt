@@ -15,6 +15,9 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import kotlinx.coroutines.delay
+import uk.scimone.diafit.home.presentation.ActivityDisplay
+import uk.scimone.diafit.home.presentation.ActivityPanelWeight
+import uk.scimone.diafit.home.presentation.components.readoutAt
 import uk.scimone.diafit.home.presentation.CarbActivityDisplay
 import uk.scimone.diafit.home.presentation.CgmChartDisplay
 import uk.scimone.diafit.home.presentation.CgmPanelWeight
@@ -98,6 +101,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     cursorTime = cursorTime,
                     geometry = geometry,
                     reading = inspectedReading,
+                    activity = state.activity.readoutAt(cursorTime),
                     bolusUnits = state.insulin.filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value.toDouble() },
                     carbGrams = state.carbs.filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value },
                     lower = lower,
@@ -132,6 +136,12 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     zoomState = zoomState,
                     window = window,
                     onGeometry = onGeometry
+                )
+                ActivityDisplay(
+                    modifier = Modifier.weight(ActivityPanelWeight),
+                    data = state.activity,
+                    window = window,
+                    geometry = geometry
                 )
                 InsulinActivityDisplay(
                     modifier = Modifier.weight(1f),
