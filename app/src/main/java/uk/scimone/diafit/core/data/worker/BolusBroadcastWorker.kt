@@ -34,26 +34,28 @@ class BolusBroadcastWorker(
 
         val intent = reconstructIntent(inputData)
 
-        val entity = when (selectedSource) {
-            BolusSource.AAPS -> aaps.handleIntent(intent)
+        val entities = when (selectedSource) {
+            BolusSource.AAPS -> (aaps.handleIntent(intent) as? List<*>)?.filterIsInstance<BolusEntity>().orEmpty()
             else -> {
                 Log.d(TAG, "Bolus source $selectedSource doesn't support intent parsing.")
-                null
+                emptyList()
             }
         }
 
-        return if (entity is BolusEntity) {
-            try {
-                insertBolusUseCase(entity)
-                Log.d(TAG, "Inserted Bolus: $entity")
-                Result.success()
-            } catch (e: Exception) {
-                Log.e(TAG, "Insert failed", e)
-                Result.retry()
-            }
-        } else {
+        if (entities.isEmpty()) {
             Log.w(TAG, "No bolus entity parsed or unsupported source.")
+            return Result.success()
+        }
+
+        return try {
+            entities.forEach {
+                insertBolusUseCase(it)
+                Log.d(TAG, "Inserted Bolus: $it")
+            }
             Result.success()
+        } catch (e: Exception) {
+            Log.e(TAG, "Insert failed", e)
+            Result.retry()
         }
     }
 

@@ -3,6 +3,7 @@ package uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource
 import android.content.Intent
 import android.util.Log
 import org.json.JSONArray
+import org.json.JSONObject
 import uk.scimone.diafit.core.presentation.receivers.Intents
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.repository.syncsource.IntentHealthSyncSource
@@ -20,10 +21,11 @@ class BolusSyncSourceAaps : IntentHealthSyncSource {
         // Not applicable for intent sources, leave empty
     }
 
-    override fun handleIntent(intent: Intent): BolusEntity? {
+    /** Returns every bolus in the batch (an empty list when there is none), not just the first entry. */
+    override fun handleIntent(intent: Intent): List<BolusEntity> {
         if (intent.action != ACTION) {
             Log.w(TAG, "Unexpected intent action: ${intent.action}")
-            return null
+            return emptyList()
         }
 
         Log.i(TAG, "Received NEW_FOOD intent for bolus sync")
@@ -32,55 +34,48 @@ class BolusSyncSourceAaps : IntentHealthSyncSource {
 
         if (treatmentsJson.isNullOrEmpty()) {
             Log.e(TAG, "Empty treatments JSON for action: $ACTION")
-            return null
+            return emptyList()
         }
 
         Log.d(TAG, "Treatments JSON: $treatmentsJson")
 
         return try {
             val jsonArray = JSONArray(treatmentsJson)
-            if (jsonArray.length() == 0) {
-                Log.w(TAG, "Empty treatments list")
-                return null
+            (0 until jsonArray.length()).mapNotNull { i ->
+                parseTreatment(jsonArray.getJSONObject(i))
             }
-
-            val treatment = jsonArray.getJSONObject(0)
-            if (!treatment.has("insulin")) {
-                Log.e(TAG, "Treatment is not a bolus")
-                return null
-            }
-
-            val insulin = treatment.optDouble("insulin", 0.0)
-            val timestamp = treatment.optLong("date", 0L)
-            val sourceId = treatment.optString("_id", null)
-            val eventType = treatment.optString("eventType", "Bolus")
-            val isSmb = treatment.optBoolean("isSMB", false)
-            val pumpType = treatment.optString("pumpType", "AAPS")
-            val pumpSerial = treatment.optString("pumpSerial", "AAPS-12345")
-            val pumpId = treatment.optLong("pumpId", 12345L)
-
-            if (timestamp == 0L) {
-                Log.e(TAG, "Invalid timestamp in treatment JSON")
-                return null
-            }
-
-            BolusEntity(
-                userId = 1,
-                timestampUtc = timestamp,
-                createdAtUtc = System.currentTimeMillis(),
-                updatedAtUtc = System.currentTimeMillis(),
-                value = insulin.toFloat(),
-                eventType = eventType,
-                isSmb = isSmb,
-                pumpType = pumpType,
-                pumpSerial = pumpSerial,
-                pumpId = pumpId,
-                sourceId = sourceId
-            )
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse treatments JSON", e)
-            null
+            emptyList()
         }
+    }
+
+    private fun parseTreatment(treatment: JSONObject): BolusEntity? {
+        val insulin = treatment.optDouble("insulin", 0.0)
+        if (insulin <= 0.0) {
+            Log.d(TAG, "Skipping non-bolus treatment: ${treatment.optString("eventType")}")
+            return null
+        }
+
+        val timestamp = treatment.optLong("date", 0L)
+        if (timestamp == 0L) {
+            Log.e(TAG, "Invalid timestamp in treatment JSON")
+            return null
+        }
+
+        val now = System.currentTimeMillis()
+        return BolusEntity(
+            userId = 1,
+            timestampUtc = timestamp,
+            createdAtUtc = now,
+            updatedAtUtc = now,
+            value = insulin.toFloat(),
+            eventType = treatment.optString("eventType", "Bolus"),
+            isSmb = treatment.optBoolean("isSMB", false),
+            pumpType = treatment.optString("pumpType", "AAPS"),
+            pumpSerial = treatment.optString("pumpSerial", "AAPS-12345"),
+            pumpId = treatment.optLong("pumpId", 12345L),
+            sourceId = treatment.optString("_id", "").ifEmpty { null }
+        )
     }
 }
