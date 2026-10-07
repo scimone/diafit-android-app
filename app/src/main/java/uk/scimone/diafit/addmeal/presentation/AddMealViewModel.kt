@@ -284,6 +284,9 @@ class AddMealViewModel(
         list.mapIndexed { i, c -> if (i == index) c.withWeight(weightG) else c }
     }
 
+    /** Replaces manually typed totals with the sum of the foods again. */
+    fun onUseComponentTotals() = updateComponents { it }
+
     fun onComponentRemoved(index: Int) = updateComponents { list -> list.filterIndexed { i, _ -> i != index } }
 
     /** Edits to the components re-sum the nutrition totals (overwriting manually typed ones). */
