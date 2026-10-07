@@ -1,6 +1,7 @@
 package uk.scimone.diafit.journal.presentation.detail
 
 import uk.scimone.diafit.core.presentation.components.MealComponentCard
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,10 +15,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -104,20 +106,9 @@ fun MealDetailScreen(
                 }
             }
             if (meal.aapsLinked) AapsLinkCard(meal, onUnlink = viewModel::unlinkAaps)
+            NutritionCard(meal, wholeMeal = state.isMultiCourse)
             MealTimelineCard(state, onEditCourse = onEdit)
             GlucoseResponseCard(meal, state)
-            NutritionCard(meal, wholeMeal = state.isMultiCourse)
-            if (meal.components.isNotEmpty()) {
-                CardSection("What's in it", subtitle = "AI estimate per food") {
-                    meal.components.forEach { MealComponentCard(it) }
-                }
-            }
-            if (!state.isMultiCourse) {
-                AbsorptionCard(meal)
-                meal.reasoning?.takeIf { it.isNotBlank() }?.let { AiNotesCard(it) }
-            } else {
-                state.courses.filter { !it.reasoning.isNullOrBlank() }.takeIf { it.isNotEmpty() }?.let { CourseNotesCard(it) }
-            }
 
             OutlinedButton(
                 onClick = { confirmDelete = true },
@@ -339,18 +330,6 @@ private fun DoseRow(units: Double, isSmb: Boolean, time: String, running: String
 }
 
 @Composable
-private fun CourseNotesCard(courses: List<MealEntityUi>) {
-    CardSection("AI estimates") {
-        courses.forEach { course ->
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${course.timeFormatted} · ${course.title}", style = MaterialTheme.typography.titleSmall)
-                Text(course.reasoning.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
 private fun TitleBlock(meal: MealEntityUi) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(meal.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -384,7 +363,7 @@ private fun InfoChip(text: String, icon: androidx.compose.ui.graphics.painter.Pa
 }
 
 @Composable
-private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: String? = null, content: @Composable ColumnScope.() -> Unit) {
+private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: String? = null, leadingIcon: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -393,10 +372,16 @@ private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: 
         modifier = modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                subtitle?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                leadingIcon?.let {
+                    it()
+                    Spacer(Modifier.width(12.dp))
+                }
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    subtitle?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             content()
@@ -411,6 +396,14 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
     val stillAbsorbing = System.currentTimeMillis() < effectEnd
     CardSection(
         title = "Glucose response",
+        leadingIcon = if (state.isMultiCourse) null else ({
+            Box(
+                Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(painterResource(meal.impactType.iconRes), meal.impactType.label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
+        }),
         subtitle = if (state.isMultiCourse) "mg/dL · from the first course until the last one is absorbed"
         else "mg/dL · ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h"
     ) {
@@ -529,12 +522,39 @@ private fun AapsLinkCard(meal: MealEntityUi, onUnlink: () -> Unit) {
 
 @Composable
 private fun NutritionCard(meal: MealEntityUi, wholeMeal: Boolean) {
+    var expanded by remember { mutableStateOf(false) }
     CardSection("Nutrition", subtitle = if (wholeMeal) "All courses together" else null) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MacroTile("Carbs", meal.carbohydrates.toString(), "g", Carbs, Modifier.weight(1f))
             MacroTile("Protein", meal.proteins?.toString(), "g", null, Modifier.weight(1f))
             MacroTile("Fat", meal.fats?.toString(), "g", null, Modifier.weight(1f))
             MacroTile("Energy", meal.calories?.toString(), "kcal", null, Modifier.weight(1f))
+        }
+        if (meal.components.isNotEmpty()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "What's in it · ${meal.components.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    meal.components.forEach { MealComponentCard(it) }
+                }
+            }
         }
     }
 }
@@ -552,32 +572,3 @@ private fun MacroTile(label: String, value: String?, unit: String, accent: Color
     }
 }
 
-@Composable
-private fun AbsorptionCard(meal: MealEntityUi) {
-    CardSection("Absorption") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(meal.impactType.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text("${meal.impactType.label} · ${meal.impactType.durationLabel}", style = MaterialTheme.typography.titleSmall)
-                Text(meal.impactType.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun AiNotesCard(reasoning: String) {
-    CardSection("AI estimate") {
-        Row(verticalAlignment = Alignment.Top) {
-            Icon(Icons.Filled.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp).padding(top = 2.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(reasoning, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}

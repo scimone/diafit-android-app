@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import uk.scimone.diafit.journal.presentation.model.accent
+import uk.scimone.diafit.journal.presentation.model.iconRes
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.groupIntoSittings
 import uk.scimone.diafit.home.presentation.model.MealEntityUi
@@ -288,7 +291,8 @@ fun MealDetailSheet(
     createCameraUri: (mealId: Int) -> android.net.Uri,
     onCameraResult: (success: Boolean) -> Unit,
     onPickPhoto: (mealId: Int, uri: android.net.Uri) -> Unit,
-    onAddCourse: (mealId: Int) -> Unit
+    onAddCourse: (mealId: Int) -> Unit,
+    onOpenFull: (mealId: Int) -> Unit = {}
 ) {
     var galleryMealId by remember { mutableStateOf<Int?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture(), onCameraResult)
@@ -297,23 +301,24 @@ fun MealDetailSheet(
         galleryMealId = null
         if (uri != null && id != null) onPickPhoto(id, uri)
     }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val pagerState = rememberPagerState { group.meals.size }
+    // Dragging the preview all the way up opens the full meal page.
+    LaunchedEffect(sheetState) {
+        snapshotFlow { sheetState.currentValue }.collect { value ->
+            if (value == SheetValue.Expanded) onOpenFull(group.meals[pagerState.currentPage].id)
+        }
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = sheetState
     ) {
-        val pagerState = rememberPagerState { group.meals.size }
         Column(Modifier.padding(bottom = 24.dp)) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp).padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (group.meals.size > 1) "${group.meals.size} courses · ${group.totalCarbs} g carbs in total"
-                    else "${group.totalCarbs} g carbs",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
+                Spacer(Modifier.weight(1f))
                 group.loggedCourse?.let { course ->
                     TextButton(onClick = { onAddCourse(course.id) }) {
                         Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -382,12 +387,12 @@ private fun MealDetails(meal: MealEntityUi) {
     Column(Modifier.padding(horizontal = 20.dp).padding(top = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Outlined.Schedule, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
+                painterResource(meal.mealType.iconRes), contentDescription = null,
+                tint = meal.mealType.accent, modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                "${meal.mealType.type} · ${formatTime(meal.mealTimeUtc)}",
+                "${formatTime(meal.mealTimeUtc)} · ${meal.mealType.type}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -407,23 +412,6 @@ private fun MealDetails(meal: MealEntityUi) {
             MacroTile("Fat", meal.fats?.toString(), "g", modifier = Modifier.weight(1f))
             MacroTile("Energy", meal.calories?.toString(), "kcal", modifier = Modifier.weight(1f))
         }
-        meal.reasoning?.takeIf { it.isNotBlank() }?.let { notes ->
-            Spacer(Modifier.height(16.dp))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(12.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.AutoAwesome, contentDescription = "AI estimate",
-                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(notes, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
     }
 }
 
@@ -434,14 +422,20 @@ private fun AbsorptionChip(impact: ImpactType) {
         ImpactType.MEDIUM -> "Medium"
         ImpactType.LONG -> "Slow"
     }
-    Text(
-        text = "$label absorption · ${impact.durationMinutes / 60} h",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+    Row(
+        Modifier
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 3.dp)
-    )
+            .padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(painterResource(impact.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(
+            text = "$label absorption · ${impact.durationMinutes / 60} h",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Composable

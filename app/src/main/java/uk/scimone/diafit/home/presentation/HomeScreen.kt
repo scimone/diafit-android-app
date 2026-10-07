@@ -86,6 +86,7 @@ private const val EVENT_NEAR_MS = 15 * 60_000L
 fun HomeScreen(
     userId: Int,
     onAddCourse: (mealId: Int) -> Unit = {},
+    onOpenMeal: (mealId: Int) -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -310,6 +311,10 @@ fun HomeScreen(
                         onAddCourse = { mealId ->
                             openMealIds = emptySet()
                             onAddCourse(mealId)
+                        },
+                        onOpenFull = { mealId ->
+                            openMealIds = emptySet()
+                            onOpenMeal(mealId)
                         }
                     )
                 }

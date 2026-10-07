@@ -192,7 +192,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         when (selectedTab) {
-                            0 -> HomeScreen(userId = userId, onAddCourse = addCourse)
+                            0 -> HomeScreen(userId = userId, onAddCourse = addCourse, onOpenMeal = { overlays.add(Overlay.MealDetail(it)) })
                             1 -> Greeting("Summary")
                             2 -> JournalScreen(
                                 userId = userId,
