@@ -139,4 +139,23 @@ fun PumpEventEntity.summary(): String? =
             append(sw.label)
             if (sw.durationMinutes > 0) append(" · ").append(formatDurationMinutes(sw.durationMinutes))
         }
-    } ?: notes
+    } ?: temporaryTargetSummary() ?: notes
+
+/** "101 mg/dL · 1 h · Custom" for a Temporary Target event, else null. */
+private fun PumpEventEntity.temporaryTargetSummary(): String? {
+    if (!eventType.equals("Temporary Target", ignoreCase = true)) return null
+    return try {
+        val o = JSONObject(rawJson)
+        val low = o.optDouble("targetBottom", Double.NaN)
+        val high = o.optDouble("targetTop", Double.NaN)
+        val unit = if (o.optString("units").contains("mmol", true)) "mmol/L" else "mg/dL"
+        fun n(v: Double) = if (v == Math.floor(v)) v.toInt().toString() else "%.1f".format(java.util.Locale.US, v)
+        buildString {
+            if (!low.isNaN()) append(if (high.isNaN() || high == low) n(low) else "${n(low)}–${n(high)}").append(' ').append(unit)
+            o.optInt("duration", 0).takeIf { it > 0 }?.let { append(" · ").append(formatDurationMinutes(it)) }
+            o.optString("reason").takeIf { it.isNotEmpty() }?.let { append(" · ").append(it) }
+        }.ifEmpty { null }
+    } catch (e: Exception) {
+        null
+    }
+}

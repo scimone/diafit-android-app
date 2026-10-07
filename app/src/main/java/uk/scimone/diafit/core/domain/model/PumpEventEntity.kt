@@ -35,6 +35,6 @@ data class PumpEventEntity(
         get() = MILESTONE.containsMatchIn(eventType)
 
     private companion object {
-        val MILESTONE = Regex("change|start|battery|site|pod|reservoir|cannula|profile switch|note|announcement|exercise", RegexOption.IGNORE_CASE)
+        val MILESTONE = Regex("change|start|battery|site|pod|reservoir|cannula|profile switch|temporary target|note|announcement|exercise", RegexOption.IGNORE_CASE)
     }
 }
