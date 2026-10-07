@@ -8,7 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.animation.animateContentSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -92,11 +98,11 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    HeadingDot()
                     AbsorptionBadge(meal.impactType)
                     if (meal.aapsLinked) {
-                        Spacer(Modifier.width(4.dp))
-                        Text("AAPS ✓", style = MaterialTheme.typography.labelSmall, color = Bolus, maxLines = 1, softWrap = false)
+                        HeadingDot()
+                        Text("AAPS", style = MaterialTheme.typography.labelSmall, color = Bolus, maxLines = 1, softWrap = false)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -113,6 +119,11 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             }
         }
     }
+}
+
+@Composable
+private fun HeadingDot() {
+    Text(" · ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
 }
 
 /** Horizontal padding inside the outcome box; the heading and title are indented by the same amount. */
@@ -199,7 +210,7 @@ private fun MealOutcomeRow(meal: MealEntityUi, target: GlucoseTargetRange) {
         }
         when {
             meal.glucoseStatus == GlucoseStatus.TOO_EARLY ->
-                Text("Outcome is shown 4 h after the meal", style = labelStyle, color = muted)
+                Text("Result in 4 h", style = labelStyle, color = muted)
             meal.glucoseStatus == GlucoseStatus.NOT_ENOUGH_DATA || !meal.hasGlucoseData ->
                 Text("Not enough sensor data after this meal", style = labelStyle, color = muted)
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -260,33 +271,62 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
     }
 }
 
-/** Insulin that belongs to no meal: a manual bolus, or the SMBs of one hour. */
+/** Insulin that belongs to no meal: one bolus, or several close together that expand into their doses. */
 @Composable
 fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Filled.Vaccines, null, tint = Bolus, modifier = Modifier.size(24.dp))
+    var expanded by remember { mutableStateOf(false) }
+    val grouped = entry.count > 1
+    EntrySurface(if (grouped) ({ expanded = !expanded }) else onClick, modifier) {
+        Column(Modifier.animateContentSize()) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Vaccines, null, tint = Bolus, modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (grouped) "${clock.format(Date(entry.startUtc))}–${clock.format(Date(entry.timeUtc))}" else clock.format(Date(entry.timeUtc)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        when {
+                            !grouped -> if (entry.isSmb) "Automatic · SMB" else "Insulin bolus"
+                            entry.isSmb -> "Automatic · ${entry.count} SMBs"
+                            else -> "${entry.count} insulin doses"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                BigValue(formatUnits(entry.units), "U", Bolus)
+                if (grouped) {
+                    Icon(
+                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        if (expanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (entry.isSmb) "${clock.format(Date(entry.hourStartUtc))}–${clock.format(Date(entry.hourStartUtc + 3_600_000L))}"
-                    else clock.format(Date(entry.timeUtc)),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    if (entry.isSmb) "Automatic · ${entry.count} ${if (entry.count == 1) "SMB" else "SMBs"}" else "Insulin bolus",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+            if (grouped && expanded) {
+                Column(Modifier.padding(start = 72.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    entry.parts.forEach { part ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${clock.format(Date(part.timeUtc))} · ${if (part.isSmb) "Automatic" else "Bolus"}",
+                                Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text("${formatUnits(part.units)} U", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Bolus)
+                        }
+                    }
+                }
             }
-            BigValue(formatUnits(entry.units), "U", Bolus)
         }
     }
 }

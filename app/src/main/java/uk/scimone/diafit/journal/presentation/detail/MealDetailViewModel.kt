@@ -6,7 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.BolusEntity
@@ -65,7 +69,8 @@ class MealDetailViewModel(
     init {
         viewModelScope.launch {
             // Observing the list (not a one-shot read) keeps the page current after an edit or a new course.
-            mealRepository.observeMealsByUserId(userId)
+            // New CGM readings and boluses aren't observed, so re-read them every minute while the meal's chart window is still running.
+            combine(mealRepository.observeMealsByUserId(userId), minuteTicker()) { meals, _ -> meals }
                 .catch { Log.e(TAG, "Failed to observe meal $mealId", it) }
                 .collect { meals ->
                     val anchor = meals.firstOrNull { it.id == mealId }
@@ -127,6 +132,13 @@ class MealDetailViewModel(
             setMealValid(ids, false)
                 .onSuccess { onDone(ids) }
                 .onFailure { Log.e(TAG, "Failed to delete meal $ids", it) }
+        }
+    }
+
+    private fun minuteTicker(): Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(60_000L)
         }
     }
 

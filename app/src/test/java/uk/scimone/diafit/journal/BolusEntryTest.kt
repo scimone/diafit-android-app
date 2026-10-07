@@ -16,16 +16,18 @@ class BolusEntryTest {
     )
 
     @Test
-    fun smbsAreSummedPerHourAndManualBolusesStaySeparate() {
+    fun closeBolusesAreGroupedAndFarOnesStaySeparate() {
         val entries = listOf(
-            bolus(1, 10, 5, 0.2f, true), bolus(2, 10, 20, 0.3f, true), bolus(3, 11, 0, 0.1f, true),
-            bolus(4, 10, 30, 1.5f, false)
-        ).toBolusEntries(ZoneOffset.UTC)
+            bolus(1, 10, 5, 0.2f, true), bolus(2, 10, 20, 0.3f, true), bolus(4, 10, 40, 1.5f, false),
+            bolus(3, 13, 0, 0.1f, true)
+        ).toBolusEntries()
 
-        assertEquals(3, entries.size)
-        val hour10 = entries.single { it.isSmb && it.count == 2 }
-        assertEquals(0.5, hour10.units, 1e-6)
-        assertEquals(1, entries.single { !it.isSmb }.count)
-        assertTrue(entries.map { it.id }.toSet().size == 3)
+        assertEquals(2, entries.size)
+        val group = entries.single { it.count == 3 }
+        assertEquals(2.0, group.units, 1e-6)
+        assertEquals(3, group.parts.size)
+        assertTrue(!group.isSmb)
+        assertEquals(1, entries.single { it.count == 1 }.parts.size)
+        assertTrue(entries.map { it.id }.toSet().size == 2)
     }
 }

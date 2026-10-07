@@ -233,3 +233,7 @@ journalctl --user -u claude-rc-diafit.service -f    # logs
 systemctl --user disable --now claude-rc-diafit.service
 # after editing the unit: cp deploy/claude-rc-diafit.service ~/.config/systemd/user/ && systemctl --user daemon-reload
 ```
+
+### Journal/meal-page polish (2026-10-07)
+
+`MealDetailViewModel` re-reads CGM/boluses every minute (they aren't observed, so a recent meal's chart went stale). Standalone boluses are now grouped by `toBolusEntries()` (doses ≤ 30 min apart, group span ≤ 1 h; `BolusEntryUi.parts`) and `BolusCard` expands to list each dose; the old per-hour SMB sum is gone. Meal cards' heading separates every element with a dot (no "✓" after AAPS); the Journal's range chip sits at the far right of the filter row. `DismissInspectionWhenOffscreen` (HomeScreen.kt, also used on the History day charts) clears the inspect cursor + readout when panning moves it out of view. Not yet seen on-device: the expanded bolus group, the right-aligned range chip.

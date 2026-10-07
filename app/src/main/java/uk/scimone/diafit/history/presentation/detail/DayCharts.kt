@@ -22,6 +22,7 @@ import uk.scimone.diafit.home.presentation.ChartZoomControls
 import uk.scimone.diafit.home.presentation.InspectBarHeight
 import uk.scimone.diafit.home.presentation.InspectCursor
 import uk.scimone.diafit.home.presentation.InspectReadout
+import uk.scimone.diafit.home.presentation.DismissInspectionWhenOffscreen
 import uk.scimone.diafit.home.presentation.InsulinActivityDisplay
 import uk.scimone.diafit.home.presentation.TapToggleRadiusPx
 import uk.scimone.diafit.home.presentation.components.MealTimeline
@@ -79,6 +80,8 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
     val cursorTime = inspectedReading?.timeLong ?: selectedTime
     val lower = state.target.lowerBound
     val upper = state.target.upperBound
+
+    DismissInspectionWhenOffscreen(cursorTime, geometry) { selectedTime = null }
 
     fun timeAtX(x: Float): Long? = geometry.value?.let { g -> g.timeAt(x).coerceIn(window.minX, window.now) }
 

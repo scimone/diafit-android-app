@@ -112,7 +112,7 @@ private fun PeriodSummaryCard(state: HistoryState, modifier: Modifier = Modifier
 @Composable
 private fun ZoneShareLine(stats: DayGlucoseStats) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        ZONE_ORDER.reversed().filter { stats.share(it) > 0.0 }.forEach { zone ->
+        ZONE_ORDER.filter { stats.share(it) > 0.0 }.forEach { zone ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(8.dp).background(zoneFill(zone), RoundedCornerShape(2.dp)))
                 Text(

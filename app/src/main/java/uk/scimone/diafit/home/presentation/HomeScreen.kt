@@ -151,6 +151,8 @@ fun HomeScreen(
     }
     val cursorTime = inspectedReading?.timeLong ?: selectedTime
 
+    DismissInspectionWhenOffscreen(cursorTime, geometry) { viewModel.onSelectedTimeChange(null) }
+
     // A light tick whenever the scrub cursor reaches another meal.
     LaunchedEffect(focusedMeal?.key) {
         if (scrubbing && focusedMeal != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -378,6 +380,20 @@ private fun glucoseColor(value: Int, lower: Int, upper: Int): Color = when {
     value < lower -> BelowRange
     value > upper -> AboveRange
     else -> InRange
+}
+
+/** Clears the inspection (cursor line and readout) once the user pans the inspected time out of the visible chart. */
+@Composable
+internal fun DismissInspectionWhenOffscreen(cursorTime: Long?, geometry: State<ChartGeometry?>, onDismiss: () -> Unit) {
+    val currentCursor by rememberUpdatedState(cursorTime)
+    val currentDismiss by rememberUpdatedState(onDismiss)
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            val g = geometry.value
+            val t = currentCursor
+            if (g == null || t == null) false else g.xOf(t).let { it < g.left || it > g.right }
+        }.collect { offscreen -> if (offscreen) currentDismiss() }
+    }
 }
 
 /** The cursor line through every panel and the pin lane, with a ring on the inspected CGM reading. */

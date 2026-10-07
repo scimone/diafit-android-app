@@ -1,39 +1,52 @@
 package uk.scimone.diafit.journal.presentation.model
 
 import uk.scimone.diafit.core.domain.model.BolusEntity
-import java.time.Instant
-import java.time.ZoneId
+
+/** One delivered dose inside a [BolusEntryUi]. */
+data class BolusPartUi(val timeUtc: Long, val units: Double, val isSmb: Boolean)
 
 /**
- * Insulin that belongs to no meal, as its own journal entry: one manual bolus, or all the automatic
- * micro-boluses (SMBs) of one clock hour ([count] > 1 possible, [isSmb] true) summed up.
+ * Insulin that belongs to no meal, as its own journal entry: one bolus, or several given within
+ * [BOLUS_GROUP_GAP_MS] of each other (at most [BOLUS_GROUP_MAX_SPAN_MS] in total) summed up, with every
+ * dose kept in [parts] so the card can be expanded.
  */
 data class BolusEntryUi(
     override val id: Int,
+    /** Time of the latest dose. */
     override val timeUtc: Long,
     val units: Double,
     val count: Int,
+    /** True when every dose was an automatic micro-bolus. */
     val isSmb: Boolean,
-    /** Start of the clock hour an SMB group covers; equals [timeUtc] for a manual bolus. */
-    val hourStartUtc: Long = timeUtc
+    val startUtc: Long = timeUtc,
+    val parts: List<BolusPartUi> = emptyList()
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.BOLUS
 }
 
-/** Manual boluses one by one, SMBs summed per local clock hour. */
-fun List<BolusEntity>.toBolusEntries(zone: ZoneId = ZoneId.systemDefault()): List<BolusEntryUi> {
-    val (smbs, manual) = partition { it.isSmb }
-    val manualEntries = manual.map { BolusEntryUi(it.id, it.timestampUtc, it.value.toDouble(), 1, isSmb = false) }
-    val smbEntries = smbs.groupBy { Instant.ofEpochMilli(it.timestampUtc).atZone(zone).truncatedTo(java.time.temporal.ChronoUnit.HOURS).toInstant().toEpochMilli() }
-        .map { (hourStart, group) ->
-            BolusEntryUi(
-                id = -(hourStart / 60_000L).toInt(),  // negative: can't collide with a manual bolus' row id
-                timeUtc = group.maxOf { it.timestampUtc },
-                units = group.sumOf { it.value.toDouble() },
-                count = group.size,
-                isSmb = true,
-                hourStartUtc = hourStart
-            )
-        }
-    return manualEntries + smbEntries
+const val BOLUS_GROUP_GAP_MS = 30 * 60_000L
+const val BOLUS_GROUP_MAX_SPAN_MS = 60 * 60_000L
+
+/** Boluses close together become one entry; a lone bolus stays its own entry. */
+fun List<BolusEntity>.toBolusEntries(): List<BolusEntryUi> {
+    val groups = mutableListOf<MutableList<BolusEntity>>()
+    for (b in sortedBy { it.timestampUtc }) {
+        val current = groups.lastOrNull()
+        if (current != null &&
+            b.timestampUtc - current.last().timestampUtc <= BOLUS_GROUP_GAP_MS &&
+            b.timestampUtc - current.first().timestampUtc <= BOLUS_GROUP_MAX_SPAN_MS
+        ) current += b else groups += mutableListOf(b)
+    }
+    return groups.map { g ->
+        BolusEntryUi(
+            // Negative for a group so it can't collide with a single bolus' row id.
+            id = if (g.size == 1) g.first().id else -g.first().id - 1,
+            timeUtc = g.last().timestampUtc,
+            units = g.sumOf { it.value.toDouble() },
+            count = g.size,
+            isSmb = g.all { it.isSmb },
+            startUtc = g.first().timestampUtc,
+            parts = g.map { BolusPartUi(it.timestampUtc, it.value.toDouble(), it.isSmb) }
+        )
+    }
 }

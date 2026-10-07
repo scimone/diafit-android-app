@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uk.scimone.diafit.core.domain.model.ComponentConfidence
 import uk.scimone.diafit.core.domain.model.MealComponent
+import uk.scimone.diafit.ui.theme.Carbs
 import kotlin.math.roundToInt
 
 /**
@@ -77,7 +78,7 @@ fun MealComponentCard(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                MacroChip("${component.carbsG.roundToInt()} g carbs", MaterialTheme.colorScheme.tertiaryContainer)
+                MacroChip("${component.carbsG.roundToInt()} g carbs", Carbs.copy(alpha = 0.3f))
                 MacroChip("${component.proteinG.roundToInt()} g protein", MaterialTheme.colorScheme.secondaryContainer)
                 MacroChip("${component.fatG.roundToInt()} g fat", MaterialTheme.colorScheme.secondaryContainer)
                 MacroChip("${component.calories.roundToInt()} kcal", MaterialTheme.colorScheme.surfaceContainerHighest)
