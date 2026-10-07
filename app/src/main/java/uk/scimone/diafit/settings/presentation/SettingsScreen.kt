@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Vaccines
@@ -29,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.health.connect.client.PermissionController
 import org.koin.androidx.compose.koinViewModel
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectPermissions
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
 
@@ -56,6 +66,8 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.checkBatteryOptimization()
+                // Permissions can be changed in Health Connect itself.
+                viewModel.refreshHealthConnect()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -69,6 +81,14 @@ fun SettingsScreen(
         )
     }
 
+    // The permission dialog is Health Connect's own; the CGM one is only asked for when that source is picked.
+    val activityPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.onActivityPermissionsResult()
+    }
+    val glucosePermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.onGlucosePermissionResult()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,12 +100,34 @@ fun SettingsScreen(
 
         SettingsSection(title = "CGM data source", icon = Icons.Filled.Sensors) {
             CgmSource.values().forEach { source ->
+                val healthConnect = source == CgmSource.HEALTH_CONNECT
                 SelectableRow(
-                    label = source.name,
+                    label = if (healthConnect) source.displayName else source.name,
+                    caption = if (healthConnect) "Blood glucose another app wrote to Health Connect" else null,
                     selected = source == state.selectedCgmSource,
-                    onClick = { viewModel.onCgmSourceSelected(source) }
+                    enabled = !healthConnect || state.healthConnect.availability == HealthConnectAvailability.AVAILABLE,
+                    onClick = {
+                        // Health Connect needs its own read permission for blood glucose first.
+                        if (healthConnect && !state.healthConnect.glucoseGranted) {
+                            glucosePermissions.launch(HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND)
+                        } else {
+                            viewModel.onCgmSourceSelected(source)
+                        }
+                    }
                 )
             }
+        }
+
+        SettingsSection(title = "Health Connect", icon = Icons.Filled.MonitorHeart) {
+            HealthConnectCard(
+                state = state.healthConnect,
+                onConnect = { activityPermissions.launch(HealthConnectPermissions.activity + HealthConnectPermissions.BACKGROUND) },
+                onSyncNow = { viewModel.syncHealthConnectNow() },
+                onBackfill = { viewModel.syncHealthConnectNow(backfill = true) },
+                onDisconnect = viewModel::disconnectHealthConnect,
+                onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
+                onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
+            )
         }
 
         SettingsSection(title = "Bolus data source", icon = Icons.Filled.Vaccines) {
@@ -207,18 +249,128 @@ private fun SettingsSection(
 }
 
 @Composable
-private fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit, caption: String? = null, enabled: Boolean = true) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 10.dp, horizontal = 4.dp)
     ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Text(label, modifier = Modifier.padding(start = 4.dp))
+        RadioButton(selected = selected, onClick = onClick, enabled = enabled)
+        Column(modifier = Modifier.padding(start = 4.dp)) {
+            Text(label, color = if (enabled) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (caption != null) {
+                Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
+}
+
+/** Connect / status / sync controls for Health Connect (heart rate, steps, sleep, exercise). */
+@Composable
+private fun HealthConnectCard(
+    state: HealthConnectUiState,
+    onConnect: () -> Unit,
+    onSyncNow: () -> Unit,
+    onBackfill: () -> Unit,
+    onDisconnect: () -> Unit,
+    onInstall: () -> Unit,
+    onOpenHealthConnect: () -> Unit
+) {
+    Text(
+        "Imports heart rate, steps, sleep and exercise from your watch or phone and shows them under Activity on Home and History.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(12.dp))
+    when (state.availability) {
+        HealthConnectAvailability.UNAVAILABLE, HealthConnectAvailability.UPDATE_REQUIRED -> {
+            val update = state.availability == HealthConnectAvailability.UPDATE_REQUIRED
+            Text(
+                if (update) "Health Connect needs to be updated before Diafit can use it." else "Health Connect isn't available on this device.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onInstall) { Text(if (update) "Update Health Connect" else "Get Health Connect") }
+        }
+        HealthConnectAvailability.AVAILABLE -> {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf("Heart rate", "Steps", "Sleep", "Exercise").forEach {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(it, style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = if (state.connected) {
+                            { Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary) }
+                        } else null
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            if (!state.connected) {
+                if (state.enabled && !state.activityGranted) {
+                    Text(
+                        "Permission was withdrawn in Health Connect. Allow it again to keep importing.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                Button(onClick = onConnect) { Text("Connect Health Connect") }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "The last 14 days are imported when you connect, then new data every 15 minutes.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                val sync = state.sync
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    when (sync) {
+                        is HealthConnectSyncStatus.Syncing -> {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Importing… ${(sync.progress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        is HealthConnectSyncStatus.Failed -> {
+                            Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Import failed: ${sync.message}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                        }
+                        HealthConnectSyncStatus.Idle -> {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                state.lastSync?.let { "Connected · last import ${formatSyncTime(it)}" } ?: "Connected · waiting for the first import",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                if (!state.backgroundGranted) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Background access isn't allowed, so data is only imported while Diafit is open. You can allow it in Health Connect.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onSyncNow, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Sync now") }
+                    OutlinedButton(onClick = onBackfill, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Re-import 2 weeks") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = onOpenHealthConnect) { Text("Manage in Health Connect") }
+                    TextButton(onClick = onDisconnect) { Text("Disconnect") }
+                }
+            }
+        }
+    }
+}
+
+private fun formatSyncTime(time: Long): String {
+    val sameDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).let { it.format(Date(time)) == it.format(Date()) }
+    return SimpleDateFormat(if (sameDay) "HH:mm" else "d MMM HH:mm", Locale.getDefault()).format(Date(time))
 }
 
 @Composable

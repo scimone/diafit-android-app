@@ -8,7 +8,12 @@ import org.koin.dsl.module
 import uk.scimone.diafit.core.data.file.FileStorageRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealAnalysisRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealRepositoryImpl
+import uk.scimone.diafit.core.data.local.ActivityDao
 import uk.scimone.diafit.core.data.local.AppDatabase
+import uk.scimone.diafit.core.data.repository.ActivityRepositoryImpl
+import uk.scimone.diafit.core.domain.repository.ActivityRepository
+import uk.scimone.diafit.core.domain.usecase.GetActivityBetweenUseCase
+import uk.scimone.diafit.core.domain.usecase.ObserveActivitySinceUseCase
 import uk.scimone.diafit.core.data.local.BolusDao
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.local.MealDao
@@ -51,7 +56,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17)
             .build()
     }
 
@@ -60,6 +65,10 @@ val coreModule = module {
     single<CgmDao> { get<AppDatabase>().cgmDao() }
     single<BolusDao> { get<AppDatabase>().bolusDao() }
     single<PumpEventDao> { get<AppDatabase>().pumpEventDao() }
+    single<ActivityDao> { get<AppDatabase>().activityDao() }
+    single<ActivityRepository> { ActivityRepositoryImpl(get()) }
+    single { ObserveActivitySinceUseCase(get()) }
+    single { GetActivityBetweenUseCase(get()) }
     single<PumpEventRepository> { PumpEventRepositoryImpl(get()) }
 
     // Provide file storage

@@ -66,6 +66,8 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 class MainActivity : ComponentActivity() {
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
     private val cgmServiceManager: CgmServiceManager by inject()
+    private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository by inject()
+    private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
     private val setMealValid: SetMealValidUseCase by inject()
     private val getOpenSitting: GetOpenSittingUseCase by inject()
     private val fileStorage: FileStorageRepository by inject()
@@ -97,6 +99,14 @@ class MainActivity : ComponentActivity() {
             val source = getCgmSourceUseCase()
             cgmServiceManager.start(source)  // start service on app launch
             Log.d("MainActivity", "Starting CGM Service with source: $source")
+        }
+
+        // Health Connect activity import: keep the routine job scheduled and catch up whenever the app opens.
+        lifecycleScope.launch {
+            if (settingsRepository.isHealthConnectEnabled()) {
+                healthConnectScheduler.schedulePeriodic()
+                healthConnectScheduler.syncNow()
+            }
         }
 
         lifecycleScope.launch {

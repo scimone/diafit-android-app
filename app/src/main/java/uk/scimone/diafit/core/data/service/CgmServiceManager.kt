@@ -36,7 +36,8 @@ class CgmServiceManager(
         stopAll()
 
         when (cgmSource) {
-            CgmSource.NIGHTSCOUT -> ContextCompat.startForegroundService(
+            // Both poll once a minute from the foreground service.
+            CgmSource.NIGHTSCOUT, CgmSource.HEALTH_CONNECT -> ContextCompat.startForegroundService(
                 context,
                 Intent(context, RemoteCgmSyncService::class.java)
             )
@@ -44,7 +45,6 @@ class CgmServiceManager(
                 context,
                 Intent(context, BroadcastIntentHealthSyncService::class.java)
             )
-            else -> { /* No service started */ }
         }
         currentSource = cgmSource
     }
@@ -56,9 +56,6 @@ class CgmServiceManager(
      * doesn't cause a restart blip on every check.
      */
     fun ensureRunning(cgmSource: CgmSource) {
-        if (cgmSource != CgmSource.NIGHTSCOUT && cgmSource != CgmSource.JUGGLUCO && cgmSource != CgmSource.XDRIP) {
-            return
-        }
         if (isServiceNotificationActive()) {
             Log.d(TAG, "Watchdog check: CGM sync notification still active for $cgmSource")
             return
@@ -81,9 +78,8 @@ class CgmServiceManager(
     fun stop(source: CgmSource) {
         if (currentSource == source) currentSource = null
         when (source) {
-            CgmSource.NIGHTSCOUT -> context.stopService(Intent().setClass(context, RemoteCgmSyncService::class.java))
+            CgmSource.NIGHTSCOUT, CgmSource.HEALTH_CONNECT -> context.stopService(Intent().setClass(context, RemoteCgmSyncService::class.java))
             CgmSource.JUGGLUCO, CgmSource.XDRIP -> context.stopService(Intent().setClass(context, BroadcastIntentHealthSyncService::class.java))
-            else -> { }
         }
     }
 }

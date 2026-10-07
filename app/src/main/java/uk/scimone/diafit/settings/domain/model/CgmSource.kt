@@ -4,4 +4,5 @@ enum class CgmSource(val displayName: String) {
     XDRIP("xdrip"),
     JUGGLUCO("Juggluco"),
     NIGHTSCOUT("Nightscout"),
+    HEALTH_CONNECT("Health Connect"),
 }

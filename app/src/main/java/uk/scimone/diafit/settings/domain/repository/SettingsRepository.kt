@@ -20,4 +20,11 @@ interface SettingsRepository {
 
     suspend fun getAiConfig(): AiConfig
     suspend fun setAiConfig(config: AiConfig)
+
+    /** Health Connect activity import (heart rate, steps, sleep, exercise) switched on by the user. */
+    suspend fun isHealthConnectEnabled(): Boolean
+    suspend fun setHealthConnectEnabled(enabled: Boolean)
+    /** Epoch ms of the last successful Health Connect import, or null if there was none. */
+    suspend fun getHealthConnectLastSync(): Long?
+    suspend fun setHealthConnectLastSync(time: Long?)
 }

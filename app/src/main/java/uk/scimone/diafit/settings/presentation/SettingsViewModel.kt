@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectManager
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectPermissions
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer
+import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import uk.scimone.diafit.settings.domain.model.AiConfig
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
@@ -39,7 +44,11 @@ class SettingsViewModel(
     private val getAiConfig: GetAiConfigUseCase,
     private val setAiConfig: SetAiConfigUseCase,
     private val listAiModels: ListAiModelsUseCase,
-    private val appContext: Context
+    private val appContext: Context,
+    private val settingsRepository: SettingsRepository,
+    private val healthConnectManager: HealthConnectManager,
+    private val healthConnectSyncer: HealthConnectSyncer,
+    private val healthConnectScheduler: HealthConnectScheduler
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -52,7 +61,71 @@ class SettingsViewModel(
 
     init {
         refreshSettings()
+        viewModelScope.launch {
+            healthConnectSyncer.status.collect { sync ->
+                _state.value = _state.value.let { it.copy(healthConnect = it.healthConnect.copy(sync = sync)) }
+                // A finished import updates "last imported".
+                if (sync is uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus.Idle) refreshHealthConnect()
+            }
+        }
     }
+
+    /** Re-reads Health Connect's availability and which permissions are granted (they can change outside the app). */
+    fun refreshHealthConnect() {
+        viewModelScope.launch {
+            val granted = healthConnectManager.grantedPermissions()
+            val enabled = settingsRepository.isHealthConnectEnabled()
+            val lastSync = settingsRepository.getHealthConnectLastSync()
+            _state.value = _state.value.let {
+                it.copy(
+                    healthConnect = it.healthConnect.copy(
+                        availability = healthConnectManager.availability(),
+                        enabled = enabled,
+                        activityGranted = HealthConnectPermissions.activity.all { p -> p in granted },
+                        glucoseGranted = HealthConnectPermissions.glucose.all { p -> p in granted },
+                        backgroundGranted = HealthConnectPermissions.BACKGROUND in granted,
+                        lastSync = lastSync
+                    )
+                )
+            }
+        }
+    }
+
+    /** Result of the activity permission dialog: when everything was granted, switch the import on and backfill. */
+    fun onActivityPermissionsResult() {
+        viewModelScope.launch {
+            val granted = healthConnectManager.grantedPermissions()
+            if (HealthConnectPermissions.activity.all { it in granted }) {
+                settingsRepository.setHealthConnectEnabled(true)
+                healthConnectScheduler.schedulePeriodic()
+                healthConnectScheduler.syncNow(backfill = true)
+            }
+            refreshHealthConnect()
+        }
+    }
+
+    /** Result of the glucose permission dialog: Health Connect becomes the CGM source only if it was granted. */
+    fun onGlucosePermissionResult() {
+        viewModelScope.launch {
+            val granted = healthConnectManager.grantedPermissions()
+            if (HealthConnectPermissions.glucose.all { it in granted }) onCgmSourceSelected(CgmSource.HEALTH_CONNECT)
+            refreshHealthConnect()
+        }
+    }
+
+    fun syncHealthConnectNow(backfill: Boolean = false) = healthConnectScheduler.syncNow(backfill)
+
+    /** Stops importing (data already imported stays); permissions can be withdrawn in Health Connect itself. */
+    fun disconnectHealthConnect() {
+        viewModelScope.launch {
+            settingsRepository.setHealthConnectEnabled(false)
+            healthConnectScheduler.cancel()
+            refreshHealthConnect()
+        }
+    }
+
+    fun healthConnectStoreIntent() = healthConnectManager.storeIntent()
+    fun healthConnectSettingsIntent() = healthConnectManager.settingsIntent()
 
     private fun refreshSettings() {
         viewModelScope.launch {
@@ -64,6 +137,7 @@ class SettingsViewModel(
             val range = getGlucoseTargetRange()
             val nightscoutConfig = getNightscoutConfig()
             val aiConfig = getAiConfig()
+            refreshHealthConnect()
 
             _state.value = _state.value.copy(
                 selectedCgmSource = cgmSource,

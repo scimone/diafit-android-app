@@ -79,6 +79,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             .apply()
     }
 
+    override suspend fun isHealthConnectEnabled(): Boolean = prefs.getBoolean("health_connect_enabled", false)
+
+    override suspend fun setHealthConnectEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("health_connect_enabled", enabled).apply()
+    }
+
+    override suspend fun getHealthConnectLastSync(): Long? =
+        prefs.getLong("health_connect_last_sync", 0L).takeIf { it > 0L }
+
+    override suspend fun setHealthConnectLastSync(time: Long?) {
+        prefs.edit().putLong("health_connect_last_sync", time ?: 0L).apply()
+    }
+
     private companion object {
         const val DEFAULT_AI_BASE_URL = "https://api.openai.com/v1"
     }

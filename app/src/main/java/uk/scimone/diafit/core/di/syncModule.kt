@@ -4,7 +4,11 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.BolusSyncSourceAaps
+import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceHealthConnect
 import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceJuggluco
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectManager
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler
+import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer
 import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceNightscout
 import uk.scimone.diafit.core.data.repository.syncsource.cgmsyncsource.CgmSyncSourceXdrip
 import uk.scimone.diafit.core.data.service.CgmServiceManager
@@ -18,6 +22,7 @@ import uk.scimone.diafit.settings.domain.model.CgmSource
 
 val syncModule = module {
     single<HealthSyncSource>(named("NIGHTSCOUT")) { CgmSyncSourceNightscout(get(), get()) }
+    single<HealthSyncSource>(named("HEALTH_CONNECT")) { CgmSyncSourceHealthConnect(get()) }
     factory<HealthSyncSource>(named("JUGGLUCO")) { CgmSyncSourceJuggluco() }
     factory<IntentHealthSyncSource>(named("JUGGLUCO")) { get<HealthSyncSource>(named("JUGGLUCO")) as IntentHealthSyncSource }
 
@@ -34,7 +39,8 @@ val syncModule = module {
             sources = mapOf(
                 CgmSource.NIGHTSCOUT to get(named("NIGHTSCOUT")),
                 CgmSource.XDRIP to get(named("XDRIP")),
-                CgmSource.JUGGLUCO to get(named("JUGGLUCO"))
+                CgmSource.JUGGLUCO to get(named("JUGGLUCO")),
+                CgmSource.HEALTH_CONNECT to get(named("HEALTH_CONNECT"))
             )
         )
     }
@@ -48,6 +54,10 @@ val syncModule = module {
             )
         )
     }
+
+    single { HealthConnectManager(androidContext()) }
+    single { HealthConnectSyncer(get(), get(), get(), get()) }
+    single { HealthConnectScheduler(androidContext()) }
 
     single { CgmServiceManager(androidContext()) }
 

@@ -50,7 +50,11 @@ val settingsModule = module {
             getAiConfig = get(),
             setAiConfig = get(),
             listAiModels = get(),
-            appContext = get()
+            appContext = get(),
+            settingsRepository = get(),
+            healthConnectManager = get(),
+            healthConnectSyncer = get(),
+            healthConnectScheduler = get()
         )
     }
 }

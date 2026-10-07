@@ -8,12 +8,19 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
+import uk.scimone.diafit.core.domain.model.ExerciseEntity
+import uk.scimone.diafit.core.domain.model.HeartRateEntity
+import uk.scimone.diafit.core.domain.model.SleepStageEntity
+import uk.scimone.diafit.core.domain.model.StepsEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
 
 @Database(
-    entities = [MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class],
-    version = 16,
+    entities = [
+        MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class,
+        HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class
+    ],
+    version = 17,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -32,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cgmDao(): CgmDao
     abstract fun bolusDao(): BolusDao
     abstract fun pumpEventDao(): PumpEventDao
+    abstract fun activityDao(): ActivityDao
 
     companion object {
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -93,6 +101,37 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE PumpEventEntity ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Health Connect activity data: heart rate, steps, sleep stages, exercise sessions. */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `HeartRateEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `bpm` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_HeartRateEntity_timestamp` ON `HeartRateEntity` (`timestamp`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `StepsEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `startUtc` INTEGER NOT NULL, `count` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_StepsEntity_startUtc` ON `StepsEntity` (`startUtc`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `SleepStageEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `sessionId` TEXT NOT NULL, `startUtc` INTEGER NOT NULL, " +
+                        "`endUtc` INTEGER NOT NULL, `stage` INTEGER NOT NULL, `sessionStartUtc` INTEGER NOT NULL, " +
+                        "`sessionEndUtc` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_SleepStageEntity_sessionId_startUtc` ON `SleepStageEntity` (`sessionId`, `startUtc`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_SleepStageEntity_endUtc` ON `SleepStageEntity` (`endUtc`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `ExerciseEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `sourceId` TEXT NOT NULL, `startUtc` INTEGER NOT NULL, " +
+                        "`endUtc` INTEGER NOT NULL, `exerciseType` INTEGER NOT NULL, `title` TEXT)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_ExerciseEntity_sourceId` ON `ExerciseEntity` (`sourceId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ExerciseEntity_endUtc` ON `ExerciseEntity` (`endUtc`)")
             }
         }
     }
