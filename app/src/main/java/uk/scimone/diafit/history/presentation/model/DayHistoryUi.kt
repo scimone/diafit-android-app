@@ -1,6 +1,7 @@
 package uk.scimone.diafit.history.presentation.model
 
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.ActivityDayStats
 import uk.scimone.diafit.core.domain.model.ActivitySpan
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseSample
@@ -30,11 +31,21 @@ data class DayHistoryUi(
     /** Sleep and exercise overlapping the day. */
     val activity: ActivityData,
     val elevatedActivity: List<ActivitySpan>,
+    /** Steps, sleep (the night that ended this day) and workouts of the day; null when there is none. */
+    val activityStats: ActivityDayStats?,
     /** Null when the day has no readings. */
     val stats: DayGlucoseStats?
 ) {
     val totalCarbs: Float get() = carbs.sumOf { it.total.toDouble() }.toFloat()
     val totalInsulin: Float get() = insulin.sumOf { it.total.toDouble() }.toFloat()
+    val steps: Int get() = activityStats?.steps ?: 0
+    val sleepMs: Long get() = activityStats?.sleepMs ?: 0L
+    /** Time in elevated activity or logged workouts (overlap counted once). */
+    val activeMs: Long
+        get() = uk.scimone.diafit.core.domain.model.unionDurationMs(
+            elevatedActivity.map { maxOf(it.startUtc, dayStartUtc) to minOf(it.endUtc, dayEndUtc) } +
+                activity.exercise.map { maxOf(it.startUtc, dayStartUtc) to minOf(it.endUtc, dayEndUtc) }
+        )
 }
 
 fun DayHistory.toUi(
@@ -56,6 +67,7 @@ fun DayHistory.toUi(
         insulin = cluster(boluses.map { TreatmentEvent(it.timestampUtc, it.value) }),
         activity = activity,
         elevatedActivity = elevatedActivity,
+        activityStats = ActivityDayStats.from(activity, start, end),
         stats = DayGlucoseStats.from(
             readings.sortedBy { it.timestamp }.map { GlucoseSample(it.timestamp, it.valueMgdl) },
             GlucoseThresholds.from(target)

@@ -46,7 +46,8 @@ class GetDailyHistoryUseCase(
                         meals = mealsByDay[date].orEmpty(),
                         activity = ActivityData(
                             sleep = activity.sessions.sleep.filter { it.sessionEndUtc > dayStart && it.sessionStartUtc < dayEnd },
-                            exercise = activity.sessions.exercise.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
+                            exercise = activity.sessions.exercise.filter { it.endUtc > dayStart && it.startUtc < dayEnd },
+                            steps = activity.steps.filter { it.startUtc in dayStart until dayEnd }
                         ),
                         elevatedActivity = activity.elevated.filter { it.endUtc > dayStart && it.startUtc < dayEnd }
                     )

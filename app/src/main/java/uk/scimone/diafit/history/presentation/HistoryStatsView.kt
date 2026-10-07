@@ -32,6 +32,8 @@ import uk.scimone.diafit.history.presentation.detail.percent
 import uk.scimone.diafit.history.presentation.detail.zoneFill
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
 import uk.scimone.diafit.journal.presentation.components.formatUnits
+import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.Sleep
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
@@ -41,19 +43,21 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val DateWidth = 52.dp
-private val PercentWidth = 36.dp
-private val MeanWidth = 34.dp
-private val MiniBarWidth = 50.dp
+private val DateWidth = 44.dp
+private val PercentWidth = 32.dp
+private val MeanWidth = 30.dp
+private val MiniBarWidth = 40.dp
 
 /**
  * The period's statistics pinned on top, and below one compact row per day: time-in-range bar, mean
- * glucose and the day's carbs and insulin as small bars scaled to the period's maxima.
+ * glucose and the day's carbs, insulin, steps and sleep as small bars scaled to the period's maxima.
  */
 @Composable
 internal fun HistoryStatsView(state: HistoryState, today: Long, onOpenDay: (Long) -> Unit) {
     val maxCarbs = remember(state.days) { state.days.maxOfOrNull { it.totalCarbs }?.coerceAtLeast(1f) ?: 1f }
     val maxInsulin = remember(state.days) { state.days.maxOfOrNull { it.totalInsulin }?.coerceAtLeast(1f) ?: 1f }
+    val maxSteps = remember(state.days) { state.days.maxOfOrNull { it.steps }?.coerceAtLeast(1) ?: 1 }
+    val maxSleep = remember(state.days) { state.days.maxOfOrNull { it.sleepMs }?.coerceAtLeast(1L) ?: 1L }
 
     Column(Modifier.fillMaxSize()) {
         PeriodSummaryCard(state, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
@@ -61,7 +65,7 @@ internal fun HistoryStatsView(state: HistoryState, today: Long, onOpenDay: (Long
         HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
             items(state.days, key = { it.epochDay }) { day ->
-                DayStatsRow(day, state.thresholds, day.epochDay == today, maxCarbs, maxInsulin) { onOpenDay(day.epochDay) }
+                DayStatsRow(day, state.thresholds, day.epochDay == today, maxCarbs, maxInsulin, maxSteps, maxSleep) { onOpenDay(day.epochDay) }
             }
         }
     }
@@ -103,6 +107,18 @@ private fun PeriodSummaryCard(state: HistoryState, modifier: Modifier = Modifier
                 }
                 Metric("Carbs / day", "${Math.round(state.days.sumOf { it.totalCarbs.toDouble() } / dayCount)}", "g", Modifier.weight(1f), valueColor = Carbs)
                 Metric("Insulin / day", formatUnits(state.days.sumOf { it.totalInsulin.toDouble() } / dayCount), "U", Modifier.weight(1f), valueColor = Bolus)
+            }
+            // Activity averages, over the days that have any of the data (a missing wearable day isn't a zero).
+            val stepDays = state.days.filter { it.steps > 0 }
+            val sleepNights = state.days.filter { it.sleepMs > 0 }
+            val activeDays = state.days.filter { it.activeMs > 0 }
+            if (stepDays.isNotEmpty() || sleepNights.isNotEmpty() || activeDays.isNotEmpty()) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Row(Modifier.fillMaxWidth()) {
+                    Metric("Steps / day", if (stepDays.isEmpty()) "–" else "%,d".format(stepDays.sumOf { it.steps } / stepDays.size), "", Modifier.weight(1f), valueColor = Activity.takeIf { stepDays.isNotEmpty() })
+                    Metric("Active / day", if (activeDays.isEmpty()) "–" else compactDuration(activeDays.sumOf { it.activeMs } / state.days.size.coerceAtLeast(1)), "", Modifier.weight(1f), valueColor = Activity.takeIf { activeDays.isNotEmpty() })
+                    Metric("Sleep / night", if (sleepNights.isEmpty()) "–" else compactDuration(sleepNights.sumOf { it.sleepMs } / sleepNights.size), "", Modifier.weight(1f), valueColor = Sleep.takeIf { sleepNights.isNotEmpty() })
+                }
             }
         }
     }
@@ -147,6 +163,10 @@ private fun StatsHeaderRow(modifier: Modifier = Modifier) {
         Text("Carbs", style = style, color = Carbs, modifier = Modifier.width(MiniBarWidth))
         Spacer(Modifier.width(6.dp))
         Text("Insulin", style = style, color = Bolus, modifier = Modifier.width(MiniBarWidth))
+        Spacer(Modifier.width(6.dp))
+        Text("Steps", style = style, color = Activity, modifier = Modifier.width(MiniBarWidth))
+        Spacer(Modifier.width(6.dp))
+        Text("Sleep", style = style, color = Sleep, modifier = Modifier.width(MiniBarWidth))
     }
 }
 
@@ -157,6 +177,8 @@ private fun DayStatsRow(
     isToday: Boolean,
     maxCarbs: Float,
     maxInsulin: Float,
+    maxSteps: Int,
+    maxSleep: Long,
     onClick: () -> Unit
 ) {
     val stats = day.stats
@@ -199,6 +221,10 @@ private fun DayStatsRow(
         MiniBar(day.totalCarbs, maxCarbs, if (day.totalCarbs > 0) "${day.totalCarbs.toInt()} g" else "", Carbs)
         Spacer(Modifier.width(6.dp))
         MiniBar(day.totalInsulin, maxInsulin, if (day.totalInsulin > 0) "${formatUnits(day.totalInsulin.toDouble())} U" else "", Bolus)
+        Spacer(Modifier.width(6.dp))
+        MiniBar(day.steps.toFloat(), maxSteps.toFloat(), if (day.steps > 0) compactCount(day.steps) else "", Activity)
+        Spacer(Modifier.width(6.dp))
+        MiniBar(day.sleepMs.toFloat(), maxSleep.toFloat(), if (day.sleepMs > 0) compactDuration(day.sleepMs) else "", Sleep)
     }
 }
 
@@ -207,6 +233,15 @@ private fun meanColor(t: GlucoseThresholds, mean: Int): Color = when (t.zoneOf(m
     GlucoseZone.IN_RANGE -> MaterialTheme.colorScheme.onSurface
     GlucoseZone.LOW, GlucoseZone.VERY_LOW -> BelowRange
     GlucoseZone.HIGH, GlucoseZone.VERY_HIGH -> AboveRange
+}
+
+/** "8.2k" for 8 234 steps, "950" below 1 000. */
+private fun compactCount(n: Int): String = if (n >= 1000) "%.1fk".format(Locale.US, n / 1000.0) else "$n"
+
+/** "7h12" / "45m". */
+private fun compactDuration(ms: Long): String {
+    val minutes = ms / 60_000L
+    return if (minutes >= 60) "${minutes / 60}h%02d".format(minutes % 60) else "${minutes}m"
 }
 
 /** A horizontal bar filled to [value]/[max] with its label on top. */

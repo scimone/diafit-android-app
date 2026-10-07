@@ -35,7 +35,7 @@ class ActivityRepositoryImpl(private val dao: ActivityDao) : ActivityRepository 
         dao.observeStepsSince(start, userId)
     ) { sleep, exercise, hr, steps ->
         val sessions = ActivityData(sleep = sleep, exercise = exercise)
-        ActivityOverview(sessions, ElevatedActivity.detect(hr, steps, sessions.sleepSessions))
+        ActivityOverview(sessions, ElevatedActivity.detect(hr, steps, sessions.sleepSessions), steps)
     }.flowOn(Dispatchers.Default)
 
     override suspend fun getSessionsBetween(start: Long, end: Long, userId: Int) = ActivityData(

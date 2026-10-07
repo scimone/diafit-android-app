@@ -158,4 +158,23 @@ data class ActivityDayStats(
 }
 
 /** What the History overview draws per range: sleep and logged workouts, plus elevated-activity ranges found in heart rate and steps. */
-data class ActivityOverview(val sessions: ActivityData = ActivityData(), val elevated: List<ActivitySpan> = emptyList())
+data class ActivityOverview(
+    val sessions: ActivityData = ActivityData(),
+    val elevated: List<ActivitySpan> = emptyList(),
+    val steps: List<StepsEntity> = emptyList()
+)
+
+/** Total length of the union of [intervals] (start to end, ms): overlapping ones count once. */
+fun unionDurationMs(intervals: List<Pair<Long, Long>>): Long {
+    var total = 0L
+    var curStart = 0L
+    var curEnd = Long.MIN_VALUE
+    for ((s, e) in intervals.sortedBy { it.first }) {
+        if (curEnd == Long.MIN_VALUE || s > curEnd) {
+            if (curEnd != Long.MIN_VALUE) total += curEnd - curStart
+            curStart = s; curEnd = e
+        } else if (e > curEnd) curEnd = e
+    }
+    if (curEnd != Long.MIN_VALUE) total += curEnd - curStart
+    return total
+}
