@@ -49,7 +49,7 @@ private const val STEPS_FULL = 1200
 private const val STEPS_BAR_FRACTION = 0.45f
 /** Space under the panel title, then the heart-rate plot, then the sleep/exercise lane. */
 private val PlotTopInset = 12.dp
-private val PlotMaxHeight = 40.dp
+private val PlotMaxHeight = 54.dp
 private val LaneHeight = 16.dp
 private val LaneGap = 4.dp
 
