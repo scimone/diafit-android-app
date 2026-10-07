@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -211,6 +213,8 @@ fun HomeScreen(
                         }
                     }
 
+                    val insulinPanel = remember { mutableStateOf<Rect?>(null) }
+                    val carbPanel = remember { mutableStateOf<Rect?>(null) }
                     // The stacked panels share one time axis; the pin lane and cursor overlay follow it.
                     Box(Modifier.weight(1f).onGloballyPositioned { chartsBottomInRoot = it.positionInRoot().y + it.size.height }) {
                         Column(Modifier.fillMaxSize()) {
@@ -248,6 +252,7 @@ fun HomeScreen(
                                 PlaceholderPanel("Basal", Modifier.weight(1f))
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
+                                    panelBounds = insulinPanel,
                                     history = state.insulinActivityHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
@@ -255,6 +260,7 @@ fun HomeScreen(
                                 )
                                 CarbActivityDisplay(
                                     modifier = Modifier.weight(1f),
+                                    panelBounds = carbPanel,
                                     history = state.carbHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
@@ -268,7 +274,11 @@ fun HomeScreen(
                             geometry = geometry,
                             lower = state.targetRangeLower,
                             upper = state.targetRangeUpper,
-                            modifier = Modifier.matchParentSize()
+                            modifier = Modifier.matchParentSize(),
+                            insulinTimes = cursorTime?.let { c -> state.insulinActivityHistory.filter { abs(it.timeLong - c) <= EVENT_NEAR_MS }.map { it.timeLong } }.orEmpty(),
+                            carbTimes = cursorTime?.let { c -> state.carbHistory.filter { abs(it.timeLong - c) <= EVENT_NEAR_MS }.map { it.timeLong } }.orEmpty(),
+                            insulinPanel = insulinPanel,
+                            carbPanel = carbPanel
                         )
                     }
 
@@ -385,15 +395,38 @@ internal fun InspectCursor(
     geometry: State<ChartGeometry?>,
     lower: Int,
     upper: Int,
-    modifier: Modifier
+    modifier: Modifier,
+    /** Times of the boluses/carbs the cursor catches, marked on their own panels (see [panelBounds]). */
+    insulinTimes: List<Long> = emptyList(),
+    carbTimes: List<Long> = emptyList(),
+    insulinPanel: State<Rect?>? = null,
+    carbPanel: State<Rect?>? = null
 ) {
     val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
     val ringColor = MaterialTheme.colorScheme.background
-    Canvas(modifier) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    Canvas(modifier.onGloballyPositioned { origin = it.positionInRoot() }) {
         val g = geometry.value ?: return@Canvas
         val time = cursorTime ?: return@Canvas
         val x = g.xOf(time)
         if (x < g.left || x > g.right) return@Canvas
+        fun mark(times: List<Long>, panel: Rect?, color: Color) {
+            if (panel == null) return
+            val top = panel.top - origin.y + 2.dp.toPx()
+            val bottom = panel.bottom - origin.y - 2.dp.toPx()
+            val half = 14.dp.toPx()
+            times.forEach { t ->
+                val ex = g.xOf(t)
+                if (ex < g.left || ex > g.right) return@forEach
+                val topLeft = Offset(ex - half, top)
+                val box = androidx.compose.ui.geometry.Size(half * 2, bottom - top)
+                val corner = androidx.compose.ui.geometry.CornerRadius(half)
+                drawRoundRect(color.copy(alpha = 0.18f), topLeft, box, corner)
+                drawRoundRect(color, topLeft, box, corner, style = Stroke(2.dp.toPx()))
+            }
+        }
+        mark(insulinTimes, insulinPanel?.value, Bolus)
+        mark(carbTimes, carbPanel?.value, Carbs)
         drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.5.dp.toPx())
         reading?.let {
             val fraction = ((it.value - CGM_MIN_Y) / (CGM_MAX_Y - CGM_MIN_Y)).coerceIn(0f, 1f)
@@ -558,6 +591,9 @@ fun CgmChartDisplay(
     }
 }
 
+private fun Modifier.reportBounds(target: MutableState<Rect?>?): Modifier =
+    if (target == null) this else onGloballyPositioned { target.value = it.boundsInRoot() }
+
 /** The glucose panel's share of the chart height relative to the other panels (1 each). */
 internal const val CgmPanelWeight = 1.5f
 /** Vico leaves a few dp of inset under every chart; trimming it makes the panels touch. */
@@ -566,13 +602,14 @@ private val PanelGapTrim = 5.dp
 @Composable
 fun InsulinActivityDisplay(
     modifier: Modifier,
+    panelBounds: MutableState<Rect?>? = null,
     history: List<InsulinActivityChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     window: ChartTimeWindow
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
-    BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().reportBounds(panelBounds)) {
         ComponentEventActivityChart(
             plotHeightDp = maxHeight.value,
             events = events,
@@ -594,13 +631,14 @@ fun InsulinActivityDisplay(
 @Composable
 fun CarbActivityDisplay(
     modifier: Modifier,
+    panelBounds: MutableState<Rect?>? = null,
     history: List<CarbsChartData>,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     window: ChartTimeWindow
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
-    BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight().reportBounds(panelBounds)) {
         ComponentEventActivityChart(
             plotHeightDp = maxHeight.value - if (SHOW_TIME_LABELS) 22f else 0f,
             events = events,

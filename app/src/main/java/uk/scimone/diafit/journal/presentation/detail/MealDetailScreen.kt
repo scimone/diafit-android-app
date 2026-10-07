@@ -363,7 +363,7 @@ private fun InfoChip(text: String, icon: androidx.compose.ui.graphics.painter.Pa
 }
 
 @Composable
-private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: String? = null, leadingIcon: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: String? = null, subtitleContent: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -373,15 +373,12 @@ private fun CardSection(title: String, modifier: Modifier = Modifier, subtitle: 
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                leadingIcon?.let {
-                    it()
-                    Spacer(Modifier.width(12.dp))
-                }
                 Column {
                     Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     subtitle?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    subtitleContent?.invoke()
                 }
             }
             content()
@@ -396,16 +393,17 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
     val stillAbsorbing = System.currentTimeMillis() < effectEnd
     CardSection(
         title = "Glucose response",
-        leadingIcon = if (state.isMultiCourse) null else ({
-            Box(
-                Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(meal.impactType.iconRes), meal.impactType.label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        subtitle = if (state.isMultiCourse) "mg/dL · from the first course until the last one is absorbed" else null,
+        subtitleContent = if (state.isMultiCourse) null else ({
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("mg/dL · ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(painterResource(meal.impactType.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                Text(
+                    " ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-        }),
-        subtitle = if (state.isMultiCourse) "mg/dL · from the first course until the last one is absorbed"
-        else "mg/dL · ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h"
+        })
     ) {
         if (response == null) {
             Text("Couldn't load glucose data.", color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -178,14 +178,14 @@ private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, on
                     .padding(horizontal = 6.dp, vertical = 1.dp)
             )
         }
-        CarbPill(grams = group.totalCarbs, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp))
+        CarbPill(grams = group.totalCarbs, modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp))
         Text(
             text = time,
             color = Color.White,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomStart)
                 .padding(6.dp)
                 .background(Color.Black.copy(alpha = 0.55f), CircleShape)
                 .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -313,7 +313,7 @@ fun MealDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
-        Column(Modifier.padding(bottom = 24.dp)) {
+        Column(Modifier.navigationBarsPadding().padding(bottom = 32.dp)) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp).padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
