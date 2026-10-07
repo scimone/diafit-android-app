@@ -127,3 +127,48 @@ class TargetRangeDecoration(
 
     override fun hashCode() = listOf(lower, upper, minY, maxY, color).hashCode()
 }
+
+
+/** A ring around an event bubble that the inspection cursor has caught (same idea as the ring on a CGM reading). */
+class BubbleHighlightDecoration(
+    /** Bubble x (ms), y (the series y, on the layer's [minY]..[maxY] axis) and diameter in dp. */
+    private val bubbles: List<Triple<Long, Double, Float>>,
+    private val minY: Double,
+    private val maxY: Double,
+    private val ringColor: Color,
+    private val haloColor: Color,
+    private val density: Float
+) : Decoration {
+    override fun drawOverLayers(context: CartesianDrawingContext) {
+        if (bubbles.isEmpty()) return
+        val bounds = context.layerBounds
+        val dims = context.layerDimensions
+        val ranges = context.ranges
+        val span = (maxY - minY).toFloat()
+        run {
+            val scroll = context.scroll
+            val canvas = context.canvas
+            bubbles.forEach { (time, y, diameterDp) ->
+                val x = bounds.left + dims.startPadding +
+                    dims.xSpacing * ((time - ranges.minX) / ranges.xStep).toFloat() - scroll
+                if (x < bounds.left || x > bounds.right) return@forEach
+                val cy = bounds.bottom - ((y - minY).toFloat() / span) * bounds.height
+                val radius = (diameterDp / 2f + 3f) * density
+                canvas.drawCircle(
+                    Offset(x, cy), radius,
+                    Paint().apply { color = haloColor; style = PaintingStyle.Stroke; strokeWidth = 4f * density }
+                )
+                canvas.drawCircle(
+                    Offset(x, cy), radius,
+                    Paint().apply { color = ringColor; style = PaintingStyle.Stroke; strokeWidth = 2f * density }
+                )
+            }
+        }
+    }
+
+    override fun equals(other: Any?) =
+        other is BubbleHighlightDecoration && other.bubbles == bubbles && other.minY == minY && other.maxY == maxY &&
+            other.ringColor == ringColor && other.haloColor == haloColor && other.density == density
+
+    override fun hashCode() = listOf(bubbles, minY, maxY, ringColor, haloColor, density).hashCode()
+}

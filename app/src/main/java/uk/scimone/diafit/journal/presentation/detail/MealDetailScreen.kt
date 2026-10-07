@@ -393,13 +393,12 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
     val stillAbsorbing = System.currentTimeMillis() < effectEnd
     CardSection(
         title = "Glucose response",
-        subtitle = if (state.isMultiCourse) "mg/dL · from the first course until the last one is absorbed" else null,
+        subtitle = if (state.isMultiCourse) "From the first course until the last one is absorbed" else null,
         subtitleContent = if (state.isMultiCourse) null else ({
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("mg/dL · ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Icon(painterResource(meal.impactType.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                 Text(
-                    " ${meal.impactType.label.lowercase()} absorption, about ${meal.impactType.durationMinutes / 60} h",
+                    " ${meal.impactType.label} absorption, about ${meal.impactType.durationMinutes / 60} h",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

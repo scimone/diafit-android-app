@@ -4,6 +4,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -301,19 +306,36 @@ fun MealDetailSheet(
         galleryMealId = null
         if (uri != null && id != null) onPickPhoto(id, uri)
     }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    // Always fits its content, so every preview has the same layout (photo, heading, macros, padding).
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val pagerState = rememberPagerState { group.meals.size }
-    // Dragging the preview all the way up opens the full meal page.
-    LaunchedEffect(sheetState) {
-        snapshotFlow { sheetState.currentValue }.collect { value ->
-            if (value == SheetValue.Expanded) onOpenFull(group.meals[pagerState.currentPage].id)
-        }
-    }
+    val openThresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { 56.dp.toPx() }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
-        Column(Modifier.navigationBarsPadding().padding(bottom = 32.dp)) {
+        Column(
+            Modifier
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp)
+                // Dragging the preview upwards opens the full meal page. Watches the touches without consuming them.
+                .pointerInput(group) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        var dy = 0f
+                        var fired = false
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            dy += change.positionChange().y
+                            if (!fired && dy < -openThresholdPx) {
+                                fired = true
+                                onOpenFull(group.meals[pagerState.currentPage].id)
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
+        ) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp).padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -333,7 +355,7 @@ fun MealDetailSheet(
                 pageSpacing = 12.dp
             ) { page ->
                 val meal = group.meals[page]
-                Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(24.dp))) {
+                Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(24.dp))) {
                     if (meal.photoUris.isNotEmpty()) UriMosaic(meal.photoUris)
                     else {
                         NoPhotoTile(Modifier.fillMaxSize(), iconSize = 64.dp)

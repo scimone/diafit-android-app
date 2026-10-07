@@ -104,8 +104,6 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
             }
         }
 
-        val insulinPanel = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
-        val carbPanel = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
         Box(Modifier.weight(1f)) {
             Column(
                 Modifier.fillMaxSize().inspectGestures(
@@ -134,19 +132,19 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 )
                 InsulinActivityDisplay(
                     modifier = Modifier.weight(1f),
-                    panelBounds = insulinPanel,
                     history = state.insulin,
                     scrollState = scrollState,
                     zoomState = zoomState,
-                    window = window
+                    window = window,
+                    highlightTime = cursorTime
                 )
                 CarbActivityDisplay(
                     modifier = Modifier.weight(1f),
-                    panelBounds = carbPanel,
                     history = state.carbs,
                     scrollState = scrollState,
                     zoomState = zoomState,
-                    window = window
+                    window = window,
+                    highlightTime = cursorTime
                 )
             }
             InspectCursor(
@@ -155,11 +153,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 geometry = geometry,
                 lower = lower,
                 upper = upper,
-                modifier = Modifier.matchParentSize(),
-                insulinTimes = cursorTime?.let { c -> state.insulin.filter { abs(it.timeLong - c) <= EVENT_NEAR_MS }.map { it.timeLong } }.orEmpty(),
-                carbTimes = cursorTime?.let { c -> state.carbs.filter { abs(it.timeLong - c) <= EVENT_NEAR_MS }.map { it.timeLong } }.orEmpty(),
-                insulinPanel = insulinPanel,
-                carbPanel = carbPanel
+                modifier = Modifier.matchParentSize()
             )
         }
 

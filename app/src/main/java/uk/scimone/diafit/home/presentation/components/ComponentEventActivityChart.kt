@@ -1,6 +1,7 @@
 package uk.scimone.diafit.home.presentation.components
 
 import androidx.compose.foundation.shape.CircleShape
+import uk.scimone.diafit.home.presentation.utils.BubbleHighlightDecoration
 import uk.scimone.diafit.home.presentation.utils.NowDecoration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import uk.scimone.diafit.home.presentation.utils.createTimeAxisRangeProvider
 import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
 import uk.scimone.diafit.home.presentation.utils.getTimeAxisXStep
 import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /** A dose/meal event: [value] is units (insulin) or grams (carbs); [durationMinutes] feeds the curve. */
@@ -86,6 +88,9 @@ private fun mergeNearbyEvents(events: List<ChartEvent>, windowMs: Long): List<Ch
  * value is looked up from the (curve height + tiny offset) y via [BubbleValues].
  */
 private const val VALUE_SCALE = 1e-4
+
+/** Events within this distance of the inspection cursor count as caught by it (matches Home's readout). */
+private const val HIGHLIGHT_NEAR_MS = 15 * 60_000L
 
 /** Approximate height of a bubble's value label, for y-range headroom. */
 private const val BUBBLE_LABEL_DP = 14f
@@ -133,9 +138,12 @@ fun ComponentEventActivityChart(
     showTimeLabels: Boolean,
     window: ChartTimeWindow,
     scrollState: VicoScrollState,
-    zoomState: VicoZoomState
+    zoomState: VicoZoomState,
+    /** Inspection cursor time: bubbles standing for events near it get a ring. */
+    highlightTime: Long? = null
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
 
     val alignedMinTime = window.minX
     val realTime = window.now
@@ -290,6 +298,14 @@ fun ComponentEventActivityChart(
         bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels, showLine = showTimeLabels),
         layerPadding = { LineChartLayerPadding },
         decorations = listOfNotNull(
+            highlightTime?.let { cursor ->
+                val rings = recentEvents.mapIndexedNotNull { i, bubble ->
+                    val end = recentEvents.getOrNull(i + 1)?.time ?: Long.MAX_VALUE
+                    val caught = rawRecentEvents.any { it.time >= bubble.time && it.time < end && abs(it.time - cursor) <= HIGHLIGHT_NEAR_MS }
+                    if (caught) Triple(bubble.time, bubbleYs[i], bubbleDiameter(bubble.value, bubbleRefValue).value) else null
+                }
+                BubbleHighlightDecoration(rings, minY, maxY, onSurface, MaterialTheme.colorScheme.background, density)
+            },
             NowDecoration(
                 nowX = realTime.toDouble(),
                 lineColor = onSurface.copy(alpha = 0.7f),
