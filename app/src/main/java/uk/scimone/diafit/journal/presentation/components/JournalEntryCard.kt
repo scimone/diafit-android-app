@@ -379,6 +379,15 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                 if (!entry.notes.isNullOrBlank()) {
                     Text(entry.notes, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 }
+                entry.target?.let { t ->
+                    Surface(Modifier.padding(top = 6.dp), shape = RoundedCornerShape(50), color = InRange.copy(alpha = 0.16f)) {
+                        Text(
+                            "Target ${t.valueText}" + if (t.reason.isNotEmpty()) " · ${t.reason}" else "",
+                            Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelMedium, color = InRange
+                        )
+                    }
+                }
             }
         }
     }

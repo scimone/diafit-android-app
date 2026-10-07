@@ -31,6 +31,8 @@ import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.repository.PumpEventRepository
+import uk.scimone.diafit.core.domain.model.pairTemporaryTargets
+import uk.scimone.diafit.core.domain.model.toTemporaryTarget
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.toUi as pumpEventToUi
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
@@ -187,7 +189,10 @@ class JournalViewModel(
 
     /** Device milestones (pod/site changes, ...) in the range; routine temp basals stay out of the journal. */
     private suspend fun pumpEventEntries(from: Long, to: Long): List<PumpEventUi> = try {
-        pumpEventRepository.getBetween(from, to, userId).filter { it.isMilestone }.map { it.pumpEventToUi() }
+        val milestones = pumpEventRepository.getBetween(from, to, userId).filter { it.isMilestone }
+        val pairs = pairTemporaryTargets(milestones)
+        val pairedTargetIds = pairs.values.map { it.id }.toSet()
+        milestones.filter { it.id !in pairedTargetIds }.map { it.pumpEventToUi(pairs[it.id]?.toTemporaryTarget()) }
     } catch (e: Exception) {
         Log.e(TAG, "Error loading pump events", e)
         emptyList()

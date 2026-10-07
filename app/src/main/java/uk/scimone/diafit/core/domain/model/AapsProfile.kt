@@ -141,21 +141,61 @@ fun PumpEventEntity.summary(): String? =
         }
     } ?: temporaryTargetSummary() ?: notes
 
-/** "101 mg/dL · 1 h · Custom" for a Temporary Target event, else null. */
-private fun PumpEventEntity.temporaryTargetSummary(): String? {
+/** A Temporary Target event: AAPS aims for [low]..[high] for [durationMinutes]. */
+data class TemporaryTarget(
+    val eventId: Int,
+    val startUtc: Long,
+    val low: Double,
+    val high: Double,
+    val reason: String,
+    val durationMinutes: Int,
+    val isMmol: Boolean
+) {
+    val unit: String get() = if (isMmol) "mmol/L" else "mg/dL"
+    /** "150 mg/dL" or "100–120 mg/dL". */
+    val valueText: String
+        get() {
+            fun n(v: Double) = if (v == Math.floor(v)) v.toInt().toString() else "%.1f".format(java.util.Locale.US, v)
+            return (if (high == low) n(low) else "${n(low)}–${n(high)}") + " " + unit
+        }
+}
+
+/** Null unless this event is a Temporary Target with a target value. */
+fun PumpEventEntity.toTemporaryTarget(): TemporaryTarget? {
     if (!eventType.equals("Temporary Target", ignoreCase = true)) return null
     return try {
         val o = JSONObject(rawJson)
         val low = o.optDouble("targetBottom", Double.NaN)
-        val high = o.optDouble("targetTop", Double.NaN)
-        val unit = if (o.optString("units").contains("mmol", true)) "mmol/L" else "mg/dL"
-        fun n(v: Double) = if (v == Math.floor(v)) v.toInt().toString() else "%.1f".format(java.util.Locale.US, v)
-        buildString {
-            if (!low.isNaN()) append(if (high.isNaN() || high == low) n(low) else "${n(low)}–${n(high)}").append(' ').append(unit)
-            o.optInt("duration", 0).takeIf { it > 0 }?.let { append(" · ").append(formatDurationMinutes(it)) }
-            o.optString("reason").takeIf { it.isNotEmpty() }?.let { append(" · ").append(it) }
-        }.ifEmpty { null }
+        if (low.isNaN()) return null
+        val high = o.optDouble("targetTop", low).takeIf { !it.isNaN() } ?: low
+        TemporaryTarget(id, timestampUtc, low, high, o.optString("reason"), o.optInt("duration", 0), o.optString("units").contains("mmol", true))
     } catch (e: Exception) {
         null
     }
+}
+
+/** "150 mg/dL · 10 min · Activity" for a Temporary Target event, else null. */
+private fun PumpEventEntity.temporaryTargetSummary(): String? =
+    toTemporaryTarget()?.let { t ->
+        buildString {
+            append(t.valueText)
+            if (t.durationMinutes > 0) append(" · ").append(formatDurationMinutes(t.durationMinutes))
+            if (t.reason.isNotEmpty()) append(" · ").append(t.reason)
+        }
+    }
+
+/** AAPS sends a profile switch and its temporary target as two events seconds apart; they count as one. */
+const val TARGET_PAIR_WINDOW_MS = 2 * 60_000L
+
+/** Profile Switch event id -> the Temporary Target event that belongs to it (closest within [TARGET_PAIR_WINDOW_MS], each used once). */
+fun pairTemporaryTargets(events: List<PumpEventEntity>): Map<Int, PumpEventEntity> {
+    val targets = events.filter { it.eventType.equals("Temporary Target", true) }.toMutableList()
+    val result = mutableMapOf<Int, PumpEventEntity>()
+    events.filter { it.eventType.equals("Profile Switch", true) }.sortedBy { it.timestampUtc }.forEach { sw ->
+        val best = targets.filter { kotlin.math.abs(it.timestampUtc - sw.timestampUtc) <= TARGET_PAIR_WINDOW_MS }
+            .minByOrNull { kotlin.math.abs(it.timestampUtc - sw.timestampUtc) } ?: return@forEach
+        targets.remove(best)
+        result[sw.id] = best
+    }
+    return result
 }

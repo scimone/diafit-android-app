@@ -42,6 +42,9 @@ import uk.scimone.diafit.core.domain.model.effectiveProfileAt
 import uk.scimone.diafit.core.domain.model.formatDurationMinutes
 import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.core.domain.model.DayWindow
+import uk.scimone.diafit.core.domain.model.TemporaryTarget
+import uk.scimone.diafit.core.domain.model.valueAt
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import uk.scimone.diafit.core.domain.model.basalInsulin
 import uk.scimone.diafit.core.domain.model.clipChanges
 import uk.scimone.diafit.core.domain.model.effectiveProfile
@@ -95,7 +98,7 @@ fun ProfileSwitchDetailScreen(
             when {
                 !state.loaded -> Unit
                 current == null -> Text("This event is no longer available.", Modifier.padding(24.dp))
-                else -> DiffContent(current, state.previous)
+                else -> DiffContent(current, state.previous, state.target)
             }
         }
     }
@@ -116,7 +119,7 @@ fun ProfileSwitchDetailScreen(
 }
 
 @Composable
-private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
+private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target: TemporaryTarget?) {
     val after = current.effectiveProfile()
     // What AAPS ran before: the previous switch's profile, or else this same saved profile unchanged.
     val before = previous?.effectiveProfileAt(current.startUtc) ?: current.profile
@@ -149,7 +152,8 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                         if (current.percentage != 100) TypeChip("${current.percentage}%")
                         if (current.timeShiftHours != 0) TypeChip("Shift ${if (current.timeShiftHours > 0) "+" else "−"}${abs(current.timeShiftHours)} h")
-                        if (current.percentage == 100 && current.timeShiftHours == 0) TypeChip("Profile only")
+                        if (target != null) TypeChip("Target ${target.valueText}")
+                        if (current.percentage == 100 && current.timeShiftHours == 0 && target == null) TypeChip("Profile only")
                     }
                     Text(
                         if (current.durationMinutes > 0) "In force for ${formatDurationMinutes(current.durationMinutes)}" else "No end time recorded",
@@ -195,7 +199,49 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?) {
                 subtitle = "1 U covers this many grams of carbs"
             )
         }
-        item { TargetDiffCard(before, after, window) }
+        item {
+            if (target != null) TemporaryTargetCard(target, before, current.startUtc, lengthSeconds)
+            else TargetDiffCard(before, after, window)
+        }
+    }
+}
+
+@Composable
+private fun TemporaryTargetCard(target: TemporaryTarget, before: AapsProfile, startUtc: Long, lengthSeconds: Int) {
+    val zone = java.time.ZoneId.systemDefault()
+    val start = java.time.Instant.ofEpochMilli(startUtc).atZone(zone)
+    val startSecond = start.toLocalTime().toSecondOfDay()
+    val profileLow = before.targetLow.valueAt(startSecond)
+    val profileHigh = before.targetHigh.valueAt(startSecond) ?: profileLow
+    val profileText = profileLow?.let { if (profileHigh != null && profileHigh != it) "${fmt(it, 0)}–${fmt(profileHigh, 0)}" else fmt(it, 0) }
+    val delta = profileLow?.let { target.low - it }
+    val fmtClock = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+    val end = start.plusSeconds((if (target.durationMinutes > 0) target.durationMinutes * 60 else lengthSeconds).toLong())
+    ScheduleCard("Temporary target", "Replaces the profile's glucose target while it runs", TargetColor) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Surface(Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
+                Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Profile target", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(profileText ?: "–", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = TargetColor.copy(alpha = 0.16f)) {
+                Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Temporary", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(target.valueText.substringBefore(' '), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TargetColor)
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${start.format(fmtClock)}–${end.format(fmtClock)}" + if (target.reason.isNotEmpty()) " · ${target.reason}" else "",
+                Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (delta != null && abs(delta) > 1e-6) {
+                Text("${if (delta > 0) "+" else "−"}${fmt(abs(delta), 0)} ${target.unit}", style = MaterialTheme.typography.labelLarge, color = TargetColor)
+            }
+        }
     }
 }
 
