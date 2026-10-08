@@ -170,6 +170,7 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
                     JournalEntryCard(
                         entry,
                         state.target,
+                        onAddPhoto = { uri -> viewModel.addPhoto(entry.id, uri) },
                         onClick = when (entry) {
                             is MealEntityUi -> ({ onOpenMeal(entry.id) })
                             is GlucoseEpisodeUi, is BolusEntryUi, is PumpEventUi, is SleepEntryUi, is ExerciseEntryUi -> null

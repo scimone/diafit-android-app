@@ -28,6 +28,8 @@ val historyModule = module {
             getTargetRange = get(),
             settingsRepository = get(),
             context = get(),
+            mealRepository = get(),
+            updateMeal = get(),
             userId = userId,
             epochDay = epochDay
         )

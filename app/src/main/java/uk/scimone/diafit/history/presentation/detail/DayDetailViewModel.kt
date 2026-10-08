@@ -48,6 +48,8 @@ class DayDetailViewModel(
     private val getTargetRange: GetTargetRangeUseCase,
     private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository,
     private val context: Context,
+    private val mealRepository: uk.scimone.diafit.core.domain.repository.MealRepository,
+    private val updateMeal: uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase,
     private val userId: Int,
     epochDay: Long
 ) : ViewModel() {
@@ -61,6 +63,18 @@ class DayDetailViewModel(
     init {
         observe()
         viewModelScope.launch { SettingsChangeBus.settingsChanged.collect { observe() } }
+    }
+
+    /** Attaches a photo to a meal that has none (it becomes the cover); the observed meals refresh the page. */
+    fun addPhoto(mealId: Int, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val meal = mealRepository.getMealById(mealId) ?: return@launch
+                updateMeal(meal, listOf(uk.scimone.diafit.core.domain.model.MealPhoto(java.util.UUID.randomUUID().toString(), uri)))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error adding photo", e)
+            }
+        }
     }
 
     private fun observe() {
