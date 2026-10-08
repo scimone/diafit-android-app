@@ -5,7 +5,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -155,6 +160,9 @@ fun MealTimeline(
         // moves the cards without recomposing.
         // Dragging the strip pans the charts (and the cards follow, being tied to the data points).
         val scope = rememberCoroutineScope()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val flingJob = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        val decay = remember(density) { splineBasedDecay<Float>(density) }
         Layout(
             content = {
                 ordered.forEach { group ->
@@ -168,12 +176,23 @@ fun MealTimeline(
                     }
                 }
             },
-            modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                detectHorizontalDragGestures { change, dx ->
-                    change.consume()
+            modifier = Modifier.fillMaxSize().draggable(
+                orientation = Orientation.Horizontal,
+                state = rememberDraggableState { dx ->
+                    flingJob.value?.cancel()
                     scope.launch { scrollState.scroll(Scroll.Absolute.pixels(scrollState.value - dx)) }
+                },
+                onDragStarted = { flingJob.value?.cancel() },
+                onDragStopped = { velocity ->
+                    // Carry on after the finger lifts, like the charts do.
+                    flingJob.value = scope.launch {
+                        AnimationState(scrollState.value, -velocity).animateDecay(decay) {
+                            val target = value
+                            scope.launch { scrollState.scroll(Scroll.Absolute.pixels(target)) }
+                        }
+                    }
                 }
-            }
+            )
         ) { measurables, constraints ->
             val size = CardSize.roundToPx()
             val gap = 8.dp.roundToPx()
