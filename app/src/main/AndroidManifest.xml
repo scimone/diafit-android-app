@@ -79,6 +79,17 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="uk.scimone.diafit.core.presentation.receivers.AapsStatusLogReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="info.nightscout.androidaps.status" />
+                <action android:name="info.nightscout.client.NEW_TREATMENT" />
+                <action android:name="info.nightscout.client.NEW_DEVICESTATUS" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
