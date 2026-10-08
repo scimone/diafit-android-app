@@ -19,13 +19,13 @@ import kotlin.math.min
 const val CARBS_FULL_INTENSITY_G = 100f
 const val INSULIN_FULL_INTENSITY_U = 10f
 
-val TREATMENT_BAND_HEIGHT = 5.dp
+val TREATMENT_BAND_HEIGHT = 6.dp
 private const val BLOCK_PAD_MS = 6 * 60_000L
 private val BLOCK_MIN_WIDTH = 4.dp
 private const val BAND_MIN_ALPHA = 0.2f
 
 /** Entries closer than this (carbs, or insulin doses) share one block on the day tiles. */
-const val BAND_GROUP_GAP_MS = 20 * 60_000L
+const val BAND_GROUP_GAP_MS = 60 * 60_000L
 
 /** A stretch of entries drawn as one block: first to last entry and everything they add up to. */
 internal class EventBlock(val startUtc: Long, val endUtc: Long, val total: Float)
