@@ -3,6 +3,7 @@ package uk.scimone.diafit.home.presentation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import uk.scimone.diafit.core.domain.model.ActivityLevel
 import uk.scimone.diafit.core.domain.model.currentActivityLevel
 import uk.scimone.diafit.core.domain.model.remainingCarbs
 import uk.scimone.diafit.core.domain.model.remainingInsulin
@@ -823,7 +824,9 @@ internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
     val glucose = state.cgmUi?.takeIf { !it.isStale }?.value?.let {
         PanelValue("$it", "mg/dL", glucoseColor(it, state.targetRangeLower, state.targetRangeUpper))
     }
-    val activity = currentActivityLevel(state.activity, now)?.let { PanelValue(it.label, "", Activity) }
+    // Nothing recent from a connected source (Health Connect) means nothing was going on: Low. Without a source, no value.
+    val activityLevel = currentActivityLevel(state.activity, now) ?: ActivityLevel.LOW.takeIf { state.activityConnected }
+    val activity = activityLevel?.let { PanelValue(it.label, "", Activity) }
     val basal = state.basal.lastOrNull()?.takeIf { now - it.endUtc <= 2 * 60_000L }?.let { PanelValue(formatRate(it.delivered), "U/h", Basal) }
     val insulin = remainingInsulin(state.insulinActivityHistory.map { it.timeLong to it.value.toDouble() }, now)
     val carbs = remainingCarbs(state.carbHistory.map { Triple(it.timeLong, it.value.toDouble(), it.durationMinutes) }, now)

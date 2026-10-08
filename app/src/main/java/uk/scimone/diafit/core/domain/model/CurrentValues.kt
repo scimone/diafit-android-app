@@ -38,7 +38,7 @@ fun remainingCarbs(meals: List<Triple<Long, Double, Int>>, now: Long): Double =
 
 /** How active the person is right now, for the Home activity heading. */
 enum class ActivityLevel(val label: String) {
-    SLEEPING("Sleeping"), WORKOUT("Workout"), RESTING("Resting"), LIGHT("Light"), MODERATE("Moderate"), VIGOROUS("Vigorous")
+    SLEEPING("Sleeping"), WORKOUT("Workout"), LOW("Low"), MODERATE("Moderate"), HIGH("High")
 }
 
 private const val RECENT_HEART_MS = 15 * MINUTE_MS
@@ -47,7 +47,8 @@ private const val RECENT_STEPS_MS = 20 * MINUTE_MS
 /**
  * The current [ActivityLevel]: asleep or in a workout if one covers [now]; otherwise the higher of the level the
  * latest heart rate (against the person's resting rate: 20th percentile of the data, clamped 45..75) and the
- * latest 15-minute step count suggest. Null when there is no recent heart rate or steps.
+ * latest 15-minute step count suggest (below 15 bpm / 450 steps over resting = Low). Null when there is no recent
+ * heart rate or steps; the caller decides what that means (Low when an activity source is connected).
  */
 fun currentActivityLevel(data: ActivityData, now: Long): ActivityLevel? {
     if (data.sleepSessions.any { now >= it.startUtc && now < it.endUtc }) return ActivityLevel.SLEEPING
@@ -65,6 +66,6 @@ fun currentActivityLevel(data: ActivityData, now: Long): ActivityLevel? {
     } ?: 0
     val fromSteps = steps?.let { when { it.count < 150 -> 0; it.count < 450 -> 1; it.count < 900 -> 2; else -> 3 } } ?: 0
     return when (max(fromHeart, fromSteps)) {
-        0 -> ActivityLevel.RESTING; 1 -> ActivityLevel.LIGHT; 2 -> ActivityLevel.MODERATE; else -> ActivityLevel.VIGOROUS
+        0, 1 -> ActivityLevel.LOW; 2 -> ActivityLevel.MODERATE; else -> ActivityLevel.HIGH
     }
 }

@@ -31,7 +31,7 @@ class CurrentValuesTest {
     @Test
     fun activityLevelFollowsHeartRateAboveResting() {
         val base = (0 until 100).map { HeartRateEntity(userId = 1, timestamp = it * min, bpm = 60) }
-        assertEquals(ActivityLevel.RESTING, currentActivityLevel(ActivityData(heartRate = base), 99 * min))
+        assertEquals(ActivityLevel.LOW, currentActivityLevel(ActivityData(heartRate = base), 99 * min))
         val moving = base + HeartRateEntity(userId = 1, timestamp = 100 * min, bpm = 100)
         assertEquals(ActivityLevel.MODERATE, currentActivityLevel(ActivityData(heartRate = moving), 100 * min))
         assertEquals(null, currentActivityLevel(ActivityData(), 0L))
