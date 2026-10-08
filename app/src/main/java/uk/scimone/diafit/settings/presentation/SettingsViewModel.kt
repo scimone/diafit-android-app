@@ -48,6 +48,7 @@ class SettingsViewModel(
     private val healthConnectManager: HealthConnectManager,
     private val healthConnectSyncer: HealthConnectSyncer,
     private val healthConnectScheduler: HealthConnectScheduler,
+    private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler,
     private val nightscoutApi: NightscoutApi,
     private val backfillRunner: BackfillRunner
 ) : ViewModel() {
@@ -183,6 +184,7 @@ class SettingsViewModel(
     fun onConnectorToggled(connector: Connector, enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setConnectorEnabled(connector, enabled)
+            if (enabled && connector == Connector.NIGHTSCOUT) nightscoutSyncScheduler.syncNow()
             connectorsChanged(cgmMayHaveChanged = DataType.CGM in connector.provides)
         }
     }
@@ -195,6 +197,7 @@ class SettingsViewModel(
             if (type == DataType.CGM) _restartCgmServiceEvent.emit(settingsRepository.getCgmSource())
             // Newly wanted Health Connect activity data: fetch it right away.
             if (connector == Connector.HEALTH_CONNECT && type.isActivity) healthConnectScheduler.syncNow()
+            if (connector == Connector.NIGHTSCOUT && type != DataType.CGM) nightscoutSyncScheduler.syncNow()
             SettingsChangeBus.notifyChange()
         }
     }

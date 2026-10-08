@@ -3,6 +3,8 @@ package uk.scimone.diafit.core.data.networking.dto
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsTempBasalParser
@@ -75,4 +77,54 @@ object NightscoutTreatmentMapper {
             rawJson = t.toString()
         )
     }
+
+    /**
+     * Any other treatment (profile switch, temporary target, site / sensor / insulin / battery change, note...) as the
+     * same [PumpEventEntity] the live AAPS path stores. Null for boluses, carbs, temp basals and invalidated documents.
+     */
+    fun toPumpEvent(t: JsonObject, userId: Int = 1, now: Long = System.currentTimeMillis()): PumpEventEntity? {
+        val eventType = t.str("eventType") ?: "Unknown"
+        if ((t.num("insulin") ?: 0.0) > 0.0 || (t.num("carbs") ?: 0.0) > 0.0) return null
+        if (eventType.startsWith("Temp Basal", ignoreCase = true)) return null
+        if ((t["isValid"] as? JsonPrimitive)?.booleanOrNull == false) return null
+        val ts = timestampOf(t) ?: return null
+        val duration = (t.num("durationInMilliseconds")?.div(60_000.0)) ?: t.num("duration")
+        return PumpEventEntity(
+            userId = userId, timestampUtc = ts, createdAtUtc = now,
+            eventType = eventType,
+            notes = t.str("notes"),
+            durationMinutes = duration?.takeIf { !it.isNaN() },
+            rate = t.num("rate"),
+            sourceId = t.str("_id") ?: "$eventType-$ts",
+            rawJson = t.toString()
+        )
+    }
+
+    /**
+     * A document of Nightscout's `profile` collection as a "Profile Switch" at 100 % with the stored profile attached,
+     * so the Profile page and the basal timeline can use it like a switch AAPS made. Null if it holds no usable profile.
+     */
+    fun profileDocToSwitch(doc: JsonObject, userId: Int = 1, now: Long = System.currentTimeMillis()): PumpEventEntity? {
+        val store = doc["store"] as? JsonObject ?: return null
+        val name = t(doc.str("defaultProfile"), store.keys.firstOrNull()) ?: return null
+        val profile = store[name] as? JsonObject ?: return null
+        val ts = (doc.str("startDate") ?: doc.str("created_at"))
+            ?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?.takeIf { it > 0 } ?: return null
+        val raw = buildJsonObject {
+            put("eventType", "Profile Switch")
+            put("profile", name)
+            put("profileJson", profile.toString())
+            put("percentage", 100)
+            put("duration", 0)
+            put("timeshift", 0)
+            put("created_at", Instant.ofEpochMilli(ts).toString())
+        }
+        return PumpEventEntity(
+            userId = userId, timestampUtc = ts, createdAtUtc = now, eventType = "Profile Switch",
+            durationMinutes = 0.0, sourceId = "ns-profile-${doc.str("_id") ?: ts}", rawJson = raw.toString()
+        )
+    }
+
+    private fun t(a: String?, b: String?): String? = a?.takeIf { it.isNotEmpty() } ?: b
 }

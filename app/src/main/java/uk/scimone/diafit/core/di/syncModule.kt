@@ -62,10 +62,16 @@ val syncModule = module {
     single { uk.scimone.diafit.core.data.backfill.BackfillCoverageStore(androidContext()) }
     single {
         uk.scimone.diafit.core.data.backfill.BackfillRunner(
-            nightscout = get(), healthConnect = get(), cgmDao = get(), bolusDao = get(), activityDao = get(),
-            mealRepository = get(), pumpEvents = get(), mergeCarbEntries = get(), store = get()
+            nightscout = get(), healthConnect = get(), cgmDao = get(), activityDao = get(),
+            treatments = get(), store = get()
         )
     }
+    single {
+        uk.scimone.diafit.core.data.nightscout.NightscoutTreatmentImporter(
+            nightscout = get(), bolusDao = get(), mealRepository = get(), pumpEvents = get(), mergeCarbEntries = get()
+        )
+    }
+    single { uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler(androidContext()) }
 
     single { CgmServiceManager(androidContext()) }
 

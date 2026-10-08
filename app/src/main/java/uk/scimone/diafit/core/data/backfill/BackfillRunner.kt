@@ -11,17 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer
+import uk.scimone.diafit.core.data.nightscout.NightscoutTreatmentImporter
 import uk.scimone.diafit.core.data.local.ActivityDao
-import uk.scimone.diafit.core.data.local.BolusDao
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.data.networking.NightscoutApi
-import uk.scimone.diafit.core.data.networking.dto.NightscoutTreatmentMapper
 import uk.scimone.diafit.core.data.networking.dto.toCgmEntity
 import uk.scimone.diafit.core.domain.model.TimeRange
 import uk.scimone.diafit.core.domain.model.TimeRanges
-import uk.scimone.diafit.core.domain.repository.MealRepository
-import uk.scimone.diafit.core.domain.repository.PumpEventRepository
-import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.util.formatTimestamp
 import uk.scimone.diafit.core.domain.util.networking.Result
 import uk.scimone.diafit.settings.domain.model.Connector
@@ -44,11 +40,8 @@ class BackfillRunner(
     private val nightscout: NightscoutApi,
     private val healthConnect: HealthConnectSyncer,
     private val cgmDao: CgmDao,
-    private val bolusDao: BolusDao,
     private val activityDao: ActivityDao,
-    private val mealRepository: MealRepository,
-    private val pumpEvents: PumpEventRepository,
-    private val mergeCarbEntries: MergeCarbEntriesUseCase,
+    private val treatments: NightscoutTreatmentImporter,
     private val store: BackfillCoverageStore,
     private val userId: Int = 1
 ) {
@@ -117,7 +110,7 @@ class BackfillRunner(
         chunks.forEachIndexed { i, start ->
             progress(i / chunks.size.toFloat())
             val end = minOf(start + step, gap.end)
-            added += if (type == DataType.CGM) importCgm(start, end) else importTreatments(type, start, end)
+            added += if (type == DataType.CGM) importCgm(start, end) else treatments.import(setOf(type), start, end)[type] ?: 0
         }
         progress(1f)
         return added
@@ -133,45 +126,10 @@ class BackfillRunner(
             is Result.Error -> error("Nightscout glucose request failed (${r.error}).")
         }
 
-    private suspend fun importTreatments(type: DataType, start: Long, end: Long): Int {
-        val docs = when (val r = nightscout.getTreatments(start, end)) {
-            is Result.Success -> r.data
-            is Result.Error -> error("Nightscout treatments request failed (${r.error}).")
-        }
-        var added = 0
-        when (type) {
-            DataType.BOLUS -> {
-                val existing = bolusDao.getBolusBetween(start - HOUR, end + HOUR, userId).map { it.timestampUtc }.toHashSet()
-                docs.mapNotNull { NightscoutTreatmentMapper.toBolus(it, userId) }
-                    .filter { existing.add(it.timestampUtc) }
-                    .forEach { bolusDao.insertBolus(it); added++ }
-            }
-            DataType.FOOD -> {
-                docs.mapNotNull { NightscoutTreatmentMapper.toMeal(it, userId) }.forEach { meal ->
-                    if (meal.sourceId != null && mealRepository.existsBySourceId(meal.sourceId)) return@forEach
-                    if (mealRepository.existsImportedAt(meal.mealTimeUtc, meal.carbohydrates)) return@forEach
-                    if (mealRepository.createMeal(meal).isSuccess) added++
-                }
-                if (added > 0) runCatching { mergeCarbEntries(userId) }
-            }
-            DataType.BASAL -> {
-                // A live temp basal (AAPS status broadcast) and the same one from Nightscout start seconds apart.
-                val existing = pumpEvents.getBetween(start - HOUR, end + HOUR, userId)
-                    .filter { it.eventType == "Temp Basal" }.map { it.timestampUtc }
-                docs.mapNotNull { NightscoutTreatmentMapper.toTempBasal(it, userId) }
-                    .filter { e -> existing.none { kotlin.math.abs(it - e.timestampUtc) < SAME_EVENT_MS } }
-                    .forEach { if (pumpEvents.insert(it)) added++ }
-            }
-            else -> Unit
-        }
-        return added
-    }
-
     private companion object {
         const val TAG = "BackfillRunner"
         const val HOUR = 3_600_000L
         const val DAY = 24 * HOUR
-        const val SAME_EVENT_MS = 90_000L
         /** Recent time stays "not fetched": the source may not have received it yet. */
         const val RECENT_GUARD_MS = HOUR
     }

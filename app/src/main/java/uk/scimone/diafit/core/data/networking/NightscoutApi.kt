@@ -47,6 +47,13 @@ class NightscoutApi(
         }
     }
 
+    /** The `profile` collection (the stored insulin profiles), newest first. */
+    suspend fun getProfiles(): Result<List<JsonObject>, NetworkError> {
+        val config = getNightscoutConfig()
+        val url = constructUrl("/api/v1/profile.json", baseUrl = config.baseUrl, apiKey = null)
+        return safeCall { client.get(url) { applyNightscoutAuth(config.apiKey) } }
+    }
+
     /** Checks the saved URL and credentials: reachable, and the secret/token accepted (`/api/v1/verifyauth`). */
     suspend fun testConnection(): NightscoutCheck {
         val config = getNightscoutConfig()

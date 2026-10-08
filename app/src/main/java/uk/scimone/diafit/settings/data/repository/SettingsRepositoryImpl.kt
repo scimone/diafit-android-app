@@ -22,7 +22,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
-    init { migrateLegacySources() }
+    init { migrateLegacySources(); migrateProfileAndDevice() }
 
     /** First run of the connector model: carry over the old single CGM / bolus source and the Health Connect switch. */
     private fun migrateLegacySources() {
@@ -45,6 +45,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         listOf(DataType.BOLUS, DataType.FOOD, DataType.BASAL).forEach { edit.putString(selectionKey(it), Connector.AAPS.name) }
         if (hc) DataType.ACTIVITY.forEach { edit.putString(selectionKey(it), Connector.HEALTH_CONNECT.name) }
         edit.putBoolean(KEY_MIGRATED, true).apply()
+    }
+
+    /** Profile / device events used to be stored whenever AAPS was connected; keep that by selecting AAPS (else Nightscout) for them. */
+    private fun migrateProfileAndDevice() {
+        if (prefs.getBoolean(KEY_MIGRATED_PROFILE, false)) return
+        val enabled = prefs.getStringSet(KEY_ENABLED, emptySet()).orEmpty()
+        val edit = prefs.edit()
+        for (type in listOf(DataType.PROFILE, DataType.DEVICE)) {
+            val pick = listOf(Connector.AAPS, Connector.NIGHTSCOUT).firstOrNull { it.name in enabled }
+            if (pick != null && prefs.getString(selectionKey(type), null) == null) edit.putString(selectionKey(type), pick.name)
+        }
+        edit.putBoolean(KEY_MIGRATED_PROFILE, true).apply()
     }
 
     override suspend fun getEnabledConnectors(): Set<Connector> =
@@ -147,6 +159,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private companion object {
         const val KEY_MIGRATED = "connectors_migrated"
+        const val KEY_MIGRATED_PROFILE = "connectors_migrated_profile_device"
         const val KEY_ENABLED = "connectors_enabled"
         const val SELECTION_OFF = "OFF"
         fun selectionKey(type: DataType) = "source_${type.name.lowercase()}"

@@ -9,7 +9,11 @@ enum class DataType(val label: String) {
     HEART_RATE("Heart rate"),
     STEPS("Steps"),
     SLEEP("Sleep"),
-    EXERCISE("Exercise");
+    EXERCISE("Exercise"),
+    /** Profile switches and temporary targets (the insulin profile in force). */
+    PROFILE("Profile & targets"),
+    /** Pump and sensor events: site / pod / insulin / sensor / battery changes, notes. */
+    DEVICE("Pump & sensor changes");
 
     val isActivity: Boolean get() = this in ACTIVITY
 
@@ -29,12 +33,13 @@ enum class Connector(
     val description: String
 ) {
     NIGHTSCOUT(
-        "Nightscout", setOf(DataType.CGM),
-        setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL),
-        "Your Nightscout site: live glucose, and history of glucose, insulin and carbs."
+        "Nightscout",
+        setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
+        setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
+        "Your Nightscout site: glucose, insulin, carbs, temp basals, profile and sensor / pump changes, live and as history."
     ),
     AAPS(
-        "AndroidAPS", setOf(DataType.BOLUS, DataType.FOOD, DataType.BASAL),
+        "AndroidAPS", setOf(DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
         emptySet(),
         "Boluses, carbs, temp basals and profile changes broadcast live by AAPS (no history)."
     ),

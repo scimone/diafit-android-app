@@ -12,6 +12,8 @@ import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsEve
 import uk.scimone.diafit.core.domain.repository.PumpEventRepository
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
+import uk.scimone.diafit.core.domain.model.dataType
 
 /** Stores non-bolus, non-carb AAPS treatments (pod change, temp basal, ...) as [uk.scimone.diafit.core.domain.model.PumpEventEntity]. */
 class PumpEventBroadcastWorker(
@@ -24,7 +26,10 @@ class PumpEventBroadcastWorker(
 
     override suspend fun doWork(): Result {
         if (Connector.AAPS !in settings.getEnabledConnectors()) return Result.success()
-        val events = AapsEventParser.parse(reconstructIntent(inputData))
+        // Each event only counts if AAPS feeds its data type (profile & targets / temp basals / device changes).
+        val wanted = listOf(DataType.PROFILE, DataType.BASAL, DataType.DEVICE)
+            .filter { settings.getSelection(it) == Connector.AAPS }.toSet()
+        val events = AapsEventParser.parse(reconstructIntent(inputData)).filter { it.dataType in wanted }
         return try {
             val inserted = events.count { repository.insert(it) }
             Log.d(TAG, "Pump events parsed=${events.size}, inserted=$inserted")

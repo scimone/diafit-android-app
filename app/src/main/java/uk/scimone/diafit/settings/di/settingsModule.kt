@@ -47,6 +47,7 @@ val settingsModule = module {
             healthConnectManager = get(),
             healthConnectSyncer = get(),
             healthConnectScheduler = get(),
+            nightscoutSyncScheduler = get(),
             nightscoutApi = get(),
             backfillRunner = get()
         )

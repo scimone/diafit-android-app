@@ -3,6 +3,7 @@ package uk.scimone.diafit.core.domain.model
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import uk.scimone.diafit.settings.domain.model.DataType
 
 /**
  * A non-insulin, non-carb treatment from AAPS (pod/site change, temp basal, profile switch, note, ...).
@@ -38,3 +39,12 @@ data class PumpEventEntity(
         val MILESTONE = Regex("change|start|battery|site|pod|reservoir|cannula|profile switch|temporary target|note|announcement|exercise", RegexOption.IGNORE_CASE)
     }
 }
+
+/** Which data type an event belongs to, so each can be switched on / off per connector in Settings. */
+fun pumpEventDataType(eventType: String): DataType = when {
+    eventType.equals("Profile Switch", ignoreCase = true) || eventType.equals("Temporary Target", ignoreCase = true) -> DataType.PROFILE
+    eventType.startsWith("Temp Basal", ignoreCase = true) -> DataType.BASAL
+    else -> DataType.DEVICE
+}
+
+val PumpEventEntity.dataType: DataType get() = pumpEventDataType(eventType)
