@@ -24,9 +24,15 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
+import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.history.presentation.components.ActivityStrip
+import uk.scimone.diafit.history.presentation.components.CARBS_FULL_INTENSITY_G
+import uk.scimone.diafit.history.presentation.components.INSULIN_FULL_INTENSITY_U
+import uk.scimone.diafit.history.presentation.components.TreatmentStrip
 import uk.scimone.diafit.history.presentation.components.drawHourGuides
 import uk.scimone.diafit.history.presentation.components.hourGuideColor
 import uk.scimone.diafit.history.presentation.model.AgpMarkers
+import uk.scimone.diafit.history.presentation.model.REFERENCE_DAY_MS
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.Activity
 import uk.scimone.diafit.ui.theme.Bolus
@@ -56,9 +62,13 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
             }
         } else Column(Modifier.fillMaxSize()) {
             AgpPlot(agp, thresholds, Modifier.weight(1f).fillMaxWidth())
-            DensityLane(markers.carbs, Carbs, Modifier.fillMaxWidth())
-            DensityLane(markers.bolus, Bolus, Modifier.fillMaxWidth())
-            DensityLane(markers.activity, Activity, Modifier.fillMaxWidth())
+            // The day tracks' own strips, fed every day folded onto one reference day and drawn fainter so overlaps deepen.
+            Spacer(Modifier.height(3.dp))
+            TreatmentStrip(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale)
+            Spacer(Modifier.height(1.dp))
+            TreatmentStrip(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale)
+            Spacer(Modifier.height(1.dp))
+            ActivityStrip(ActivityData(), markers.activity, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale)
         }
     }
 }
@@ -133,41 +143,5 @@ private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y:
         p.close()
         drawPath(p, color)
         i = j + 1
-    }
-}
-
-/** Height of one event-density lane under the profile. */
-private val LANE_HEIGHT = 18.dp
-
-/**
- * One soft area curve: how often (and how much) something usually happens at each time of day, scaled to its own
- * busiest moment. Quiet at a glance, no per-event marks.
- */
-@Composable
-private fun DensityLane(density: FloatArray, color: Color, modifier: Modifier = Modifier) {
-    val guides = hourGuideColor()
-    Canvas(modifier.height(LANE_HEIGHT)) {
-        drawHourGuides(guides)
-        val w = size.width
-        val top = 2.dp.toPx()
-        val h = size.height - top
-        fun x(bin: Int) = when {
-            bin < 0 -> 0f
-            bin >= density.size -> w
-            else -> w * (bin + 0.5f) / density.size
-        }
-        fun y(v: Float) = top + h * (1f - v)
-        val line = Path().apply {
-            moveTo(0f, y(density[0]))
-            for (i in density.indices) lineTo(x(i), y(density[i]))
-            lineTo(w, y(density.last()))
-        }
-        val fill = Path().apply {
-            addPath(line)
-            lineTo(w, size.height)
-            lineTo(0f, size.height)
-            close()
-        }
-        drawPath(fill, color.copy(alpha = 0.6f))
     }
 }

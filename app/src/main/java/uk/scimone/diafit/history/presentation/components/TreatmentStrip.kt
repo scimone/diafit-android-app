@@ -29,7 +29,9 @@ fun TreatmentStrip(
     color: Color,
     fullIntensityAt: Float,
     modifier: Modifier = Modifier,
-    height: Dp = 8.dp
+    height: Dp = 8.dp,
+    /** Multiplies every block's opacity; below 1 lets stacked blocks (several days in one strip) build up. */
+    alphaScale: Float = 1f
 ) {
     val guides = hourGuideColor()
     Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
@@ -38,7 +40,7 @@ fun TreatmentStrip(
         clusters.forEach { cluster ->
             val x0 = axis.x(cluster.centerUtc - BLOCK_HALF_WIDTH_MS).coerceAtLeast(0f)
             val x1 = axis.x(cluster.centerUtc + BLOCK_HALF_WIDTH_MS).coerceAtMost(size.width)
-            val alpha = min(cluster.total / fullIntensityAt, 1f).coerceAtLeast(MIN_ALPHA)
+            val alpha = min(cluster.total / fullIntensityAt, 1f).coerceAtLeast(MIN_ALPHA) * alphaScale
             drawRoundRect(color.copy(alpha = alpha), Offset(x0, 1f), Size(x1 - x0, size.height - 2f), CornerRadius(size.height / 2))
         }
     }

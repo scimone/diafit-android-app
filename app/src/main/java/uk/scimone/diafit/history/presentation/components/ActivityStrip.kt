@@ -31,7 +31,9 @@ fun ActivityStrip(
     dayStartUtc: Long,
     dayEndUtc: Long,
     modifier: Modifier = Modifier,
-    height: Dp = 8.dp
+    height: Dp = 8.dp,
+    /** Multiplies the opacity of the elevated-activity blocks (several days drawn in one strip). */
+    alphaScale: Float = 1f
 ) {
     val guides = hourGuideColor()
     Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
@@ -47,7 +49,7 @@ fun ActivityStrip(
             val x1 = axis.x(span.endUtc).coerceAtMost(size.width)
             if (x1 > x0) {
                 drawRoundRect(
-                    Activity.copy(alpha = 0.25f + 0.45f * span.intensity),
+                    Activity.copy(alpha = (0.25f + 0.45f * span.intensity) * alphaScale),
                     Offset(x0, 1f), Size(max(2f, x1 - x0), size.height - 2f), CornerRadius(size.height / 2)
                 )
             }
