@@ -33,12 +33,20 @@ fun ActivityStrip(
     modifier: Modifier = Modifier,
     height: Dp = 8.dp,
     /** Multiplies the opacity of the elevated-activity blocks (several days drawn in one strip). */
-    alphaScale: Float = 1f
+    alphaScale: Float = 1f,
+    /** Per-bin share (0..1) of days asleep (AGP); drawn beneath the activity marks. */
+    sleepShare: FloatArray? = null
 ) {
     val guides = hourGuideColor()
     Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
         drawHourGuides(guides)
         val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
+        sleepShare?.let { share ->
+            val bw = size.width / share.size
+            for (i in share.indices) if (share[i] > 0f) {
+                drawRect(Sleep.copy(alpha = 0.1f + 0.75f * share[i]), Offset(i * bw, 1f), Size(bw + 0.5f, size.height - 2f))
+            }
+        }
         data.sleepSessions.forEach { s ->
             val x0 = axis.x(s.startUtc).coerceAtLeast(0f)
             val x1 = axis.x(s.endUtc).coerceAtMost(size.width)

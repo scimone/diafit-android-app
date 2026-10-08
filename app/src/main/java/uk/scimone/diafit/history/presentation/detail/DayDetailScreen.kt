@@ -84,7 +84,7 @@ fun DayDetailScreen(
     val scope = rememberCoroutineScope()
     val shown = LocalDate.ofEpochDay(epochDayOf(pagerState.currentPage))
     // The selected tab stays the same while moving between days.
-    var tab by rememberSaveable { mutableStateOf(DayTab.STATS) }
+    var tab by rememberSaveable { mutableStateOf(DayTab.CHARTS) }
 
     Scaffold(
         topBar = {
