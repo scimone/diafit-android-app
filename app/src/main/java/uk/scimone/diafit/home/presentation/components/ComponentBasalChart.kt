@@ -41,7 +41,7 @@ internal fun formatRate(rate: Double): String = "%.2f".format(java.util.Locale.U
 /**
  * The basal panel: what ran (**filled step line**) on the shared time axis, drawn on a Canvas through the CGM
  * chart's [geometry]. Where the loop's temp basal differs from the profile's scheduled rate, the schedule is
- * shown as a dashed line. Over it runs the **insulin activity of the basal alone** (see [basalInsulinActivity]).
+ * shown as a dashed line. Over it runs the **insulin activity of the basal alone** (plus the SMBs; see [basalInsulinActivity]).
  * The rate steps are not drawn after [ChartTimeWindow.now]; the activity forecast is, faded.
  */
 @Composable
@@ -56,7 +56,7 @@ fun ComponentBasalChart(
     /** Super micro boluses, drawn as triangles in the [BasalStyle.DEVIATION] style. */
     smbs: List<SmbMark> = emptyList()
 ) {
-    val activity = remember(segments, window.maxX) { basalInsulinActivity(segments, window.minX, window.maxX) }
+    val activity = remember(segments, smbs, window.maxX) { basalInsulinActivity(segments, window.minX, window.maxX, smbs = smbs) }
     val axisMax = remember(segments) {
         max(MIN_AXIS_RATE, (segments.maxOfOrNull { max(it.delivered, it.scheduled ?: 0.0) } ?: 0.0) * 1.2)
     }

@@ -12,6 +12,12 @@ data class BasalSegment(val startUtc: Long, val endUtc: Long, val delivered: Dou
 /** A super micro bolus the loop gave: [units] at [timeUtc]. */
 data class SmbMark(val timeUtc: Long, val units: Double, val count: Int = 1)
 
+/** Total basal insulin (U) delivered within [fromUtc]..[toUtc]: every segment's rate times its length. */
+fun List<BasalSegment>.deliveredUnits(fromUtc: Long, toUtc: Long): Double = sumOf { s ->
+    val ms = (minOf(s.endUtc, toUtc) - maxOf(s.startUtc, fromUtc)).coerceAtLeast(0)
+    s.delivered * ms / 3_600_000.0
+}
+
 /** SMBs closer together than this (chained) are drawn as one triangle. */
 const val SMB_GROUP_GAP_MS = 15 * 60_000L
 /** ...but one triangle never spans longer than this. */
@@ -95,10 +101,16 @@ fun List<Pair<Long, Double>>.valueAt(timeUtc: Long): Double? {
  * Insulin activity (U/min, the same unit as the bolus chart) of the basal alone: every minute's difference
  * between the delivered and the scheduled rate (a temp basal above the schedule adds insulin, below it takes
  * insulin away, so the curve can go negative) acts along the usual insulin curve. Minutes without a known
- * schedule count as no difference. Sampled every [stepMs] from [fromUtc] to [toUtc], which may lie after the
+ * schedule count as no difference. SMBs ([smbs]) add their dose on top. Sampled every [stepMs] from [fromUtc] to [toUtc], which may lie after the
  * last segment to show the tail still acting.
  */
-fun basalInsulinActivity(segments: List<BasalSegment>, fromUtc: Long, toUtc: Long, stepMs: Long = 5 * STEP_MS): List<Pair<Long, Double>> {
+fun basalInsulinActivity(
+    segments: List<BasalSegment>,
+    fromUtc: Long,
+    toUtc: Long,
+    stepMs: Long = 5 * STEP_MS,
+    smbs: List<SmbMark> = emptyList()
+): List<Pair<Long, Double>> {
     val kernelMinutes = (4.5 * 60).toInt()
     val kernel = DoubleArray(kernelMinutes) { InsulinActivity.calculate(1.0, 0L, it * STEP_MS).activity }
     val deviations = HashMap<Long, Double>()   // minute index -> units/min delivered above (+) / below (-) the schedule
@@ -116,6 +128,11 @@ fun basalInsulinActivity(segments: List<BasalSegment>, fromUtc: Long, toUtc: Lon
         for (k in 0 until kernelMinutes) {
             val d = deviations[Math.floorDiv(t, STEP_MS) - k] ?: continue
             a += d * kernel[k]
+        }
+        // SMBs are extra insulin on top of the schedule.
+        smbs.forEach { smb ->
+            val k = Math.floorDiv(t, STEP_MS) - Math.floorDiv(smb.timeUtc, STEP_MS)
+            if (k in 0 until kernelMinutes) a += smb.units * kernel[k.toInt()]
         }
         out += t to a
         t += stepMs

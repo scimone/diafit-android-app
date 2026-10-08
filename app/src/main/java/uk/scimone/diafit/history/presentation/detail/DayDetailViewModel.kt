@@ -36,6 +36,7 @@ import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
+import uk.scimone.diafit.core.domain.model.deliveredUnits
 import uk.scimone.diafit.core.domain.model.toSmbMarks
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
 import java.time.LocalDate
@@ -104,6 +105,7 @@ class DayDetailViewModel(
             carbs = meals.map { CarbsChartData(it.mealTimeUtc, it.carbohydrates, it.impactType.durationMinutes) },
             activity = activity,
             basal = basal,
+            basalUnits = basal.deliveredUnits(dayStartUtc, dayEndUtc),
             smbs = boluses.toSmbMarks(),
             timelineMeals = meals.map { it.toMealEntityUi(context) },
             activityStats = ActivityDayStats.from(activity, dayStartUtc, dayEndUtc),
@@ -139,6 +141,8 @@ data class DayDetailState(
     /** Charts tab: heart rate, steps, sleep and exercise. */
     val activity: ActivityData = ActivityData(),
     val basal: List<uk.scimone.diafit.core.domain.model.BasalSegment> = emptyList(),
+    /** Basal insulin delivered over the day so far (rate x time of every segment). */
+    val basalUnits: Double = 0.0,
     val smbs: List<uk.scimone.diafit.core.domain.model.SmbMark> = emptyList(),
     val basalStyle: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
     val activityStats: ActivityDayStats? = null,

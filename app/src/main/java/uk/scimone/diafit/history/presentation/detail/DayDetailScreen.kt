@@ -48,6 +48,7 @@ import uk.scimone.diafit.ui.theme.SleepRem
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.InRange
 import java.time.LocalDate
@@ -237,12 +238,9 @@ private fun SummaryCard(state: DayDetailState) {
         }
         Row(Modifier.fillMaxWidth()) {
             Metric("Carbs", "${state.totalCarbs}", "g", Modifier.weight(1f), valueColor = Carbs)
-            Metric("Insulin", formatUnits(state.totalInsulin), "U", Modifier.weight(1f), valueColor = Bolus)
-            if (state.smbUnits > 0) {
-                Metric("Bolus · SMB", "${formatUnits(state.bolusUnits)} · ${formatUnits(state.smbUnits)}", "U", Modifier.weight(1.3f))
-            } else {
-                Metric("Boluses", "${state.bolusCount}", "", Modifier.weight(1.3f))
-            }
+            Metric("Bolus", formatUnits(state.bolusUnits), "U", Modifier.weight(1f), valueColor = Bolus)
+            Metric("Basal", formatUnits(state.basalUnits), "U", Modifier.weight(1f), valueColor = Basal)
+            if (state.smbUnits > 0) Metric("SMB", formatUnits(state.smbUnits), "U", Modifier.weight(1f), valueColor = Bolus)
         }
     }
 }
