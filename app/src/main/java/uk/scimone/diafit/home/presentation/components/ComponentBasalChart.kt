@@ -25,6 +25,10 @@ private val PlotTopInset = 14.dp
 private val PlotBottomInset = 3.dp
 /** The y axis always spans at least this many U/h, so a tiny basal doesn't fill the panel. */
 private const val MIN_AXIS_RATE = 0.5
+/** Rate steps use only this share of the plot height (the y axis reaches further up), keeping them low. */
+private const val RATE_HEIGHT_SHARE = 0.6f
+/** The activity curve is drawn this many times taller than the bolus panel's scale. */
+private const val ACTIVITY_BOOST = 1.4
 
 /** "0.30" style: two decimals below 10 U/h. */
 internal fun formatRate(rate: Double): String = "%.2f".format(java.util.Locale.US, rate)
@@ -57,13 +61,13 @@ fun ComponentBasalChart(
         val plotTop = PlotTopInset.toPx()
         val plotBottom = size.height - PlotBottomInset.toPx()
         val unitsPerPx = (activityUnitsPerDp?.let { it / density }
-            ?: (max(0.0005, activity.maxOf { it.second }) * 1.1 / (plotBottom - plotTop)))
+            ?: (max(0.0005, activity.maxOf { it.second }) * 1.1 / (plotBottom - plotTop))) / ACTIVITY_BOOST
         // The activity curve shares the rate's zero line. When the basal activity goes negative, the zero line
         // moves up by just enough room for the deepest dip (at most 40% of the plot).
         val lowest = activity.minOf { it.second }.coerceAtMost(0.0)
         val room = ((-lowest / unitsPerPx).toFloat() * 1.05f).coerceIn(0f, (plotBottom - plotTop) * 0.4f)
         val zeroY = plotBottom - room
-        fun yOf(rate: Double) = zeroY - (rate / axisMax).toFloat().coerceIn(0f, 1f) * (zeroY - plotTop)
+        fun yOf(rate: Double) = zeroY - (rate / axisMax).toFloat().coerceIn(0f, 1f) * RATE_HEIGHT_SHARE * (zeroY - plotTop)
         fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
 
         clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
