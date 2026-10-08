@@ -39,6 +39,7 @@ import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
+import uk.scimone.diafit.ui.theme.Sleep
 
 private const val Y_MIN = 40f
 private const val EDGE_PAD_DP = 6
@@ -69,6 +70,8 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
             TreatmentStrip(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale)
             Spacer(Modifier.height(1.dp))
             ActivityStrip(ActivityData(), markers.activity, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale)
+            Spacer(Modifier.height(1.dp))
+            SleepShareStrip(markers.sleepShare)
         }
     }
 }
@@ -116,10 +119,10 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
             if (v.isNaN()) { open = false; continue }
             if (open) line.lineTo(x(i), y(v)) else { line.moveTo(if (i == 0) 0f else x(i), y(v)); open = true }
         }
-        // Same zone clipping as the bands: the line takes the zone's colour, darkened so it stands out from the bands.
+        // Same zone clipping as the bands: the line takes the zone's colour, lightened so it stands out from the bands.
         val stroke = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) {
-            drawPath(line, androidx.compose.ui.graphics.lerp(color, Color.Black, 0.5f), style = stroke)
+            drawPath(line, androidx.compose.ui.graphics.lerp(color, Color.White, 0.85f), style = stroke)
         }
     }
 }
@@ -142,5 +145,18 @@ private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y:
         p.close()
         drawPath(p, color)
         i = j + 1
+    }
+}
+
+/** Sleep across all counted days: a bin is as strong as the share of days that were asleep then. */
+@Composable
+private fun SleepShareStrip(share: FloatArray) {
+    val guides = hourGuideColor()
+    Canvas(Modifier.fillMaxWidth().height(8.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))) {
+        drawHourGuides(guides)
+        val bw = size.width / share.size
+        for (i in share.indices) if (share[i] > 0f) {
+            drawRect(Sleep.copy(alpha = 0.1f + 0.75f * share[i]), Offset(i * bw, 1f), Size(bw + 0.5f, size.height - 2f))
+        }
     }
 }

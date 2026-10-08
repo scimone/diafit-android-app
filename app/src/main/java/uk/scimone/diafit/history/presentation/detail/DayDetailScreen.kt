@@ -62,7 +62,7 @@ private const val MIN_DAY_COVERAGE = 0.7
 private const val MAX_DAYS_BACK = 3650
 
 /** The three views of a day. */
-private enum class DayTab(val label: String) { STATS("Stats"), CHARTS("Charts"), JOURNAL("Journal") }
+private enum class DayTab(val label: String) { CHARTS("Charts"), STATS("Stats"), JOURNAL("Journal") }
 
 /**
  * One day in full, opened from a History row, in three tabs: stats, the Home-style charts with the
