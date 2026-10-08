@@ -16,6 +16,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.offset
+import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.AppNotificationEntity
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +63,19 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
     val items by viewModel.recent.collectAsState()
     val markRead = rememberUpdatedState(viewModel::markAllRead)
     DisposableEffect(Unit) { onDispose { markRead.value() } }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val remove: (AppNotificationEntity) -> Unit = { n ->
+        viewModel.remove(n)
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            if (snackbar.showSnackbar("Notification removed", actionLabel = "Undo", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+                viewModel.restore(n)
+            }
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text("Notifications") },
@@ -67,23 +94,49 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(items, key = { it.id }) { n ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { onOpen(n.link) },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-                    ) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Box(Modifier.padding(top = 6.dp).size(8.dp).background(if (n.isRead) Color.Transparent else Color(0xFFE53935), CircleShape))
-                            Column(Modifier.weight(1f)) {
-                                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                                Text(n.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(
-                                    SimpleDateFormat("EEE d MMM HH:mm", Locale.getDefault()).format(Date(n.timestampUtc)),
-                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                    // Swipe either way, or tap the ✕, to remove.
+                    val dismissState = rememberSwipeToDismissBoxState()
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) remove(n)
+                    }
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        modifier = Modifier.animateItem(),
+                        backgroundContent = {
+                            Box(
+                                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer, CardDefaults.shape).padding(horizontal = 20.dp),
+                                contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Alignment.CenterEnd else Alignment.CenterStart
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                             }
                         }
+                    ) {
+                        NotificationCard(n, onClick = { onOpen(n.link) }, onRemove = { remove(n) })
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRemove: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Row(Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.padding(top = 6.dp).size(8.dp).background(if (n.isRead) Color.Transparent else Color(0xFFE53935), CircleShape))
+            Column(Modifier.weight(1f)) {
+                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(n.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    SimpleDateFormat("EEE d MMM HH:mm", Locale.getDefault()).format(Date(n.timestampUtc)),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.padding(top = 0.dp).size(36.dp).offset(y = (-8).dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

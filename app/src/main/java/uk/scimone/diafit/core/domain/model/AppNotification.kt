@@ -1,5 +1,6 @@
 package uk.scimone.diafit.core.domain.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -17,7 +18,9 @@ data class AppNotificationEntity(
     val text: String,
     val dedupeKey: String,
     val isRead: Boolean = false,
-    val link: String? = null
+    val link: String? = null,
+    /** Removed by the user: hidden, but kept so the [dedupeKey] still stops the same alert from being raised again. */
+    @ColumnInfo(defaultValue = "0") val isDeleted: Boolean = false
 )
 
 /** Which expiry alert to raise for one consumable, if any. */

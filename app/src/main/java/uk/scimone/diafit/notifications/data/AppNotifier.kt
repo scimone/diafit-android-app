@@ -33,6 +33,9 @@ class AppNotifier(private val context: Context, private val dao: NotificationDao
         return true
     }
 
+    /** Takes the push for [key] off the phone's notification shade, if it's still there. */
+    fun cancel(key: String) = NotificationManagerCompat.from(context).cancel(key.hashCode())
+
     private fun push(channel: NotificationChannelSpec, id: Int, title: String, text: String, link: String) {
         val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         if (needsPermission && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
