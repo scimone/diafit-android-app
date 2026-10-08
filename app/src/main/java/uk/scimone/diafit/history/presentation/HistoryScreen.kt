@@ -1,6 +1,8 @@
 package uk.scimone.diafit.history.presentation
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -16,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,7 +51,8 @@ fun HistoryScreen(
 
     Column(Modifier.fillMaxSize()) {
         PeriodHeader(
-            days = state.days,
+            first = state.periodFirstDay,
+            last = state.periodLastDay,
             range = state.range,
             isLatest = state.page == 0,
             onRange = viewModel::setRange,
@@ -56,6 +61,7 @@ fun HistoryScreen(
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
+        WeekdayFilterRow(state.weekdays, viewModel::setWeekdays)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -67,7 +73,7 @@ fun HistoryScreen(
                 )
                 tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
                 else -> Column(Modifier.fillMaxSize()) {
-                    AgpCard(state.agp, state.thresholds, Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
+                    AgpCard(state.agp, state.agpMarkers, state.thresholds, Modifier.fillMaxWidth().fillMaxHeight(0.34f).padding(horizontal = 8.dp))
                     Spacer(Modifier.height(4.dp))
                     HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
                     LazyColumn(
@@ -97,7 +103,8 @@ private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
 /** Period selector: back/forward arrows around the date range; tapping the range opens the time frame menu (1 week to 3 months). */
 @Composable
 private fun PeriodHeader(
-    days: List<DayHistoryUi>,
+    first: Long?,
+    last: Long?,
     range: HistoryRange,
     isLatest: Boolean,
     onRange: (HistoryRange) -> Unit,
@@ -110,11 +117,8 @@ private fun PeriodHeader(
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            val label = if (days.isEmpty()) "" else {
-                val first = LocalDate.ofEpochDay(days.last().epochDay)
-                val last = LocalDate.ofEpochDay(days.first().epochDay)
-                "${first.format(RANGE_FORMAT)} – ${last.format(RANGE_FORMAT)}"
-            }
+            val label = if (first == null || last == null) "" else
+                "${LocalDate.ofEpochDay(first).format(RANGE_FORMAT)} – ${LocalDate.ofEpochDay(last).format(RANGE_FORMAT)}"
             TextButton(onClick = { menuOpen = true }) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text("  ${range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -138,3 +142,60 @@ private fun PeriodHeader(
     }
 }
 
+
+private val WEEKDAYS = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+private val WEEKEND = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+private val WORK_DAYS = WEEKDAYS.toSet()
+
+/**
+ * One slim row to filter every chart of the page by weekday: seven round day toggles (none selected = all days)
+ * and two shortcuts for Mon–Fri and Sat–Sun, which a second tap clears.
+ */
+@Composable
+private fun WeekdayFilterRow(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        DayOfWeek.entries.forEach { d ->
+            val on = d in selected
+            val shape = androidx.compose.foundation.shape.CircleShape
+            Box(
+                Modifier
+                    .size(28.dp)
+                    .clip(shape)
+                    .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .border(1.dp, if (on) Color.Transparent else MaterialTheme.colorScheme.outlineVariant, shape)
+                    .clickable { onChange(if (on) selected - d else selected + d) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    d.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        ShortcutChip("Mon–Fri", selected == WORK_DAYS) { onChange(if (selected == WORK_DAYS) emptySet() else WORK_DAYS) }
+        ShortcutChip("Sat–Sun", selected == WEEKEND) { onChange(if (selected == WEEKEND) emptySet() else WEEKEND) }
+    }
+}
+
+@Composable
+private fun ShortcutChip(label: String, active: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        Modifier
+            .height(28.dp)
+            .clip(shape)
+            .background(if (active) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .border(1.dp, if (active) Color.Transparent else MaterialTheme.colorScheme.outlineVariant, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+    }
+}

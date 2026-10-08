@@ -18,7 +18,11 @@ import uk.scimone.diafit.core.domain.model.GlucoseSample
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.domain.usecase.ClusterTreatmentsUseCase
 import uk.scimone.diafit.history.domain.usecase.GetDailyHistoryUseCase
+import uk.scimone.diafit.history.presentation.model.AgpMarkers
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
+import uk.scimone.diafit.history.presentation.model.toAgpMarkers
+import java.time.DayOfWeek
+import java.time.LocalDate
 import uk.scimone.diafit.history.presentation.model.toThresholds
 import uk.scimone.diafit.history.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
@@ -36,6 +40,9 @@ class HistoryViewModel(
     val state: StateFlow<HistoryState> = _state
 
     private var observeJob: Job? = null
+    private var filterJob: Job? = null
+    private var rawDays: List<DayHistoryUi> = emptyList()
+    private var weekdays: Set<DayOfWeek> = emptySet()
     private var page = 0
     private var range = HistoryRange.TWO_WEEKS
 
@@ -76,20 +83,8 @@ class HistoryViewModel(
             getDailyHistory(userId, range.days, page)
                 .map { days ->
                     val ui = days.map { it.toUi(target, clusterTreatments) }
-                    val samples = ui.asReversed().flatMap { day -> day.glucose.map { GlucoseSample(it.timeUtc, it.mgdl) } }
-                    val agp = AgpProfile.builder().also { b ->
-                        ui.forEach { day ->
-                            day.glucose.forEach { b.add(((it.timeUtc - day.dayStartUtc) / 60_000L).toInt().coerceIn(0, 1439), it.mgdl) }
-                        }
-                    }.build()
-                    HistoryState(
-                        days = ui,
-                        agp = agp,
-                        thresholds = thresholds,
-                        range = range,
-                        page = page,
-                        periodStats = DayGlucoseStats.from(samples, thresholds)
-                    )
+                    rawDays = ui
+                    buildState(ui, thresholds, range, page, weekdays)
                 }
                 .flowOn(Dispatchers.Default)
                 .catch { e ->
@@ -98,6 +93,47 @@ class HistoryViewModel(
                 }
                 .collect { next -> _state.value = next }
         }
+    }
+
+    /** Which weekdays are shown; an empty set (or all seven) means every day. Re-filters the loaded data, no new query. */
+    fun setWeekdays(selected: Set<DayOfWeek>) {
+        val normalized = if (selected.size == 7) emptySet() else selected
+        if (normalized == weekdays) return
+        weekdays = normalized
+        filterJob?.cancel()
+        filterJob = viewModelScope.launch(Dispatchers.Default) {
+            val current = _state.value
+            _state.value = buildState(rawDays, current.thresholds, range, page, normalized)
+        }
+    }
+
+    /** Filters [all] by weekday and derives everything that summarises the shown days (period stats, AGP, event markers). */
+    private fun buildState(
+        all: List<DayHistoryUi>,
+        thresholds: GlucoseThresholds,
+        range: HistoryRange,
+        page: Int,
+        weekdays: Set<DayOfWeek>
+    ): HistoryState {
+        val shown = if (weekdays.isEmpty()) all else all.filter { LocalDate.ofEpochDay(it.epochDay).dayOfWeek in weekdays }
+        val agp = AgpProfile.builder().also { b ->
+            shown.forEach { day ->
+                day.glucose.forEach { b.add(((it.timeUtc - day.dayStartUtc) / 60_000L).toInt().coerceIn(0, 1439), it.mgdl) }
+            }
+        }.build()
+        val samples = shown.asReversed().flatMap { day -> day.glucose.map { GlucoseSample(it.timeUtc, it.mgdl) } }
+        return HistoryState(
+            days = shown,
+            thresholds = thresholds,
+            range = range,
+            page = page,
+            weekdays = weekdays,
+            periodFirstDay = all.lastOrNull()?.epochDay,
+            periodLastDay = all.firstOrNull()?.epochDay,
+            agp = agp,
+            agpMarkers = shown.toAgpMarkers(),
+            periodStats = DayGlucoseStats.from(samples, thresholds)
+        )
     }
 
     private companion object {
@@ -114,6 +150,12 @@ data class HistoryState(
     val periodStats: DayGlucoseStats? = null,
     /** Ambulatory glucose profile over the whole period; null without readings. */
     val agp: AgpProfile? = null,
+    val agpMarkers: AgpMarkers = AgpMarkers(emptyList(), emptyList(), emptyList(), 0),
+    /** Selected weekdays; empty = all. */
+    val weekdays: Set<DayOfWeek> = emptySet(),
+    /** First and last day of the period before the weekday filter (for the header label). */
+    val periodFirstDay: Long? = null,
+    val periodLastDay: Long? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

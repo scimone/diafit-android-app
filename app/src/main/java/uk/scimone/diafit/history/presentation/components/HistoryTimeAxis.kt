@@ -15,8 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * The single 0–24 h axis shared by every track below it, full width like the tracks. Labelled every
- * 6 h with minor ticks every 3 h.
+ * The single 0–24 h axis shared by every track below it, full width like the tracks. Labelled every 6 h.
  */
 @Composable
 fun HistoryTimeAxis(modifier: Modifier = Modifier) {
@@ -25,14 +24,10 @@ fun HistoryTimeAxis(modifier: Modifier = Modifier) {
     val style = TextStyle(color = color, fontSize = 10.sp)
     Row(modifier.fillMaxWidth().height(20.dp)) {
         Canvas(Modifier.weight(1f).height(20.dp)) {
-            for (hour in 0..24 step 3) {
+            for (hour in 0..24 step 6) {
                 val x = hour / 24f * size.width
-                if (hour % 6 == 0) {
-                    val label = measurer.measure("%02d:00".format(hour), style)
-                    drawText(label, topLeft = Offset((x - label.size.width / 2f).coerceIn(0f, size.width - label.size.width), 0f))
-                } else {
-                    drawLine(color.copy(alpha = 0.4f), Offset(x, size.height - 8.dp.toPx()), Offset(x, size.height - 4.dp.toPx()), 1.dp.toPx())
-                }
+                val label = measurer.measure("%02d:00".format(hour), style)
+                drawText(label, topLeft = Offset((x - label.size.width / 2f).coerceIn(0f, size.width - label.size.width), 0f))
             }
         }
     }

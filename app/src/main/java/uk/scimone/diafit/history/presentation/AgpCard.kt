@@ -2,8 +2,8 @@ package uk.scimone.diafit.history.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,7 +24,16 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
+import uk.scimone.diafit.history.presentation.components.drawHourGuides
+import uk.scimone.diafit.history.presentation.components.hourGuideColor
+import uk.scimone.diafit.history.presentation.components.stripBackground
+import uk.scimone.diafit.history.presentation.model.AgpMarkers
+import uk.scimone.diafit.history.presentation.model.ClockMarker
 import uk.scimone.diafit.ui.theme.AboveRange
+import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Carbs
+import kotlin.math.sqrt
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 
@@ -37,7 +46,7 @@ private const val EDGE_PAD_DP = 6
  * no axis of its own, so its hours line up with the time axis and day tracks below.
  */
 @Composable
-internal fun AgpCard(agp: AgpProfile?, thresholds: GlucoseThresholds, modifier: Modifier = Modifier) {
+internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseThresholds, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
@@ -48,12 +57,21 @@ internal fun AgpCard(agp: AgpProfile?, thresholds: GlucoseThresholds, modifier: 
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("No glucose readings in this period", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } else AgpPlot(agp, thresholds, Modifier.fillMaxWidth())
+        } else Column(Modifier.fillMaxSize()) {
+            AgpPlot(agp, thresholds, Modifier.weight(1f).fillMaxWidth())
+            Spacer(Modifier.height(3.dp))
+            MarkerRow(markers.carbs, markers.dayCount, Carbs, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(1.dp))
+            MarkerRow(markers.bolus, markers.dayCount, Bolus, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(1.dp))
+            MarkerRow(markers.activity, markers.dayCount, Activity, Modifier.fillMaxWidth())
+        }
     }
 }
 
 @Composable
 private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Modifier) {
+    val guides = hourGuideColor()
     val targetFill = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
     val yMax = remember(agp) {
         val top = agp.p95.filter { !it.isNaN() }.maxOrNull() ?: 250f
@@ -74,6 +92,7 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
         val yLow = y(thresholds.low.toFloat())
 
         drawRect(targetFill, Offset(0f, yHigh), Size(w, yLow - yHigh))
+        drawHourGuides(guides)
 
         // Each band is drawn three times, clipped to the zone it falls in, so it takes that zone's colour.
         val zones = listOf(
@@ -118,5 +137,28 @@ private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y:
         p.close()
         drawPath(p, color)
         i = j + 1
+    }
+}
+
+/** Height of one event-density row under the profile. */
+private val MARKER_ROW_HEIGHT = 10.dp
+
+/**
+ * One row of semi-transparent marks, one per event of every day in the period: where they pile up the
+ * colour deepens. A mark's opacity encodes its amount (carbs, units) or intensity; the base opacity is
+ * lowered for long periods so 90 days don't saturate to solid.
+ */
+@Composable
+private fun MarkerRow(markers: List<ClockMarker>, dayCount: Int, color: Color, modifier: Modifier = Modifier) {
+    val guides = hourGuideColor()
+    val background = stripBackground()
+    val scale = remember(dayCount) { sqrt(14f / maxOf(dayCount, 14)) }
+    Canvas(modifier.height(MARKER_ROW_HEIGHT).background(background)) {
+        drawHourGuides(guides)
+        val w = size.width
+        markers.forEach { m ->
+            val alpha = (0.2f + 0.6f * m.weight) * scale
+            drawRect(color.copy(alpha = alpha), Offset(m.start * w, 0f), Size(((m.end - m.start) * w).coerceAtLeast(1.5f), size.height))
+        }
     }
 }
