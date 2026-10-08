@@ -169,9 +169,9 @@ private fun DeviationCanvas(
     modifier: Modifier,
     activityUnitsPerDp: Double?
 ) {
-    val axisMax = remember(segments) {
-        max(MIN_AXIS_RATE / 2, (segments.maxOfOrNull { s -> s.scheduled?.let { kotlin.math.abs(s.delivered - it) } ?: 0.0 } ?: 0.0) * 1.15)
-    }
+    val devs = remember(segments) { segments.mapNotNull { s -> s.scheduled?.let { s.delivered - it } } }
+    val posMax = devs.maxOfOrNull { it }?.coerceAtLeast(0.0) ?: 0.0
+    val negMax = devs.minOfOrNull { it }?.let { -it }?.coerceAtLeast(0.0) ?: 0.0
     Canvas(modifier) {
         val g = geometry.value ?: return@Canvas
         val clipRight = min(g.right, g.xOf(window.now))
@@ -181,9 +181,12 @@ private fun DeviationCanvas(
         val plotTop = triangleMax + TriangleGap.toPx()
         val plotBottom = size.height - triangleMax - TriangleGap.toPx()
         if (plotBottom <= plotTop) return@Canvas
-        val zeroY = (plotTop + plotBottom) / 2f
+        // Positive deviations are usually much larger than negative ones: the zero line sits lower than the middle.
+        val posShare = if (posMax + negMax < 1e-6) 0.7 else (posMax / (posMax + negMax)).coerceIn(0.55, 0.8)
+        val zeroY = plotTop + posShare.toFloat() * (plotBottom - plotTop)
         val half = zeroY - plotTop
-        fun devY(dev: Double) = zeroY - (dev / axisMax).toFloat().coerceIn(-1f, 1f) * half
+        val ratePerPx = max(MIN_AXIS_RATE / 2 / half, max(posMax / (zeroY - plotTop), negMax / (plotBottom - zeroY)) * 1.1)
+        fun devY(dev: Double) = (zeroY - (dev / ratePerPx).toFloat()).coerceIn(plotTop, plotBottom)
         val unitsPerPx = (activityUnitsPerDp?.let { it / density }
             ?: (max(0.0005, activity.maxOf { abs(it.second) }) * 1.1 / half)) / ACTIVITY_BOOST
         fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
