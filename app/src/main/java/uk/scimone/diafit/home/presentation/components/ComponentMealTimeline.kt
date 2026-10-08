@@ -42,6 +42,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import com.patrykandpatrick.vico.compose.cartesian.Scroll
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.Layout
 import uk.scimone.diafit.home.presentation.utils.ChartGeometry
@@ -130,6 +133,7 @@ fun MealTimeline(
     inView: List<MealGroup>,
     highlighted: List<MealGroup>,
     geometry: State<ChartGeometry?>,
+    scrollState: VicoScrollState,
     onGroupClick: (MealGroup) -> Unit,
     modifier: Modifier = Modifier,
     /** Shown when there are no meals at all (Home's default invites logging one). */
@@ -149,10 +153,8 @@ fun MealTimeline(
         // Each card sits under its meal's data point on the charts (pushed aside only to avoid overlapping
         // a neighbour, and kept on screen at the edges). Geometry is read in the layout pass, so panning
         // moves the cards without recomposing.
-        // The user can also drag the strip sideways (e.g. to reach cards that were pushed together);
-        // moving the charts puts the cards back under their data points.
-        var userShift by remember { mutableFloatStateOf(0f) }
-        val lastOrigin = remember { floatArrayOf(Float.NaN) }
+        // Dragging the strip pans the charts (and the cards follow, being tied to the data points).
+        val scope = rememberCoroutineScope()
         Layout(
             content = {
                 ordered.forEach { group ->
@@ -169,7 +171,7 @@ fun MealTimeline(
             modifier = Modifier.fillMaxSize().pointerInput(Unit) {
                 detectHorizontalDragGestures { change, dx ->
                     change.consume()
-                    userShift += dx
+                    scope.launch { scrollState.scroll(Scroll.Absolute.pixels(scrollState.value - dx)) }
                 }
             }
         ) { measurables, constraints ->
@@ -178,10 +180,6 @@ fun MealTimeline(
             val width = constraints.maxWidth
             val placeables = measurables.map { it.measure(Constraints.fixed(size, size)) }
             val g = geometry.value
-            if (g != null && g.originPx != lastOrigin[0]) {
-                if (!lastOrigin[0].isNaN()) userShift = 0f
-                lastOrigin[0] = g.originPx
-            }
             val xs = IntArray(placeables.size) { i ->
                 if (g == null) width - size
                 else (g.xOf(ordered[i].startTime) - size / 2f).toInt()
@@ -197,8 +195,7 @@ fun MealTimeline(
             }
             layout(width, constraints.maxHeight) {
                 val y = (constraints.maxHeight - size) / 2
-                val shift = userShift.toInt()
-                placeables.forEachIndexed { i, p -> p.place(xs[i] + shift, y) }
+                placeables.forEachIndexed { i, p -> p.place(xs[i], y) }
             }
         }
     }

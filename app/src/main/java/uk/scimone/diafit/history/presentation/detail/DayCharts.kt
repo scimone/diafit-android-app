@@ -178,6 +178,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
             inView = mealsInView,
             highlighted = mealGroups.caughtBy(selectedTime),
             geometry = geometry,
+            scrollState = scrollState,
             onGroupClick = { group -> onOpenMeal(group.meals.first().id) },
             modifier = Modifier.padding(top = 6.dp),
             noMealsMessage = "No meals on this day."

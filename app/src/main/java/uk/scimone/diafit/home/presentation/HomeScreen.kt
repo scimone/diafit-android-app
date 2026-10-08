@@ -296,6 +296,7 @@ fun HomeScreen(
                         inView = mealsInView,
                         highlighted = mealGroups.caughtBy(selectedTime),
                         geometry = geometry,
+                        scrollState = chartScrollState,
                         onGroupClick = { group ->
                             openMealIds = group.meals.map { it.id }.toSet()
                             // Bring the meal into view on the charts behind the sheet.
