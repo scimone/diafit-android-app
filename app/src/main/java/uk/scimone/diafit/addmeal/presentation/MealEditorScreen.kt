@@ -184,7 +184,7 @@ fun MealEditorScreen(
             )
 
             // Asking the AI; once it answered, its foods appear under the totals instead.
-            if (uiState.photos.isNotEmpty() && (uiState.components.isEmpty() || uiState.isAnalyzing)) {
+            if (uiState.photos.isNotEmpty() && (uiState.components.isEmpty() || uiState.isAnalyzing || uiState.aiRequestOpen)) {
                 AiRequestCard(uiState, viewModel::onAiNotesChanged, viewModel::analyzeMeal)
             }
 
@@ -196,10 +196,10 @@ fun MealEditorScreen(
                 onUseFoodTotals = viewModel::onUseFoodTotals
             )
 
-            if (uiState.components.isNotEmpty() && !uiState.isAnalyzing) {
+            if (uiState.components.isNotEmpty() && !uiState.isAnalyzing && !uiState.aiRequestOpen) {
                 FoodsCard(
                     state = uiState,
-                    onRedo = viewModel::analyzeMeal,
+                    onRedo = viewModel::openAiRequest,
                     onWeightChange = viewModel::onComponentWeightChanged,
                     onMacrosChange = viewModel::onComponentMacrosChanged,
                     onRemove = viewModel::onComponentRemoved
@@ -488,7 +488,7 @@ private fun TitleField(overline: String, value: String, placeholder: String, onV
 private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit, onAnalyze: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
     val n = state.photos.size
-    var showNotes by rememberSaveable { mutableStateOf(false) }
+    var showNotes by rememberSaveable { mutableStateOf(state.components.isNotEmpty()) }
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = primary.copy(alpha = 0.06f),
@@ -528,10 +528,10 @@ private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit,
                         leadingIcon = { Icon(Icons.Outlined.EditNote, null, Modifier.size(18.dp)) }
                     )
                 }
-                Button(onClick = { showNotes = false; onAnalyze() }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Button(onClick = { onAnalyze() }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                     Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Estimate nutrition")
+                    Text(if (state.components.isEmpty()) "Estimate nutrition" else "Estimate again")
                 }
             }
         }

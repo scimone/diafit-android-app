@@ -257,14 +257,14 @@ class AddMealViewModel(
         if (photos.isEmpty() || uiState.value.isAnalyzing) return
         viewModelScope.launch {
             val notes = uiState.value.aiNotes
-            // The note is only context for this request; it isn't shown again afterwards.
-            _uiState.update { it.copy(isAnalyzing = true, aiNotes = "") }
+            // The note stays, so a failed request can be edited and resent (or a redo can reuse it).
+            _uiState.update { it.copy(isAnalyzing = true) }
 
             analyzeMealUseCase(photos.map { it.uri }, notes)
                 .onSuccess { analysis ->
                     if (analysis.components.isEmpty()) {
                         // Nothing usable: leave the form as it was instead of filling in "No food detected".
-                        _uiState.update { it.copy(isAnalyzing = false, snackbarMessage = "The AI found no food in the photos") }
+                        _uiState.update { it.copy(isAnalyzing = false, aiRequestOpen = true, snackbarMessage = "The AI found no food in the photos") }
                         return@onSuccess
                     }
                     val totals = analysis.totals
@@ -283,6 +283,7 @@ class AddMealViewModel(
                             impactAuto = true,
                             reasoning = analysis.reasoning,
                             isAnalyzing = false,
+                            aiRequestOpen = false,
                             snackbarMessage = "AI estimate ready. Check the values before saving"
                         )
                     }
@@ -292,6 +293,7 @@ class AddMealViewModel(
                     _uiState.update {
                         it.copy(
                             isAnalyzing = false,
+                            aiRequestOpen = true,
                             snackbarMessage = "AI analysis failed: ${error.message}"
                         )
                     }
@@ -405,6 +407,11 @@ class AddMealViewModel(
                 .onSuccess { _uiState.update { it.copy(finished = EditorResult.Deleted(id)) } }
                 .onFailure { _uiState.update { s -> s.copy(snackbarMessage = "Couldn't delete the meal") } }
         }
+    }
+
+    /** Shows the request card again (with the previous note) so the user can edit it and resend. */
+    fun openAiRequest() {
+        _uiState.update { it.copy(aiRequestOpen = true) }
     }
 
     fun onAiNotesChanged(notes: String) {

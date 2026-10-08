@@ -37,6 +37,8 @@ data class AddMealState(
     val reasoning: String? = null,
     /** Optional context sent to the AI together with the photos, e.g. "I only ate half". */
     val aiNotes: String = "",
+    /** Shows the AI request card (with the note) again after an estimate, to resend it. */
+    val aiRequestOpen: Boolean = false,
     /** Foods identified in the photos; the nutrition totals start as their sum (the user may still override them). */
     val components: List<MealComponent> = emptyList(),
     val isAnalyzing: Boolean = false,
@@ -74,7 +76,7 @@ data class AddMealState(
     /** The user-editable fields only, for unsaved-changes detection. */
     fun formFields() = copy(
         isAnalyzing = false, isLoading = false, snackbarMessage = null, finished = null, dishName = null,
-        sitting = null, aiNotes = ""
+        sitting = null, aiNotes = "", aiRequestOpen = false
     )
 }
 

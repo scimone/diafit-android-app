@@ -49,7 +49,7 @@ For each component give:
 Then give:
 - meal_name: a very short title for the whole meal: 2-5 words, max 35 characters, no punctuation or descriptions (e.g. "Pumpkin soup with bread", "Salmon sushi", "Pasta Bolognese").
 - absorption: how long the meal will raise blood sugar: SHORT (mostly fast sugars, drinks, dextrose, up to about 2 h), MEDIUM (ordinary mixed meal, 2-4 h), LONG (high fat/protein or very slow, e.g. pizza, cream sauces, 4 h or more).
-- reasoning: very brief, max 2 short sentences (about 200 characters in total). Say how the portions were judged and the key assumption or the least certain component, plus any notes from the person that were applied. Then end with the fixed words "Estimate only, verify before dosing."
+- reasoning: very brief, max 2 short sentences (about 200 characters in total). Say plainly how the portions were judged and the key assumption or the least certain component, plus any notes from the person that were applied. Plain, concise reasoning about the food only: no warnings, disclaimers or advice (never say it is just an estimate or that the person should verify or double-check anything).
 
 Prefer realistic, not conservative, numbers. If a photo shows no food, return an empty components list and explain in the reasoning.
 Respond only with JSON matching the provided schema.

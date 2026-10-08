@@ -1,6 +1,7 @@
 package uk.scimone.diafit.core.data.networking
 
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -16,6 +17,8 @@ import uk.scimone.diafit.core.data.networking.dto.ModelListResponseDto
 import uk.scimone.diafit.core.data.networking.util.safeCall
 import uk.scimone.diafit.core.domain.util.networking.NetworkError
 import uk.scimone.diafit.core.domain.util.networking.Result
+
+private const val AI_REQUEST_TIMEOUT_MS = 300_000L
 
 /** Minimal client for the OpenAI-compatible `/chat/completions` endpoint, vision-capable. */
 class OpenAiApi(private val client: HttpClient) {
@@ -66,6 +69,12 @@ class OpenAiApi(private val client: HttpClient) {
             client.post(url) {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "Bearer $apiKey")
+                // Vision requests with several photos (or a slow local model) can take minutes.
+                timeout {
+                    requestTimeoutMillis = AI_REQUEST_TIMEOUT_MS
+                    socketTimeoutMillis = AI_REQUEST_TIMEOUT_MS
+                    connectTimeoutMillis = 30_000
+                }
                 setBody(requestBody.toString())
             }
         }

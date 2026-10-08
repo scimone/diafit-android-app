@@ -2,6 +2,7 @@ package uk.scimone.diafit.core.data.networking.util
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.ANDROID
@@ -21,6 +22,7 @@ object HttpClientFactory {
                 level = LogLevel.ALL
                 logger = Logger.ANDROID
             }
+            install(HttpTimeout) // limits are set per request (see OpenAiApi)
             install(ContentNegotiation) {
                 json(
                     json = Json {
