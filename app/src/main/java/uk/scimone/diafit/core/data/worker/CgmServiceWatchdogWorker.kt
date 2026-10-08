@@ -31,7 +31,7 @@ class CgmServiceWatchdogWorker(
     override suspend fun doWork(): Result {
         val source = getCgmSourceUseCase()
         Log.d(TAG, "Watchdog tick for source: $source")
-        cgmServiceManager.ensureRunning(source)
+        if (source != null) cgmServiceManager.ensureRunning(source)
         return Result.success()
     }
 }

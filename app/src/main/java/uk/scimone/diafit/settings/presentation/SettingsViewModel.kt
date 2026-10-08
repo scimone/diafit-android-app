@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.data.networking.NightscoutApi
+import uk.scimone.diafit.core.data.networking.NightscoutCheck
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectManager
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectPermissions
@@ -16,28 +18,21 @@ import uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import uk.scimone.diafit.settings.domain.model.AiConfig
-import uk.scimone.diafit.settings.domain.model.BolusSource
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
-import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
-import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.domain.usecase.ListAiModelsUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetAiConfigUseCase
-import uk.scimone.diafit.settings.domain.usecase.SetBolusSourceUseCase
-import uk.scimone.diafit.settings.domain.usecase.SetCgmSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetTargetRangeUseCase
 import uk.scimone.diafit.settings.isIgnoringBatteryOptimizations
 
 class SettingsViewModel(
-    private val getCgmSource: GetCgmSourceUseCase,
-    private val setCgmSource: SetCgmSourceUseCase,
-    private val getBolusSource: GetBolusSourceUseCase,
-    private val setBolusSource: SetBolusSourceUseCase,
     private val getGlucoseTargetRange: GetTargetRangeUseCase,
     private val setGlucoseTargetRange: SetTargetRangeUseCase,
     private val getNightscoutConfig: GetNightscoutConfigUseCase,
@@ -49,16 +44,16 @@ class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val healthConnectManager: HealthConnectManager,
     private val healthConnectSyncer: HealthConnectSyncer,
-    private val healthConnectScheduler: HealthConnectScheduler
+    private val healthConnectScheduler: HealthConnectScheduler,
+    private val nightscoutApi: NightscoutApi
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state
 
-    private val _restartCgmServiceEvent = MutableSharedFlow<CgmSource>()
-    private val _restartBolusServiceEvent = MutableSharedFlow<BolusSource>()
+    /** The CGM connector to run (null: stop CGM sync); emitted whenever the CGM selection may have changed. */
+    private val _restartCgmServiceEvent = MutableSharedFlow<CgmSource?>()
     val restartCgmServiceEvent = _restartCgmServiceEvent.asSharedFlow()
-    val restartBolusServiceEvent = _restartBolusServiceEvent.asSharedFlow()
 
     init {
         refreshSettings()
@@ -93,24 +88,30 @@ class SettingsViewModel(
         }
     }
 
-    /** Result of the activity permission dialog: when everything was granted, switch the import on and backfill. */
-    fun onActivityPermissionsResult() {
+    /**
+     * Result of Health Connect's permission dialog (activity and glucose are asked for together). Connects
+     * Health Connect when at least one kind of data was allowed; the data types it can now deliver are
+     * the ones the user then picks it for.
+     */
+    fun onHealthConnectPermissionsResult() {
         viewModelScope.launch {
             val granted = healthConnectManager.grantedPermissions()
-            if (HealthConnectPermissions.activity.all { it in granted }) {
-                settingsRepository.setHealthConnectEnabled(true)
-                healthConnectScheduler.schedulePeriodic()
-                healthConnectScheduler.syncNow(backfill = true)
+            val activity = HealthConnectPermissions.activity.all { it in granted }
+            val glucose = HealthConnectPermissions.glucose.all { it in granted }
+            if (activity || glucose) {
+                settingsRepository.setConnectorEnabled(Connector.HEALTH_CONNECT, true)
+                // A type whose permission was refused can't be fed by it.
+                if (!glucose && settingsRepository.getSelection(DataType.CGM) == Connector.HEALTH_CONNECT) {
+                    settingsRepository.setSelection(DataType.CGM, null)
+                }
+                if (!activity) DataType.ACTIVITY.filter { settingsRepository.getSelection(it) == Connector.HEALTH_CONNECT }
+                    .forEach { settingsRepository.setSelection(it, null) }
+                if (activity) {
+                    healthConnectScheduler.schedulePeriodic()
+                    healthConnectScheduler.syncNow(backfill = true)
+                }
+                connectorsChanged(cgmMayHaveChanged = true)
             }
-            refreshHealthConnect()
-        }
-    }
-
-    /** Result of the glucose permission dialog: Health Connect becomes the CGM source only if it was granted. */
-    fun onGlucosePermissionResult() {
-        viewModelScope.launch {
-            val granted = healthConnectManager.grantedPermissions()
-            if (HealthConnectPermissions.glucose.all { it in granted }) onCgmSourceSelected(CgmSource.HEALTH_CONNECT)
             refreshHealthConnect()
         }
     }
@@ -120,9 +121,10 @@ class SettingsViewModel(
     /** Stops importing (data already imported stays); permissions can be withdrawn in Health Connect itself. */
     fun disconnectHealthConnect() {
         viewModelScope.launch {
-            settingsRepository.setHealthConnectEnabled(false)
+            settingsRepository.setConnectorEnabled(Connector.HEALTH_CONNECT, false)
             healthConnectScheduler.cancel()
             refreshHealthConnect()
+            connectorsChanged(cgmMayHaveChanged = true)
         }
     }
 
@@ -134,16 +136,13 @@ class SettingsViewModel(
             _state.value = _state.value.copy(isLoading = true)
 
             val batteryIgnored = appContext.isIgnoringBatteryOptimizations()
-            val cgmSource = getCgmSource()
-            val bolusSource = getBolusSource()
+            loadConnectors()
             val range = getGlucoseTargetRange()
             val nightscoutConfig = getNightscoutConfig()
             val aiConfig = getAiConfig()
             refreshHealthConnect()
 
             _state.value = _state.value.copy(
-                selectedCgmSource = cgmSource,
-                selectedBolusSource = bolusSource,
                 glucoseTargetRange = range,
                 nightscoutConfig = nightscoutConfig,
                 aiConfig = aiConfig,
@@ -153,19 +152,52 @@ class SettingsViewModel(
         }
     }
 
-    fun onCgmSourceSelected(source: CgmSource) {
+    /** Reads which connectors are connected and which one feeds each data type. */
+    private suspend fun loadConnectors() {
+        val enabled = settingsRepository.getEnabledConnectors()
+        val selections = DataType.values().associateWith { settingsRepository.getSelection(it) }
+        _state.value = _state.value.copy(enabledConnectors = enabled, selections = selections)
+    }
+
+    private fun connectorsChanged(cgmMayHaveChanged: Boolean) {
         viewModelScope.launch {
-            setCgmSource(source)
-            _state.value = _state.value.copy(selectedCgmSource = source)
-            _restartCgmServiceEvent.emit(source) // side effect event
+            loadConnectors()
+            if (cgmMayHaveChanged) _restartCgmServiceEvent.emit(settingsRepository.getCgmSource())
+            SettingsChangeBus.notifyChange()
         }
     }
 
-    fun onBolusSourceSelected(source: BolusSource) {
+    /** Connects or disconnects a connector that needs no permission dialog (Nightscout, AAPS, xDrip+, Juggluco). */
+    fun onConnectorToggled(connector: Connector, enabled: Boolean) {
         viewModelScope.launch {
-            setBolusSource(source)
-            _state.value = _state.value.copy(selectedBolusSource = source)
-            _restartBolusServiceEvent.emit(source) // side effect event
+            settingsRepository.setConnectorEnabled(connector, enabled)
+            connectorsChanged(cgmMayHaveChanged = DataType.CGM in connector.provides)
+        }
+    }
+
+    /** Which connector feeds [type]; null turns that data off. */
+    fun onSelectionChanged(type: DataType, connector: Connector?) {
+        viewModelScope.launch {
+            settingsRepository.setSelection(type, connector)
+            loadConnectors()
+            if (type == DataType.CGM) _restartCgmServiceEvent.emit(settingsRepository.getCgmSource())
+            // Newly wanted Health Connect activity data: fetch it right away.
+            if (connector == Connector.HEALTH_CONNECT && type.isActivity) healthConnectScheduler.syncNow()
+            SettingsChangeBus.notifyChange()
+        }
+    }
+
+    /** Verifies the saved Nightscout address and credentials. */
+    fun testNightscout() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(nightscoutCheck = NightscoutCheckState.Checking)
+            val result = nightscoutApi.testConnection()
+            _state.value = _state.value.copy(
+                nightscoutCheck = when (result) {
+                    NightscoutCheck.Ok -> NightscoutCheckState.Ok
+                    is NightscoutCheck.Failed -> NightscoutCheckState.Failed(result.message)
+                }
+            )
         }
     }
 
@@ -182,7 +214,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             val newConfig = NightscoutConfig(baseUrl, apiKey)
             setNightscoutConfig(newConfig)
-            _state.value = _state.value.copy(nightscoutConfig = newConfig)
+            _state.value = _state.value.copy(nightscoutConfig = newConfig, nightscoutCheck = NightscoutCheckState.Idle)
             SettingsChangeBus.notifyChange()
         }
     }

@@ -65,7 +65,7 @@ class DayDetailViewModel(
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
             val target = getTargetRange().toCore()
-            val connected = settingsRepository.isHealthConnectEnabled()
+            val connected = settingsRepository.isActivityEnabled()
             getDayDetail(userId, date)
                 .map { it.toState(target).copy(activityConnected = connected) }
                 .flowOn(Dispatchers.IO)

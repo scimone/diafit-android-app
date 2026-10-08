@@ -11,8 +11,9 @@ import org.koin.core.component.inject
 import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsCarbParser
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
-import uk.scimone.diafit.settings.domain.model.BolusSource
-import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
+import uk.scimone.diafit.settings.domain.repository.SettingsRepository
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 
 /** Inserts carb entries from AAPS treatment broadcasts as (photo-less) meals, deduped by `sourceId`. */
 class CarbBroadcastWorker(
@@ -22,10 +23,10 @@ class CarbBroadcastWorker(
 
     private val mealRepository: MealRepository by inject()
     private val mergeCarbEntries: MergeCarbEntriesUseCase by inject()
-    private val getBolusSourceUseCase: GetBolusSourceUseCase by inject()
+    private val settings: SettingsRepository by inject()
 
     override suspend fun doWork(): Result {
-        if (getBolusSourceUseCase() != BolusSource.AAPS) {
+        if (settings.getSelection(DataType.FOOD) != Connector.AAPS) {
             Log.d(TAG, "Carb intent ignored: AAPS isn't the selected bolus/treatment source.")
             return Result.success()
         }

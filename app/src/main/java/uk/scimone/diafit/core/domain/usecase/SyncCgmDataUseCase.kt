@@ -9,7 +9,7 @@ class SyncCgmDataUseCase(
     private val sources: Map<CgmSource, HealthSyncSource>
 ) {
     suspend operator fun invoke() {
-        val currentSource = getCgmSourceUseCase()
+        val currentSource = getCgmSourceUseCase() ?: return
         val actualSource = sources[currentSource]
             ?: error("Unsupported CGM source: $currentSource")
         actualSource.sync()

@@ -12,6 +12,8 @@ import uk.scimone.diafit.settings.domain.model.AiConfig
 import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
@@ -20,23 +22,68 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
-    override suspend fun getCgmSource(): CgmSource {
-        val name = prefs.getString("cgm_source", CgmSource.NIGHTSCOUT.name)
-        return CgmSource.valueOf(name!!)
+    init { migrateLegacySources() }
+
+    /** First run of the connector model: carry over the old single CGM / bolus source and the Health Connect switch. */
+    private fun migrateLegacySources() {
+        if (prefs.getBoolean(KEY_MIGRATED, false)) return
+        val cgm = prefs.getString("cgm_source", CgmSource.NIGHTSCOUT.name)
+            ?.let { runCatching { CgmSource.valueOf(it) }.getOrNull() } ?: CgmSource.NIGHTSCOUT
+        val cgmConnector = when (cgm) {
+            CgmSource.NIGHTSCOUT -> Connector.NIGHTSCOUT
+            CgmSource.XDRIP -> Connector.XDRIP
+            CgmSource.JUGGLUCO -> Connector.JUGGLUCO
+            CgmSource.HEALTH_CONNECT -> Connector.HEALTH_CONNECT
+        }
+        val hc = prefs.getBoolean("health_connect_enabled", false) || cgm == CgmSource.HEALTH_CONNECT
+        val enabled = mutableSetOf(cgmConnector, Connector.AAPS)
+        if (hc) enabled += Connector.HEALTH_CONNECT
+        val edit = prefs.edit()
+            .putStringSet(KEY_ENABLED, enabled.map { it.name }.toSet())
+            .putString(selectionKey(DataType.CGM), cgmConnector.name)
+            .putBoolean("health_connect_enabled", hc)
+        listOf(DataType.BOLUS, DataType.FOOD, DataType.BASAL).forEach { edit.putString(selectionKey(it), Connector.AAPS.name) }
+        if (hc) DataType.ACTIVITY.forEach { edit.putString(selectionKey(it), Connector.HEALTH_CONNECT.name) }
+        edit.putBoolean(KEY_MIGRATED, true).apply()
     }
 
-    override suspend fun setCgmSource(source: CgmSource) {
-        prefs.edit().putString("cgm_source", source.name).apply()
+    override suspend fun getEnabledConnectors(): Set<Connector> =
+        prefs.getStringSet(KEY_ENABLED, emptySet()).orEmpty()
+            .mapNotNull { n -> Connector.values().firstOrNull { it.name == n } }.toSet()
+
+    override suspend fun setConnectorEnabled(connector: Connector, enabled: Boolean) {
+        val now = getEnabledConnectors().let { if (enabled) it + connector else it - connector }
+        val edit = prefs.edit().putStringSet(KEY_ENABLED, now.map { it.name }.toSet())
+        for (type in connector.provides) {
+            val current = prefs.getString(selectionKey(type), null)
+            if (enabled) {
+                // Only fills a type nobody feeds yet; an explicit "off" or another connector's choice stays.
+                if (current == null) edit.putString(selectionKey(type), connector.name)
+            } else if (current == connector.name) {
+                val next = Connector.values().firstOrNull { it in now && type in it.provides }
+                if (next != null) edit.putString(selectionKey(type), next.name) else edit.remove(selectionKey(type))
+            }
+        }
+        if (connector == Connector.HEALTH_CONNECT) edit.putBoolean("health_connect_enabled", enabled)
+        edit.apply()
     }
 
-    override suspend fun getBolusSource(): BolusSource {
-        val name = prefs.getString("bolus_source", BolusSource.AAPS.name)
-        return BolusSource.valueOf(name!!)
+    override suspend fun getSelection(type: DataType): Connector? {
+        val name = prefs.getString(selectionKey(type), null) ?: return null
+        val connector = Connector.values().firstOrNull { it.name == name } ?: return null
+        return connector.takeIf { it in getEnabledConnectors() && type in it.provides }
     }
 
-    override suspend fun setBolusSource(source: BolusSource) {
-        prefs.edit().putString("bolus_source", source.name).apply()
+    override suspend fun setSelection(type: DataType, connector: Connector?) {
+        prefs.edit().putString(selectionKey(type), connector?.name ?: SELECTION_OFF).apply()
     }
+
+    override suspend fun isActivityEnabled(): Boolean = DataType.ACTIVITY.any { getSelection(it) != null }
+
+    override suspend fun getCgmSource(): CgmSource? = getSelection(DataType.CGM)?.toCgmSource()
+
+    override suspend fun getBolusSource(): BolusSource? =
+        if (getSelection(DataType.BOLUS) == Connector.AAPS) BolusSource.AAPS else null
 
     override suspend fun getTargetRange(): SettingsGlucoseTargetRange {
         val lower = prefs.getInt("glucose_lower_bound", 70)
@@ -99,6 +146,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     }
 
     private companion object {
+        const val KEY_MIGRATED = "connectors_migrated"
+        const val KEY_ENABLED = "connectors_enabled"
+        const val SELECTION_OFF = "OFF"
+        fun selectionKey(type: DataType) = "source_${type.name.lowercase()}"
         const val DEFAULT_AI_BASE_URL = "https://api.openai.com/v1"
     }
 }

@@ -10,8 +10,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsEventParser
 import uk.scimone.diafit.core.domain.repository.PumpEventRepository
-import uk.scimone.diafit.settings.domain.model.BolusSource
-import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
+import uk.scimone.diafit.settings.domain.repository.SettingsRepository
+import uk.scimone.diafit.settings.domain.model.Connector
 
 /** Stores non-bolus, non-carb AAPS treatments (pod change, temp basal, ...) as [uk.scimone.diafit.core.domain.model.PumpEventEntity]. */
 class PumpEventBroadcastWorker(
@@ -20,10 +20,10 @@ class PumpEventBroadcastWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     private val repository: PumpEventRepository by inject()
-    private val getBolusSourceUseCase: GetBolusSourceUseCase by inject()
+    private val settings: SettingsRepository by inject()
 
     override suspend fun doWork(): Result {
-        if (getBolusSourceUseCase() != BolusSource.AAPS) return Result.success()
+        if (Connector.AAPS !in settings.getEnabledConnectors()) return Result.success()
         val events = AapsEventParser.parse(reconstructIntent(inputData))
         return try {
             val inserted = events.count { repository.insert(it) }

@@ -70,7 +70,9 @@ class CgmServiceManager(
         return manager.activeNotifications.any { it.id == CGM_SYNC_NOTIFICATION_ID }
     }
 
-    private fun stopAll() {
+    /** CGM turned off: nothing should keep running for it. */
+    fun stopAll() {
+        currentSource = null
         context.stopService(Intent().setClass(context, RemoteCgmSyncService::class.java))
         context.stopService(Intent().setClass(context, BroadcastIntentHealthSyncService::class.java))
     }

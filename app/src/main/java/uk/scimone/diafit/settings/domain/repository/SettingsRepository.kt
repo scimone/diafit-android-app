@@ -3,14 +3,28 @@ package uk.scimone.diafit.settings.domain.repository
 import uk.scimone.diafit.settings.domain.model.AiConfig
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 
 interface SettingsRepository {
-    suspend fun getCgmSource(): CgmSource
-    suspend fun setCgmSource(source: CgmSource)
-    suspend fun getBolusSource(): BolusSource
-    suspend fun setBolusSource(source: BolusSource)
+    /** Connectors the user has connected (any number). */
+    suspend fun getEnabledConnectors(): Set<Connector>
+    /**
+     * Connects or disconnects [connector]. Connecting makes it the source of every data type it provides
+     * that has no source yet; disconnecting hands its types to another connected provider, or to none.
+     */
+    suspend fun setConnectorEnabled(connector: Connector, enabled: Boolean)
+    /** The connector feeding [type], or null when the user turned that data off / nothing is connected. */
+    /** Health Connect is connected and at least one activity data type is switched on. */
+    suspend fun isActivityEnabled(): Boolean
+    suspend fun getSelection(type: DataType): Connector?
+    suspend fun setSelection(type: DataType, connector: Connector?)
+
+    /** The CGM connector as the sync layer knows it; null when CGM is off. */
+    suspend fun getCgmSource(): CgmSource?
+    suspend fun getBolusSource(): BolusSource?
 
     suspend fun getTargetRange(): SettingsGlucoseTargetRange
     suspend fun setTargetRange(range: SettingsGlucoseTargetRange)

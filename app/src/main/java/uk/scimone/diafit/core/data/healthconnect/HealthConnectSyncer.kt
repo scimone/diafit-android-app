@@ -21,6 +21,8 @@ import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
 import uk.scimone.diafit.core.domain.repository.ActivityRepository
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import java.time.Duration
 import java.time.Instant
@@ -70,6 +72,7 @@ class HealthConnectSyncer(
         runCatching {
             val granted = manager.grantedPermissions()
             val now = Instant.now()
+            val wants = DataType.ACTIVITY.associateWith { settings.getSelection(it) == Connector.HEALTH_CONNECT }
             var heartRate = 0; var steps = 0; var sleep = 0; var exercise = 0
             val dayChunks = (days downTo 1).map { daysAgo ->
                 val end = now.minus(Duration.ofDays(daysAgo - 1L))
@@ -78,10 +81,10 @@ class HealthConnectSyncer(
             dayChunks.forEachIndexed { i, (start, end) ->
                 _status.value = HealthConnectSyncStatus.Syncing(i / dayChunks.size.toFloat())
                 if (HealthConnectPermissions.activity.all { it in granted }) {
-                    heartRate += readHeartRate(start, end)
-                    steps += readSteps(start, end)
-                    sleep += readSleep(start, end)
-                    exercise += readExercise(start, end)
+                    if (wants[DataType.HEART_RATE] == true) heartRate += readHeartRate(start, end)
+                    if (wants[DataType.STEPS] == true) steps += readSteps(start, end)
+                    if (wants[DataType.SLEEP] == true) sleep += readSleep(start, end)
+                    if (wants[DataType.EXERCISE] == true) exercise += readExercise(start, end)
                 }
             }
             val summary = HealthConnectImportSummary(heartRate, steps, sleep, exercise, days)

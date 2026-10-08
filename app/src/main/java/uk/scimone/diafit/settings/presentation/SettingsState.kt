@@ -4,14 +4,16 @@ import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
 import uk.scimone.diafit.settings.domain.model.AiConfig
-import uk.scimone.diafit.settings.domain.model.BolusSource
-import uk.scimone.diafit.settings.domain.model.CgmSource
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 
 data class SettingsState(
-    val selectedCgmSource: CgmSource = CgmSource.JUGGLUCO,
-    val selectedBolusSource: BolusSource = BolusSource.AAPS,
+    /** Connected connectors (any number) and the one feeding each data type (null = off). */
+    val enabledConnectors: Set<Connector> = emptySet(),
+    val selections: Map<DataType, Connector?> = emptyMap(),
+    val nightscoutCheck: NightscoutCheckState = NightscoutCheckState.Idle,
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
     val nightscoutConfig: NightscoutConfig = NightscoutConfig(baseUrl = "", apiKey = ""),
     val aiConfig: AiConfig = AiConfig(baseUrl = "", apiKey = ""),
@@ -38,4 +40,11 @@ data class HealthConnectUiState(
 ) {
     /** Importing activity data: switched on and Health Connect still lets us read it. */
     val connected: Boolean get() = enabled && activityGranted
+}
+
+sealed interface NightscoutCheckState {
+    data object Idle : NightscoutCheckState
+    data object Checking : NightscoutCheckState
+    data object Ok : NightscoutCheckState
+    data class Failed(val message: String) : NightscoutCheckState
 }

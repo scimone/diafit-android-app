@@ -97,7 +97,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             val source = getCgmSourceUseCase()
-            cgmServiceManager.start(source)  // start service on app launch
+            if (source != null) cgmServiceManager.start(source) else cgmServiceManager.stopAll()  // start service on app launch
             Log.d("MainActivity", "Starting CGM Service with source: $source")
         }
 
@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 settingsViewModel.restartCgmServiceEvent.collect { source ->
-                    cgmServiceManager.start(source)
+                    if (source != null) cgmServiceManager.start(source) else cgmServiceManager.stopAll()
                 }
             }
         }

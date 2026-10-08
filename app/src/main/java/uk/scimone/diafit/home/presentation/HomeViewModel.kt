@@ -228,7 +228,7 @@ class HomeViewModel(
 
     private fun observeActivity(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
-            val connected = settingsRepository.isHealthConnectEnabled()
+            val connected = settingsRepository.isActivityEnabled()
             _state.update { it.copy(activityConnected = connected) }
             observeActivitySinceUseCase(nowMinus24h, userId)
                 .catch { e -> Log.e("HomeViewModel", "Failed to load activity data", e) }

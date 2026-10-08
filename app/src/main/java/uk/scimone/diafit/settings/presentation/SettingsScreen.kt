@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
@@ -50,8 +52,9 @@ import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import uk.scimone.diafit.settings.domain.model.BolusSource
-import uk.scimone.diafit.settings.domain.model.CgmSource
+import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
+import uk.scimone.diafit.settings.domain.model.connectorsProviding
 
 @Composable
 fun SettingsScreen(
@@ -81,12 +84,14 @@ fun SettingsScreen(
         )
     }
 
-    // The permission dialog is Health Connect's own; the CGM one is only asked for when that source is picked.
-    val activityPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
-        viewModel.onActivityPermissionsResult()
+    // Health Connect's own dialog; glucose and activity are asked for together.
+    val healthConnectPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.onHealthConnectPermissionsResult()
     }
-    val glucosePermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
-        viewModel.onGlucosePermissionResult()
+    val connectHealthConnect = {
+        healthConnectPermissions.launch(
+            HealthConnectPermissions.activity + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND
+        )
     }
 
     Column(
@@ -98,44 +103,70 @@ fun SettingsScreen(
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
-        SettingsSection(title = "CGM data source", icon = Icons.Filled.Sensors) {
-            CgmSource.values().forEach { source ->
-                val healthConnect = source == CgmSource.HEALTH_CONNECT
-                SelectableRow(
-                    label = if (healthConnect) source.displayName else source.name,
-                    caption = if (healthConnect) "Blood glucose another app wrote to Health Connect" else null,
-                    selected = source == state.selectedCgmSource,
-                    enabled = !healthConnect || state.healthConnect.availability == HealthConnectAvailability.AVAILABLE,
-                    onClick = {
-                        // Health Connect needs its own read permission for blood glucose first.
-                        if (healthConnect && !state.healthConnect.glucoseGranted) {
-                            glucosePermissions.launch(HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND)
-                        } else {
-                            viewModel.onCgmSourceSelected(source)
+        SettingsSection(title = "Connectors", icon = Icons.Filled.Hub) {
+            Text(
+                "Connect the apps and services Diafit should get data from. You can connect as many as you like, then choose below which one feeds each kind of data.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Connector.values().forEach { connector ->
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+                val enabled = connector in state.enabledConnectors
+                val unavailable = connector == Connector.HEALTH_CONNECT &&
+                    state.healthConnect.availability != HealthConnectAvailability.AVAILABLE
+                ConnectorHeader(
+                    connector = connector,
+                    enabled = enabled,
+                    switchEnabled = !unavailable || enabled,
+                    onToggle = { on ->
+                        when {
+                            connector == Connector.HEALTH_CONNECT && on -> connectHealthConnect()
+                            connector == Connector.HEALTH_CONNECT -> viewModel.disconnectHealthConnect()
+                            else -> viewModel.onConnectorToggled(connector, on)
                         }
                     }
                 )
+                if (connector == Connector.HEALTH_CONNECT && (enabled || unavailable)) {
+                    Spacer(Modifier.height(8.dp))
+                    HealthConnectCard(
+                        state = state.healthConnect,
+                        wanted = DataType.ACTIVITY.filter { state.selections[it] == Connector.HEALTH_CONNECT }.toSet(),
+                        onConnect = connectHealthConnect,
+                        onSyncNow = { viewModel.syncHealthConnectNow() },
+                        onBackfill = { viewModel.syncHealthConnectNow(backfill = true) },
+                        onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
+                        onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
+                    )
+                } else if (enabled) {
+                    Spacer(Modifier.height(8.dp))
+                    when (connector) {
+                        Connector.NIGHTSCOUT -> NightscoutConnectorSetup(state, viewModel)
+                        Connector.AAPS -> SetupHint("In AAPS, turn on its data broadcast so Diafit receives treatments (Config Builder → Sync → NSClient, and the Data broadcaster plugin for temp basals). Diafit doesn't need a login.")
+                        Connector.XDRIP -> SetupHint("In xDrip+: Settings → Inter-app settings → Broadcast locally. Diafit then receives every reading; no login needed.")
+                        Connector.JUGGLUCO -> SetupHint("In Juggluco: Settings → Data exchange → Glucodata broadcast, then switch on Diafit in the list of apps. No login needed.")
+                        else -> Unit
+                    }
+                }
             }
         }
 
-        SettingsSection(title = "Health Connect", icon = Icons.Filled.MonitorHeart) {
-            HealthConnectCard(
-                state = state.healthConnect,
-                onConnect = { activityPermissions.launch(HealthConnectPermissions.activity + HealthConnectPermissions.BACKGROUND) },
-                onSyncNow = { viewModel.syncHealthConnectNow() },
-                onBackfill = { viewModel.syncHealthConnectNow(backfill = true) },
-                onDisconnect = viewModel::disconnectHealthConnect,
-                onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
-                onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
+        SettingsSection(title = "Data sources", icon = Icons.Filled.Tune) {
+            Text(
+                "Choose which connector feeds each kind of data, or switch it off if you don't want it in Diafit.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        SettingsSection(title = "Bolus data source", icon = Icons.Filled.Vaccines) {
-            BolusSource.values().forEach { source ->
-                SelectableRow(
-                    label = source.name,
-                    selected = source == state.selectedBolusSource,
-                    onClick = { viewModel.onBolusSourceSelected(source) }
+            DataType.values().forEach { type ->
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                DataTypeSourceRow(
+                    type = type,
+                    enabledConnectors = state.enabledConnectors,
+                    selected = state.selections[type],
+                    onSelect = { viewModel.onSelectionChanged(type, it) }
                 )
             }
         }
@@ -145,16 +176,6 @@ fun SettingsScreen(
                 lower = state.glucoseTargetRange.lowerBound,
                 upper = state.glucoseTargetRange.upperBound,
                 onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
-            )
-        }
-
-        SettingsSection(title = "Nightscout", icon = Icons.Filled.CloudQueue) {
-            ServerConfigInput(
-                baseUrl = state.nightscoutConfig.baseUrl,
-                apiKey = state.nightscoutConfig.apiKey,
-                baseUrlLabel = "Base URL",
-                apiKeyLabel = "API secret",
-                onConfigChanged = { baseUrl, apiKey -> viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
             )
         }
 
@@ -272,19 +293,13 @@ private fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit,
 @Composable
 private fun HealthConnectCard(
     state: HealthConnectUiState,
+    wanted: Set<DataType>,
     onConnect: () -> Unit,
     onSyncNow: () -> Unit,
     onBackfill: () -> Unit,
-    onDisconnect: () -> Unit,
     onInstall: () -> Unit,
     onOpenHealthConnect: () -> Unit
 ) {
-    Text(
-        "Imports heart rate, steps, sleep and exercise from your watch or phone and shows them under Activity on Home and History.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(Modifier.height(12.dp))
     when (state.availability) {
         HealthConnectAvailability.UNAVAILABLE, HealthConnectAvailability.UPDATE_REQUIRED -> {
             val update = state.availability == HealthConnectAvailability.UPDATE_REQUIRED
@@ -298,12 +313,12 @@ private fun HealthConnectCard(
         HealthConnectAvailability.AVAILABLE -> {
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                listOf("Heart rate", "Steps", "Sleep", "Exercise").forEach {
+                DataType.ACTIVITY.forEach { type ->
                     AssistChip(
                         onClick = {},
                         enabled = false,
-                        label = { Text(it, style = MaterialTheme.typography.labelMedium) },
-                        leadingIcon = if (state.connected) {
+                        label = { Text(type.label, style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = if (state.connected && type in wanted) {
                             { Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary) }
                         } else null
                     )
@@ -318,7 +333,7 @@ private fun HealthConnectCard(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                Button(onClick = onConnect) { Text("Connect Health Connect") }
+                Button(onClick = onConnect) { Text("Allow access") }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "The last 14 days are imported when you connect, then new data every 15 minutes.",
@@ -355,8 +370,10 @@ private fun HealthConnectCard(
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val missing = listOfNotNull(
-                        "heart rate".takeIf { sum.heartRate == 0 }, "steps".takeIf { sum.steps == 0 },
-                        "sleep".takeIf { sum.sleep == 0 }, "workouts".takeIf { sum.exercise == 0 }
+                        "heart rate".takeIf { DataType.HEART_RATE in wanted && sum.heartRate == 0 },
+                        "steps".takeIf { DataType.STEPS in wanted && sum.steps == 0 },
+                        "sleep".takeIf { DataType.SLEEP in wanted && sum.sleep == 0 },
+                        "workouts".takeIf { DataType.EXERCISE in wanted && sum.exercise == 0 }
                     )
                     if (missing.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
@@ -364,7 +381,7 @@ private fun HealthConnectCard(
                         Text(
                             "No ${missing.joinToString(", ")} data found. Diafit shows what other apps (your watch or fitness app) write to Health Connect; see Manage in Health Connect → Data and access.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (missing.size == 4) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (missing.size == wanted.size) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -380,13 +397,86 @@ private fun HealthConnectCard(
                     OutlinedButton(onClick = onSyncNow, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Sync now") }
                     OutlinedButton(onClick = onBackfill, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Re-import 2 weeks") }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = onOpenHealthConnect) { Text("Manage in Health Connect") }
-                    TextButton(onClick = onDisconnect) { Text("Disconnect") }
-                }
+                TextButton(onClick = onOpenHealthConnect) { Text("Manage in Health Connect") }
             }
         }
     }
+}
+
+@Composable
+private fun ConnectorHeader(connector: Connector, enabled: Boolean, switchEnabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(connector.displayName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(connector.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = enabled, onCheckedChange = onToggle, enabled = switchEnabled)
+    }
+}
+
+@Composable
+private fun SetupHint(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun NightscoutConnectorSetup(state: SettingsState, viewModel: SettingsViewModel) {
+    ServerConfigInput(
+        baseUrl = state.nightscoutConfig.baseUrl,
+        apiKey = state.nightscoutConfig.apiKey,
+        baseUrlLabel = "Address (https://…)",
+        apiKeyLabel = "API secret or access token",
+        onConfigChanged = { baseUrl, apiKey -> viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = viewModel::testNightscout, enabled = state.nightscoutCheck != NightscoutCheckState.Checking) {
+            Text("Test connection")
+        }
+        Spacer(Modifier.width(12.dp))
+        when (val check = state.nightscoutCheck) {
+            NightscoutCheckState.Idle -> Unit
+            NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            NightscoutCheckState.Ok -> {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Connected", style = MaterialTheme.typography.bodyMedium)
+            }
+            is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+/** One data type: the connectors that can feed it (radio list, with Off), or what to connect when there are none. */
+@Composable
+private fun DataTypeSourceRow(
+    type: DataType,
+    enabledConnectors: Set<Connector>,
+    selected: Connector?,
+    onSelect: (Connector?) -> Unit
+) {
+    val providers = connectorsProviding(type)
+    val available = providers.filter { it in enabledConnectors }
+    Text(type.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+    if (available.isEmpty()) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "No connector set up for this. Connect ${providers.joinToString(", ", transform = Connector::displayName)} above to get it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    available.forEach { connector ->
+        SelectableRow(label = connector.displayName, selected = connector == selected, onClick = { onSelect(connector) })
+    }
+    SelectableRow(
+        label = "Off",
+        caption = if (selected == null) "Not shown in Diafit" else null,
+        selected = selected == null,
+        onClick = { onSelect(null) }
+    )
 }
 
 private fun formatSyncTime(time: Long): String {

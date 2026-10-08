@@ -9,7 +9,7 @@ class SyncBolusDataUseCase(
     private val sources: Map<BolusSource, HealthSyncSource>
 ) {
     suspend operator fun invoke() {
-        val currentSource = getBolusSourceUseCase()
+        val currentSource = getBolusSourceUseCase() ?: return
         val actualSource = sources[currentSource]
             ?: error("Unsupported Bolus source: $currentSource")
         actualSource.sync()
