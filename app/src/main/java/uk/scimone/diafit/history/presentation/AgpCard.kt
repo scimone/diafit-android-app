@@ -69,7 +69,6 @@ internal fun AgpCard(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         color = uk.scimone.diafit.history.presentation.components.stripBackground(),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         if (agp == null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
