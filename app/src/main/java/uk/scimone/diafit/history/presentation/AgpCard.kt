@@ -83,7 +83,32 @@ internal class AgpBands(
     val outerHigh: FloatArray
 ) {
     val bins: Int get() = median.size
+
+    /**
+     * For display: every curve blurred with a circular Gaussian of [sigmaMinutes] (the day wraps at midnight), so
+     * the chart reads as smooth curves rather than bin-to-bin noise. Empty bins stay empty and don't pull neighbours.
+     */
+    fun smoothed(sigmaMinutes: Float = DISPLAY_SMOOTHING_MINUTES): AgpBands {
+        val sigma = sigmaMinutes / (24 * 60f / bins)
+        val radius = kotlin.math.ceil(3 * sigma).toInt()
+        val kernel = FloatArray(2 * radius + 1) { val d = it - radius; kotlin.math.exp(-d * d / (2 * sigma * sigma)) }
+        fun FloatArray.blur() = FloatArray(size) { i ->
+            if (this[i].isNaN()) Float.NaN else {
+                var sum = 0f
+                var weight = 0f
+                for (k in kernel.indices) {
+                    val v = this[(i + k - radius + size * 2) % size]
+                    if (!v.isNaN()) { sum += v * kernel[k]; weight += kernel[k] }
+                }
+                sum / weight
+            }
+        }
+        return AgpBands(outerLow.blur(), low.blur(), median.blur(), high.blur(), outerHigh.blur())
+    }
 }
+
+/** Display smoothing of the AGP curves (Gaussian sigma), shared by History and Patterns. */
+private const val DISPLAY_SMOOTHING_MINUTES = 25f
 
 internal fun AgpProfile.toBands() = AgpBands(p5, p25, median, p75, p95)
 
@@ -106,6 +131,7 @@ internal fun AgpPlot(
     val dim = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val bands = remember(bands) { bands.smoothed() }
     val yMax = remember(bands) {
         val top = bands.outerHigh.filter { !it.isNaN() }.maxOrNull() ?: 250f
         maxOf(250f, kotlin.math.ceil(top / 50f) * 50f).coerceAtMost(400f)
@@ -150,11 +176,8 @@ internal fun AgpPlot(
         }
 
         val line = Path()
-        var open = false
-        for (i in 0 until n) {
-            val v = bands.median[i]
-            if (v.isNaN()) { open = false; continue }
-            if (open) line.lineTo(x(i), y(v)) else { line.moveTo(if (i == 0) 0f else x(i), y(v)); open = true }
+        forEachRun(bands.median, bands.median) { i, j ->
+            line.curveThrough(edgePoints(bands.median, i, j, n, w, ::x, ::y), moveFirst = true)
         }
         // Same zone clipping as the bands: the line takes the zone's colour, lightened so it stands out from the bands.
         val stroke = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -181,23 +204,49 @@ internal fun AgpPlot(
     }
 }
 
-/** Fills the area between [lo] and [hi] as one path per run of bins that have data, edges extended to the card sides. */
+/** Fills the area between [lo] and [hi] as one curved path per run of bins that have data, edges extended to the card sides. */
 private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y: (Float) -> Float, color: Color) {
     val n = lo.size
-    var i = 0
-    while (i < n) {
-        if (lo[i].isNaN() || hi[i].isNaN()) { i++; continue }
-        var j = i
-        while (j + 1 < n && !lo[j + 1].isNaN() && !hi[j + 1].isNaN()) j++
+    forEachRun(lo, hi) { i, j ->
         val p = Path()
-        if (i == 0) p.moveTo(0f, y(hi[0])).also { p.lineTo(x(0), y(hi[0])) } else p.moveTo(x(i), y(hi[i]))
-        for (k in i + 1..j) p.lineTo(x(k), y(hi[k]))
-        if (j == n - 1) p.lineTo(x(n), y(hi[j]).also { })
-        if (j == n - 1) p.lineTo(x(n), y(lo[j]))
-        for (k in j downTo i) p.lineTo(x(k), y(lo[k]))
-        if (i == 0) p.lineTo(0f, y(lo[0]))
+        p.curveThrough(edgePoints(hi, i, j, n, size.width, x, y), moveFirst = true)
+        p.curveThrough(edgePoints(lo, i, j, n, size.width, x, y).asReversed(), moveFirst = false)
         p.close()
         drawPath(p, color)
+    }
+}
+
+/** Calls [block] with the first and last bin of every run where both arrays have data. */
+private inline fun forEachRun(a: FloatArray, b: FloatArray, block: (Int, Int) -> Unit) {
+    val n = a.size
+    var i = 0
+    while (i < n) {
+        if (a[i].isNaN() || b[i].isNaN()) { i++; continue }
+        var j = i
+        while (j + 1 < n && !a[j + 1].isNaN() && !b[j + 1].isNaN()) j++
+        block(i, j)
         i = j + 1
     }
+}
+
+/** The points of [v] over bins [i]..[j], stretched to the chart's left/right edge when the run touches it. */
+private fun edgePoints(v: FloatArray, i: Int, j: Int, n: Int, width: Float, x: (Int) -> Float, y: (Float) -> Float): List<Offset> =
+    buildList {
+        if (i == 0) add(Offset(0f, y(v[0])))
+        for (k in i..j) add(Offset(x(k), y(v[k])))
+        if (j == n - 1) add(Offset(width, y(v[j])))
+    }
+
+/** A smooth curve through [points]: quadratic segments between their midpoints, with each point as control. */
+private fun Path.curveThrough(points: List<Offset>, moveFirst: Boolean) {
+    if (points.isEmpty()) return
+    val first = points[0]
+    if (moveFirst) moveTo(first.x, first.y) else lineTo(first.x, first.y)
+    for (k in 1 until points.size) {
+        val prev = points[k - 1]
+        val cur = points[k]
+        quadraticTo(prev.x, prev.y, (prev.x + cur.x) / 2, (prev.y + cur.y) / 2)
+    }
+    val last = points.last()
+    lineTo(last.x, last.y)
 }
