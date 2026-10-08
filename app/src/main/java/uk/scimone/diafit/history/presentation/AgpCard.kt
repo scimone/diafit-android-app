@@ -112,10 +112,9 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
             if (v.isNaN()) { open = false; continue }
             if (open) line.lineTo(x(i), y(v)) else { line.moveTo(if (i == 0) 0f else x(i), y(v)); open = true }
         }
-        drawPath(
-            line, InRange,
-            style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
+        // Same zone clipping as the bands: the line is red below range and purple above it.
+        val stroke = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) { drawPath(line, color, style = stroke) }
     }
 }
 

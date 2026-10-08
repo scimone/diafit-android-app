@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
@@ -58,10 +59,11 @@ fun HistoryScreen(
             onRange = viewModel::setRange,
             tab = tab,
             onTab = { tab = it },
+            weekdays = state.weekdays,
+            onWeekdays = viewModel::setWeekdays,
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
-        WeekdayFilterRow(state.weekdays, viewModel::setWeekdays)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -110,6 +112,8 @@ private fun PeriodHeader(
     onRange: (HistoryRange) -> Unit,
     tab: HistoryTab,
     onTab: (HistoryTab) -> Unit,
+    weekdays: Set<DayOfWeek>,
+    onWeekdays: (Set<DayOfWeek>) -> Unit,
     onOlder: () -> Unit,
     onNewer: () -> Unit
 ) {
@@ -134,6 +138,7 @@ private fun PeriodHeader(
             }
         }
         IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
+        WeekdayFilterButton(weekdays, onWeekdays)
         // View switch: shows the icon of the view it leads to.
         FilledTonalIconButton(onClick = { onTab(if (tab == HistoryTab.CHARTS) HistoryTab.STATS else HistoryTab.CHARTS) }) {
             if (tab == HistoryTab.CHARTS) Icon(Icons.Outlined.BarChart, "Show statistics")
@@ -148,38 +153,51 @@ private val WEEKEND = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 private val WORK_DAYS = WEEKDAYS.toSet()
 
 /**
- * One slim row to filter every chart of the page by weekday: seven round day toggles (none selected = all days)
- * and two shortcuts for Mon–Fri and Sat–Sun, which a second tap clears.
+ * Weekday filter as one icon in the period header (tonal, with the number of chosen days, once active). It opens a small
+ * popup with seven round day toggles (none chosen = all days) and shortcuts for Mon–Fri and Sat–Sun, which a second tap clears.
  */
 @Composable
-private fun WeekdayFilterRow(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        DayOfWeek.entries.forEach { d ->
-            val on = d in selected
-            val shape = androidx.compose.foundation.shape.CircleShape
-            Box(
-                Modifier
-                    .size(28.dp)
-                    .clip(shape)
-                    .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .border(1.dp, if (on) Color.Transparent else MaterialTheme.colorScheme.outlineVariant, shape)
-                    .clickable { onChange(if (on) selected - d else selected + d) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    d.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+private fun WeekdayFilterButton(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val active = selected.isNotEmpty()
+    Box {
+        BadgedBox(badge = { if (active) Badge { Text(selected.size.toString()) } }) {
+            IconButton(
+                onClick = { open = true },
+                colors = if (active) IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary) else IconButtonDefaults.iconButtonColors()
+            ) { Icon(Icons.Outlined.FilterList, "Filter by weekday") }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Weekdays", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    DayOfWeek.entries.forEach { d ->
+                        val on = d in selected
+                        val shape = androidx.compose.foundation.shape.CircleShape
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .clip(shape)
+                                .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .border(1.dp, if (on) Color.Transparent else MaterialTheme.colorScheme.outlineVariant, shape)
+                                .clickable { onChange(if (on) selected - d else selected + d) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                d.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ShortcutChip("Mon–Fri", selected == WORK_DAYS) { onChange(if (selected == WORK_DAYS) emptySet() else WORK_DAYS) }
+                    ShortcutChip("Sat–Sun", selected == WEEKEND) { onChange(if (selected == WEEKEND) emptySet() else WEEKEND) }
+                    if (active) ShortcutChip("All", false) { onChange(emptySet()) }
+                }
             }
         }
-        Spacer(Modifier.weight(1f))
-        ShortcutChip("Mon–Fri", selected == WORK_DAYS) { onChange(if (selected == WORK_DAYS) emptySet() else WORK_DAYS) }
-        ShortcutChip("Sat–Sun", selected == WEEKEND) { onChange(if (selected == WEEKEND) emptySet() else WEEKEND) }
     }
 }
 
