@@ -16,6 +16,9 @@ import uk.scimone.diafit.settings.di.settingsModule
 import uk.scimone.diafit.profile.di.profileModule
 import uk.scimone.diafit.patterns.di.patternsModule
 import uk.scimone.diafit.core.di.syncModule
+import uk.scimone.diafit.backendsync.BackendSyncFeature
+import uk.scimone.diafit.backendsync.data.BackendSyncScheduler
+import uk.scimone.diafit.backendsync.di.backendSyncModule
 import java.util.concurrent.TimeUnit
 
 class DiafitApp : Application() {
@@ -36,7 +39,7 @@ class DiafitApp : Application() {
                     settingsModule,
                     profileModule,
                     patternsModule
-                )
+                ) + if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()
             )
         }
 
@@ -51,6 +54,10 @@ class DiafitApp : Application() {
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler>(uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler::class.java).schedulePeriodic()
         // Glucose pattern alerts (14-day AGP), twice a day.
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.patterns.data.PatternScheduler>(uk.scimone.diafit.patterns.data.PatternScheduler::class.java).schedulePeriodic()
+        // Optional upload to the user's Diafit backend; the worker is a no-op until one is configured.
+        if (BackendSyncFeature.ENABLED) {
+            org.koin.java.KoinJavaComponent.get<BackendSyncScheduler>(BackendSyncScheduler::class.java).schedulePeriodic()
+        }
     }
 
 }

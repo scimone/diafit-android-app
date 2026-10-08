@@ -125,6 +125,11 @@ class MainActivity : ComponentActivity() {
         nightscoutSyncScheduler.syncNow()
         deviceExpiryScheduler.checkNow()
         patternScheduler.checkNow()
+        if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
+            org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.backendsync.data.BackendSyncScheduler>(
+                uk.scimone.diafit.backendsync.data.BackendSyncScheduler::class.java
+            ).syncNow()
+        }
         pendingLink.value = intent?.getStringExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK)
         intent?.removeExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK) // not again on recreate
 

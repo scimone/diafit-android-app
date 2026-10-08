@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Tune
@@ -223,6 +224,12 @@ fun SettingsScreen(
                 onModelChanged = viewModel::onAiModelChanged,
                 onLoadModels = viewModel::loadAiModels
             )
+        }
+
+        if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
+            SettingsSection(title = "Backend sync", icon = Icons.Filled.CloudUpload) {
+                uk.scimone.diafit.backendsync.presentation.BackendSyncSettings()
+            }
         }
 
         SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {

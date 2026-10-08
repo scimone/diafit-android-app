@@ -42,6 +42,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pumpEventDao(): PumpEventDao
     abstract fun activityDao(): ActivityDao
     abstract fun notificationDao(): NotificationDao
+    /** Optional backend upload (see BackendSyncFeature); read-only queries, no tables of its own. */
+    abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao
 
     companion object {
         /** Notifications can be removed by the user (soft delete, so they aren't raised again). */
