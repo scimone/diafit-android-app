@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudQueue
@@ -178,6 +179,21 @@ fun SettingsScreen(
                 upper = state.glucoseTargetRange.upperBound,
                 onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
             )
+        }
+
+        SettingsSection(title = "Basal chart", icon = Icons.AutoMirrored.Filled.ShowChart) {
+            uk.scimone.diafit.settings.domain.model.BasalStyle.values().forEach { style ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onBasalStyleChanged(style) }
+                ) {
+                    RadioButton(selected = state.basalStyle == style, onClick = { viewModel.onBasalStyleChanged(style) })
+                    Column(Modifier.weight(1f)) {
+                        Text(style.label, style = MaterialTheme.typography.bodyLarge)
+                        Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
 
         SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {

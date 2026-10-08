@@ -157,6 +157,8 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     modifier = Modifier.weight(1f),
                     activityUnitsPerDp = bolusScale.value,
                     segments = state.basal,
+                    style = state.basalStyle,
+                    smbs = state.smbs,
                     scrollState = scrollState,
                     zoomState = zoomState,
                     window = window,

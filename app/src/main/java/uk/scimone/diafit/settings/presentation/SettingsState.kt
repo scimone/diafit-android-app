@@ -16,6 +16,7 @@ data class SettingsState(
     val selections: Map<DataType, Connector?> = emptyMap(),
     val nightscoutCheck: NightscoutCheckState = NightscoutCheckState.Idle,
     val backfill: BackfillStatus = BackfillStatus.Idle,
+    val basalStyle: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
     val nightscoutConfig: NightscoutConfig = NightscoutConfig(baseUrl = "", apiKey = ""),
     val aiConfig: AiConfig = AiConfig(baseUrl = "", apiKey = ""),

@@ -1,6 +1,7 @@
 package uk.scimone.diafit.settings.domain.repository
 
 import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.BasalStyle
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.Connector
@@ -28,6 +29,9 @@ interface SettingsRepository {
 
     suspend fun getTargetRange(): SettingsGlucoseTargetRange
     suspend fun setTargetRange(range: SettingsGlucoseTargetRange)
+
+    suspend fun getBasalStyle(): BasalStyle
+    suspend fun setBasalStyle(style: BasalStyle)
 
     suspend fun getNightscoutConfig(): NightscoutConfig
     suspend fun setNightscoutConfig(config: NightscoutConfig)

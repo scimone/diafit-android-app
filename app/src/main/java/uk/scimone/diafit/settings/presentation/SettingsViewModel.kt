@@ -157,6 +157,7 @@ class SettingsViewModel(
 
             _state.value = _state.value.copy(
                 glucoseTargetRange = range,
+                basalStyle = settingsRepository.getBasalStyle(),
                 nightscoutConfig = nightscoutConfig,
                 aiConfig = aiConfig,
                 isBatteryOptimizationIgnored = batteryIgnored,
@@ -220,6 +221,14 @@ class SettingsViewModel(
                     is NightscoutCheck.Failed -> NightscoutCheckState.Failed(result.message)
                 }
             )
+        }
+    }
+
+    fun onBasalStyleChanged(style: uk.scimone.diafit.settings.domain.model.BasalStyle) {
+        viewModelScope.launch {
+            settingsRepository.setBasalStyle(style)
+            _state.value = _state.value.copy(basalStyle = style)
+            SettingsChangeBus.notifyChange()
         }
     }
 

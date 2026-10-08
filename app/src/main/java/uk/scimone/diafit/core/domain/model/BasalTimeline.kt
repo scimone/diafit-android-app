@@ -9,6 +9,11 @@ import java.time.ZoneId
  */
 data class BasalSegment(val startUtc: Long, val endUtc: Long, val delivered: Double, val scheduled: Double?)
 
+/** A super micro bolus the loop gave: [units] at [timeUtc]. */
+data class SmbMark(val timeUtc: Long, val units: Double)
+
+fun List<BolusEntity>.toSmbMarks(): List<SmbMark> = filter { it.isSmb }.map { SmbMark(it.timestampUtc, it.value.toDouble()) }
+
 private const val STEP_MS = 60_000L
 
 /**

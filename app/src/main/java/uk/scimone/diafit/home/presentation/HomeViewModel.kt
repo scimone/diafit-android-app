@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import uk.scimone.diafit.core.domain.usecase.ObserveActivitySinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllBolusSinceUseCase
 import uk.scimone.diafit.core.domain.usecase.GetAllMealsSinceUseCase
+import uk.scimone.diafit.core.domain.model.toSmbMarks
 import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.toInsulinActivityChartData
@@ -72,6 +73,7 @@ class HomeViewModel(
         observeActivity()
         observeBasal()
         loadTargetRange()
+        viewModelScope.launch { _state.update { it.copy(basalStyle = settingsRepository.getBasalStyle()) } }
     }
 
     private fun observeLatestCgm() {
@@ -138,6 +140,7 @@ class HomeViewModel(
                     _state.update {
                         it.copy(
                             bolusHistory = bolusUiList,
+                            smbs = bolusList.toSmbMarks(),
                             insulinActivityHistory = insulinActivityList,
                             isLoading = false
                         )

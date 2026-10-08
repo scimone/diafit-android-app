@@ -15,6 +15,7 @@ import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.Connector
 import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
+import uk.scimone.diafit.settings.domain.model.BasalStyle
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 
@@ -108,6 +109,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             .putInt("glucose_lower_bound", range.lowerBound)
             .putInt("glucose_upper_bound", range.upperBound)
             .apply()
+    }
+
+    override suspend fun getBasalStyle(): BasalStyle =
+        BasalStyle.values().firstOrNull { it.name == prefs.getString("basal_style", null) } ?: BasalStyle.RATE
+
+    override suspend fun setBasalStyle(style: BasalStyle) {
+        prefs.edit().putString("basal_style", style.name).apply()
     }
 
     override suspend fun getNightscoutConfig(): NightscoutConfig {

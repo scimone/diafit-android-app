@@ -18,6 +18,8 @@ data class HomeState(
     val carbHistory: List<CarbsChartData> = emptyList(),
     val mealHistory: List<MealEntityUi> = emptyList(),
     val basal: List<BasalSegment> = emptyList(),
+    val smbs: List<uk.scimone.diafit.core.domain.model.SmbMark> = emptyList(),
+    val basalStyle: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
     val activity: ActivityData = ActivityData(),
     /** Health Connect import switched on (decides which "no activity data" message to show). */
     val activityConnected: Boolean = false,

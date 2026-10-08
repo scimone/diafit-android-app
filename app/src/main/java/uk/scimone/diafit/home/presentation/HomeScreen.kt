@@ -300,7 +300,9 @@ fun HomeScreen(
                                     window = window,
                                     geometry = geometry,
                                     headline = headlines.basal.takeIf { nowVisible },
-                                    activityUnitsPerDp = bolusScale.value
+                                    activityUnitsPerDp = bolusScale.value,
+                                    style = state.basalStyle,
+                                    smbs = state.smbs
                                 )
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -678,10 +680,12 @@ internal fun BasalDisplay(
     geometry: State<ChartGeometry?>,
     headline: PanelValue? = null,
     /** The bolus panel's y scale, so the basal's insulin activity curve is drawn at the same scale. */
-    activityUnitsPerDp: Double? = null
+    activityUnitsPerDp: Double? = null,
+    style: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
+    smbs: List<uk.scimone.diafit.core.domain.model.SmbMark> = emptyList()
 ) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
-        ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp)
+        ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp, style = style, smbs = smbs)
         PanelTitle("Basal", headline)
     }
 }
