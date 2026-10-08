@@ -96,9 +96,9 @@ internal fun AgpCard(
                         Spacer(Modifier.height(3.dp))
                         // Every day's sittings folded onto one lane, drawn fainter so overlaps deepen.
                         if (layers.treatments) {
-                            TreatmentBand(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale)
+                            TreatmentBand(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale, groupGapMs = 0L)
                             Spacer(Modifier.height(2.dp))
-                            TreatmentBand(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale)
+                            TreatmentBand(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale, groupGapMs = 0L)
                             Spacer(Modifier.height(2.dp))
                         }
                         if (layers.activity) {
