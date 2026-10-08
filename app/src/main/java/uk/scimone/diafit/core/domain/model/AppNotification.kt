@@ -4,7 +4,11 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** An in-app notification (also pushed to the phone). [dedupeKey] makes sure the same alert is only raised once. */
+/**
+ * An in-app notification (also pushed to the phone). [dedupeKey] makes sure the same alert is only raised once.
+ * [link] says what tapping it opens (`devices`, or `patterns:` + highlighted patterns); null = the Devices page,
+ * which is all that older rows link to.
+ */
 @Entity(indices = [Index(value = ["dedupeKey"], unique = true), Index(value = ["timestampUtc"])])
 data class AppNotificationEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -12,7 +16,8 @@ data class AppNotificationEntity(
     val title: String,
     val text: String,
     val dedupeKey: String,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val link: String? = null
 )
 
 /** Which expiry alert to raise for one consumable, if any. */

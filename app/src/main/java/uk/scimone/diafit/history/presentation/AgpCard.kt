@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
@@ -61,7 +62,7 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
                 Text("No glucose readings in this period", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else Column(Modifier.fillMaxSize()) {
-            AgpPlot(agp, thresholds, Modifier.weight(1f).fillMaxWidth())
+            AgpPlot(agp.toBands(), thresholds, Modifier.weight(1f).fillMaxWidth())
             // The day tracks' own strips, fed every day folded onto one reference day and drawn fainter so overlaps deepen.
             Spacer(Modifier.height(3.dp))
             TreatmentStrip(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale)
@@ -73,29 +74,68 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
     }
 }
 
+/** The five AGP curves, any bin count (History: 96 bins, 5–95 %; Patterns: 288 bins, 10–90 %). NaN = no data. */
+internal class AgpBands(
+    val outerLow: FloatArray,
+    val low: FloatArray,
+    val median: FloatArray,
+    val high: FloatArray,
+    val outerHigh: FloatArray
+) {
+    val bins: Int get() = median.size
+}
+
+internal fun AgpProfile.toBands() = AgpBands(p5, p25, median, p75, p95)
+
+/**
+ * The AGP chart without card or axis. [highlights] are stretches of the day (start/end hour, wrapping midnight
+ * when start > end) washed in [highlightColor] while the rest of the day is dimmed. [yLabels] writes the target
+ * range limits at the left edge.
+ */
 @Composable
-private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Modifier) {
+internal fun AgpPlot(
+    bands: AgpBands,
+    thresholds: GlucoseThresholds,
+    modifier: Modifier,
+    highlights: List<Pair<Int, Int>> = emptyList(),
+    highlightColor: Color = MaterialTheme.colorScheme.primary,
+    yLabels: Boolean = false
+) {
     val guides = hourGuideColor()
     val targetFill = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
-    val yMax = remember(agp) {
-        val top = agp.p95.filter { !it.isNaN() }.maxOrNull() ?: 250f
+    val dim = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val yMax = remember(bands) {
+        val top = bands.outerHigh.filter { !it.isNaN() }.maxOrNull() ?: 250f
         maxOf(250f, kotlin.math.ceil(top / 50f) * 50f).coerceAtMost(400f)
     }
     Canvas(modifier) {
+        val n = bands.bins
         val top = EDGE_PAD_DP.dp.toPx()
         val h = size.height - 2 * top
         val w = size.width
         // Bin centres, extended to both edges so the curves span the whole day like the tracks.
         fun x(bin: Int) = when {
             bin < 0 -> 0f
-            bin >= AgpProfile.BINS -> w
-            else -> w * (bin + 0.5f) / AgpProfile.BINS
+            bin >= n -> w
+            else -> w * (bin + 0.5f) / n
         }
         fun y(v: Float) = top + h * (1f - (v.coerceIn(Y_MIN, yMax) - Y_MIN) / (yMax - Y_MIN))
         val yHigh = y(thresholds.high.toFloat())
         val yLow = y(thresholds.low.toFloat())
+        // Highlighted stretches as x ranges, midnight-wrapping ones split in two.
+        val lit = highlights.flatMap { (start, end) ->
+            if (start > end) listOf(start * w / 24f to w, 0f to end * w / 24f) else listOf(start * w / 24f to end * w / 24f)
+        }.sortedBy { it.first }.fold(mutableListOf<Pair<Float, Float>>()) { merged, r ->
+            // Overlapping stretches (night contains dawn) become one, so washes don't stack and no edge sits inside.
+            val last = merged.lastOrNull()
+            if (last != null && r.first <= last.second) merged[merged.size - 1] = last.first to maxOf(last.second, r.second) else merged += r
+            merged
+        }
 
         drawRect(targetFill, Offset(0f, yHigh), Size(w, yLow - yHigh))
+        for ((from, to) in lit) drawRect(highlightColor.copy(alpha = 0.14f), Offset(from, 0f), Size(to - from, size.height))
         drawHourGuides(guides)
 
         // Each band is drawn three times, clipped to the zone it falls in, so it takes that zone's colour.
@@ -105,14 +145,14 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
             Triple(yLow, size.height, BelowRange)
         )
         for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) {
-            band(agp.p5, agp.p95, ::x, ::y, color.copy(alpha = 0.28f))
-            band(agp.p25, agp.p75, ::x, ::y, color.copy(alpha = 0.75f))
+            band(bands.outerLow, bands.outerHigh, ::x, ::y, color.copy(alpha = 0.28f))
+            band(bands.low, bands.high, ::x, ::y, color.copy(alpha = 0.75f))
         }
 
         val line = Path()
         var open = false
-        for (i in 0 until AgpProfile.BINS) {
-            val v = agp.median[i]
+        for (i in 0 until n) {
+            val v = bands.median[i]
             if (v.isNaN()) { open = false; continue }
             if (open) line.lineTo(x(i), y(v)) else { line.moveTo(if (i == 0) 0f else x(i), y(v)); open = true }
         }
@@ -121,12 +161,29 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
         for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) {
             drawPath(line, androidx.compose.ui.graphics.lerp(color, Color.White, 0.4f), style = stroke)
         }
+
+        if (lit.isNotEmpty()) {
+            // Dim everything outside the highlighted stretches, and edge them so they read as a selection.
+            val edges = lit.flatMap { listOf(it.first, it.second) }.filter { it > 0f && it < w }.sorted()
+            var cursor = 0f
+            for ((from, to) in lit) {
+                if (from > cursor) drawRect(dim, Offset(cursor, 0f), Size(from - cursor, size.height))
+                cursor = maxOf(cursor, to)
+            }
+            if (cursor < w) drawRect(dim, Offset(cursor, 0f), Size(w - cursor, size.height))
+            for (e in edges) drawLine(highlightColor, Offset(e, 0f), Offset(e, size.height), 1.5.dp.toPx())
+        }
+
+        if (yLabels) for (v in listOf(thresholds.low, thresholds.high)) {
+            val text = measurer.measure(v.toString(), labelStyle)
+            drawText(text, topLeft = Offset(4.dp.toPx(), y(v.toFloat()) - text.size.height - 1.dp.toPx()))
+        }
     }
 }
 
 /** Fills the area between [lo] and [hi] as one path per run of bins that have data, edges extended to the card sides. */
 private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y: (Float) -> Float, color: Color) {
-    val n = AgpProfile.BINS
+    val n = lo.size
     var i = 0
     while (i < n) {
         if (lo[i].isNaN() || hi[i].isNaN()) { i++; continue }

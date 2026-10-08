@@ -21,7 +21,7 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
         uk.scimone.diafit.core.domain.model.AppNotificationEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -44,6 +44,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
 
     companion object {
+        /** Notifications say what they open (Devices page, Patterns page with highlights). */
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE AppNotificationEntity ADD COLUMN link TEXT")
+            }
+        }
+
         /** In-app notifications (device expiry alerts). */
         val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {

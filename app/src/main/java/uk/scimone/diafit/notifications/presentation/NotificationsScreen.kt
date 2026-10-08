@@ -43,7 +43,7 @@ import java.util.Locale
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit, onOpen: () -> Unit) {
+fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
     val viewModel: NotificationsViewModel = koinViewModel()
     val items by viewModel.recent.collectAsState()
     val markRead = rememberUpdatedState(viewModel::markAllRead)
@@ -68,7 +68,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: () -> Unit) {
             ) {
                 items(items, key = { it.id }) { n ->
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+                        modifier = Modifier.fillMaxWidth().clickable { onOpen(n.link) },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

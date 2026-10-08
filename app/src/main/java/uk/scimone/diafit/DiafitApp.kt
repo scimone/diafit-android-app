@@ -14,6 +14,7 @@ import uk.scimone.diafit.home.di.homeModule
 import uk.scimone.diafit.journal.di.journalModule
 import uk.scimone.diafit.settings.di.settingsModule
 import uk.scimone.diafit.profile.di.profileModule
+import uk.scimone.diafit.patterns.di.patternsModule
 import uk.scimone.diafit.core.di.syncModule
 import java.util.concurrent.TimeUnit
 
@@ -33,7 +34,8 @@ class DiafitApp : Application() {
                     historyModule,
                     syncModule,
                     settingsModule,
-                    profileModule
+                    profileModule,
+                    patternsModule
                 )
             )
         }
@@ -47,6 +49,8 @@ class DiafitApp : Application() {
         )
         // Sensor / pump-part expiry alerts: survives process death like the watchdog.
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler>(uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler::class.java).schedulePeriodic()
+        // Glucose pattern alerts (14-day AGP), twice a day.
+        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.patterns.data.PatternScheduler>(uk.scimone.diafit.patterns.data.PatternScheduler::class.java).schedulePeriodic()
     }
 
 }

@@ -33,6 +33,7 @@ import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailScreen
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Insights
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -72,6 +73,9 @@ class MainActivity : ComponentActivity() {
     private val pumpEventRepair: uk.scimone.diafit.core.data.repository.PumpEventRepair by inject()
     private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler by inject()
     private val deviceExpiryScheduler: uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler by inject()
+    private val patternScheduler: uk.scimone.diafit.patterns.data.PatternScheduler by inject()
+    /** Link of a tapped push notification, consumed once the UI has opened its page. */
+    private val pendingLink = mutableStateOf<String?>(null)
     private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
     private val setMealValid: SetMealValidUseCase by inject()
     private val getOpenSitting: GetOpenSittingUseCase by inject()
@@ -120,6 +124,9 @@ class MainActivity : ComponentActivity() {
         nightscoutSyncScheduler.schedulePeriodic()
         nightscoutSyncScheduler.syncNow()
         deviceExpiryScheduler.checkNow()
+        patternScheduler.checkNow()
+        pendingLink.value = intent?.getStringExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK)
+        intent?.removeExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK) // not again on recreate
 
         // Android 13+: push notifications (device expiry alerts) need the runtime permission.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -162,6 +169,15 @@ class MainActivity : ComponentActivity() {
                 }
                 val onMealDeleted: (Int) -> Unit = { mealId -> onMealsDeleted(listOf(mealId), "Deleted") }
                 val addCourse: (Int) -> Unit = { mealId -> overlays.add(Overlay.MealEditor(mealId = null, addToMealId = mealId)) }
+                // What a notification opens: the Patterns page with its patterns highlighted, else the Devices page.
+                val openLink: (String?) -> Unit = { link ->
+                    val patterns = uk.scimone.diafit.notifications.domain.parsePatternsLink(link)
+                    overlays.add(if (patterns != null) Overlay.Patterns(patterns) else Overlay.Devices)
+                }
+                val link by pendingLink
+                LaunchedEffect(link) {
+                    link?.let { overlays.clear(); openLink(it); pendingLink.value = null }
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -208,6 +224,14 @@ class MainActivity : ComponentActivity() {
                                         onClick = {
                                             overflowMenuExpanded = false
                                             overlays.add(Overlay.Profile)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Patterns") },
+                                        leadingIcon = { Icon(imageVector = Icons.Filled.Insights, contentDescription = null) },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            overlays.add(Overlay.Patterns())
                                         }
                                     )
                                     DropdownMenuItem(
@@ -316,7 +340,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.ProfileSwitchDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -331,7 +355,12 @@ class MainActivity : ComponentActivity() {
                                 )
                                 is Overlay.Notifications -> uk.scimone.diafit.notifications.presentation.NotificationsScreen(
                                     onBack = { overlays.remove(overlay) },
-                                    onOpen = { overlays.remove(overlay); overlays.add(Overlay.Devices) }
+                                    onOpen = { link -> overlays.remove(overlay); openLink(link) }
+                                )
+                                is Overlay.Patterns -> uk.scimone.diafit.patterns.presentation.PatternsScreen(
+                                    userId = userId,
+                                    highlighted = overlay.highlighted,
+                                    onBack = { overlays.remove(overlay) }
                                 )
                                 is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
@@ -373,6 +402,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK)?.let { pendingLink.value = it }
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -394,6 +428,8 @@ private sealed interface Overlay {
     data object Profile : Overlay
     data object Devices : Overlay
     data object Notifications : Overlay
+    /** The 14-day AGP and its patterns; [highlighted] (pattern texts) start highlighted. */
+    data class Patterns(val highlighted: List<String> = emptyList()) : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
