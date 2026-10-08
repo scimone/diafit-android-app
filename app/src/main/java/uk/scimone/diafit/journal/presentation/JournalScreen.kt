@@ -272,7 +272,7 @@ private fun EmptyJournal(onAddEntry: () -> Unit) {
         Text("Your journal is empty", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Log a meal and see how it moved your glucose.",
+            "Meals you log appear here with how they moved your glucose, together with boluses, lows and highs, device changes, sleep and workouts.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

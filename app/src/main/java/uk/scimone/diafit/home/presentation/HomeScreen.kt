@@ -4,6 +4,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import uk.scimone.diafit.core.domain.model.ActivityLevel
+import uk.scimone.diafit.core.domain.model.at
+import uk.scimone.diafit.core.domain.model.basalInsulinActivity
+import uk.scimone.diafit.core.domain.model.valueAt
 import uk.scimone.diafit.core.domain.model.currentActivityLevel
 import uk.scimone.diafit.core.domain.model.remainingCarbs
 import uk.scimone.diafit.core.domain.model.remainingInsulin
@@ -142,6 +145,7 @@ fun HomeScreen(
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
     val bolusScale = remember { mutableStateOf<Double?>(null) }
+    val basalActivitySeries = remember(state.basal, window.maxX) { basalInsulinActivity(state.basal, window.minX, window.maxX) }
     // The headline values describe "now", so they go away once the now line has been scrolled out of view.
     val nowVisible by remember(window) {
         derivedStateOf { geometry.value?.let { g -> g.xOf(window.now).let { it >= g.left && it <= g.right } } ?: true }
@@ -233,6 +237,8 @@ fun HomeScreen(
                                 geometry = geometry,
                                 reading = inspectedReading,
                                 activity = state.activity.readoutAt(cursorTime),
+                                basalRate = state.basal.at(cursorTime)?.delivered,
+                                basalActivity = basalActivitySeries.valueAt(cursorTime)?.takeIf { state.basal.isNotEmpty() },
                                 bolusUnits = state.insulinActivityHistory
                                     .filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value.toDouble() },
                                 carbGrams = state.carbHistory
@@ -382,7 +388,7 @@ fun HomeScreen(
     }
 }
 
-internal val InspectBarHeight = 40.dp
+internal val InspectBarHeight = 56.dp
 internal const val TapToggleRadiusPx = 48f
 
 /**
@@ -489,6 +495,9 @@ internal fun InspectReadout(
     geometry: State<ChartGeometry?>,
     reading: CgmChartData?,
     activity: ActivityReadout? = null,
+    /** Basal rate (U/h) running at the cursor, and the net insulin activity of the basal then (U/min). */
+    basalRate: Double? = null,
+    basalActivity: Double? = null,
     bolusUnits: Double,
     carbGrams: Int,
     lower: Int,
@@ -506,10 +515,8 @@ internal fun InspectReadout(
                 shadowElevation = 3.dp,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Row(
-                    Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(time, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(8.dp))
                     if (reading != null) {
@@ -534,6 +541,13 @@ internal fun InspectReadout(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
                     )
                 }
+                if (basalRate != null || basalActivity != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        basalRate?.let { ReadoutEvent(Basal, "${formatRate(it)} U/h", firstGap = 0.dp) }
+                        basalActivity?.let { ReadoutEvent(Bolus, "%+.2f U/h activity".format(Locale.US, it * 60), firstGap = if (basalRate != null) 10.dp else 0.dp) }
+                    }
+                }
+                }
             }
         }
     ) { measurables, constraints ->
@@ -547,8 +561,8 @@ internal fun InspectReadout(
 }
 
 @Composable
-private fun ReadoutEvent(color: Color, text: String) {
-    Spacer(Modifier.width(10.dp))
+private fun ReadoutEvent(color: Color, text: String, firstGap: androidx.compose.ui.unit.Dp = 10.dp) {
+    Spacer(Modifier.width(firstGap))
     Box(Modifier.size(8.dp).background(color, CircleShape))
     Spacer(Modifier.width(4.dp))
     Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)

@@ -56,6 +56,18 @@ fun buildBasalTimeline(
     return out
 }
 
+/** The segment covering [timeUtc], or null where no basal is known. */
+fun List<BasalSegment>.at(timeUtc: Long): BasalSegment? = firstOrNull { timeUtc >= it.startUtc && timeUtc < it.endUtc }
+
+/** Linear interpolation of a time-sorted series such as [basalInsulinActivity]'s; null outside it. */
+fun List<Pair<Long, Double>>.valueAt(timeUtc: Long): Double? {
+    val i = indexOfFirst { it.first >= timeUtc }
+    if (i < 0 || (i == 0 && first().first > timeUtc)) return null
+    if (i == 0 || this[i].first == timeUtc) return this[i].second
+    val (t0, v0) = this[i - 1]; val (t1, v1) = this[i]
+    return v0 + (v1 - v0) * (timeUtc - t0).toDouble() / (t1 - t0)
+}
+
 /**
  * Insulin activity (U/min, the same unit as the bolus chart) of the basal alone: every minute's difference
  * between the delivered and the scheduled rate (a temp basal above the schedule adds insulin, below it takes

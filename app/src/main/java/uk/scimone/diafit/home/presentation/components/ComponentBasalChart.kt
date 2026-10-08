@@ -58,15 +58,14 @@ fun ComponentBasalChart(
         val plotBottom = size.height - PlotBottomInset.toPx()
         fun yOf(rate: Double) = plotBottom - (rate / axisMax).toFloat().coerceIn(0f, 1f) * (plotBottom - plotTop)
 
-        // The insulin activity of the basal sits on its own zero line mid-panel (it can go below it); the
-        // forecast tail after "now" is drawn faded like the bolus curve.
-        val zeroY = (plotTop + plotBottom) / 2f
+        // The insulin activity of the basal shares the rate's zero line (the bottom of the plot). The rare, small
+        // negative stretches just dip under it; the forecast tail after "now" is drawn faded like the bolus curve.
+        val zeroY = plotBottom
         val unitsPerPx = (activityUnitsPerDp?.let { it / density }
-            ?: (max(0.0005, activity.maxOf { kotlin.math.abs(it.second) }) * 1.1 / ((plotBottom - plotTop) / 2f)))
-        fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
+            ?: (max(0.0005, activity.maxOf { it.second }) * 1.1 / (plotBottom - plotTop)))
+        fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, size.height)
 
         clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
-            drawLine(Bolus.copy(alpha = 0.35f), Offset(g.left, zeroY), Offset(g.right, zeroY), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 5f)))
             fun drawActivity(points: List<Pair<Long, Double>>, alpha: Float) {
                 if (points.size < 2) return
                 val line = Path().apply { points.forEachIndexed { i, (t, a) -> if (i == 0) moveTo(g.xOf(t), activityY(a)) else lineTo(g.xOf(t), activityY(a)) } }
