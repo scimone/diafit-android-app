@@ -87,6 +87,8 @@ fun ComponentBasalChart(
             drawActivity(listOfNotNull(nowAct) + activity.filter { it.first > window.now }, 0.45f)
         }
 
+        drawLine(Basal, Offset(g.left, zeroY), Offset(g.right, zeroY), strokeWidth = 1.dp.toPx())
+
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
             // Delivered rate: one closed area per run of touching segments, with the step line on top.
             var line: Path? = null
