@@ -56,7 +56,7 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17, AppDatabase.MIGRATION_17_18)
             .build()
     }
 
@@ -66,6 +66,8 @@ val coreModule = module {
     single<BolusDao> { get<AppDatabase>().bolusDao() }
     single<PumpEventDao> { get<AppDatabase>().pumpEventDao() }
     single<ActivityDao> { get<AppDatabase>().activityDao() }
+    single<uk.scimone.diafit.core.data.local.NotificationDao> { get<AppDatabase>().notificationDao() }
+    single { uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler(androidContext()) }
     single<ActivityRepository> { ActivityRepositoryImpl(get()) }
     single { ObserveActivitySinceUseCase(get()) }
     single { GetActivityBetweenUseCase(get()) }

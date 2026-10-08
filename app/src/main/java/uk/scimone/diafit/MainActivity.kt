@@ -31,6 +31,7 @@ import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.profile.presentation.ProfileScreen
 import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailScreen
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sensors
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
     private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository by inject()
     private val pumpEventRepair: uk.scimone.diafit.core.data.repository.PumpEventRepair by inject()
     private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler by inject()
+    private val deviceExpiryScheduler: uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler by inject()
     private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
     private val setMealValid: SetMealValidUseCase by inject()
     private val getOpenSitting: GetOpenSittingUseCase by inject()
@@ -117,6 +119,15 @@ class MainActivity : ComponentActivity() {
         // Nightscout treatments (insulin, carbs, profile, device changes): routine job plus a catch-up on open.
         nightscoutSyncScheduler.schedulePeriodic()
         nightscoutSyncScheduler.syncNow()
+        deviceExpiryScheduler.checkNow()
+
+        // Android 13+: push notifications (device expiry alerts) need the runtime permission.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+                .launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -172,6 +183,15 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             actions = {
+                                val notificationsViewModel: uk.scimone.diafit.notifications.presentation.NotificationsViewModel = org.koin.androidx.compose.koinViewModel()
+                                val unread by notificationsViewModel.unreadCount.collectAsState()
+                                IconButton(onClick = { overlays.add(Overlay.Notifications) }) {
+                                    BadgedBox(badge = {
+                                        if (unread > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
+                                    }) {
+                                        Icon(imageVector = Icons.Filled.Notifications, contentDescription = "Notifications")
+                                    }
+                                }
                                 IconButton(onClick = { overflowMenuExpanded = true }) {
                                     Icon(
                                         imageVector = Icons.Filled.MoreVert,
@@ -296,7 +316,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.ProfileSwitchDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.ProfileSwitchDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -308,6 +328,10 @@ class MainActivity : ComponentActivity() {
                                     onEdit = { overlays.add(Overlay.MealEditor(it)) },
                                     onAddCourse = addCourse,
                                     onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
+                                )
+                                is Overlay.Notifications -> uk.scimone.diafit.notifications.presentation.NotificationsScreen(
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpen = { overlays.remove(overlay); overlays.add(Overlay.Devices) }
                                 )
                                 is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
@@ -369,6 +393,7 @@ private sealed interface Overlay {
     /** The insulin profile AAPS is running (read-only). */
     data object Profile : Overlay
     data object Devices : Overlay
+    data object Notifications : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
     data class MealDetail(val mealId: Int) : Overlay

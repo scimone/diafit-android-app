@@ -68,4 +68,18 @@ class DeviceStatusTest {
         assertEquals(true, uk.scimone.diafit.core.domain.model.deviceLayout(emptyList(), false, "OMNIPOD_DASH").patch)
         assertEquals(false, uk.scimone.diafit.core.domain.model.deviceLayout(emptyList(), false, "ACCU_CHEK_COMBO").patch)
     }
+
+    @Test fun expiryAlertsFireOncePerThreshold() {
+        val h = 3_600_000L
+        fun age(kind: DeviceKind, remainingH: Double) =
+            uk.scimone.diafit.core.domain.model.DeviceAge(kind, 0L, ((kind.defaultHours - remainingH) * h).toLong(), kind.defaultHours)
+        fun alerts(kind: DeviceKind, remainingH: Double) =
+            uk.scimone.diafit.core.domain.model.expiryAlerts(listOf(age(kind, remainingH))) { "t" }.map { it.key }
+        assertEquals(emptyList<String>(), alerts(DeviceKind.SITE, 11.0))
+        assertEquals(listOf("SITE-0-10"), alerts(DeviceKind.SITE, 9.5))
+        assertEquals(listOf("SITE-0-1"), alerts(DeviceKind.SITE, 0.5))
+        assertEquals(emptyList<String>(), alerts(DeviceKind.SITE, -1.0))
+        assertEquals(listOf("SENSOR-0-24"), alerts(DeviceKind.SENSOR, 20.0))
+        assertEquals(listOf("SENSOR-0-1"), alerts(DeviceKind.SENSOR, 0.9))
+    }
 }

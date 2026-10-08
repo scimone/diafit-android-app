@@ -18,9 +18,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
 @Database(
     entities = [
         MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class,
-        HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class
+        HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
+        uk.scimone.diafit.core.domain.model.AppNotificationEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -40,8 +41,22 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bolusDao(): BolusDao
     abstract fun pumpEventDao(): PumpEventDao
     abstract fun activityDao(): ActivityDao
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
+        /** In-app notifications (device expiry alerts). */
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `AppNotificationEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`timestampUtc` INTEGER NOT NULL, `title` TEXT NOT NULL, `text` TEXT NOT NULL, " +
+                        "`dedupeKey` TEXT NOT NULL, `isRead` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_AppNotificationEntity_dedupeKey` ON `AppNotificationEntity` (`dedupeKey`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_AppNotificationEntity_timestampUtc` ON `AppNotificationEntity` (`timestampUtc`)")
+            }
+        }
+
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(

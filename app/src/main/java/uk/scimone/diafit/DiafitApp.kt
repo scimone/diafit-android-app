@@ -45,6 +45,8 @@ class DiafitApp : Application() {
             ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequestBuilder<CgmServiceWatchdogWorker>(15, TimeUnit.MINUTES).build()
         )
+        // Sensor / pump-part expiry alerts: survives process death like the watchdog.
+        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler>(uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler::class.java).schedulePeriodic()
     }
 
 }

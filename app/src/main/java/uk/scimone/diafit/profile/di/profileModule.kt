@@ -6,6 +6,7 @@ import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailViewModel
 import uk.scimone.diafit.profile.presentation.ProfileViewModel
 
 val profileModule = module {
+    viewModel { uk.scimone.diafit.notifications.presentation.NotificationsViewModel(get()) }
     single { uk.scimone.diafit.devices.presentation.DeviceInputsSource(get(), get()) }
     viewModel { (userId: Int) -> uk.scimone.diafit.devices.presentation.DevicesViewModel(get(), get(), get(), get(), userId) }
     viewModel { (userId: Int) -> ProfileViewModel(pumpEventRepository = get(), userId = userId) }
