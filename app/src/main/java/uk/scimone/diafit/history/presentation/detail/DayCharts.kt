@@ -27,6 +27,7 @@ import uk.scimone.diafit.home.presentation.InspectBarHeight
 import uk.scimone.diafit.home.presentation.InspectCursor
 import uk.scimone.diafit.home.presentation.InspectReadout
 import uk.scimone.diafit.home.presentation.DismissInspectionWhenOffscreen
+import uk.scimone.diafit.home.presentation.BasalDisplay
 import uk.scimone.diafit.home.presentation.InsulinActivityDisplay
 import uk.scimone.diafit.home.presentation.TapToggleRadiusPx
 import uk.scimone.diafit.home.presentation.components.MealTimeline
@@ -142,6 +143,12 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     modifier = Modifier.weight(ActivityPanelWeight),
                     data = state.activity,
                     connected = state.activityConnected,
+                    window = window,
+                    geometry = geometry
+                )
+                BasalDisplay(
+                    modifier = Modifier.weight(1f),
+                    segments = state.basal,
                     window = window,
                     geometry = geometry
                 )

@@ -36,6 +36,8 @@ class HomeViewModel(
     private val getAllBolusSinceUseCase: GetAllBolusSinceUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val observeActivitySinceUseCase: ObserveActivitySinceUseCase,
+    private val getBasalTimelineUseCase: uk.scimone.diafit.core.domain.usecase.GetBasalTimelineUseCase,
+    private val pumpEventRepository: uk.scimone.diafit.core.domain.repository.PumpEventRepository,
     private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository,
     private val getAllMealsSinceUseCase: GetAllMealsSinceUseCase,
     private val application: Application,
@@ -68,6 +70,7 @@ class HomeViewModel(
         observeBolusHistory()
         observeMealData()
         observeActivity()
+        observeBasal()
         loadTargetRange()
     }
 
@@ -203,6 +206,25 @@ class HomeViewModel(
                 }
         }
     }
+
+    /** Basal over the last 24 h; reloaded when a pump event arrives (profile switch, temp basal) and every minute. */
+    private fun observeBasal() {
+        basalJob?.cancel()
+        basalJob = viewModelScope.launch {
+            val ticks = flow { while (true) { emit(Unit); delay(60_000L) } }
+            combine(pumpEventRepository.observeCount(userId), ticks) { _, _ -> }
+                .catch { e -> Log.e("HomeViewModel", "Failed to observe basal", e) }
+                .collect {
+                    val now = System.currentTimeMillis()
+                    val basal = runCatching { getBasalTimelineUseCase(now - 25 * 3_600_000L, now, userId) }
+                        .onFailure { e -> Log.e("HomeViewModel", "Failed to load basal", e) }
+                        .getOrDefault(emptyList())
+                    _state.update { it.copy(basal = basal) }
+                }
+        }
+    }
+
+    private var basalJob: kotlinx.coroutines.Job? = null
 
     private fun observeActivity(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {

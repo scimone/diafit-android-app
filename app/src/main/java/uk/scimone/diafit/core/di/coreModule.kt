@@ -97,6 +97,7 @@ val coreModule = module {
     single<BolusRepository> { BolusRepositoryImpl(get()) }
     single { InsertBolusUseCase(get()) }
     single { GetAllBolusSinceUseCase(get()) }
+    single { uk.scimone.diafit.core.domain.usecase.GetBasalTimelineUseCase(get()) }
 
     // Nightscout HTTP API
     single { HttpClientFactory.create(Android.create()) }

@@ -101,6 +101,7 @@ class DayDetailViewModel(
             insulin = boluses.filter { it.timestampUtc < dayEndUtc }.map { it.toInsulinActivityChartData() },
             carbs = meals.map { CarbsChartData(it.mealTimeUtc, it.carbohydrates, it.impactType.durationMinutes) },
             activity = activity,
+            basal = basal,
             timelineMeals = meals.map { it.toMealEntityUi(context) },
             activityStats = ActivityDayStats.from(activity, dayStartUtc, dayEndUtc),
             entries = (mealCards + episodeCards + bolusCards + activityCards(activity, dayStartUtc, dayEndUtc)).sortedBy { it.timeUtc }
@@ -134,6 +135,7 @@ data class DayDetailState(
     val carbs: List<CarbsChartData> = emptyList(),
     /** Charts tab: heart rate, steps, sleep and exercise. */
     val activity: ActivityData = ActivityData(),
+    val basal: List<uk.scimone.diafit.core.domain.model.BasalSegment> = emptyList(),
     val activityStats: ActivityDayStats? = null,
     val activityConnected: Boolean = false,
     /** Charts tab: courses for the meal photo strip under the panels. */

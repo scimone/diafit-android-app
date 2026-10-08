@@ -62,6 +62,8 @@ import uk.scimone.diafit.home.presentation.components.ActivityReadout
 import uk.scimone.diafit.home.presentation.components.ComponentActivityChart
 import uk.scimone.diafit.home.presentation.components.readoutAt
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.BasalSegment
+import uk.scimone.diafit.home.presentation.components.ComponentBasalChart
 import uk.scimone.diafit.ui.theme.Activity
 import uk.scimone.diafit.ui.theme.Sleep
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
@@ -260,8 +262,12 @@ fun HomeScreen(
                                     window = window,
                                     geometry = geometry
                                 )
-                                // Placeholder for an upcoming graph.
-                                PlaceholderPanel("Basal", Modifier.weight(1f))
+                                BasalDisplay(
+                                    modifier = Modifier.weight(1f),
+                                    segments = state.basal,
+                                    window = window,
+                                    geometry = geometry
+                                )
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
                                     history = state.insulinActivityHistory,
@@ -582,6 +588,28 @@ internal fun ActivityDisplay(
         if (data.isEmpty) {
             Text(
                 if (connected) "No activity data in this period" else "No activity data · connect Health Connect in Settings",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+    }
+}
+
+/** Basal rate (profile schedule and the loop's temp basals) on the shared time axis. */
+@Composable
+internal fun BasalDisplay(
+    modifier: Modifier,
+    segments: List<BasalSegment>,
+    window: ChartTimeWindow,
+    geometry: State<ChartGeometry?>
+) {
+    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
+        ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
+        PanelTitle("Basal")
+        if (segments.isEmpty()) {
+            Text(
+                "No basal data yet · run a profile switch in AAPS",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.Center)

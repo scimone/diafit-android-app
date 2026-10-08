@@ -1,6 +1,7 @@
 package uk.scimone.diafit.home.presentation
 
 import uk.scimone.diafit.core.domain.model.ActivityData
+import uk.scimone.diafit.core.domain.model.BasalSegment
 import uk.scimone.diafit.home.presentation.model.BolusChartData
 import uk.scimone.diafit.home.presentation.model.CarbsChartData
 import uk.scimone.diafit.home.presentation.model.CgmChartData
@@ -16,6 +17,7 @@ data class HomeState(
     val insulinActivityHistory: List<InsulinActivityChartData> = emptyList(),
     val carbHistory: List<CarbsChartData> = emptyList(),
     val mealHistory: List<MealEntityUi> = emptyList(),
+    val basal: List<BasalSegment> = emptyList(),
     val activity: ActivityData = ActivityData(),
     /** Health Connect import switched on (decides which "no activity data" message to show). */
     val activityConnected: Boolean = false,
