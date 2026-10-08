@@ -683,14 +683,6 @@ internal fun BasalDisplay(
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp)
         PanelTitle("Basal", headline)
-        if (segments.isEmpty()) {
-            Text(
-                "No basal data yet · run a profile switch in AAPS",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
     }
 }
 
