@@ -36,9 +36,9 @@ fun Modifier.sleepWashShare(share: FloatArray): Modifier {
             // Whole-pixel edges, so neighbouring bins never overlap (an overlap shows as a faint stripe).
             val x0 = kotlin.math.floor(i * bin)
             val x1 = kotlin.math.floor((i + 1) * bin)
-            drawRect(base.copy(alpha = SLEEP_WASH_ALPHA * 1.6f * share[i]), Offset(x0, 0f), Size(x1 - x0, size.height))
+            drawRect(base.copy(alpha = SLEEP_WASH_ALPHA * 0.5f * share[i]), Offset(x0, 0f), Size(x1 - x0, size.height))
         }
     }
 }
 
-private const val SLEEP_WASH_ALPHA = 0.16f
+private const val SLEEP_WASH_ALPHA = 0.10f

@@ -30,8 +30,10 @@ import uk.scimone.diafit.core.domain.model.gaussianSmoothCircular
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.components.ACTIVITY_LANE_HEIGHT
 import uk.scimone.diafit.history.presentation.components.ActivityLane
-import uk.scimone.diafit.history.presentation.components.TREATMENT_LANE_HEIGHT
-import uk.scimone.diafit.history.presentation.components.TreatmentLane
+import uk.scimone.diafit.history.presentation.components.CARBS_FULL_INTENSITY_G
+import uk.scimone.diafit.history.presentation.components.INSULIN_FULL_INTENSITY_U
+import uk.scimone.diafit.history.presentation.components.TREATMENT_BAND_HEIGHT
+import uk.scimone.diafit.history.presentation.components.TreatmentBand
 import uk.scimone.diafit.history.presentation.components.drawHourGuides
 import uk.scimone.diafit.history.presentation.components.sleepWashShare
 import uk.scimone.diafit.history.presentation.model.HistoryLayers
@@ -39,6 +41,8 @@ import uk.scimone.diafit.history.presentation.components.hourGuideColor
 import uk.scimone.diafit.history.presentation.model.AgpMarkers
 import uk.scimone.diafit.history.presentation.model.REFERENCE_DAY_MS
 import uk.scimone.diafit.ui.theme.AboveRange
+import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 
@@ -71,15 +75,15 @@ internal fun AgpCard(
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("No glucose readings in this period", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } else Column(
-            Modifier
-                .fillMaxSize()
-                .then(if (layers.sleep) Modifier.sleepWashShare(markers.sleepShare) else Modifier)
-        ) {
-            AgpPlot(agp.toBands(), thresholds, Modifier.weight(1f).fillMaxWidth())
+        } else Column(Modifier.fillMaxSize()) {
+            // The wash sits behind the plot only, not behind the lanes.
+            AgpPlot(
+                agp.toBands(), thresholds,
+                Modifier.weight(1f).fillMaxWidth().then(if (layers.sleep) Modifier.sleepWashShare(markers.sleepShare) else Modifier)
+            )
             val laneCount = listOf(layers.treatments, layers.activity).count { it }
             if (laneCount > 0 && collapse < 1f) {
-                val lanesHeight = 3.dp + (if (layers.treatments) TREATMENT_LANE_HEIGHT + 2.dp else 0.dp) +
+                val lanesHeight = 3.dp + (if (layers.treatments) (TREATMENT_BAND_HEIGHT + 2.dp) * 2 else 0.dp) +
                     (if (layers.activity) ACTIVITY_LANE_HEIGHT + 2.dp else 0.dp) + 3.dp
                 Box(
                     Modifier
@@ -92,7 +96,9 @@ internal fun AgpCard(
                         Spacer(Modifier.height(3.dp))
                         // Every day's sittings folded onto one lane, drawn fainter so overlaps deepen.
                         if (layers.treatments) {
-                            TreatmentLane(markers.carbs, markers.bolus, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale, mergeClose = false)
+                            TreatmentBand(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale)
+                            Spacer(Modifier.height(2.dp))
+                            TreatmentBand(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale)
                             Spacer(Modifier.height(2.dp))
                         }
                         if (layers.activity) {

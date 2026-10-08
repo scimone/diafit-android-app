@@ -14,13 +14,12 @@ import uk.scimone.diafit.core.domain.model.ActivitySpan
 import uk.scimone.diafit.ui.theme.Activity
 import kotlin.math.max
 
-val ACTIVITY_LANE_HEIGHT = 10.dp
-private const val MIN_BAR_FRACTION = 0.35f
+val ACTIVITY_LANE_HEIGHT = TREATMENT_BAND_HEIGHT
 
 /**
  * How active the day was, on its own lane under the treatments. Every stretch of raised activity found in
- * heart rate and steps ([elevated]) is a bar standing on the lane's floor: the harder it was (higher heart rate, more steps),
- * the taller and stronger it is. A logged workout ([workouts]) fills the whole lane height. Sleep is not drawn here
+ * heart rate and steps ([elevated]) is a bar of the full lane height: the harder it was (higher heart rate, more steps),
+ * the stronger its colour. A logged workout ([workouts]) is drawn almost opaque. Sleep is not drawn here
  * (it is the grey wash behind the tile).
  */
 @Composable
@@ -40,14 +39,13 @@ fun ActivityLane(
         drawLine(floor, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1f)
         val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
         val corner = CornerRadius(minOf(size.height / 2, 3.dp.toPx()))
-        fun bar(span: ActivitySpan, heightFraction: Float, alpha: Float) {
+        fun bar(span: ActivitySpan, alpha: Float) {
             val x0 = axis.x(span.startUtc).coerceAtLeast(0f)
             val x1 = axis.x(span.endUtc).coerceAtMost(size.width)
             if (x1 <= x0) return
-            val h = size.height * heightFraction
-            drawRoundRect(Activity.copy(alpha = alpha.coerceIn(0f, 1f)), Offset(x0, size.height - h), Size(max(2.5.dp.toPx(), x1 - x0), h), corner)
+            drawRoundRect(Activity.copy(alpha = alpha.coerceIn(0f, 1f)), Offset(x0, 0f), Size(max(2.5.dp.toPx(), x1 - x0), size.height), corner)
         }
-        elevated.forEach { bar(it, MIN_BAR_FRACTION + (1f - MIN_BAR_FRACTION) * it.intensity, (0.3f + 0.5f * it.intensity) * alphaScale) }
-        workouts.forEach { bar(it, 1f, 0.9f * (0.4f + 0.6f * alphaScale)) }
+        elevated.forEach { bar(it, (0.3f + 0.5f * it.intensity) * alphaScale) }
+        workouts.forEach { bar(it, 0.9f * (0.4f + 0.6f * alphaScale)) }
     }
 }
