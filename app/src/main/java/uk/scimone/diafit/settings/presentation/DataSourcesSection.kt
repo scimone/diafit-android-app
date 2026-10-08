@@ -115,6 +115,12 @@ internal fun DataSourcesList(
                 val sources = connectorsBackfilling(type).filter { it in state.enabledConnectors }
                 if (sources.isNotEmpty() && selected != null) {
                     BackfillPanel(type, sources, state, onBackfill, onDismissBackfill, missingRanges, onAllowHistory)
+                } else if (selected != null && connectorsBackfilling(type).isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "To fill in past data, connect ${connectorsBackfilling(type).joinToString(" or ", transform = Connector::displayName)} above.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -135,7 +141,8 @@ private fun BackfillPanel(
     var source by remember(sources) { mutableStateOf(sources.first()) }
     var span by remember { mutableStateOf<BackfillSpan>(BackfillSpan.LastDays(14)) }
     var picking by remember { mutableStateOf(false) }
-    val range = span.toRange()
+    // Fixed per choice: "now" must not be re-read on every recomposition, or the gap check restarts in a loop.
+    val range = remember(span) { span.toRange() }
     val status = state.backfill
     val running = status is BackfillStatus.Running
     val mine = status.takeIf {
