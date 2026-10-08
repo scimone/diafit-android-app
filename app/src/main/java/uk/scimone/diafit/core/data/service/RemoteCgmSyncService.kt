@@ -56,7 +56,7 @@ class RemoteCgmSyncService : Service() {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("CGM Sync Service")
             .setContentText("Syncing CGM data in real-time")
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // same as BroadcastIntentCgmSyncService
+            .setSmallIcon(R.drawable.ic_stat_diafit) // same as BroadcastIntentCgmSyncService
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
