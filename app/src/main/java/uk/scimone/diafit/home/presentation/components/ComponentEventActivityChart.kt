@@ -56,7 +56,7 @@ data class ChartEvent(
 /**
  * Within this distance of the previous event, events share one bubble (drawn at the first one's
  * time). Chained, so a long meal with a plate and a small bolus every 10 minutes becomes one
- * labelled bubble; each individual event stays visible as a small tick dot on the curve.
+ * labelled bubble; every individual event is also marked by a small tick dot on the curve.
  */
 private const val BUBBLE_MERGE_WINDOW_MS = 15 * 60_000L
 private val TickDotSize = 5.dp
@@ -117,7 +117,7 @@ private class EventBubbleProvider(
     override fun getLargestPoint(extraStore: ExtraStore) = LineCartesianLayer.Point(component, ChartPointSize)
 }
 
-/** Small dots marking each individual event under a merged bubble. */
+/** Small dots marking each individual event on the curve. */
 private class TickProvider(private val component: Component) : LineCartesianLayer.PointProvider {
     override fun getPoint(entry: LineCartesianLayerModel.Entry, extraStore: ExtraStore): LineCartesianLayer.Point =
         LineCartesianLayer.Point(component, TickDotSize)
@@ -166,8 +166,8 @@ fun ComponentEventActivityChart(
     val dpPerHour = ChartXSpacing.value * zoomState.value.coerceAtLeast(0.01f)
     val mergeWindowMs = maxOf(BUBBLE_MERGE_WINDOW_MS, (BUBBLE_MIN_GAP_DP / dpPerHour * 3_600_000f).toLong())
     val recentEvents = mergeNearbyEvents(rawRecentEvents, mergeWindowMs)
-    // Only worth drawing when some bubble stands for more than one event.
-    val tickEvents = if (recentEvents.size < rawRecentEvents.size) rawRecentEvents else emptyList()
+    // Every individual event gets a dot on the curve, merged or not.
+    val tickEvents = rawRecentEvents
 
     // Each bubble sits on the curve: y = curve height at the event time, nudged by a tiny
     // value-proportional offset so the value survives Vico's y-only point/label callbacks.
@@ -186,14 +186,15 @@ fun ComponentEventActivityChart(
                 series(x = pastPoints.map { it.first }, y = pastPoints.map { it.second })
                 series(x = futurePoints.map { it.first }, y = futurePoints.map { it.second })
             }
-            if (tickEvents.isNotEmpty()) {
-                lineSeries {
-                    series(x = tickEvents.map { it.time }, y = tickEvents.map { activityAt(it.time) })
-                }
-            }
             if (recentEvents.isNotEmpty()) {
                 lineSeries {
                     series(x = recentEvents.map { it.time }, y = bubbleYs)
+                }
+            }
+            // After the bubbles, so the dots are drawn on top of them.
+            if (tickEvents.isNotEmpty()) {
+                lineSeries {
+                    series(x = tickEvents.map { it.time }, y = tickEvents.map { activityAt(it.time) })
                 }
             }
         }
@@ -290,8 +291,8 @@ fun ComponentEventActivityChart(
     val chart = rememberCartesianChart(
         *listOfNotNull(
             curveLayer,
-            tickLayer.takeIf { tickEvents.isNotEmpty() },
-            bubbleLayer.takeIf { recentEvents.isNotEmpty() }
+            bubbleLayer.takeIf { recentEvents.isNotEmpty() },
+            tickLayer.takeIf { tickEvents.isNotEmpty() }
         ).toTypedArray(),
         startAxis = VerticalAxis.rememberStart(
             label = null,

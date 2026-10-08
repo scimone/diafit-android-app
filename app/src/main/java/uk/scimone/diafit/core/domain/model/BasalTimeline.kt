@@ -139,3 +139,35 @@ fun basalInsulinActivity(
     }
     return out
 }
+
+/**
+ * Basal insulin still to act at [now] (U): the area under the rest of [basalInsulinActivity]'s curve for what was
+ * delivered up to [now], i.e. every past minute's difference from the schedule plus the [smbs], each weighted by
+ * the share of its insulin curve still ahead. Negative when the loop has held back more than it added.
+ */
+fun basalRemainingInsulin(segments: List<BasalSegment>, now: Long, smbs: List<SmbMark> = emptyList()): Double {
+    val kernelMinutes = (4.5 * 60).toInt()
+    val kernel = DoubleArray(kernelMinutes) { InsulinActivity.calculate(1.0, 0L, it * STEP_MS).activity }
+    val total = kernel.sum()
+    if (total <= 0.0) return 0.0
+    // remaining[k] = share of a dose still to act k minutes after it was given.
+    val remaining = DoubleArray(kernelMinutes)
+    var acc = total
+    for (k in 0 until kernelMinutes) { remaining[k] = acc / total; acc -= kernel[k] }
+    fun shareAt(k: Long) = if (k in 0 until kernelMinutes) remaining[k.toInt()] else 0.0
+
+    val nowMinute = Math.floorDiv(now, STEP_MS)
+    var iob = 0.0
+    segments.forEach { s ->
+        val sched = s.scheduled ?: return@forEach
+        val perMinute = (s.delivered - sched) / 60.0
+        if (perMinute == 0.0) return@forEach
+        val first = maxOf(Math.floorDiv(s.startUtc, STEP_MS), nowMinute - kernelMinutes + 1)
+        val last = minOf(Math.floorDiv(s.endUtc - 1, STEP_MS), nowMinute)
+        for (minute in first..last) iob += perMinute * shareAt(nowMinute - minute)
+    }
+    smbs.forEach { smb ->
+        if (smb.timeUtc <= now) iob += smb.units * shareAt(nowMinute - Math.floorDiv(smb.timeUtc, STEP_MS))
+    }
+    return iob
+}

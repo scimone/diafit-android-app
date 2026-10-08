@@ -82,4 +82,17 @@ class BasalTimelineTest {
         val a = uk.scimone.diafit.core.domain.model.basalInsulinActivity(seg, odd + 6 * hour, odd + 6 * hour)
         assertEquals(0.6 / 60.0, a.last().second, 0.6 / 60.0 * 0.03)
     }
+
+    @Test fun basalRemainingInsulinCountsDeviationsAndSmbs() {
+        val now = 10 * hour
+        val seg = uk.scimone.diafit.core.domain.model.BasalSegment(now - 30 * 60_000L, now, 2.3, 0.3)   // +2 U/h for 30 min = +1 U
+        val smb = uk.scimone.diafit.core.domain.model.SmbMark(now, 0.5)
+        // Fresh insulin is almost all still to act.
+        val iob = uk.scimone.diafit.core.domain.model.basalRemainingInsulin(listOf(seg), now, listOf(smb))
+        assertEquals(1.45, iob, 0.06)
+        // Below the schedule is negative; all gone after the DIA.
+        val low = uk.scimone.diafit.core.domain.model.BasalSegment(now - 60 * 60_000L, now, 0.0, 0.3)
+        assertEquals(true, uk.scimone.diafit.core.domain.model.basalRemainingInsulin(listOf(low), now) < 0)
+        assertEquals(0.0, uk.scimone.diafit.core.domain.model.basalRemainingInsulin(listOf(seg), now + 5 * hour, listOf(smb)), 1e-9)
+    }
 }

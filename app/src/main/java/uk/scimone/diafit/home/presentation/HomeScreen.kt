@@ -79,6 +79,7 @@ import uk.scimone.diafit.home.presentation.components.ComponentActivityChart
 import uk.scimone.diafit.home.presentation.components.readoutAt
 import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.BasalSegment
+import uk.scimone.diafit.core.domain.model.basalRemainingInsulin
 import uk.scimone.diafit.home.presentation.components.ComponentBasalChart
 import uk.scimone.diafit.ui.theme.Activity
 import uk.scimone.diafit.ui.theme.Sleep
@@ -137,7 +138,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val window = remember(nowMinute) { homeTimeWindow(nowMinute) }
-    val headlines = remember(state.cgmUi, state.basal, state.activity, state.insulinActivityHistory, state.carbHistory, nowMinute, state.targetRangeLower, state.targetRangeUpper) {
+    val headlines = remember(state.cgmUi, state.basal, state.smbs, state.activity, state.insulinActivityHistory, state.carbHistory, nowMinute, state.targetRangeLower, state.targetRangeUpper) {
         homeHeadlines(state, nowMinute)
     }
 
@@ -300,6 +301,7 @@ fun HomeScreen(
                                     window = window,
                                     geometry = geometry,
                                     headline = headlines.basal.takeIf { nowVisible },
+                                    insulinHeadline = headlines.basalInsulin.takeIf { nowVisible },
                                     activityUnitsPerDp = bolusScale.value,
                                     style = state.basalStyle,
                                     smbs = state.smbs
@@ -616,19 +618,19 @@ data class PanelValue(val text: String, val unit: String, val color: Color)
 
 /** Small muted heading in a panel's top-left corner, with the panel's latest [value] (if any) beside it. */
 @Composable
-private fun BoxScope.PanelTitle(text: String, value: PanelValue? = null) {
+private fun BoxScope.PanelTitle(text: String, value: PanelValue? = null, extra: PanelValue? = null) {
     Row(
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 2.dp)
     ) {
         Text(text = text, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (value != null) {
+        listOfNotNull(value, extra).forEach { v ->
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)) { append(value.text) }
-                    if (value.unit.isNotEmpty()) withStyle(SpanStyle(fontSize = 10.sp)) { append(" ${value.unit}") }
+                    withStyle(SpanStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)) { append(v.text) }
+                    if (v.unit.isNotEmpty()) withStyle(SpanStyle(fontSize = 10.sp)) { append(" ${v.unit}") }
                 },
-                color = value.color,
+                color = v.color,
                 modifier = Modifier.padding(start = 6.dp)
             )
         }
@@ -679,6 +681,8 @@ internal fun BasalDisplay(
     window: ChartTimeWindow,
     geometry: State<ChartGeometry?>,
     headline: PanelValue? = null,
+    /** Basal insulin on board, shown after [headline]. */
+    insulinHeadline: PanelValue? = null,
     /** The bolus panel's y scale, so the basal's insulin activity curve is drawn at the same scale. */
     activityUnitsPerDp: Double? = null,
     style: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
@@ -686,7 +690,7 @@ internal fun BasalDisplay(
 ) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp, style = style, smbs = smbs)
-        PanelTitle("Basal", headline)
+        PanelTitle("Basal", headline, insulinHeadline)
     }
 }
 
@@ -846,6 +850,8 @@ internal data class HomeHeadlines(
     val glucose: PanelValue? = null,
     val activity: PanelValue? = null,
     val basal: PanelValue? = null,
+    /** Basal insulin on board (temp basal differences + SMBs), shown after the rate. */
+    val basalInsulin: PanelValue? = null,
     val bolus: PanelValue? = null,
     val carbs: PanelValue? = null
 )
@@ -858,12 +864,15 @@ internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
     val activityLevel = activityLevelAt(state.activity, state.activityConnected, now)
     val activity = activityLevel?.let { PanelValue(it.label, "", Activity) }
     val basal = state.basal.lastOrNull()?.takeIf { now - it.endUtc <= 2 * 60_000L }?.let { PanelValue(formatRate(it.delivered), "U/h", Basal) }
+    val basalInsulin = state.basal.takeIf { it.isNotEmpty() || state.smbs.isNotEmpty() }
+        ?.let { PanelValue("%.2f".format(java.util.Locale.US, basalRemainingInsulin(it, now, state.smbs)), "U", Bolus) }
     val insulin = remainingInsulin(state.insulinActivityHistory.map { it.timeLong to it.value.toDouble() }, now)
     val carbs = remainingCarbs(state.carbHistory.map { Triple(it.timeLong, it.value.toDouble(), it.durationMinutes) }, now)
     return HomeHeadlines(
         glucose = glucose,
         activity = activity,
         basal = basal,
+        basalInsulin = basalInsulin,
         bolus = PanelValue("%.2f".format(java.util.Locale.US, insulin), "U", Bolus),
         carbs = PanelValue("${carbs.roundToInt()}", "g", Carbs)
     )

@@ -53,7 +53,7 @@ fun ComponentBasalChart(
     /** The bolus panel's y scale (U/min per dp) so both insulin activity curves are comparable; own autoscale when null. */
     activityUnitsPerDp: Double? = null,
     style: BasalStyle = BasalStyle.RATE,
-    /** Super micro boluses, drawn as triangles in the [BasalStyle.DEVIATION] style. */
+    /** Super micro boluses, drawn as triangles (under the zero line in [BasalStyle.RATE], at the bar in [BasalStyle.DEVIATION]). */
     smbs: List<SmbMark> = emptyList()
 ) {
     val activity = remember(segments, smbs, window.maxX) { basalInsulinActivity(segments, window.minX, window.maxX, smbs = smbs) }
@@ -78,7 +78,9 @@ fun ComponentBasalChart(
         // The activity curve shares the rate's zero line. When the basal activity goes negative, the zero line
         // moves up by just enough room for the deepest dip (at most 40% of the plot).
         val lowest = activity.minOf { it.second }.coerceAtMost(0.0)
-        val room = ((-lowest / unitsPerPx).toFloat() * 1.05f).coerceIn(0f, (plotBottom - plotTop) * 0.4f)
+        // SMBs are triangles under the zero line, so it moves up by at least their height when any are in view.
+        val smbRoom = if (smbs.any { it.timeUtc in window.minX..window.now }) TriangleMax.toPx() + TriangleGap.toPx() - PlotBottomInset.toPx() else 0f
+        val room = max(smbRoom, ((-lowest / unitsPerPx).toFloat() * 1.05f).coerceIn(0f, (plotBottom - plotTop) * 0.4f))
         val zeroY = plotBottom - room
         fun yOf(rate: Double) = zeroY - (rate / axisMax).toFloat().coerceIn(0f, 1f) * RATE_HEIGHT_SHARE * (zeroY - plotTop)
         fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
@@ -127,6 +129,19 @@ fun ComponentBasalChart(
                 val p = Path().apply { moveTo(g.xOf(s.startUtc), y); lineTo(g.xOf(s.endUtc), y) }
                 drawPath(p, Basal, style = dash)
             }
+
+            // SMBs: triangles just under the zero line, pointing up at the rate.
+            smbs.forEach { smb ->
+                if (smb.timeUtc > window.now) return@forEach
+                val x = g.xOf(smb.timeUtc)
+                if (x < g.left - TriangleMax.toPx() || x > clipRight + TriangleMax.toPx()) return@forEach
+                val side = smbTriangleSize(smb.units)
+                val tip = zeroY + TriangleGap.toPx()
+                val path = Path().apply {
+                    moveTo(x - side / 2, tip + side); lineTo(x + side / 2, tip + side); lineTo(x, tip); close()
+                }
+                drawPath(path, Bolus)
+            }
         }
 
         clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
@@ -153,6 +168,10 @@ private val TriangleMax = 12.dp
 /** An SMB of this many units gets the largest triangle. */
 private const val SMB_FULL_SIZE_UNITS = 2.0
 private val TriangleGap = 2.dp
+
+/** Side of an SMB's triangle (px), growing with sqrt(dose) up to [SMB_FULL_SIZE_UNITS]. */
+private fun androidx.compose.ui.unit.Density.smbTriangleSize(units: Double): Float =
+    TriangleMin.toPx() + (TriangleMax - TriangleMin).toPx() * sqrt((units / SMB_FULL_SIZE_UNITS).coerceIn(0.0, 1.0)).toFloat()
 
 /**
  * The difference view: every stretch where the loop moved the delivered rate from the schedule is a bar from the
@@ -211,7 +230,7 @@ private fun DeviationCanvas(
                 val x = g.xOf(smb.timeUtc)
                 if (x < g.left - triangleMax || x > clipRight + triangleMax) return@forEach
                 val dev = segments.at(smb.timeUtc)?.let { s -> s.scheduled?.let { s.delivered - it } } ?: 0.0
-                val size = TriangleMin.toPx() + (TriangleMax - TriangleMin).toPx() * sqrt((smb.units / SMB_FULL_SIZE_UNITS).coerceIn(0.0, 1.0)).toFloat()
+                val size = smbTriangleSize(smb.units)
                 val gap = TriangleGap.toPx()
                 val path = Path()
                 if (dev >= 0) {   // above the bar, pointing down at it
