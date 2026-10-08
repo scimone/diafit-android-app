@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +73,9 @@ import java.util.Locale
 
 /** One row of the journal (and of a History day's journal), whatever the entry kind. */
 @Composable
-fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick: (() -> Unit)?, modifier: Modifier = Modifier, onAddPhoto: ((android.net.Uri) -> Unit)? = null) {
     when (entry) {
-        is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier)
+        is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier, onAddPhoto)
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
         is BolusEntryUi -> BolusCard(entry, onClick, modifier)
         is PumpEventUi -> PumpEventCard(entry, onClick, modifier)
@@ -96,7 +98,11 @@ private fun EntrySurface(onClick: (() -> Unit)?, modifier: Modifier, content: @C
 
 /** A meal: its photo, carbs, the insulin for it, absorption speed, and what glucose did afterwards. */
 @Composable
-fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit, modifier: Modifier = Modifier, onAddPhoto: ((android.net.Uri) -> Unit)? = null) {
+    if (meal.photoUris.isEmpty()) {
+        PhotolessMealCard(meal, onClick, modifier, onAddPhoto)
+        return
+    }
     EntrySurface(onClick, modifier) {
         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             MealThumbnail(meal)
@@ -136,6 +142,53 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                         meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** A meal without a photo: a standard-size icon row like the other entries, no glucose outcome, and a one-tap way to add a photo. */
+@Composable
+private fun PhotolessMealCard(meal: MealEntityUi, onClick: () -> Unit, modifier: Modifier, onAddPhoto: ((android.net.Uri) -> Unit)?) {
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) onAddPhoto?.invoke(uri) }
+    EntrySurface(onClick, modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).background(Carbs.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.Restaurant, null, tint = Carbs, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (meal.courseCount > 1) meal.timeFormatted.substringBefore('–') else meal.timeFormatted,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                    HeadingDot()
+                    AbsorptionBadge(meal.impactType)
+                    if (meal.aapsLinked) {
+                        HeadingDot()
+                        Text("AAPS", style = MaterialTheme.typography.labelSmall, color = Bolus, maxLines = 1, softWrap = false)
+                    }
+                }
+                Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (onAddPhoto != null) {
+                androidx.compose.material3.IconButton(onClick = {
+                    picker.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Icon(Icons.Outlined.AddAPhoto, "Add photo", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                BigValue("${meal.carbohydrates}", "g", Carbs)
+                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
             }
         }
     }

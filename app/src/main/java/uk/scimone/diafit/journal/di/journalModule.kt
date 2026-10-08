@@ -15,6 +15,7 @@ val journalModule = module {
             pumpEventRepository = get(),
             activityRepository = get(),
             mergeCarbEntries = get(),
+            updateMeal = get(),
             getTargetRangeUseCase = get(),
             context = get(),
             userId = get()

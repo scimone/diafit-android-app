@@ -68,6 +68,7 @@ class JournalViewModel(
     private val pumpEventRepository: PumpEventRepository,
     private val activityRepository: ActivityRepository,
     private val mergeCarbEntries: MergeCarbEntriesUseCase,
+    private val updateMeal: uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase,
     private val getTargetRangeUseCase: GetTargetRangeUseCase,
     private val context: Context,
     private val userId: Int
@@ -228,6 +229,20 @@ class JournalViewModel(
     } catch (e: Exception) {
         Log.e(TAG, "Error loading activity", e)
         emptyList()
+    }
+
+    /** Attaches a photo to a meal that has none (it becomes the cover). */
+    fun addPhoto(mealId: Int, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val meal = mealRepository.getMealById(mealId) ?: return@launch
+                val photo = uk.scimone.diafit.core.domain.model.MealPhoto(java.util.UUID.randomUUID().toString(), uri)
+                updateMeal(meal, listOf(photo))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error adding photo", e)
+            }
+            observeEntries()
+        }
     }
 
     /** Removes a device event from the journal (soft delete, so AAPS re-sending it doesn't bring it back). */

@@ -114,6 +114,7 @@ fun JournalScreen(
                                     JournalEntryCard(
                                         entry,
                                         uiState.target,
+                                        onAddPhoto = { uri -> viewModel.addPhoto(entry.id, uri) },
                                         onClick = {
                                             // Profile switches and temporary targets get a detail page; other device events a small dialog.
                                             if (entry is PumpEventUi && !entry.hasDetailPage) selectedEvent = entry else onOpenEntry(entry)
