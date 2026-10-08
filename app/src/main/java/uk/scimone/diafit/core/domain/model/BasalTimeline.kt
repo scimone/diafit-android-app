@@ -10,9 +10,27 @@ import java.time.ZoneId
 data class BasalSegment(val startUtc: Long, val endUtc: Long, val delivered: Double, val scheduled: Double?)
 
 /** A super micro bolus the loop gave: [units] at [timeUtc]. */
-data class SmbMark(val timeUtc: Long, val units: Double)
+data class SmbMark(val timeUtc: Long, val units: Double, val count: Int = 1)
 
-fun List<BolusEntity>.toSmbMarks(): List<SmbMark> = filter { it.isSmb }.map { SmbMark(it.timestampUtc, it.value.toDouble()) }
+/** SMBs closer together than this (chained) are drawn as one triangle. */
+const val SMB_GROUP_GAP_MS = 15 * 60_000L
+/** ...but one triangle never spans longer than this. */
+const val SMB_GROUP_MAX_SPAN_MS = 30 * 60_000L
+
+/** The SMBs of this list, nearby ones merged into one mark: summed dose, at the dose-weighted mean time. */
+fun List<BolusEntity>.toSmbMarks(): List<SmbMark> {
+    val groups = mutableListOf<MutableList<BolusEntity>>()
+    filter { it.isSmb }.sortedBy { it.timestampUtc }.forEach { b ->
+        val g = groups.lastOrNull()
+        if (g != null && b.timestampUtc - g.last().timestampUtc <= SMB_GROUP_GAP_MS &&
+            b.timestampUtc - g.first().timestampUtc <= SMB_GROUP_MAX_SPAN_MS) g += b else groups += mutableListOf(b)
+    }
+    return groups.map { g ->
+        val units = g.sumOf { it.value.toDouble() }
+        val time = if (units > 0) (g.sumOf { it.timestampUtc.toDouble() * it.value } / units).toLong() else g.first().timestampUtc
+        SmbMark(time, units, g.size)
+    }
+}
 
 private const val STEP_MS = 60_000L
 

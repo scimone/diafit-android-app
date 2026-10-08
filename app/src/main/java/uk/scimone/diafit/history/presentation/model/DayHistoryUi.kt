@@ -28,6 +28,8 @@ data class DayHistoryUi(
     val glucose: List<GlucosePoint>,
     val carbs: List<TreatmentCluster>,
     val insulin: List<TreatmentCluster>,
+    /** SMB insulin of the day: not in the strip, but part of [totalInsulin]. */
+    val smbUnits: Float = 0f,
     /** Sleep and exercise overlapping the day. */
     val activity: ActivityData,
     val elevatedActivity: List<ActivitySpan>,
@@ -37,7 +39,7 @@ data class DayHistoryUi(
     val stats: DayGlucoseStats?
 ) {
     val totalCarbs: Float get() = carbs.sumOf { it.total.toDouble() }.toFloat()
-    val totalInsulin: Float get() = insulin.sumOf { it.total.toDouble() }.toFloat()
+    val totalInsulin: Float get() = insulin.sumOf { it.total.toDouble() }.toFloat() + smbUnits
     val steps: Int get() = activityStats?.steps ?: 0
     val sleepMs: Long get() = activityStats?.sleepMs ?: 0L
     /** Time in elevated activity or logged workouts (overlap counted once). */
@@ -64,7 +66,8 @@ fun DayHistory.toUi(
         dayEndUtc = end,
         glucose = points,
         carbs = cluster(meals.map { TreatmentEvent(it.mealTimeUtc, it.carbohydrates.toFloat()) }),
-        insulin = cluster(boluses.map { TreatmentEvent(it.timestampUtc, it.value) }),
+        insulin = cluster(boluses.filter { !it.isSmb }.map { TreatmentEvent(it.timestampUtc, it.value) }),
+        smbUnits = boluses.filter { it.isSmb }.sumOf { it.value.toDouble() }.toFloat(),
         activity = activity,
         elevatedActivity = elevatedActivity,
         activityStats = ActivityDayStats.from(activity, start, end),

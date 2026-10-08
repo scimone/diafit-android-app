@@ -100,7 +100,7 @@ class DayDetailViewModel(
             bolusCount = dayBoluses.count { !it.isSmb },
             cgm = dayReadings.map { it.toChartData() },
             // Boluses from just before midnight still show their activity at the start of the day.
-            insulin = boluses.filter { it.timestampUtc < dayEndUtc }.map { it.toInsulinActivityChartData() },
+            insulin = boluses.filter { !it.isSmb && it.timestampUtc < dayEndUtc }.map { it.toInsulinActivityChartData() },
             carbs = meals.map { CarbsChartData(it.mealTimeUtc, it.carbohydrates, it.impactType.durationMinutes) },
             activity = activity,
             basal = basal,

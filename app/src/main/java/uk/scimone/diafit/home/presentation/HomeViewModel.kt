@@ -134,8 +134,9 @@ class HomeViewModel(
                     }
                 }
                 .collect { bolusList ->
-                    val bolusUiList = bolusList.map { it.toChartData() }
-                    val insulinActivityList = bolusList.map { it.toInsulinActivityChartData() }
+                    val manual = bolusList.filter { !it.isSmb }
+                    val bolusUiList = manual.map { it.toChartData() }
+                    val insulinActivityList = manual.map { it.toInsulinActivityChartData() }
 
                     _state.update {
                         it.copy(

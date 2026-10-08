@@ -151,7 +151,7 @@ fun ComponentBasalChart(
 private val TriangleMin = 4.dp
 private val TriangleMax = 12.dp
 /** An SMB of this many units gets the largest triangle. */
-private const val SMB_FULL_SIZE_UNITS = 1.0
+private const val SMB_FULL_SIZE_UNITS = 2.0
 private val TriangleGap = 2.dp
 
 /**
