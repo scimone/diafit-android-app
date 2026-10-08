@@ -88,9 +88,12 @@ fun SettingsScreen(
     val healthConnectPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         viewModel.onHealthConnectPermissionsResult()
     }
+    val historyPermission = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.refreshHealthConnect()
+    }
     val connectHealthConnect = {
         healthConnectPermissions.launch(
-            HealthConnectPermissions.activity + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND
+            HealthConnectPermissions.activity + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND + HealthConnectPermissions.HISTORY
         )
     }
 
@@ -158,17 +161,15 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            DataType.values().forEach { type ->
-                Spacer(Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-                DataTypeSourceRow(
-                    type = type,
-                    enabledConnectors = state.enabledConnectors,
-                    selected = state.selections[type],
-                    onSelect = { viewModel.onSelectionChanged(type, it) }
-                )
-            }
+            Spacer(Modifier.height(4.dp))
+            DataSourcesList(
+                state = state,
+                onSelect = viewModel::onSelectionChanged,
+                onBackfill = viewModel::startBackfill,
+                onDismissBackfill = viewModel::dismissBackfill,
+                missingRanges = viewModel::missingRanges,
+                onAllowHistory = { historyPermission.launch(setOf(HealthConnectPermissions.HISTORY)) }
+            )
         }
 
         SettingsSection(title = "Glucose target range (mg/dL)", icon = Icons.Filled.GpsFixed) {
@@ -417,66 +418,61 @@ private fun ConnectorHeader(connector: Connector, enabled: Boolean, switchEnable
 
 @Composable
 private fun SetupHint(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    var shown by remember { mutableStateOf(false) }
+    TextButton(onClick = { shown = !shown }, contentPadding = PaddingValues(horizontal = 0.dp)) {
+        Text(if (shown) "Hide setup tips" else "Setup tips", style = MaterialTheme.typography.labelMedium)
+    }
+    if (shown) Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun NightscoutConnectorSetup(state: SettingsState, viewModel: SettingsViewModel) {
+    // null = follow the saved config (collapsed once an address is set); true once the user is editing.
+    var editing by remember { mutableStateOf<Boolean?>(null) }
+    val open = editing ?: state.nightscoutConfig.baseUrl.isBlank()
+    val check = state.nightscoutCheck
+    LaunchedEffect(check) { if (check == NightscoutCheckState.Ok) editing = false }
+
+    if (!open) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                state.nightscoutConfig.baseUrl.removePrefix("https://").removePrefix("http://").trimEnd('/'),
+                style = MaterialTheme.typography.bodyMedium, maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            when (check) {
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else -> TextButton(onClick = viewModel::testNightscout) { Text("Test") }
+            }
+            TextButton(onClick = { editing = true }) { Text("Edit") }
+        }
+        if (check is NightscoutCheckState.Failed) {
+            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        return
+    }
     ServerConfigInput(
         baseUrl = state.nightscoutConfig.baseUrl,
         apiKey = state.nightscoutConfig.apiKey,
         baseUrlLabel = "Address (https://…)",
         apiKeyLabel = "API secret or access token",
-        onConfigChanged = { baseUrl, apiKey -> viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
+        onConfigChanged = { baseUrl, apiKey -> editing = true; viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
     )
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = viewModel::testNightscout, enabled = state.nightscoutCheck != NightscoutCheckState.Checking) {
+        OutlinedButton(onClick = viewModel::testNightscout, enabled = check != NightscoutCheckState.Checking) {
             Text("Test connection")
         }
-        Spacer(Modifier.width(12.dp))
-        when (val check = state.nightscoutCheck) {
-            NightscoutCheckState.Idle -> Unit
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = { editing = false }, enabled = state.nightscoutConfig.baseUrl.isNotBlank()) { Text("Done") }
+        Spacer(Modifier.width(4.dp))
+        when (check) {
             NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            NightscoutCheckState.Ok -> {
-                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Connected", style = MaterialTheme.typography.bodyMedium)
-            }
             is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            else -> Unit
         }
     }
-}
-
-/** One data type: the connectors that can feed it (radio list, with Off), or what to connect when there are none. */
-@Composable
-private fun DataTypeSourceRow(
-    type: DataType,
-    enabledConnectors: Set<Connector>,
-    selected: Connector?,
-    onSelect: (Connector?) -> Unit
-) {
-    val providers = connectorsProviding(type)
-    val available = providers.filter { it in enabledConnectors }
-    Text(type.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-    if (available.isEmpty()) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "No connector set up for this. Connect ${providers.joinToString(", ", transform = Connector::displayName)} above to get it.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        return
-    }
-    available.forEach { connector ->
-        SelectableRow(label = connector.displayName, selected = connector == selected, onClick = { onSelect(connector) })
-    }
-    SelectableRow(
-        label = "Off",
-        caption = if (selected == null) "Not shown in Diafit" else null,
-        selected = selected == null,
-        onClick = { onSelect(null) }
-    )
 }
 
 private fun formatSyncTime(time: Long): String {

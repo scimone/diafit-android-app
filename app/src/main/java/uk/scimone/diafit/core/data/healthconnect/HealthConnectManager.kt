@@ -27,6 +27,9 @@ object HealthConnectPermissions {
     val glucose: Set<String> = setOf(HealthPermission.getReadPermission(BloodGlucoseRecord::class))
 
     /** Lets the periodic import (and the CGM sync service) read while Diafit isn't on screen. */
+    /** Reading data from before the first permission grant plus 30 days (needed to backfill older history). */
+    const val HISTORY = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
+
     const val BACKGROUND = HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 }
 

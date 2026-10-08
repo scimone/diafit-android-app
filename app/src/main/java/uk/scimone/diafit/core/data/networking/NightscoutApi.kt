@@ -11,6 +11,7 @@ import uk.scimone.diafit.core.data.networking.util.applyNightscoutAuth
 import uk.scimone.diafit.core.data.networking.util.constructUrl
 import uk.scimone.diafit.core.data.networking.util.safeCall
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 
 class NightscoutApi(
@@ -28,6 +29,20 @@ class NightscoutApi(
                 parameter("find[dateString][\$gte]", startDate)
                 parameter("find[dateString][\$lte]", endDate)
                 parameter("count", 10000000)
+            }
+        }
+    }
+
+    /** Treatments (boluses, carbs, temp basals, ...) created in [startMs, endMs), as raw documents. */
+    suspend fun getTreatments(startMs: Long, endMs: Long): Result<List<JsonObject>, NetworkError> {
+        val config = getNightscoutConfig()
+        val url = constructUrl("/api/v1/treatments.json", baseUrl = config.baseUrl, apiKey = null)
+        return safeCall {
+            client.get(url) {
+                applyNightscoutAuth(config.apiKey)
+                parameter("find[created_at][\$gte]", Instant.ofEpochMilli(startMs).toString())
+                parameter("find[created_at][\$lt]", Instant.ofEpochMilli(endMs).toString())
+                parameter("count", 20000)
             }
         }
     }

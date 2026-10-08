@@ -1,5 +1,6 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.data.backfill.BackfillStatus
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
@@ -14,6 +15,7 @@ data class SettingsState(
     val enabledConnectors: Set<Connector> = emptySet(),
     val selections: Map<DataType, Connector?> = emptyMap(),
     val nightscoutCheck: NightscoutCheckState = NightscoutCheckState.Idle,
+    val backfill: BackfillStatus = BackfillStatus.Idle,
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
     val nightscoutConfig: NightscoutConfig = NightscoutConfig(baseUrl = "", apiKey = ""),
     val aiConfig: AiConfig = AiConfig(baseUrl = "", apiKey = ""),
@@ -33,6 +35,8 @@ data class HealthConnectUiState(
     val activityGranted: Boolean = false,
     val glucoseGranted: Boolean = false,
     val backgroundGranted: Boolean = false,
+    /** May read data older than 30 days before the first grant (needed to backfill long ranges). */
+    val historyGranted: Boolean = false,
     val lastSync: Long? = null,
     /** What the last import found, per data type. */
     val summary: HealthConnectImportSummary? = null,

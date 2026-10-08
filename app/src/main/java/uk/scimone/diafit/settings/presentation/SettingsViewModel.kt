@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.data.backfill.BackfillRunner
+import uk.scimone.diafit.core.data.backfill.BackfillStatus
+import uk.scimone.diafit.core.domain.model.TimeRange
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.networking.NightscoutCheck
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
@@ -45,7 +48,8 @@ class SettingsViewModel(
     private val healthConnectManager: HealthConnectManager,
     private val healthConnectSyncer: HealthConnectSyncer,
     private val healthConnectScheduler: HealthConnectScheduler,
-    private val nightscoutApi: NightscoutApi
+    private val nightscoutApi: NightscoutApi,
+    private val backfillRunner: BackfillRunner
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -57,6 +61,13 @@ class SettingsViewModel(
 
     init {
         refreshSettings()
+        viewModelScope.launch {
+            backfillRunner.status.collect { s ->
+                _state.value = _state.value.copy(backfill = s)
+                // New data landed: Home / History re-read it.
+                if (s is BackfillStatus.Done && !s.nothingMissing) SettingsChangeBus.notifyChange()
+            }
+        }
         viewModelScope.launch {
             healthConnectSyncer.status.collect { sync ->
                 _state.value = _state.value.let { it.copy(healthConnect = it.healthConnect.copy(sync = sync)) }
@@ -80,6 +91,7 @@ class SettingsViewModel(
                         activityGranted = HealthConnectPermissions.activity.all { p -> p in granted },
                         glucoseGranted = HealthConnectPermissions.glucose.all { p -> p in granted },
                         backgroundGranted = HealthConnectPermissions.BACKGROUND in granted,
+                        historyGranted = HealthConnectPermissions.HISTORY in granted,
                         lastSync = lastSync,
                         summary = HealthConnectImportSummary.decode(settingsRepository.getHealthConnectSummary())
                     )
@@ -186,6 +198,13 @@ class SettingsViewModel(
             SettingsChangeBus.notifyChange()
         }
     }
+
+    /** Fetches [type] for [range] from [connector], skipping what is already there. */
+    fun startBackfill(type: DataType, connector: Connector, range: TimeRange) = backfillRunner.start(type, connector, range)
+    fun dismissBackfill() = backfillRunner.dismiss()
+
+    /** The parts of [range] that would be fetched (the rest already has data). */
+    suspend fun missingRanges(type: DataType, range: TimeRange): List<TimeRange> = backfillRunner.missing(type, range)
 
     /** Verifies the saved Nightscout address and credentials. */
     fun testNightscout() {

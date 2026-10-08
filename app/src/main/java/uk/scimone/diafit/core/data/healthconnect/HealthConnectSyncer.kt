@@ -21,6 +21,7 @@ import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
 import uk.scimone.diafit.core.domain.repository.ActivityRepository
+import uk.scimone.diafit.core.domain.model.TimeRange
 import uk.scimone.diafit.settings.domain.model.Connector
 import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
@@ -110,14 +111,46 @@ class HealthConnectSyncer(
         val latest = cgmDao.getLatestTimestampBySource(CGM_SOURCE, userId)
         val from = latest?.let { Instant.ofEpochMilli(it).minus(Duration.ofMinutes(30)) }
             ?: now.minus(Duration.ofDays(BACKFILL_DAYS.toLong()))
+        importGlucose(from, now.plusSeconds(60))
+    }
 
+    /**
+     * Imports one data type for a past time range (the user-driven backfill), one day per read.
+     * Returns the number of records found; throws when the permission for that type is missing.
+     */
+    suspend fun backfill(type: DataType, range: TimeRange, onProgress: (Float) -> Unit = {}): Int = mutex.withLock {
+        check(manager.isAvailable) { "Health Connect isn't available." }
+        val granted = manager.grantedPermissions()
+        val needed = if (type == DataType.CGM) HealthConnectPermissions.glucose else HealthConnectPermissions.activity
+        check(needed.all { it in granted }) { "Health Connect access for ${type.label.lowercase()} hasn't been allowed." }
+        val dayMs = Duration.ofDays(1).toMillis()
+        val chunks = generateSequence(range.start) { it + dayMs }.takeWhile { it < range.end }.toList()
+        var found = 0
+        chunks.forEachIndexed { i, start ->
+            onProgress(i / chunks.size.toFloat())
+            val s = Instant.ofEpochMilli(start)
+            val e = Instant.ofEpochMilli(minOf(start + dayMs, range.end))
+            found += when (type) {
+                DataType.CGM -> importGlucose(s, e)
+                DataType.HEART_RATE -> readHeartRate(s, e)
+                DataType.STEPS -> readSteps(s, e)
+                DataType.SLEEP -> readSleep(s, e)
+                DataType.EXERCISE -> readExercise(s, e)
+                else -> 0
+            }
+        }
+        onProgress(1f)
+        found
+    }
+
+    private suspend fun importGlucose(from: Instant, to: Instant): Int {
         val readings = mutableListOf<Pair<Long, Double>>() // time, mg/dL
         var pageToken: String? = null
         do {
             val response = manager.client.readRecords(
                 ReadRecordsRequest(
                     recordType = BloodGlucoseRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(from, now.plusSeconds(60)),
+                    timeRangeFilter = TimeRangeFilter.between(from, to),
                     pageSize = PAGE_SIZE,
                     pageToken = pageToken
                 )
@@ -125,7 +158,7 @@ class HealthConnectSyncer(
             response.records.forEach { readings += it.time.toEpochMilli() to it.level.inMilligramsPerDeciliter }
             pageToken = response.pageToken
         } while (pageToken != null)
-        if (readings.isEmpty()) return@withLock 0
+        if (readings.isEmpty()) return 0
 
         readings.sortBy { it.first }
         // The reading just before the batch seeds the first rate.
@@ -150,7 +183,7 @@ class HealthConnectSyncer(
         }
         cgmDao.insertAll(entities)
         Log.d(TAG, "Imported ${entities.size} glucose readings")
-        entities.size
+        return entities.size
     }
 
     private suspend fun readHeartRate(start: Instant, end: Instant): Int {

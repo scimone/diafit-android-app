@@ -49,6 +49,12 @@ interface ActivityDao {
     @Query("SELECT * FROM ExerciseEntity WHERE userId == :userId AND endUtc >= :start ORDER BY startUtc ASC")
     fun observeExerciseSince(start: Long, userId: Int): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT timestamp FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end ORDER BY timestamp ASC")
+    suspend fun getHeartRateTimestampsBetween(start: Long, end: Long, userId: Int): List<Long>
+
+    @Query("SELECT startUtc FROM StepsEntity WHERE userId == :userId AND startUtc >= :start AND startUtc < :end ORDER BY startUtc ASC")
+    suspend fun getStepTimestampsBetween(start: Long, end: Long, userId: Int): List<Long>
+
     @Query("SELECT * FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end ORDER BY timestamp ASC")
     suspend fun getHeartRateBetween(start: Long, end: Long, userId: Int): List<HeartRateEntity>
 

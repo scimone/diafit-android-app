@@ -26,6 +26,9 @@ interface CgmDao {
     fun getEntriesBetween(start: Long, end: Long, userId: Int): List<CgmEntity>
 
     /** Newest reading written by one source (e.g. Health Connect), to resume an import from there. */
+    @Query("SELECT timestamp FROM CgmEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end ORDER BY timestamp ASC")
+    suspend fun getTimestampsBetween(start: Long, end: Long, userId: Int): List<Long>
+
     @Query("SELECT MAX(timestamp) FROM CgmEntity WHERE userId == :userId AND source == :source")
     suspend fun getLatestTimestampBySource(source: String, userId: Int): Long?
 }
