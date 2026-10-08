@@ -619,11 +619,10 @@ data class PanelValue(val text: String, val unit: String, val color: Color)
 /** Small muted heading in a panel's top-left corner, with the panel's latest [value] (if any) beside it. */
 @Composable
 private fun BoxScope.PanelTitle(text: String, value: PanelValue? = null, extra: PanelValue? = null) {
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 2.dp)
-    ) {
-        Text(text = text, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // Aligned on the text baseline: the label and the bigger bold value have different line boxes,
+    // so aligning their bottoms left the value a little off the label.
+    Row(modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 2.dp)) {
+        Text(text = text, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.alignByBaseline())
         listOfNotNull(value, extra).forEach { v ->
             Text(
                 text = buildAnnotatedString {
@@ -631,7 +630,7 @@ private fun BoxScope.PanelTitle(text: String, value: PanelValue? = null, extra: 
                     if (v.unit.isNotEmpty()) withStyle(SpanStyle(fontSize = 10.sp)) { append(" ${v.unit}") }
                 },
                 color = v.color,
-                modifier = Modifier.padding(start = 6.dp)
+                modifier = Modifier.alignByBaseline().padding(start = 6.dp)
             )
         }
     }

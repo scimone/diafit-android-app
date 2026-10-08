@@ -186,15 +186,14 @@ fun ComponentEventActivityChart(
                 series(x = pastPoints.map { it.first }, y = pastPoints.map { it.second })
                 series(x = futurePoints.map { it.first }, y = futurePoints.map { it.second })
             }
-            if (recentEvents.isNotEmpty()) {
-                lineSeries {
-                    series(x = recentEvents.map { it.time }, y = bubbleYs)
-                }
-            }
-            // After the bubbles, so the dots are drawn on top of them.
             if (tickEvents.isNotEmpty()) {
                 lineSeries {
                     series(x = tickEvents.map { it.time }, y = tickEvents.map { activityAt(it.time) })
+                }
+            }
+            if (recentEvents.isNotEmpty()) {
+                lineSeries {
+                    series(x = recentEvents.map { it.time }, y = bubbleYs)
                 }
             }
         }
@@ -291,8 +290,8 @@ fun ComponentEventActivityChart(
     val chart = rememberCartesianChart(
         *listOfNotNull(
             curveLayer,
-            bubbleLayer.takeIf { recentEvents.isNotEmpty() },
-            tickLayer.takeIf { tickEvents.isNotEmpty() }
+            tickLayer.takeIf { tickEvents.isNotEmpty() },
+            bubbleLayer.takeIf { recentEvents.isNotEmpty() }
         ).toTypedArray(),
         startAxis = VerticalAxis.rememberStart(
             label = null,
