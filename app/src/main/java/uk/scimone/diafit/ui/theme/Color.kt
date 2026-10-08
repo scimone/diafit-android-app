@@ -73,6 +73,7 @@ val Carbs = Color(0xFFFFD54F)        // Muted but warm yellow, less saturated
 val Bolus = Color(0xFF42A5F5)        // Clean bright blue, friendly and clear
 val Basal = Color(0xFF1565C0)        // Dark blue for basal insulin everywhere (Bolus is the lighter blue)
 val Activity = Color(0xFFAB47BC)     // Softened vibrant pink-purple (modern magenta)
+val Warning = Color(0xFFF59E0B)      // Amber for pump / system warnings
 val Device = Color(0xFF90A4AE)       // Neutral blue-grey for device/therapy events, distinct from every data colour
 
 

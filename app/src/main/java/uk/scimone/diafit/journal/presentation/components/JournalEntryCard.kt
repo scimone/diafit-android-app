@@ -14,12 +14,14 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,12 +43,15 @@ import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.GlucoseEpisode
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.model.MEAL_OUTCOME_WINDOW_MS
+import uk.scimone.diafit.R
 import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
+import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
+import uk.scimone.diafit.ui.theme.Warning
 import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
 import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
 import uk.scimone.diafit.core.domain.model.SleepStage
@@ -381,7 +386,13 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                 Modifier.size(48.dp).background(Device.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Build, null, tint = Device, modifier = Modifier.size(24.dp))
+                val tint = if (entry.icon == PumpEventIcon.WARNING) Warning else Device
+                when (entry.icon) {
+                    PumpEventIcon.PUMP -> Icon(painterResource(R.drawable.ic_insulin_pump), null, tint = tint, modifier = Modifier.size(24.dp))
+                    PumpEventIcon.SENSOR -> Icon(painterResource(R.drawable.ic_sensor), null, tint = tint, modifier = Modifier.size(24.dp))
+                    PumpEventIcon.WARNING -> Icon(Icons.Filled.Warning, null, tint = tint, modifier = Modifier.size(24.dp))
+                    PumpEventIcon.GENERIC -> Icon(Icons.Filled.Build, null, tint = tint, modifier = Modifier.size(24.dp))
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -391,7 +402,10 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                 )
                 Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (!entry.notes.isNullOrBlank()) {
-                    Text(entry.notes, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                    Text(
+                        entry.notes, style = MaterialTheme.typography.bodyMedium, maxLines = 2,
+                        color = if (entry.icon == PumpEventIcon.WARNING) Warning else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             // The values of a profile switch / target, right-aligned like the numbers on meal cards, coloured like their charts.

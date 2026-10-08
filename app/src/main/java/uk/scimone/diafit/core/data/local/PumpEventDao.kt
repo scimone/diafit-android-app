@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
 
@@ -33,4 +34,11 @@ interface PumpEventDao {
 
     @Query("UPDATE PumpEventEntity SET isDeleted = :deleted WHERE id == :id")
     suspend fun setDeleted(id: Int, deleted: Boolean)
+
+    /** Events stored before their origin was recorded (see PumpEventNormalizer.SOURCE_KEY). */
+    @Query("SELECT * FROM PumpEventEntity WHERE eventType != 'Temp Basal' AND rawJson NOT LIKE '%diafitSource%'")
+    suspend fun getUnstamped(): List<PumpEventEntity>
+
+    @Update
+    suspend fun update(event: PumpEventEntity)
 }

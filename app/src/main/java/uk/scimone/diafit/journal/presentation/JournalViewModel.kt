@@ -37,6 +37,7 @@ import uk.scimone.diafit.core.domain.model.pairTemporaryTargets
 import uk.scimone.diafit.core.domain.model.toTemporaryTarget
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.toUi as pumpEventToUi
+import uk.scimone.diafit.journal.presentation.model.toMergedChangeUi
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.model.MealMatcher
@@ -199,9 +200,18 @@ class JournalViewModel(
             // AAPS sometimes sends the same event twice under different ids: keep the first of each.
             .distinctBy { Triple(it.eventType.lowercase(), it.timestampUtc / 60_000, it.durationMinutes to it.notes) }
             .distinctBy { it.toTemporaryTarget()?.let { t -> listOf(t.startUtc / 60_000, t.low, t.high, t.reason) } ?: it.id }
-        val pairs = pairTemporaryTargets(milestones)
+        // A site change and an insulin change at the same moment are one event (new pod / infusion set).
+        val insulinChanges = milestones.filter { it.eventType.equals("Insulin Change", true) }.toMutableList()
+        val merged = milestones.filter { it.eventType.equals("Site Change", true) }.mapNotNull { site ->
+            insulinChanges.firstOrNull { kotlin.math.abs(it.timestampUtc - site.timestampUtc) < 2 * 60_000L }
+                ?.also { insulinChanges.remove(it) }?.let { listOf(site, it) }
+        }
+        val mergedIds = merged.flatten().map { it.id }.toSet()
+        val rest = milestones.filter { it.id !in mergedIds }
+        val pairs = pairTemporaryTargets(rest)
         val pairedTargetIds = pairs.values.map { it.id }.toSet()
-        milestones.filter { it.id !in pairedTargetIds }.map { it.pumpEventToUi(pairs[it.id]?.toTemporaryTarget()) }
+        rest.filter { it.id !in pairedTargetIds }.map { it.pumpEventToUi(pairs[it.id]?.toTemporaryTarget()) } +
+            merged.map { it.toMergedChangeUi() }
     } catch (e: Exception) {
         Log.e(TAG, "Error loading pump events", e)
         emptyList()
@@ -221,10 +231,10 @@ class JournalViewModel(
     }
 
     /** Removes a device event from the journal (soft delete, so AAPS re-sending it doesn't bring it back). */
-    fun deletePumpEvent(id: Int) {
+    fun deletePumpEvent(ids: List<Int>) {
         viewModelScope.launch {
             try {
-                pumpEventRepository.setDeleted(id, true)
+                ids.forEach { pumpEventRepository.setDeleted(it, true) }
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting pump event", e)
             }

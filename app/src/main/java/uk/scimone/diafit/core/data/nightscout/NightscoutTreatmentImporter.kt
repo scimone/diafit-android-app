@@ -4,6 +4,7 @@ import uk.scimone.diafit.core.data.local.BolusDao
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.networking.dto.NightscoutTreatmentMapper
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
+import uk.scimone.diafit.core.domain.model.PumpEventNormalizer
 import uk.scimone.diafit.core.domain.model.dataType
 import uk.scimone.diafit.core.domain.model.toProfileSwitch
 import uk.scimone.diafit.core.domain.repository.MealRepository
@@ -31,7 +32,6 @@ class NightscoutTreatmentImporter(
         private const val HOUR = 3_600_000L
         /** A live event and the same one from Nightscout can be stamped seconds apart. */
         private const val TEMP_BASAL_SAME_MS = 90_000L
-        private const val EVENT_SAME_MS = 5_000L
     }
 
     /** Fetches treatments in [startMs, endMs) once and stores what [types] ask for. Returns the rows added per type. */
@@ -87,14 +87,14 @@ class NightscoutTreatmentImporter(
     private suspend fun importEvents(
         docs: List<kotlinx.serialization.json.JsonObject>, types: Set<DataType>, start: Long, end: Long
     ): Map<DataType, Int> {
-        val existing = pumpEvents.getBetween(start - HOUR, end + HOUR, userId)
+        val existing = pumpEvents.getBetween(start - HOUR, end + HOUR, userId).toMutableList()
         val added = types.associateWith { 0 }.toMutableMap()
         for (event in docs.mapNotNull { NightscoutTreatmentMapper.toPumpEvent(it, userId) }) {
             val type = event.dataType
             if (type !in types) continue
             // The live AAPS copy may lack Nightscout's _id (then keyed by type + time): don't store it twice.
-            if (existing.any { it.eventType == event.eventType && abs(it.timestampUtc - event.timestampUtc) < EVENT_SAME_MS }) continue
-            if (pumpEvents.insert(event)) added[type] = added.getValue(type) + 1
+            if (existing.any { PumpEventNormalizer.isSameEvent(it, event) }) continue
+            if (pumpEvents.insert(event)) { added[type] = added.getValue(type) + 1; existing += event }
         }
         return added
     }

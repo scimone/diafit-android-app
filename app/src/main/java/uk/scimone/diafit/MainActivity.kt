@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
     private val getCgmSourceUseCase: GetCgmSourceUseCase by inject()
     private val cgmServiceManager: CgmServiceManager by inject()
     private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository by inject()
+    private val pumpEventRepair: uk.scimone.diafit.core.data.repository.PumpEventRepair by inject()
     private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler by inject()
     private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
     private val setMealValid: SetMealValidUseCase by inject()
@@ -109,6 +110,8 @@ class MainActivity : ComponentActivity() {
                 healthConnectScheduler.syncNow()
             }
         }
+
+        lifecycleScope.launch { pumpEventRepair.runOnce() }
 
         // Nightscout treatments (insulin, carbs, profile, device changes): routine job plus a catch-up on open.
         nightscoutSyncScheduler.schedulePeriodic()

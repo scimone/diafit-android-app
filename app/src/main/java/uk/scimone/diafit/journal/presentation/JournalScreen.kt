@@ -35,6 +35,9 @@ import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.components.formatDuration
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
+import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
+import uk.scimone.diafit.ui.theme.Warning
+import androidx.compose.ui.graphics.Color
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
@@ -129,7 +132,7 @@ fun JournalScreen(
         SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
         selectedEvent?.let { event ->
             DeviceEventDialog(event, onDismiss = { selectedEvent = null }, onDelete = {
-                viewModel.deletePumpEvent(event.id)
+                viewModel.deletePumpEvent(event.ids)
                 selectedEvent = null
             })
         }
@@ -148,9 +151,11 @@ private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelet
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(time, style = MaterialTheme.typography.bodyMedium)
-                event.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                event.notes?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = if (event.icon == PumpEventIcon.WARNING) Warning else Color.Unspecified)
+                }
                 Text(
-                    "Imported from AAPS. Deleting only removes it from Diafit.",
+                    (event.source?.let { "Imported from $it. " } ?: "") + "Deleting only removes it from Diafit.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

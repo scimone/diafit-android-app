@@ -12,6 +12,7 @@ import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
+import uk.scimone.diafit.core.domain.model.PumpEventNormalizer
 import java.time.Instant
 
 /**
@@ -89,7 +90,7 @@ object NightscoutTreatmentMapper {
         if ((t["isValid"] as? JsonPrimitive)?.booleanOrNull == false) return null
         val ts = timestampOf(t) ?: return null
         val duration = (t.num("durationInMilliseconds")?.div(60_000.0)) ?: t.num("duration")
-        return PumpEventEntity(
+        val event = PumpEventEntity(
             userId = userId, timestampUtc = ts, createdAtUtc = now,
             eventType = eventType,
             notes = t.str("notes"),
@@ -98,6 +99,8 @@ object NightscoutTreatmentMapper {
             sourceId = t.str("_id") ?: "$eventType-$ts",
             rawJson = t.toString()
         )
+        // AAPS also logs profile changes as Notes carrying the profile: those are profile switches.
+        return PumpEventNormalizer.withSource(PumpEventNormalizer.profileNoteToSwitch(event) ?: event, "Nightscout")
     }
 
     /**
@@ -123,7 +126,7 @@ object NightscoutTreatmentMapper {
         return PumpEventEntity(
             userId = userId, timestampUtc = ts, createdAtUtc = now, eventType = "Profile Switch",
             durationMinutes = 0.0, sourceId = "ns-profile-${doc.str("_id") ?: ts}", rawJson = raw.toString()
-        )
+        ).let { PumpEventNormalizer.withSource(it, "Nightscout") }
     }
 
     private fun t(a: String?, b: String?): String? = a?.takeIf { it.isNotEmpty() } ?: b

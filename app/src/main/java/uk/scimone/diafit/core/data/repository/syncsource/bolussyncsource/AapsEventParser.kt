@@ -5,6 +5,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
+import uk.scimone.diafit.core.domain.model.PumpEventNormalizer
 import java.time.Instant
 
 /**
@@ -42,7 +43,7 @@ object AapsEventParser {
             t.has("duration") && !t.isNull("duration") -> t.optDouble("duration")
             else -> null
         }
-        return PumpEventEntity(
+        val event = PumpEventEntity(
             userId = userId,
             timestampUtc = timestamp,
             createdAtUtc = System.currentTimeMillis(),
@@ -53,5 +54,6 @@ object AapsEventParser {
             sourceId = t.optString("_id", "").ifEmpty { "$eventType-$timestamp" },
             rawJson = t.toString()
         )
+        return PumpEventNormalizer.withSource(PumpEventNormalizer.profileNoteToSwitch(event) ?: event, "AAPS")
     }
 }
