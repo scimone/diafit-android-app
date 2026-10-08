@@ -21,7 +21,7 @@ class AapsStatusReceiver : BroadcastReceiver() {
         val tempBasal = AapsTempBasalParser.parse(
             extras.getString("enacted"),
             extras.getLong("enactedTimeStamp", 0L),
-            extras.getDouble("baseBasal", Double.NaN)
+            (extras.get("baseBasal") as? Number)?.toDouble()
         ) ?: return
         val data = Data.Builder()
             .putLong(TempBasalBroadcastWorker.KEY_ENACTED_AT, tempBasal.enactedAt)
