@@ -1,5 +1,6 @@
 package uk.scimone.diafit.journal.presentation.components
 
+import uk.scimone.diafit.home.presentation.components.UriMosaic
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,8 +12,6 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.animation.animateContentSize
@@ -167,35 +166,14 @@ private fun BigValue(value: String, unit: String, color: Color) {
     }
 }
 
-/** The cover photo (or the meal-type tile), with a "+N" badge when there are more photos. */
+/** The meal-type tile, one photo, or the split view of several (same mosaic as on Home). */
 @Composable
 private fun MealThumbnail(meal: MealEntityUi) {
     val size = 84.dp
     val photos = meal.photoUris
-    Box(Modifier.size(size)) {
-        if (photos.isEmpty()) {
-            MealTypeTile(meal.mealType, size)
-        } else {
-            AsyncImage(
-                model = photos.first(),
-                contentDescription = meal.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize().clip(RoundedCornerShape(16.dp))
-            )
-        }
-        if (photos.size > 1) {
-            Text(
-                "+${photos.size - 1}",
-                color = Color.White,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(5.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                    .padding(horizontal = 6.dp, vertical = 1.dp)
-            )
-        }
+    Box(Modifier.size(size).clip(RoundedCornerShape(16.dp))) {
+        if (photos.isEmpty()) MealTypeTile(meal.mealType, size)
+        else UriMosaic(photos)
     }
 }
 
@@ -331,13 +309,6 @@ fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
                     )
                 }
                 BigValue(formatUnits(entry.units), "U", Bolus)
-                if (grouped) {
-                    Icon(
-                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        if (expanded) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
             if (grouped && expanded) {
                 Column(Modifier.padding(start = 72.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

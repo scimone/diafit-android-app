@@ -278,7 +278,7 @@ private fun PhotoMosaic(group: MealGroup) = UriMosaic(group.photos)
 
 /** 1 photo fills the tile; 2 split it; 3+ show one large and two stacked, with "+N" on the last. */
 @Composable
-private fun UriMosaic(photos: List<android.net.Uri>) {
+internal fun UriMosaic(photos: List<android.net.Uri>) {
     val gap = 2.dp
     when {
         photos.isEmpty() -> NoPhotoTile(Modifier.fillMaxSize())
