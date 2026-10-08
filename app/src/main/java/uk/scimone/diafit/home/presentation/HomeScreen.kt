@@ -1,5 +1,7 @@
 package uk.scimone.diafit.home.presentation
 
+import androidx.compose.ui.res.painterResource
+import uk.scimone.diafit.R
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -537,12 +539,18 @@ internal fun InspectReadout(
                             Text("no reading", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    basalRate?.let { ReadoutEvent(Basal, "${formatRate(it)} U/h") }
-                    if (activity?.label == null) activityLevel?.let { ReadoutEvent(Activity, it.label) }
-                    activity?.bpm?.let { ReadoutEvent(Activity, "$it bpm") }
-                    activity?.label?.let { ReadoutEvent(Sleep.takeIf { _ -> it.startsWith("Sleep") || it == "Asleep" } ?: Activity, it) }
-                    if (bolusUnits > 0) ReadoutEvent(Bolus, formatAmount(bolusUnits) + " U")
-                    if (carbGrams > 0) ReadoutEvent(Carbs, "$carbGrams g")
+                    // Order: glucose (above), carbs, bolus, basal, activity.
+                    if (carbGrams > 0) ReadoutEvent(R.drawable.ic_meal_type_snack, Carbs, "$carbGrams g")
+                    if (bolusUnits > 0) ReadoutEvent(R.drawable.ic_readout_bolus, Bolus, formatAmount(bolusUnits) + " U")
+                    basalRate?.let { ReadoutEvent(R.drawable.ic_readout_basal, Basal, "${formatRate(it)} U/h") }
+                    val doing = listOfNotNull(
+                        activity?.label ?: activityLevel?.label,
+                        activity?.bpm?.let { "$it bpm" }
+                    )
+                    if (doing.isNotEmpty()) {
+                        val asleep = activity?.label?.let { it.startsWith("Sleep") || it == "Asleep" } == true
+                        ReadoutEvent(R.drawable.ic_readout_activity, if (asleep) Sleep else Activity, doing.joinToString(" · "))
+                    }
                     Icon(
                         Icons.Default.Close, contentDescription = "Close inspection",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
@@ -561,11 +569,11 @@ internal fun InspectReadout(
 }
 
 @Composable
-private fun ReadoutEvent(color: Color, text: String) {
+private fun ReadoutEvent(@androidx.annotation.DrawableRes icon: Int, color: Color, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).background(color, CircleShape))
-        Spacer(Modifier.width(4.dp))
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Icon(painterResource(icon), contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(3.dp))
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = color)
     }
 }
 

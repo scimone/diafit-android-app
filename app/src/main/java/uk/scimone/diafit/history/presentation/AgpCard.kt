@@ -76,7 +76,6 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
 @Composable
 private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Modifier) {
     val guides = hourGuideColor()
-    val halo = Color.White.copy(alpha = 0.55f)
     val targetFill = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
     val yMax = remember(agp) {
         val top = agp.p95.filter { !it.isNaN() }.maxOrNull() ?: 250f
@@ -117,11 +116,11 @@ private fun AgpPlot(agp: AgpProfile, thresholds: GlucoseThresholds, modifier: Mo
             if (v.isNaN()) { open = false; continue }
             if (open) line.lineTo(x(i), y(v)) else { line.moveTo(if (i == 0) 0f else x(i), y(v)); open = true }
         }
-        // Same zone clipping as the bands: the line is red below range and purple above it.
-        // A thin light halo under the line lifts it off the bands of the same colour.
-        drawPath(line, halo, style = Stroke(4.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        val stroke = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) { drawPath(line, color, style = stroke) }
+        // Same zone clipping as the bands: the line takes the zone's colour, darkened so it stands out from the bands.
+        val stroke = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        for ((zTop, zBottom, color) in zones) clipRect(0f, zTop, w, zBottom) {
+            drawPath(line, androidx.compose.ui.graphics.lerp(color, Color.Black, 0.5f), style = stroke)
+        }
     }
 }
 

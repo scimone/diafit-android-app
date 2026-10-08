@@ -10,11 +10,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,7 +33,7 @@ private data class NavTab(
 
 private val navTabs = listOf(
     NavTab(0, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-    NavTab(1, "Summary", Icons.Filled.Insights, Icons.Outlined.Insights),
+    NavTab(1, "Stats", Icons.Filled.BarChart, Icons.Outlined.BarChart),
     NavTab(2, "Journal", Icons.Filled.Book, Icons.Outlined.Book),
     NavTab(3, "History", Icons.Filled.History, Icons.Outlined.History),
 )

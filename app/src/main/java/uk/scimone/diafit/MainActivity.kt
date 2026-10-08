@@ -215,7 +215,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when (selectedTab) {
                             0 -> HomeScreen(userId = userId, onAddCourse = addCourse, onOpenMeal = { overlays.add(Overlay.MealDetail(it)) })
-                            1 -> Greeting("Summary")
+                            1 -> Greeting("Stats")
                             2 -> JournalScreen(
                                 userId = userId,
                                 onOpenEntry = { entry ->
