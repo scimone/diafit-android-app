@@ -91,7 +91,13 @@ fun JournalScreen(
                     uiState.isLoading && days.isEmpty() ->
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 
-                    days.isEmpty() -> EmptyJournal(onAddEntry)
+                    days.isEmpty() -> EmptyJournal(
+                        filter = filter,
+                        range = uiState.range,
+                        onClearFilter = { filter = null },
+                        onResetRange = { viewModel.setRange(JournalRange()) },
+                        onAddEntry = onAddEntry
+                    )
 
                     else -> LazyColumn(
                         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -256,7 +262,44 @@ private fun daySummary(entries: List<JournalEntryUi>): String {
 }
 
 @Composable
-private fun EmptyJournal(onAddEntry: () -> Unit) {
+private fun EmptyJournal(
+    filter: JournalEntryKind?,
+    range: JournalRange,
+    onClearFilter: () -> Unit,
+    onResetRange: () -> Unit,
+    onAddEntry: () -> Unit
+) {
+    // Entries may exist, just not for this filter or period: say so instead of claiming the journal is empty.
+    if (filter != null || range.isCustom) {
+        val title = if (filter != null) "No ${filter.pluralLabel.lowercase()} in this period" else "Nothing in this period"
+        val body = when {
+            filter != null && range.isCustom -> "Nothing of this kind was recorded in the days you picked. Try all entries or a longer period."
+            filter != null -> "Nothing of this kind was recorded in the last $DEFAULT_RANGE_DAYS days."
+            else -> "No entries were recorded in the days you picked."
+        }
+        Column(
+            Modifier.fillMaxSize().padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.AutoMirrored.Outlined.MenuBook,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(6.dp))
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (filter != null) FilledTonalButton(onClick = onClearFilter) { Text("Show all entries") }
+                if (range.isCustom) FilledTonalButton(onClick = onResetRange) { Text("Last $DEFAULT_RANGE_DAYS days") }
+            }
+        }
+        return
+    }
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,

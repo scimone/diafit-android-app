@@ -28,9 +28,8 @@ import uk.scimone.diafit.home.presentation.InspectCursor
 import uk.scimone.diafit.home.presentation.InspectReadout
 import uk.scimone.diafit.home.presentation.DismissInspectionWhenOffscreen
 import uk.scimone.diafit.core.domain.model.at
-import uk.scimone.diafit.core.domain.model.basalInsulinActivity
-import uk.scimone.diafit.core.domain.model.valueAt
 import uk.scimone.diafit.home.presentation.BasalDisplay
+import uk.scimone.diafit.home.presentation.activityLevelAt
 import uk.scimone.diafit.home.presentation.InsulinActivityDisplay
 import uk.scimone.diafit.home.presentation.TapToggleRadiusPx
 import uk.scimone.diafit.home.presentation.components.MealTimeline
@@ -70,7 +69,6 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
     val haptics = LocalHapticFeedback.current
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
     val bolusScale = remember { mutableStateOf<Double?>(null) }
-    val basalActivitySeries = remember(state.basal, window.maxX) { basalInsulinActivity(state.basal, window.minX, window.maxX) }
     val onGeometry = remember { { g: ChartGeometry -> geometry.value = g } }
 
     // As on Home: one scroll/zoom state shared by every panel, content-independent zoom bounds,
@@ -109,8 +107,8 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     geometry = geometry,
                     reading = inspectedReading,
                     activity = state.activity.readoutAt(cursorTime),
+                    activityLevel = activityLevelAt(state.activity, state.activityConnected, cursorTime),
                     basalRate = state.basal.at(cursorTime)?.delivered,
-                    basalActivity = basalActivitySeries.valueAt(cursorTime)?.takeIf { state.basal.isNotEmpty() },
                     bolusUnits = state.insulin.filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value.toDouble() },
                     carbGrams = state.carbs.filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value },
                     lower = lower,

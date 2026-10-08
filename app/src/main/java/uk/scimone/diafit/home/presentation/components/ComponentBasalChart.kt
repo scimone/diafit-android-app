@@ -56,14 +56,15 @@ fun ComponentBasalChart(
 
         val plotTop = PlotTopInset.toPx()
         val plotBottom = size.height - PlotBottomInset.toPx()
-        fun yOf(rate: Double) = plotBottom - (rate / axisMax).toFloat().coerceIn(0f, 1f) * (plotBottom - plotTop)
-
-        // The insulin activity of the basal shares the rate's zero line (the bottom of the plot). The rare, small
-        // negative stretches just dip under it; the forecast tail after "now" is drawn faded like the bolus curve.
-        val zeroY = plotBottom
         val unitsPerPx = (activityUnitsPerDp?.let { it / density }
             ?: (max(0.0005, activity.maxOf { it.second }) * 1.1 / (plotBottom - plotTop)))
-        fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, size.height)
+        // The activity curve shares the rate's zero line. When the basal activity goes negative, the zero line
+        // moves up by just enough room for the deepest dip (at most 40% of the plot).
+        val lowest = activity.minOf { it.second }.coerceAtMost(0.0)
+        val room = ((-lowest / unitsPerPx).toFloat() * 1.05f).coerceIn(0f, (plotBottom - plotTop) * 0.4f)
+        val zeroY = plotBottom - room
+        fun yOf(rate: Double) = zeroY - (rate / axisMax).toFloat().coerceIn(0f, 1f) * (zeroY - plotTop)
+        fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
 
         clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
             fun drawActivity(points: List<Pair<Long, Double>>, alpha: Float) {
@@ -92,7 +93,7 @@ fun ComponentBasalChart(
             fun finishRun() {
                 val l = line ?: return
                 val a = area ?: return
-                a.lineTo(lastX, plotBottom); a.lineTo(runStartX, plotBottom); a.close()
+                a.lineTo(lastX, zeroY); a.lineTo(runStartX, zeroY); a.close()
                 drawPath(a, Basal.copy(alpha = 0.22f))
                 drawPath(l, Basal, style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
                 line = null; area = null
@@ -104,7 +105,7 @@ fun ComponentBasalChart(
                 if (line == null || s.startUtc != runEnd) {
                     finishRun()
                     line = Path().apply { moveTo(x0, y) }
-                    area = Path().apply { moveTo(x0, plotBottom); lineTo(x0, y) }
+                    area = Path().apply { moveTo(x0, zeroY); lineTo(x0, y) }
                     runStartX = x0
                 } else {
                     line!!.lineTo(x0, y); area!!.lineTo(x0, y)

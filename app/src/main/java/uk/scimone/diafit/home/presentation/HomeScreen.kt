@@ -5,8 +5,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import uk.scimone.diafit.core.domain.model.ActivityLevel
 import uk.scimone.diafit.core.domain.model.at
-import uk.scimone.diafit.core.domain.model.basalInsulinActivity
-import uk.scimone.diafit.core.domain.model.valueAt
 import uk.scimone.diafit.core.domain.model.currentActivityLevel
 import uk.scimone.diafit.core.domain.model.remainingCarbs
 import uk.scimone.diafit.core.domain.model.remainingInsulin
@@ -145,7 +143,6 @@ fun HomeScreen(
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
     val bolusScale = remember { mutableStateOf<Double?>(null) }
-    val basalActivitySeries = remember(state.basal, window.maxX) { basalInsulinActivity(state.basal, window.minX, window.maxX) }
     // The headline values describe "now", so they go away once the now line has been scrolled out of view.
     val nowVisible by remember(window) {
         derivedStateOf { geometry.value?.let { g -> g.xOf(window.now).let { it >= g.left && it <= g.right } } ?: true }
@@ -237,8 +234,8 @@ fun HomeScreen(
                                 geometry = geometry,
                                 reading = inspectedReading,
                                 activity = state.activity.readoutAt(cursorTime),
+                                activityLevel = activityLevelAt(state.activity, state.activityConnected, cursorTime),
                                 basalRate = state.basal.at(cursorTime)?.delivered,
-                                basalActivity = basalActivitySeries.valueAt(cursorTime)?.takeIf { state.basal.isNotEmpty() },
                                 bolusUnits = state.insulinActivityHistory
                                     .filter { abs(it.timeLong - cursorTime) <= EVENT_NEAR_MS }.sumOf { it.value.toDouble() },
                                 carbGrams = state.carbHistory
@@ -495,9 +492,10 @@ internal fun InspectReadout(
     geometry: State<ChartGeometry?>,
     reading: CgmChartData?,
     activity: ActivityReadout? = null,
-    /** Basal rate (U/h) running at the cursor, and the net insulin activity of the basal then (U/min). */
+    /** How active the person was at the cursor (shown unless a workout/sleep label already says it). */
+    activityLevel: ActivityLevel? = null,
+    /** Basal rate (U/h) running at the cursor. */
     basalRate: Double? = null,
-    basalActivity: Double? = null,
     bolusUnits: Double,
     carbGrams: Int,
     lower: Int,
@@ -515,38 +513,40 @@ internal fun InspectReadout(
                 shadowElevation = 3.dp,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column(Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(time, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(8.dp))
-                    if (reading != null) {
-                        Text(
-                            "${reading.value}",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = glucoseColor(reading.value, lower, upper)
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        Text("mg/dL", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        Text("no reading", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // One line while it fits; the items wrap onto a second line only when they don't.
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(time, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        if (reading != null) {
+                            Text(
+                                "${reading.value}",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = glucoseColor(reading.value, lower, upper)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text("mg/dL", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            Text("no reading", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
+                    basalRate?.let { ReadoutEvent(Basal, "${formatRate(it)} U/h") }
+                    if (activity?.label == null) activityLevel?.let { ReadoutEvent(Activity, it.label) }
                     activity?.bpm?.let { ReadoutEvent(Activity, "$it bpm") }
                     activity?.label?.let { ReadoutEvent(Sleep.takeIf { _ -> it.startsWith("Sleep") || it == "Asleep" } ?: Activity, it) }
                     if (bolusUnits > 0) ReadoutEvent(Bolus, formatAmount(bolusUnits) + " U")
                     if (carbGrams > 0) ReadoutEvent(Carbs, "$carbGrams g")
-                    Spacer(Modifier.width(4.dp))
                     Icon(
                         Icons.Default.Close, contentDescription = "Close inspection",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
                     )
-                }
-                if (basalRate != null || basalActivity != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        basalRate?.let { ReadoutEvent(Basal, "${formatRate(it)} U/h", firstGap = 0.dp) }
-                        basalActivity?.let { ReadoutEvent(Bolus, "%+.2f U/h activity".format(Locale.US, it * 60), firstGap = if (basalRate != null) 10.dp else 0.dp) }
-                    }
-                }
                 }
             }
         }
@@ -561,11 +561,12 @@ internal fun InspectReadout(
 }
 
 @Composable
-private fun ReadoutEvent(color: Color, text: String, firstGap: androidx.compose.ui.unit.Dp = 10.dp) {
-    Spacer(Modifier.width(firstGap))
-    Box(Modifier.size(8.dp).background(color, CircleShape))
-    Spacer(Modifier.width(4.dp))
-    Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+private fun ReadoutEvent(color: Color, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).background(color, CircleShape))
+        Spacer(Modifier.width(4.dp))
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 private fun formatAmount(v: Double): String {
@@ -850,7 +851,7 @@ internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
         PanelValue("$it", "mg/dL", glucoseColor(it, state.targetRangeLower, state.targetRangeUpper))
     }
     // Nothing recent from a connected source (Health Connect) means nothing was going on: Low. Without a source, no value.
-    val activityLevel = currentActivityLevel(state.activity, now) ?: ActivityLevel.LOW.takeIf { state.activityConnected }
+    val activityLevel = activityLevelAt(state.activity, state.activityConnected, now)
     val activity = activityLevel?.let { PanelValue(it.label, "", Activity) }
     val basal = state.basal.lastOrNull()?.takeIf { now - it.endUtc <= 2 * 60_000L }?.let { PanelValue(formatRate(it.delivered), "U/h", Basal) }
     val insulin = remainingInsulin(state.insulinActivityHistory.map { it.timeLong to it.value.toDouble() }, now)
@@ -863,3 +864,7 @@ internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
         carbs = PanelValue("${carbs.roundToInt()}", "g", Carbs)
     )
 }
+
+/** The activity level at [time] (Low when a connected source has logged nothing then); null without a source. */
+internal fun activityLevelAt(data: ActivityData, connected: Boolean, time: Long): ActivityLevel? =
+    currentActivityLevel(data, time) ?: ActivityLevel.LOW.takeIf { connected }
