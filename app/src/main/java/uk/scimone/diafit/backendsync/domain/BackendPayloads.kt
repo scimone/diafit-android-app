@@ -7,6 +7,7 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
+import uk.scimone.diafit.core.domain.model.StepsEntity
 import java.time.Instant
 
 /** Request bodies of the Diafit backend API v2 (`diafit_backend_api.json`), and the mapping from local rows. */
@@ -95,6 +96,16 @@ data class HeartRateIn(
 )
 
 @Serializable
+data class StepsIn(
+    @SerialName("start_time") val startTime: String,
+    @SerialName("end_time") val endTime: String,
+    val count: Int,
+    val device: String,
+    val source: String,
+    @SerialName("source_id") val sourceId: String
+)
+
+@Serializable
 data class SleepStageIn(
     @SerialName("start_time") val startTime: String,
     @SerialName("end_time") val endTime: String,
@@ -177,6 +188,18 @@ fun MealIn.toPatch(): MealPatch = MealPatch(
 fun HeartRateEntity.toBackend(): HeartRateIn? {
     if (bpm !in 1..300) return null
     return HeartRateIn(isoUtc(timestamp), bpm, device = "Unknown", source = HEALTH_CONNECT_SOURCE, sourceId = null)
+}
+
+fun StepsEntity.toBackend(): StepsIn? {
+    if (count !in 0..1_000_000) return null
+    return StepsIn(
+        startTime = isoUtc(startUtc),
+        endTime = isoUtc(startUtc + StepsEntity.STEP_BUCKET_MS),
+        count = count,
+        device = "Unknown",
+        source = HEALTH_CONNECT_SOURCE,
+        sourceId = "hc-steps-$startUtc"
+    )
 }
 
 /** One session from its stage rows (all with the same `sessionId`). */

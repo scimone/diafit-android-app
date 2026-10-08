@@ -35,6 +35,7 @@ import uk.scimone.diafit.backendsync.domain.HeartRateIn
 import uk.scimone.diafit.backendsync.domain.MealIn
 import uk.scimone.diafit.backendsync.domain.MealPatch
 import uk.scimone.diafit.backendsync.domain.SleepSessionIn
+import uk.scimone.diafit.backendsync.domain.StepsIn
 import uk.scimone.diafit.backendsync.domain.isoUtc
 
 @Serializable
@@ -82,6 +83,7 @@ class BackendApi {
     suspend fun uploadBoluses(config: BackendConfig, rows: List<BolusIn>) = bulk(config, "boluses", rows, BolusIn.serializer())
     suspend fun uploadHeartRates(config: BackendConfig, rows: List<HeartRateIn>) = bulk(config, "heart-rates", rows, HeartRateIn.serializer())
     suspend fun uploadSleepSessions(config: BackendConfig, rows: List<SleepSessionIn>) = bulk(config, "sleep-sessions", rows, SleepSessionIn.serializer())
+    suspend fun uploadSteps(config: BackendConfig, rows: List<StepsIn>) = bulk(config, "steps", rows, StepsIn.serializer())
     suspend fun uploadMeals(config: BackendConfig, rows: List<MealIn>) = bulk(config, "meals", rows, MealIn.serializer())
 
     /** The backend id of the app's meal with [sourceId], looked up around the meal time it was last uploaded with. */

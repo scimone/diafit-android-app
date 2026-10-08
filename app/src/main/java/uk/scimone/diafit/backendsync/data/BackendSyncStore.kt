@@ -20,7 +20,7 @@ data class BackendSyncStatus(
 /** What a meal looked like when it was last uploaded, so edits can be detected and patched. */
 data class UploadedMeal(val hash: Int, val mealTimeUtc: Long)
 
-enum class SyncCursor { CGM, BOLUS, HEART_RATE, SLEEP }
+enum class SyncCursor { CGM, BOLUS, HEART_RATE, SLEEP, STEPS }
 
 /**
  * Backend address, token, upload progress and the last sync's outcome. Plain SharedPreferences, like the
@@ -51,6 +51,7 @@ class BackendSyncStore(context: Context) {
             putString(KEY_URL, normalized.baseUrl)
             putString(KEY_TOKEN, normalized.token)
             SyncCursor.entries.forEach { remove(cursorKey(it)) }
+            remove(KEY_STEPS_THROUGH)
             remove(KEY_LAST_SYNC); remove(KEY_LAST_OK); remove(KEY_MESSAGE)
         }
         mealPrefs.edit { clear() }
@@ -60,6 +61,10 @@ class BackendSyncStore(context: Context) {
 
     fun cursor(cursor: SyncCursor): Int = prefs.getInt(cursorKey(cursor), 0)
     fun setCursor(cursor: SyncCursor, id: Int) = prefs.edit { putInt(cursorKey(cursor), id) }
+
+    /** Step slots starting before this time have been uploaded (see [BackendSyncer]). */
+    fun stepsThrough(): Long = prefs.getLong(KEY_STEPS_THROUGH, 0L)
+    fun setStepsThrough(time: Long) = prefs.edit { putLong(KEY_STEPS_THROUGH, time) }
 
     fun uploadedMeals(): Map<String, UploadedMeal> = mealPrefs.all.mapNotNull { (key, value) ->
         val parts = (value as? String)?.split('|') ?: return@mapNotNull null
@@ -93,5 +98,6 @@ class BackendSyncStore(context: Context) {
         const val KEY_LAST_SYNC = "last_sync"
         const val KEY_LAST_OK = "last_ok"
         const val KEY_MESSAGE = "last_message"
+        const val KEY_STEPS_THROUGH = "steps_through"
     }
 }

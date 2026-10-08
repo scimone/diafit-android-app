@@ -15,7 +15,9 @@ import uk.scimone.diafit.backendsync.domain.toPatch
  * - sleep sessions: those with stage rows newer than the last upload (re-imports re-send, the backend skips them);
  * - meals: new ones in bulk; edited or deleted ones (soft delete = `is_valid: false`) are found on the backend by
  *   their source id and patched, since bulk uploads never update.
- * Steps, workouts and pump events have no endpoint and stay local. The first sync uploads the whole history.
+ * - steps: 15-minute slots once they are [STEPS_SETTLE_MS] old (Health Connect keeps rewriting recent slots as
+ *   devices sync, and bulk uploads never update), plus older slots written since the last upload (backfills).
+ * Workouts and pump events have no endpoint and stay local. The first sync uploads the whole history.
  */
 class BackendSyncer(
     private val dao: BackendSyncDao,
@@ -64,7 +66,24 @@ class BackendSyncer(
             fetch = { dao.heartRatesAfter(userId, it, PAGE) }, id = { it.id },
             upload = { rows -> api.uploadHeartRates(config, rows.mapNotNull { it.toBackend() }) }
         ).failure()?.let { return it }
-        return syncSleep(config, userId, counts)
+        syncSleep(config, userId, counts).failure()?.let { return it }
+        return syncSteps(config, userId, counts)
+    }
+
+    private suspend fun syncSteps(config: BackendConfig, userId: Int, counts: MutableMap<String, Int>): BackendResult<Unit> {
+        val cutoff = System.currentTimeMillis() - STEPS_SETTLE_MS
+        val maxId = dao.maxStepsId(userId) ?: return BackendResult.Ok(Unit)
+        val rows = dao.stepsToUpload(userId, cutoff, store.stepsThrough(), store.cursor(SyncCursor.STEPS))
+        for (chunk in rows.chunked(PAGE)) {
+            when (val result = api.uploadSteps(config, chunk.mapNotNull { it.toBackend() })) {
+                is BackendResult.Failed -> return result
+                is BackendResult.Ok -> counts.merge("step slots", result.data.inserted, Int::plus)
+            }
+        }
+        // Unsettled rows below maxId are covered later by the time window, once they pass the cutoff.
+        store.setStepsThrough(cutoff)
+        store.setCursor(SyncCursor.STEPS, maxId)
+        return BackendResult.Ok(Unit)
     }
 
     private suspend fun <T> uploadPaged(
@@ -150,5 +169,7 @@ class BackendSyncer(
         const val PAGE = 2000
         /** Sleep sessions carry up to 2,000 stages each, so fewer per request. */
         const val SLEEP_PAGE = 50
+        /** Step slots this recent may still grow (late watch/phone syncs), so they wait. */
+        const val STEPS_SETTLE_MS = 3 * 60 * 60_000L
     }
 }

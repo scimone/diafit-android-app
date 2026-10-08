@@ -43,7 +43,7 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
     LaunchedEffect(check) { if (check is BackendCheck.Ok) editing = false }
 
     Text(
-        "Optional: upload glucose, insulin, meals, heart rate and sleep to your own Diafit server. Runs every 15 minutes while online.",
+        "Optional: upload glucose, insulin, meals, heart rate, steps and sleep to your own Diafit server. Runs every 15 minutes while online.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

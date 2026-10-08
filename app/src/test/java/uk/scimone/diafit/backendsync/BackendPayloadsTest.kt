@@ -15,6 +15,8 @@ import uk.scimone.diafit.backendsync.domain.toBackendSession
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
+import uk.scimone.diafit.core.domain.model.StepsEntity
+import uk.scimone.diafit.backendsync.domain.StepsIn
 
 class BackendPayloadsTest {
     private val json = Json { encodeDefaults = true }
@@ -60,6 +62,16 @@ class BackendPayloadsTest {
         val session = rows.toBackendSession()!!
         assertEquals("s", session.sourceId)
         assertEquals(listOf(4, 5), session.stages.map { it.stage })
+    }
+
+    @Test
+    fun `step slot spans 15 minutes with a stable source id`() {
+        val payload = StepsEntity(userId = 1, startUtc = 1_791_460_800_000, count = 420).toBackend()!!
+        assertEquals("2026-10-08T12:00:00Z", payload.startTime)
+        assertEquals("2026-10-08T12:15:00Z", payload.endTime)
+        assertEquals("hc-steps-1791460800000", payload.sourceId)
+        val obj = json.encodeToJsonElement(StepsIn.serializer(), payload).jsonObject
+        assertEquals(setOf("start_time", "end_time", "count", "device", "source", "source_id"), obj.keys)
     }
 
     @Test
