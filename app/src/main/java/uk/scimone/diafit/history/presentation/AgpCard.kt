@@ -26,14 +26,11 @@ import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.components.drawHourGuides
 import uk.scimone.diafit.history.presentation.components.hourGuideColor
-import uk.scimone.diafit.history.presentation.components.stripBackground
 import uk.scimone.diafit.history.presentation.model.AgpMarkers
-import uk.scimone.diafit.history.presentation.model.ClockMarker
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.Activity
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
-import kotlin.math.sqrt
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 
@@ -59,12 +56,9 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
             }
         } else Column(Modifier.fillMaxSize()) {
             AgpPlot(agp, thresholds, Modifier.weight(1f).fillMaxWidth())
-            Spacer(Modifier.height(3.dp))
-            MarkerRow(markers.carbs, markers.dayCount, Carbs, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(1.dp))
-            MarkerRow(markers.bolus, markers.dayCount, Bolus, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(1.dp))
-            MarkerRow(markers.activity, markers.dayCount, Activity, Modifier.fillMaxWidth())
+            DensityLane(markers.carbs, Carbs, Modifier.fillMaxWidth())
+            DensityLane(markers.bolus, Bolus, Modifier.fillMaxWidth())
+            DensityLane(markers.activity, Activity, Modifier.fillMaxWidth())
         }
     }
 }
@@ -142,25 +136,38 @@ private fun DrawScope.band(lo: FloatArray, hi: FloatArray, x: (Int) -> Float, y:
     }
 }
 
-/** Height of one event-density row under the profile. */
-private val MARKER_ROW_HEIGHT = 10.dp
+/** Height of one event-density lane under the profile. */
+private val LANE_HEIGHT = 18.dp
 
 /**
- * One row of semi-transparent marks, one per event of every day in the period: where they pile up the
- * colour deepens. A mark's opacity encodes its amount (carbs, units) or intensity; the base opacity is
- * lowered for long periods so 90 days don't saturate to solid.
+ * One soft area curve: how often (and how much) something usually happens at each time of day, scaled to its own
+ * busiest moment. Quiet at a glance, no per-event marks.
  */
 @Composable
-private fun MarkerRow(markers: List<ClockMarker>, dayCount: Int, color: Color, modifier: Modifier = Modifier) {
+private fun DensityLane(density: FloatArray, color: Color, modifier: Modifier = Modifier) {
     val guides = hourGuideColor()
-    val background = stripBackground()
-    val scale = remember(dayCount) { sqrt(14f / maxOf(dayCount, 14)) }
-    Canvas(modifier.height(MARKER_ROW_HEIGHT).background(background)) {
+    Canvas(modifier.height(LANE_HEIGHT)) {
         drawHourGuides(guides)
         val w = size.width
-        markers.forEach { m ->
-            val alpha = (0.2f + 0.6f * m.weight) * scale
-            drawRect(color.copy(alpha = alpha), Offset(m.start * w, 0f), Size(((m.end - m.start) * w).coerceAtLeast(1.5f), size.height))
+        val top = 2.dp.toPx()
+        val h = size.height - top
+        fun x(bin: Int) = when {
+            bin < 0 -> 0f
+            bin >= density.size -> w
+            else -> w * (bin + 0.5f) / density.size
         }
+        fun y(v: Float) = top + h * (1f - v)
+        val line = Path().apply {
+            moveTo(0f, y(density[0]))
+            for (i in density.indices) lineTo(x(i), y(density[i]))
+            lineTo(w, y(density.last()))
+        }
+        val fill = Path().apply {
+            addPath(line)
+            lineTo(w, size.height)
+            lineTo(0f, size.height)
+            close()
+        }
+        drawPath(fill, color.copy(alpha = 0.6f))
     }
 }

@@ -150,7 +150,7 @@ data class HistoryState(
     val periodStats: DayGlucoseStats? = null,
     /** Ambulatory glucose profile over the whole period; null without readings. */
     val agp: AgpProfile? = null,
-    val agpMarkers: AgpMarkers = AgpMarkers(emptyList(), emptyList(), emptyList(), 0),
+    val agpMarkers: AgpMarkers = AgpMarkers.EMPTY,
     /** Selected weekdays; empty = all. */
     val weekdays: Set<DayOfWeek> = emptySet(),
     /** First and last day of the period before the weekday filter (for the header label). */
