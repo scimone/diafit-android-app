@@ -6,11 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
@@ -21,14 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.history.presentation.components.DayTrackRow
 import uk.scimone.diafit.history.presentation.components.HistoryTimeAxis
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
+import uk.scimone.diafit.history.presentation.model.HistoryLayers
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -49,6 +54,7 @@ fun HistoryScreen(
     val state by viewModel.state.collectAsState()
     val today = remember { LocalDate.now().toEpochDay() }
     var tab by rememberSaveable { mutableStateOf(HistoryTab.CHARTS) }
+    var layers by rememberSaveable(stateSaver = HistoryLayers.Saver) { mutableStateOf(HistoryLayers()) }
 
     Column(Modifier.fillMaxSize()) {
         PeriodHeader(
@@ -61,6 +67,8 @@ fun HistoryScreen(
             onTab = { tab = it },
             weekdays = state.weekdays,
             onWeekdays = viewModel::setWeekdays,
+            layers = layers,
+            onLayers = { layers = it },
             onOlder = viewModel::showOlder,
             onNewer = viewModel::showNewer
         )
@@ -74,24 +82,44 @@ fun HistoryScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
-                else -> Column(Modifier.fillMaxSize()) {
-                    AgpCard(state.agp, state.agpMarkers, state.thresholds, Modifier.fillMaxWidth().fillMaxHeight(0.34f).padding(horizontal = 8.dp))
-                    Spacer(Modifier.height(4.dp))
-                    HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
-                    LazyColumn(
-                        Modifier.weight(1f),
-                        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 12.dp)
-                    ) {
-                        itemsIndexed(state.days, key = { _, day -> day.epochDay }) { index, day ->
-                            // Newest first: a Sunday starts a new (older) week, so give it some air.
-                            val weekBreak = index > 0 && LocalDate.ofEpochDay(day.epochDay).dayOfWeek == DayOfWeek.SUNDAY
-                            DayTrackRow(
-                                day = day,
-                                thresholds = state.thresholds,
-                                isToday = day.epochDay == today,
-                                onClick = { onOpenDay(day.epochDay) },
-                                modifier = if (weekBreak) Modifier.padding(top = 10.dp) else Modifier
-                            )
+                else -> BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val listState = rememberLazyListState()
+                    val density = LocalDensity.current
+                    val collapseDistancePx = with(density) { COLLAPSE_SCROLL_DISTANCE.toPx() }
+                    // The profile card is full height at the top of the list and shrinks as the days scroll by.
+                    val collapse by remember(collapseDistancePx) {
+                        derivedStateOf {
+                            if (listState.firstVisibleItemIndex > 0) 1f
+                            else (listState.firstVisibleItemScrollOffset / collapseDistancePx).coerceIn(0f, 1f)
+                        }
+                    }
+                    val expandedHeight = maxHeight * 0.34f
+                    val collapsedHeight = maxOf(MIN_AGP_HEIGHT, expandedHeight * 0.55f)
+                    Column(Modifier.fillMaxSize()) {
+                        AgpCard(
+                            state.agp, state.agpMarkers, state.thresholds, layers, collapse,
+                            Modifier.fillMaxWidth().height(lerp(expandedHeight, collapsedHeight, collapse)).padding(horizontal = 8.dp)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
+                        LazyColumn(
+                            Modifier.weight(1f),
+                            state = listState,
+                            // Room to scroll past the collapse, so shrinking the card can never clamp the scroll back to the top.
+                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 12.dp + (expandedHeight - collapsedHeight))
+                        ) {
+                            itemsIndexed(state.days, key = { _, day -> day.epochDay }) { index, day ->
+                                // Newest first: a Sunday starts a new (older) week, so give it some air.
+                                val weekBreak = index > 0 && LocalDate.ofEpochDay(day.epochDay).dayOfWeek == DayOfWeek.SUNDAY
+                                DayTrackRow(
+                                    day = day,
+                                    thresholds = state.thresholds,
+                                    isToday = day.epochDay == today,
+                                    layers = layers,
+                                    onClick = { onOpenDay(day.epochDay) },
+                                    modifier = if (weekBreak) Modifier.padding(top = 10.dp) else Modifier
+                                )
+                            }
                         }
                     }
                 }
@@ -99,6 +127,9 @@ fun HistoryScreen(
         }
     }
 }
+
+private val COLLAPSE_SCROLL_DISTANCE = 120.dp
+private val MIN_AGP_HEIGHT = 112.dp
 
 private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
 
@@ -114,16 +145,18 @@ private fun PeriodHeader(
     onTab: (HistoryTab) -> Unit,
     weekdays: Set<DayOfWeek>,
     onWeekdays: (Set<DayOfWeek>) -> Unit,
+    layers: HistoryLayers,
+    onLayers: (HistoryLayers) -> Unit,
     onOlder: () -> Unit,
     onNewer: () -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
+        IconButton(onClick = onOlder, Modifier.size(40.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             val label = if (first == null || last == null) "" else
                 "${LocalDate.ofEpochDay(first).format(RANGE_FORMAT)} – ${LocalDate.ofEpochDay(last).format(RANGE_FORMAT)}"
-            TextButton(onClick = { menuOpen = true }) {
+            TextButton(onClick = { menuOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text("  ${range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Icon(Icons.Filled.ArrowDropDown, "Change time frame", tint = MaterialTheme.colorScheme.primary)
@@ -137,16 +170,42 @@ private fun PeriodHeader(
                 }
             }
         }
-        IconButton(onClick = onNewer, enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
+        IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
         WeekdayFilterButton(weekdays, onWeekdays)
+        if (tab == HistoryTab.CHARTS) LayersButton(layers, onLayers)
         // View switch: shows the icon of the view it leads to.
-        FilledTonalIconButton(onClick = { onTab(if (tab == HistoryTab.CHARTS) HistoryTab.STATS else HistoryTab.CHARTS) }) {
+        FilledTonalIconButton(onClick = { onTab(if (tab == HistoryTab.CHARTS) HistoryTab.STATS else HistoryTab.CHARTS) }, Modifier.size(40.dp)) {
             if (tab == HistoryTab.CHARTS) Icon(Icons.Outlined.BarChart, "Show statistics")
             else Icon(Icons.AutoMirrored.Outlined.ShowChart, "Show charts")
         }
     }
 }
 
+
+/** Which context layers the charts draw besides glucose, as a menu behind one icon. */
+@Composable
+private fun LayersButton(layers: HistoryLayers, onChange: (HistoryLayers) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, Modifier.size(40.dp)) { Icon(Icons.Outlined.Layers, "Choose layers") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            LayerItem("Glucose", true, enabled = false) {}
+            LayerItem("Meals and insulin", layers.treatments) { onChange(layers.copy(treatments = !layers.treatments)) }
+            LayerItem("Activity", layers.activity) { onChange(layers.copy(activity = !layers.activity)) }
+            LayerItem("Sleep", layers.sleep) { onChange(layers.copy(sleep = !layers.sleep)) }
+        }
+    }
+}
+
+@Composable
+private fun LayerItem(label: String, checked: Boolean, enabled: Boolean = true, onToggle: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = { Checkbox(checked = checked, onCheckedChange = null, enabled = enabled) },
+        enabled = enabled,
+        onClick = onToggle
+    )
+}
 
 private val WEEKDAYS = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
 private val WEEKEND = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
@@ -164,6 +223,7 @@ private fun WeekdayFilterButton(selected: Set<DayOfWeek>, onChange: (Set<DayOfWe
         BadgedBox(badge = { if (active) Badge { Text(selected.size.toString()) } }) {
             IconButton(
                 onClick = { open = true },
+                modifier = Modifier.size(40.dp),
                 colors = if (active) IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary) else IconButtonDefaults.iconButtonColors()
             ) { Icon(Icons.Outlined.FilterList, "Filter by weekday") }
         }

@@ -49,11 +49,14 @@ fun HorizonChart(
     day: DayHistoryUi,
     thresholds: GlucoseThresholds,
     modifier: Modifier = Modifier,
-    height: Dp = 30.dp
+    height: Dp = 30.dp,
+    /** False when the caller paints the field behind (the day tile does, so the sleep wash shows through). */
+    drawBackground: Boolean = true
 ) {
     val runs = day.glucose.splitAtGaps()
     val guides = hourGuideColor()
-    Canvas(modifier.fillMaxWidth().height(height).background(stripBackground())) {
+    val background = stripBackground()
+    Canvas(modifier.fillMaxWidth().height(height).then(if (drawBackground) Modifier.background(background) else Modifier)) {
         drawHourGuides(guides)
         val axis = DayXAxis(day.dayStartUtc, day.dayEndUtc, size.width)
         val stripHeight = IN_RANGE_STRIP_HEIGHT.toPx()

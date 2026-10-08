@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -21,24 +22,23 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.AgpProfile
 import uk.scimone.diafit.core.domain.model.gaussianSmoothCircular
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
-import uk.scimone.diafit.core.domain.model.ActivityData
-import uk.scimone.diafit.history.presentation.components.ActivityStrip
-import uk.scimone.diafit.history.presentation.components.CARBS_FULL_INTENSITY_G
-import uk.scimone.diafit.history.presentation.components.INSULIN_FULL_INTENSITY_U
-import uk.scimone.diafit.history.presentation.components.TreatmentStrip
+import uk.scimone.diafit.history.presentation.components.ACTIVITY_LANE_HEIGHT
+import uk.scimone.diafit.history.presentation.components.ActivityLane
+import uk.scimone.diafit.history.presentation.components.TREATMENT_LANE_HEIGHT
+import uk.scimone.diafit.history.presentation.components.TreatmentLane
 import uk.scimone.diafit.history.presentation.components.drawHourGuides
+import uk.scimone.diafit.history.presentation.components.sleepWashShare
+import uk.scimone.diafit.history.presentation.model.HistoryLayers
 import uk.scimone.diafit.history.presentation.components.hourGuideColor
 import uk.scimone.diafit.history.presentation.model.AgpMarkers
 import uk.scimone.diafit.history.presentation.model.REFERENCE_DAY_MS
 import uk.scimone.diafit.ui.theme.AboveRange
-import uk.scimone.diafit.ui.theme.Activity
-import uk.scimone.diafit.ui.theme.Bolus
-import uk.scimone.diafit.ui.theme.Carbs
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 
@@ -48,13 +48,22 @@ private const val EDGE_PAD_DP = 6
 /**
  * Ambulatory glucose profile: median line with 25–75 % (strong) and 5–95 % (faint) bands over the 24 h clock,
  * coloured by where they sit against the target range (below / in / above). It spans the full card width with
- * no axis of its own, so its hours line up with the time axis and day tracks below.
+ * no axis of its own, so its hours line up with the time axis and day tiles below. Behind it, the share of days asleep
+ * as a grey wash. Under it, the same lanes as the day tiles, fed with every day folded onto one: carbs and insulin, activity.
+ * [collapse] 0..1 (scrolling down) fades the lanes out and shrinks the card, leaving the profile itself.
  */
 @Composable
-internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseThresholds, modifier: Modifier = Modifier) {
+internal fun AgpCard(
+    agp: AgpProfile?,
+    markers: AgpMarkers,
+    thresholds: GlucoseThresholds,
+    layers: HistoryLayers,
+    collapse: Float,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
@@ -62,15 +71,37 @@ internal fun AgpCard(agp: AgpProfile?, markers: AgpMarkers, thresholds: GlucoseT
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("No glucose readings in this period", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } else Column(Modifier.fillMaxSize()) {
+        } else Column(
+            Modifier
+                .fillMaxSize()
+                .then(if (layers.sleep) Modifier.sleepWashShare(markers.sleepShare) else Modifier)
+        ) {
             AgpPlot(agp.toBands(), thresholds, Modifier.weight(1f).fillMaxWidth())
-            // The day tracks' own strips, fed every day folded onto one reference day and drawn fainter so overlaps deepen.
-            Spacer(Modifier.height(3.dp))
-            TreatmentStrip(markers.carbs, 0L, REFERENCE_DAY_MS, Carbs, CARBS_FULL_INTENSITY_G, alphaScale = markers.alphaScale)
-            Spacer(Modifier.height(1.dp))
-            TreatmentStrip(markers.bolus, 0L, REFERENCE_DAY_MS, Bolus, INSULIN_FULL_INTENSITY_U, alphaScale = markers.alphaScale)
-            Spacer(Modifier.height(1.dp))
-            ActivityStrip(ActivityData(), markers.activity, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale, sleepShare = markers.sleepShare)
+            val laneCount = listOf(layers.treatments, layers.activity).count { it }
+            if (laneCount > 0 && collapse < 1f) {
+                val lanesHeight = 3.dp + (if (layers.treatments) TREATMENT_LANE_HEIGHT + 2.dp else 0.dp) +
+                    (if (layers.activity) ACTIVITY_LANE_HEIGHT + 2.dp else 0.dp) + 3.dp
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(lanesHeight * (1f - collapse))
+                        .clipToBounds()
+                        .graphicsLayer { alpha = 1f - collapse }
+                ) {
+                    Column(Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true)) {
+                        Spacer(Modifier.height(3.dp))
+                        // Every day's sittings folded onto one lane, drawn fainter so overlaps deepen.
+                        if (layers.treatments) {
+                            TreatmentLane(markers.carbs, markers.bolus, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale, mergeClose = false)
+                            Spacer(Modifier.height(2.dp))
+                        }
+                        if (layers.activity) {
+                            ActivityLane(markers.activity, markers.workouts, 0L, REFERENCE_DAY_MS, alphaScale = markers.alphaScale)
+                            Spacer(Modifier.height(2.dp))
+                        }
+                    }
+                }
+            }
         }
     }
 }
