@@ -144,39 +144,14 @@ fun MealTimeline(
     /** Shown when there are no meals at all (Home's default invites logging one). */
     noMealsMessage: String = "No meals in the last 24 h. Tap + to log one with a photo."
 ) {
-    Box(modifier = modifier.fillMaxWidth().height(CardSize + 8.dp)) {
-        if (inView.isEmpty()) {
-            EmptyMealTimeline(
-                if (allGroups.isEmpty()) noMealsMessage
-                else "No meals in this part of the chart."
-            )
-            return@Box
-        }
-
-        val highlightKeys = highlighted.map { it.key }.toSet()
-        val ordered = inView.sortedBy { it.startTime }
-        // Each card sits under its meal's data point on the charts (pushed aside only to avoid overlapping
-        // a neighbour, and kept on screen at the edges). Geometry is read in the layout pass, so panning
-        // moves the cards without recomposing.
-        // Dragging the strip pans the charts (and the cards follow, being tied to the data points).
+    // Dragging the strip pans the charts (and the cards follow, being tied to the data points).
         val scope = rememberCoroutineScope()
         val density = androidx.compose.ui.platform.LocalDensity.current
         val flingJob = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
         val decay = remember(density) { splineBasedDecay<Float>(density) }
-        Layout(
-            content = {
-                ordered.forEach { group ->
-                    key(group.key) {
-                        MealCard(
-                            group = group,
-                            highlighted = group.key in highlightKeys,
-                            dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
-                            onClick = { onGroupClick(group) }
-                        )
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxSize().draggable(
+    Box(
+        modifier = modifier.fillMaxWidth().height(CardSize + 8.dp).then(
+Modifier.draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { dx ->
                     flingJob.value?.cancel()
@@ -193,6 +168,35 @@ fun MealTimeline(
                     }
                 }
             )
+        )
+    ) {
+        if (inView.isEmpty()) {
+            EmptyMealTimeline(
+                if (allGroups.isEmpty()) noMealsMessage
+                else "No meals in this part of the chart."
+            )
+            return@Box
+        }
+
+        val highlightKeys = highlighted.map { it.key }.toSet()
+        val ordered = inView.sortedBy { it.startTime }
+        // Each card sits under its meal's data point on the charts (pushed aside only to avoid overlapping
+        // a neighbour, and kept on screen at the edges). Geometry is read in the layout pass, so panning
+        // moves the cards without recomposing.
+        Layout(
+            content = {
+                ordered.forEach { group ->
+                    key(group.key) {
+                        MealCard(
+                            group = group,
+                            highlighted = group.key in highlightKeys,
+                            dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
+                            onClick = { onGroupClick(group) }
+                        )
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
         ) { measurables, constraints ->
             val size = CardSize.roundToPx()
             val gap = 8.dp.roundToPx()
