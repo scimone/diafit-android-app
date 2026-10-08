@@ -80,13 +80,11 @@
         </receiver>
 
         <receiver
-            android:name="uk.scimone.diafit.core.presentation.receivers.AapsStatusLogReceiver"
+            android:name="uk.scimone.diafit.core.presentation.receivers.AapsStatusReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="info.nightscout.androidaps.status" />
-                <action android:name="info.nightscout.client.NEW_TREATMENT" />
-                <action android:name="info.nightscout.client.NEW_DEVICESTATUS" />
             </intent-filter>
         </receiver>
 
