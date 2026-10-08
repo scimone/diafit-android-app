@@ -7,8 +7,8 @@ import androidx.compose.ui.graphics.lerp
 
 /** Field behind every strip: a little lighter than the page, so each day reads as one quiet track. */
 @Composable
-fun stripBackground(): Color = with(MaterialTheme.colorScheme) { lerp(background, surface, 0.7f) }
+fun stripBackground(): Color = with(MaterialTheme.colorScheme) { lerp(background, surface, 0.25f) }
 
 /** The 6-hourly guides drawn through every track. */
 @Composable
-fun hourGuideColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+fun hourGuideColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.11f)
