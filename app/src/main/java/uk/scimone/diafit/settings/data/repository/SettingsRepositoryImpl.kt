@@ -23,7 +23,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
-    init { migrateLegacySources(); migrateProfileAndDevice() }
+    init { migrateLegacySources(); migrateProfileAndDevice(); migrateDeviceStatus() }
 
     /** First run of the connector model: carry over the old single CGM / bolus source and the Health Connect switch. */
     private fun migrateLegacySources() {
@@ -58,6 +58,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             if (pick != null && prefs.getString(selectionKey(type), null) == null) edit.putString(selectionKey(type), pick.name)
         }
         edit.putBoolean(KEY_MIGRATED_PROFILE, true).apply()
+    }
+
+    /** Device status is new: existing Nightscout users get it switched on. */
+    private fun migrateDeviceStatus() {
+        if (prefs.getBoolean(KEY_MIGRATED_DEVICE_STATUS, false)) return
+        val enabled = prefs.getStringSet(KEY_ENABLED, emptySet()).orEmpty()
+        val edit = prefs.edit()
+        if (Connector.NIGHTSCOUT.name in enabled && prefs.getString(selectionKey(DataType.DEVICE_STATUS), null) == null)
+            edit.putString(selectionKey(DataType.DEVICE_STATUS), Connector.NIGHTSCOUT.name)
+        edit.putBoolean(KEY_MIGRATED_DEVICE_STATUS, true).apply()
     }
 
     override suspend fun getEnabledConnectors(): Set<Connector> =
@@ -167,6 +177,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private companion object {
         const val KEY_MIGRATED = "connectors_migrated"
+        const val KEY_MIGRATED_DEVICE_STATUS = "connectors_migrated_device_status"
         const val KEY_MIGRATED_PROFILE = "connectors_migrated_profile_device"
         const val KEY_ENABLED = "connectors_enabled"
         const val SELECTION_OFF = "OFF"

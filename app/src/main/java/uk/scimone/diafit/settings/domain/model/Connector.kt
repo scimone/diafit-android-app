@@ -13,7 +13,9 @@ enum class DataType(val label: String) {
     /** Profile switches and temporary targets (the insulin profile in force). */
     PROFILE("Profile & targets"),
     /** Pump and sensor events: site / pod / insulin / sensor / battery changes, notes. */
-    DEVICE("Pump & sensor changes");
+    DEVICE("Pump & sensor changes"),
+    /** Live levels (pump reservoir and battery, uploader battery) from the latest device status. */
+    DEVICE_STATUS("Pump & sensor status");
 
     val isActivity: Boolean get() = this in ACTIVITY
 
@@ -34,7 +36,7 @@ enum class Connector(
 ) {
     NIGHTSCOUT(
         "Nightscout",
-        setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
+        setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE, DataType.DEVICE_STATUS),
         setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
         "Your Nightscout site: glucose, insulin, carbs, temp basals, profile and sensor / pump changes, live and as history."
     ),

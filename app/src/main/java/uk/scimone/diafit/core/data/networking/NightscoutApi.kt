@@ -47,6 +47,18 @@ class NightscoutApi(
         }
     }
 
+    /** The newest `devicestatus` documents (pump reservoir / battery, uploader battery), newest first. */
+    suspend fun getDeviceStatus(count: Int = 20): Result<List<JsonObject>, NetworkError> {
+        val config = getNightscoutConfig()
+        val url = constructUrl("/api/v1/devicestatus.json", baseUrl = config.baseUrl, apiKey = null)
+        return safeCall {
+            client.get(url) {
+                applyNightscoutAuth(config.apiKey)
+                parameter("count", count)
+            }
+        }
+    }
+
     /** The `profile` collection (the stored insulin profiles), newest first. */
     suspend fun getProfiles(): Result<List<JsonObject>, NetworkError> {
         val config = getNightscoutConfig()

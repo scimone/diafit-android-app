@@ -11,7 +11,10 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import uk.scimone.diafit.core.data.networking.NightscoutApi
+import uk.scimone.diafit.core.domain.model.NightscoutDeviceStatusParser
 import uk.scimone.diafit.settings.domain.model.Connector
+import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import java.util.concurrent.TimeUnit
 
@@ -27,13 +30,23 @@ class NightscoutSyncWorker(
 
     private val importer: NightscoutTreatmentImporter by inject()
     private val settings: SettingsRepository by inject()
+    private val nightscout: NightscoutApi by inject()
+    private val deviceStatusStore: DeviceStatusStore by inject()
 
     override suspend fun doWork(): Result {
         if (Connector.NIGHTSCOUT !in settings.getEnabledConnectors()) return Result.success()
         val types = NightscoutTreatmentImporter.TYPES.filter { settings.getSelection(it) == Connector.NIGHTSCOUT }.toSet()
-        if (types.isEmpty()) return Result.success()
+        val wantStatus = settings.getSelection(DataType.DEVICE_STATUS) == Connector.NIGHTSCOUT
+        if (types.isEmpty() && !wantStatus) return Result.success()
         val now = System.currentTimeMillis()
         return try {
+            if (wantStatus) {
+                when (val r = nightscout.getDeviceStatus()) {
+                    is uk.scimone.diafit.core.domain.util.networking.Result.Success ->
+                        NightscoutDeviceStatusParser.parse(r.data)?.let { deviceStatusStore.save(it) }
+                    is uk.scimone.diafit.core.domain.util.networking.Result.Error -> Log.w(TAG, "devicestatus failed: ${r.error}")
+                }
+            }
             val added = importer.import(types, now - RECENT_MS, now + FUTURE_MS)
             Log.d(TAG, "Nightscout sync added $added")
             Result.success()

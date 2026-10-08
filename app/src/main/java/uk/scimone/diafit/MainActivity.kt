@@ -31,6 +31,7 @@ import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
 import uk.scimone.diafit.profile.presentation.ProfileScreen
 import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailScreen
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Sensors
 import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
@@ -190,6 +191,14 @@ class MainActivity : ComponentActivity() {
                                         }
                                     )
                                     DropdownMenuItem(
+                                        text = { Text("Devices") },
+                                        leadingIcon = { Icon(imageVector = Icons.Filled.Sensors, contentDescription = null) },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            overlays.add(Overlay.Devices)
+                                        }
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text("Settings") },
                                         leadingIcon = {
                                             Icon(
@@ -287,7 +296,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.ProfileSwitchDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.ProfileSwitchDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -300,6 +309,7 @@ class MainActivity : ComponentActivity() {
                                     onAddCourse = addCourse,
                                     onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
                                 )
+                                is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.ProfileSwitchDetail -> ProfileSwitchDetailScreen(
                                     userId = userId,
@@ -358,6 +368,7 @@ class MainActivity : ComponentActivity() {
 private sealed interface Overlay {
     /** The insulin profile AAPS is running (read-only). */
     data object Profile : Overlay
+    data object Devices : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
