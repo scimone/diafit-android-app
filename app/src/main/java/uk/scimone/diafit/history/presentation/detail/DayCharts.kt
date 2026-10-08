@@ -20,6 +20,7 @@ import uk.scimone.diafit.home.presentation.ActivityPanelWeight
 import uk.scimone.diafit.home.presentation.components.readoutAt
 import uk.scimone.diafit.home.presentation.CarbActivityDisplay
 import uk.scimone.diafit.home.presentation.CgmChartDisplay
+import uk.scimone.diafit.home.presentation.components.cgmMaxY
 import uk.scimone.diafit.home.presentation.CgmPanelWeight
 import uk.scimone.diafit.home.presentation.ChartZoomControls
 import uk.scimone.diafit.home.presentation.InspectBarHeight
@@ -167,6 +168,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 geometry = geometry,
                 lower = lower,
                 upper = upper,
+                maxY = cgmMaxY(state.cgm, window),
                 modifier = Modifier.matchParentSize()
             )
         }
@@ -175,6 +177,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
             allGroups = mealGroups,
             inView = mealsInView,
             highlighted = mealGroups.caughtBy(selectedTime),
+            geometry = geometry,
             onGroupClick = { group -> onOpenMeal(group.meals.first().id) },
             modifier = Modifier.padding(top = 6.dp),
             noMealsMessage = "No meals on this day."

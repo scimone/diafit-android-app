@@ -47,6 +47,12 @@ import uk.scimone.diafit.ui.theme.InRange
 const val CGM_MIN_Y = 40f
 const val CGM_MAX_Y = 250f
 
+/** The top of the glucose axis for the readings shown: 250, or the next 50 above the highest reading. */
+fun cgmMaxY(values: List<CgmChartData>, window: ChartTimeWindow): Float {
+    val peak = values.filter { it.timeLong in window.minX..window.now }.maxOfOrNull { it.value } ?: return CGM_MAX_Y
+    return maxOf(CGM_MAX_Y, kotlin.math.ceil(peak / 50f) * 50f)
+}
+
 /**
  * The glucose panel. It has no Vico marker: inspecting values is handled by HomeScreen's own gesture
  * layer (so a drag can pan without also moving a tooltip), which needs [onGeometry] to map x <-> time.
@@ -63,7 +69,7 @@ fun ComponentCgmChart(
     showTimeLabels: Boolean = false
 ) {
     val minY = CGM_MIN_Y
-    val maxY = CGM_MAX_Y
+    val maxY = cgmMaxY(values, window)
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val filteredValues = values.filter {

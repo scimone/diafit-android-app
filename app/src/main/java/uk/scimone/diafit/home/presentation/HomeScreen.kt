@@ -45,7 +45,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.model.CarbActivity
 import uk.scimone.diafit.core.domain.model.InsulinActivity
-import uk.scimone.diafit.home.presentation.components.CGM_MAX_Y
+import uk.scimone.diafit.home.presentation.components.cgmMaxY
 import uk.scimone.diafit.home.presentation.components.CGM_MIN_Y
 import uk.scimone.diafit.home.presentation.components.ChartEvent
 import uk.scimone.diafit.home.presentation.components.ComponentCgmChart
@@ -286,6 +286,7 @@ fun HomeScreen(
                             geometry = geometry,
                             lower = state.targetRangeLower,
                             upper = state.targetRangeUpper,
+                            maxY = cgmMaxY(state.cgmHistory, window),
                             modifier = Modifier.matchParentSize()
                         )
                     }
@@ -294,6 +295,7 @@ fun HomeScreen(
                         allGroups = mealGroups,
                         inView = mealsInView,
                         highlighted = mealGroups.caughtBy(selectedTime),
+                        geometry = geometry,
                         onGroupClick = { group ->
                             openMealIds = group.meals.map { it.id }.toSet()
                             // Bring the meal into view on the charts behind the sheet.
@@ -417,6 +419,7 @@ internal fun InspectCursor(
     geometry: State<ChartGeometry?>,
     lower: Int,
     upper: Int,
+    maxY: Float,
     modifier: Modifier
 ) {
     val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
@@ -428,7 +431,7 @@ internal fun InspectCursor(
         if (x < g.left || x > g.right) return@Canvas
         drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.5.dp.toPx())
         reading?.let {
-            val fraction = ((it.value - CGM_MIN_Y) / (CGM_MAX_Y - CGM_MIN_Y)).coerceIn(0f, 1f)
+            val fraction = ((it.value - CGM_MIN_Y) / (maxY - CGM_MIN_Y)).coerceIn(0f, 1f)
             val y = g.bottom - fraction * (g.bottom - g.top)
             drawCircle(glucoseColor(it.value, lower, upper), radius = 6.dp.toPx(), center = Offset(x, y))
             drawCircle(ringColor, radius = 6.dp.toPx(), center = Offset(x, y), style = Stroke(2.dp.toPx()))

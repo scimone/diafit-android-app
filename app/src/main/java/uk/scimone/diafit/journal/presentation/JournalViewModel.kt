@@ -196,6 +196,9 @@ class JournalViewModel(
     /** Device milestones (pod/site changes, ...) in the range; routine temp basals stay out of the journal. */
     private suspend fun pumpEventEntries(from: Long, to: Long): List<PumpEventUi> = try {
         val milestones = pumpEventRepository.getBetween(from, to, userId).filter { it.isMilestone }
+            // AAPS sometimes sends the same event twice under different ids: keep the first of each.
+            .distinctBy { Triple(it.eventType.lowercase(), it.timestampUtc / 60_000, it.durationMinutes to it.notes) }
+            .distinctBy { it.toTemporaryTarget()?.let { t -> listOf(t.startUtc / 60_000, t.low, t.high, t.reason) } ?: it.id }
         val pairs = pairTemporaryTargets(milestones)
         val pairedTargetIds = pairs.values.map { it.id }.toSet()
         milestones.filter { it.id !in pairedTargetIds }.map { it.pumpEventToUi(pairs[it.id]?.toTemporaryTarget()) }

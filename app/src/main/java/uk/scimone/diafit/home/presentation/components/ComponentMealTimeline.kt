@@ -41,6 +41,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
+import uk.scimone.diafit.home.presentation.utils.ChartGeometry
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -125,6 +128,7 @@ fun MealTimeline(
     allGroups: List<MealGroup>,
     inView: List<MealGroup>,
     highlighted: List<MealGroup>,
+    geometry: State<ChartGeometry?>,
     onGroupClick: (MealGroup) -> Unit,
     modifier: Modifier = Modifier,
     /** Shown when there are no meals at all (Home's default invites logging one). */
@@ -139,35 +143,47 @@ fun MealTimeline(
             return@Box
         }
 
-        // reverseLayout + newest-first: starts at the right edge (newest) and scrolls back in time.
-        val newestFirst = inView.asReversed()
-        val listState = rememberLazyListState()
         val highlightKeys = highlighted.map { it.key }.toSet()
-        val highlightIndex = newestFirst.indexOfFirst { it.key in highlightKeys }
-        LaunchedEffect(highlightIndex) {
-            if (highlightIndex < 0) return@LaunchedEffect
-            // Only move the strip if the card isn't already fully on screen: no needless motion.
-            val info = listState.layoutInfo
-            val item = info.visibleItemsInfo.firstOrNull { it.index == highlightIndex }
-            val fullyVisible = item != null && item.offset >= info.viewportStartOffset &&
-                item.offset + item.size <= info.viewportEndOffset
-            if (!fullyVisible) listState.animateScrollToItem(highlightIndex)
-        }
-        LazyRow(
-            state = listState,
-            reverseLayout = true,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            itemsIndexed(newestFirst, key = { _, g -> g.key }) { index, group ->
-                MealCard(
-                    group = group,
-                    highlighted = group.key in highlightKeys,
-                    dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
-                    onClick = { onGroupClick(group) }
-                )
+        val ordered = inView.sortedBy { it.startTime }
+        // Each card sits under its meal's data point on the charts (pushed aside only to avoid overlapping
+        // a neighbour, and kept on screen at the edges). Geometry is read in the layout pass, so panning
+        // moves the cards without recomposing.
+        Layout(
+            content = {
+                ordered.forEach { group ->
+                    key(group.key) {
+                        MealCard(
+                            group = group,
+                            highlighted = group.key in highlightKeys,
+                            dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
+                            onClick = { onGroupClick(group) }
+                        )
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { measurables, constraints ->
+            val size = CardSize.roundToPx()
+            val gap = 8.dp.roundToPx()
+            val width = constraints.maxWidth
+            val placeables = measurables.map { it.measure(Constraints.fixed(size, size)) }
+            val g = geometry.value
+            val xs = IntArray(placeables.size) { i ->
+                if (g == null) width - size
+                else (g.xOf(ordered[i].startTime) - size / 2f).toInt()
+            }
+            val maxX = (width - size).coerceAtLeast(0)
+            for (i in xs.indices) {
+                xs[i] = xs[i].coerceIn(0, maxX)
+                if (i > 0) xs[i] = maxOf(xs[i], xs[i - 1] + size + gap)
+            }
+            for (i in xs.indices.reversed()) {
+                if (xs[i] > maxX) xs[i] = maxX
+                if (i < xs.lastIndex) xs[i] = minOf(xs[i], xs[i + 1] - size - gap)
+            }
+            layout(width, constraints.maxHeight) {
+                val y = (constraints.maxHeight - size) / 2
+                placeables.forEachIndexed { i, p -> p.place(xs[i], y) }
             }
         }
     }
