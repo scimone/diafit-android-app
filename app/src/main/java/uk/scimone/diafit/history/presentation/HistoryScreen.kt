@@ -68,7 +68,7 @@ fun HistoryScreen(
                 tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
                 else -> Column(Modifier.fillMaxSize()) {
                     AgpCard(state.agp, state.thresholds, Modifier.fillMaxWidth().fillMaxHeight(0.3f).padding(horizontal = 8.dp))
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(4.dp))
                     HistoryTimeAxis(Modifier.padding(horizontal = 8.dp))
                     LazyColumn(
                         Modifier.weight(1f),
