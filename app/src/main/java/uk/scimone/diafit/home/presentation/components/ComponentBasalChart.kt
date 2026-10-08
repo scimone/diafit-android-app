@@ -70,23 +70,6 @@ fun ComponentBasalChart(
         fun yOf(rate: Double) = zeroY - (rate / axisMax).toFloat().coerceIn(0f, 1f) * RATE_HEIGHT_SHARE * (zeroY - plotTop)
         fun activityY(a: Double) = (zeroY - (a / unitsPerPx).toFloat()).coerceIn(plotTop, plotBottom)
 
-        clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
-            fun drawActivity(points: List<Pair<Long, Double>>, alpha: Float) {
-                if (points.size < 2) return
-                val line = Path().apply { points.forEachIndexed { i, (t, a) -> if (i == 0) moveTo(g.xOf(t), activityY(a)) else lineTo(g.xOf(t), activityY(a)) } }
-                val area = Path().apply {
-                    moveTo(g.xOf(points.first().first), zeroY)
-                    points.forEach { (t, a) -> lineTo(g.xOf(t), activityY(a)) }
-                    lineTo(g.xOf(points.last().first), zeroY); close()
-                }
-                drawPath(area, Bolus.copy(alpha = 0.18f * alpha))
-                drawPath(line, Bolus.copy(alpha = alpha), style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
-            }
-            val nowAct = activity.lastOrNull { it.first <= window.now }
-            drawActivity(activity.filter { it.first <= window.now }, 1f)
-            drawActivity(listOfNotNull(nowAct) + activity.filter { it.first > window.now }, 0.45f)
-        }
-
         drawLine(Basal, Offset(g.left, zeroY), Offset(g.right, zeroY), strokeWidth = 1.dp.toPx())
 
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
@@ -131,6 +114,23 @@ fun ComponentBasalChart(
                 val p = Path().apply { moveTo(g.xOf(s.startUtc), y); lineTo(g.xOf(s.endUtc), y) }
                 drawPath(p, Basal, style = dash)
             }
+        }
+
+        clipRect(left = g.left, top = 0f, right = g.right, bottom = size.height) {
+            fun drawActivity(points: List<Pair<Long, Double>>, alpha: Float) {
+                if (points.size < 2) return
+                val line = Path().apply { points.forEachIndexed { i, (t, a) -> if (i == 0) moveTo(g.xOf(t), activityY(a)) else lineTo(g.xOf(t), activityY(a)) } }
+                val area = Path().apply {
+                    moveTo(g.xOf(points.first().first), zeroY)
+                    points.forEach { (t, a) -> lineTo(g.xOf(t), activityY(a)) }
+                    lineTo(g.xOf(points.last().first), zeroY); close()
+                }
+                drawPath(area, Bolus.copy(alpha = 0.18f * alpha))
+                drawPath(line, Bolus.copy(alpha = alpha), style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
+            }
+            val nowAct = activity.lastOrNull { it.first <= window.now }
+            drawActivity(activity.filter { it.first <= window.now }, 1f)
+            drawActivity(listOfNotNull(nowAct) + activity.filter { it.first > window.now }, 0.45f)
         }
     }
 }
