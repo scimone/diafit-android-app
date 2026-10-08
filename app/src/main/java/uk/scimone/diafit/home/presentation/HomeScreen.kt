@@ -141,6 +141,11 @@ fun HomeScreen(
     // Where the shared time axis sits on screen, reported by the CGM chart on every frame. Read only
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
+    val bolusScale = remember { mutableStateOf<Double?>(null) }
+    // The headline values describe "now", so they go away once the now line has been scrolled out of view.
+    val nowVisible by remember(window) {
+        derivedStateOf { geometry.value?.let { g -> g.xOf(window.now).let { it >= g.left && it <= g.right } } ?: true }
+    }
     var chartsBottomInRoot by remember { mutableFloatStateOf(Float.MAX_VALUE) }
     val onGeometry = remember { { g: ChartGeometry -> geometry.value = g } }
 
@@ -269,7 +274,7 @@ fun HomeScreen(
                                         zoomState = chartZoomState,
                                         window = window,
                                         onGeometry = onGeometry,
-                                        headline = headlines.glucose
+                                        headline = headlines.glucose.takeIf { nowVisible }
                                     )
                                 }
                                 ActivityDisplay(
@@ -280,7 +285,7 @@ fun HomeScreen(
                                     zoomState = chartZoomState,
                                     window = window,
                                     geometry = geometry,
-                                    headline = headlines.activity
+                                    headline = headlines.activity.takeIf { nowVisible }
                                 )
                                 BasalDisplay(
                                     modifier = Modifier.weight(1f),
@@ -289,7 +294,8 @@ fun HomeScreen(
                                     zoomState = chartZoomState,
                                     window = window,
                                     geometry = geometry,
-                                    headline = headlines.basal
+                                    headline = headlines.basal.takeIf { nowVisible },
+                                    activityUnitsPerDp = bolusScale.value
                                 )
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -298,7 +304,8 @@ fun HomeScreen(
                                     zoomState = chartZoomState,
                                     window = window,
                                     highlightTime = cursorTime,
-                                    headline = headlines.bolus
+                                    headline = headlines.bolus.takeIf { nowVisible },
+                                    onScale = { bolusScale.value = it }
                                 )
                                 CarbActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -307,7 +314,7 @@ fun HomeScreen(
                                     zoomState = chartZoomState,
                                     window = window,
                                     highlightTime = cursorTime,
-                                    headline = headlines.carbs
+                                    headline = headlines.carbs.takeIf { nowVisible }
                                 )
                             }
                         }
@@ -646,10 +653,12 @@ internal fun BasalDisplay(
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
     geometry: State<ChartGeometry?>,
-    headline: PanelValue? = null
+    headline: PanelValue? = null,
+    /** The bolus panel's y scale, so the basal's insulin activity curve is drawn at the same scale. */
+    activityUnitsPerDp: Double? = null
 ) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
-        ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
+        ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp)
         PanelTitle("Basal", headline)
         if (segments.isEmpty()) {
             Text(
@@ -709,7 +718,8 @@ fun InsulinActivityDisplay(
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
     highlightTime: Long? = null,
-    headline: PanelValue? = null
+    headline: PanelValue? = null,
+    onScale: ((Double) -> Unit)? = null
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
@@ -726,7 +736,8 @@ fun InsulinActivityDisplay(
             scrollState = scrollState,
             zoomState = zoomState,
             window = window,
-            highlightTime = highlightTime
+            highlightTime = highlightTime,
+            onScale = onScale
         )
         PanelTitle("Bolus", headline)
     }

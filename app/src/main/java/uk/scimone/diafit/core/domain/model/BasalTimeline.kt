@@ -55,3 +55,35 @@ fun buildBasalTimeline(
     }
     return out
 }
+
+/**
+ * Insulin activity (U/min, the same unit as the bolus chart) of the basal alone: every minute's difference
+ * between the delivered and the scheduled rate (a temp basal above the schedule adds insulin, below it takes
+ * insulin away, so the curve can go negative) acts along the usual insulin curve. Minutes without a known
+ * schedule count as no difference. Sampled every [stepMs] from [fromUtc] to [toUtc], which may lie after the
+ * last segment to show the tail still acting.
+ */
+fun basalInsulinActivity(segments: List<BasalSegment>, fromUtc: Long, toUtc: Long, stepMs: Long = 5 * STEP_MS): List<Pair<Long, Double>> {
+    val kernelMinutes = (4.5 * 60).toInt()
+    val kernel = DoubleArray(kernelMinutes) { InsulinActivity.calculate(1.0, 0L, it * STEP_MS).activity }
+    val deviations = HashMap<Long, Double>()   // minute index -> units/min delivered above (+) / below (-) the schedule
+    segments.forEach { s ->
+        val sched = s.scheduled ?: return@forEach
+        val perMinute = (s.delivered - sched) / 60.0
+        if (perMinute == 0.0) return@forEach
+        // Segment times are not minute-aligned, so every minute is keyed by its index.
+        for (minute in Math.floorDiv(s.startUtc, STEP_MS) until Math.floorDiv(s.endUtc - 1, STEP_MS) + 1) deviations[minute] = perMinute
+    }
+    val out = mutableListOf<Pair<Long, Double>>()
+    var t = fromUtc
+    while (t <= toUtc) {
+        var a = 0.0
+        for (k in 0 until kernelMinutes) {
+            val d = deviations[Math.floorDiv(t, STEP_MS) - k] ?: continue
+            a += d * kernel[k]
+        }
+        out += t to a
+        t += stepMs
+    }
+    return out
+}

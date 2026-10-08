@@ -140,7 +140,9 @@ fun ComponentEventActivityChart(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     /** Inspection cursor time: bubbles standing for events near it get a ring. */
-    highlightTime: Long? = null
+    highlightTime: Long? = null,
+    /** Receives the chart's y scale (activity per dp) so another panel can draw its curve at the same scale. */
+    onScale: ((unitsPerDp: Double) -> Unit)? = null
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
@@ -208,6 +210,10 @@ fun ComponentEventActivityChart(
     val plotDp = (plotHeightDp - PLOT_INSET_DP).coerceAtLeast(30f)
     val curveDp = (plotDp - reserveBelowDp - reserveAboveDp).coerceAtLeast(plotDp / 3f)
     val unitsPerDp = maxActivity * 1.1 / curveDp
+    if (onScale != null) {
+        val report = androidx.compose.runtime.rememberUpdatedState(onScale)
+        LaunchedEffect(unitsPerDp) { report.value(unitsPerDp) }
+    }
     val minY = -reserveBelowDp * unitsPerDp
     val maxY = maxActivity * 1.1 + reserveAboveDp * unitsPerDp
 

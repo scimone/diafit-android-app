@@ -63,4 +63,23 @@ class BasalTimelineTest {
     fun nothingKnownGivesNoSegments() {
         assertEquals(0, buildBasalTimeline(emptyList(), emptyList(), 0, hour, zone).size)
     }
+
+    @Test
+    fun basalActivityReachesTheExtraDeliveryRateAndGoesNegativeBelowSchedule() {
+        val up = listOf(uk.scimone.diafit.core.domain.model.BasalSegment(0, 6 * hour, 0.9, 0.3))
+        val a = uk.scimone.diafit.core.domain.model.basalInsulinActivity(up, 6 * hour, 6 * hour)
+        assertEquals(0.6 / 60.0, a.last().second, 0.6 / 60.0 * 0.03)   // steady state: acting as fast as it is delivered
+        val down = listOf(uk.scimone.diafit.core.domain.model.BasalSegment(0, 6 * hour, 0.0, 0.3))
+        assertEquals(-0.3 / 60.0, uk.scimone.diafit.core.domain.model.basalInsulinActivity(down, 6 * hour, 6 * hour).last().second, 0.3 / 60.0 * 0.03)
+        val same = listOf(uk.scimone.diafit.core.domain.model.BasalSegment(0, hour, 0.3, 0.3))
+        assertEquals(0.0, uk.scimone.diafit.core.domain.model.basalInsulinActivity(same, hour, hour).last().second, 1e-12)
+    }
+
+    @Test
+    fun basalActivityHandlesSegmentsThatAreNotMinuteAligned() {
+        val odd = 1_234L
+        val seg = listOf(uk.scimone.diafit.core.domain.model.BasalSegment(odd, odd + 6 * hour, 0.9, 0.3))
+        val a = uk.scimone.diafit.core.domain.model.basalInsulinActivity(seg, odd + 6 * hour, odd + 6 * hour)
+        assertEquals(0.6 / 60.0, a.last().second, 0.6 / 60.0 * 0.03)
+    }
 }

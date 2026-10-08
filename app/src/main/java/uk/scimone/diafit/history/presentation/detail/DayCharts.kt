@@ -66,6 +66,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
     var scrubbing by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
+    val bolusScale = remember { mutableStateOf<Double?>(null) }
     val onGeometry = remember { { g: ChartGeometry -> geometry.value = g } }
 
     // As on Home: one scroll/zoom state shared by every panel, content-independent zoom bounds,
@@ -150,6 +151,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 )
                 BasalDisplay(
                     modifier = Modifier.weight(1f),
+                    activityUnitsPerDp = bolusScale.value,
                     segments = state.basal,
                     scrollState = scrollState,
                     zoomState = zoomState,
@@ -158,6 +160,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                 )
                 InsulinActivityDisplay(
                     modifier = Modifier.weight(1f),
+                    onScale = { bolusScale.value = it },
                     history = state.insulin,
                     scrollState = scrollState,
                     zoomState = zoomState,
