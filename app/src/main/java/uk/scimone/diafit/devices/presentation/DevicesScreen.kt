@@ -123,7 +123,7 @@ private fun StatusCard(status: DeviceStatus?, now: Long) {
                 status.pumpBatteryPercent?.let { LevelRow("Pump battery", "%.0f %%".format(it)) }
                 status.pumpBatteryVolt?.let { LevelRow("Pump battery", "%.2f V".format(it)) }
                 status.uploaderBatteryPercent?.let { LevelRow("Phone (uploader) battery", "%.0f %%".format(it)) }
-                status.pumpStatus?.let { LevelRow("Pump status", it) }
+                status.pumpStatus?.lineSequence()?.firstOrNull()?.let { LevelRow("Pump status", it) }
                 if (!status.hasPump && status.uploaderBatteryPercent == null)
                     Text("Nightscout reports no pump or battery levels.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Updated ${duration(now - status.timestampUtc)} ago", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

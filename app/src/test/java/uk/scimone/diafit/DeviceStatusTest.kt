@@ -46,4 +46,13 @@ class DeviceStatusTest {
         assertEquals(false, deviceAges(emptyList(), 0L).any { it.kind == DeviceKind.BATTERY })
         assertEquals(true, deviceAges(emptyList(), 0L, batteryReported = true).any { it.kind == DeviceKind.BATTERY })
     }
+
+    @Test fun aapsStatusLevels() {
+        val s = uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsDeviceStatusParser
+            .parse(mapOf("pumpReservoir" to 112.5, "pumpBattery" to "85%", "glucoseMgdl" to 100.0, "phoneBattery" to 14), 5L)!!
+        assertEquals(14.0, s.uploaderBatteryPercent!!, 0.0)
+        assertEquals(112.5, s.reservoirUnits!!, 0.0)
+        assertEquals(85.0, s.pumpBatteryPercent!!, 0.0)
+        assertNull(uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsDeviceStatusParser.parse(mapOf("iob" to 1.0), 5L))
+    }
 }

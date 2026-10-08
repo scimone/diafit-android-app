@@ -24,30 +24,35 @@ import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.domain.model.DeviceKind
 import uk.scimone.diafit.core.domain.model.hours
 
-/** One hours field per consumable; the Devices page estimates expiry as last change + this. */
+/** Days + hours fields per consumable; the Devices page estimates expiry as last change + this. */
 @Composable
 fun DeviceLifetimeSettings() {
     val store: DeviceLifetimeStore = koinInject()
     val lifetimes by store.lifetimes.collectAsState()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "How long each lasts before it should be changed (Omnipod pods: about 80 hours). Used to estimate expiry on the Devices page.",
+            "How long each lasts before it should be changed (Omnipod pods: about 3 days 8 hours). Used to estimate expiry on the Devices page.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         DeviceKind.configurable.forEach { kind ->
-            var text by remember(kind) { mutableStateOf(lifetimes.hours(kind).toString()) }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val total = lifetimes.hours(kind)
+            var days by remember(kind) { mutableStateOf((total / 24).toString()) }
+            var hours by remember(kind) { mutableStateOf((total % 24).toString()) }
+            fun save() {
+                val t = (days.toIntOrNull() ?: 0) * 24 + (hours.toIntOrNull() ?: 0)
+                if (t > 0) store.set(kind, t)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(kind.label, modifier = Modifier.weight(1f))
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { v ->
-                        text = v.filter { it.isDigit() }.take(5)
-                        text.toIntOrNull()?.takeIf { it > 0 }?.let { store.set(kind, it) }
-                    },
-                    singleLine = true,
-                    suffix = { Text("hours") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(140.dp)
+                    value = days, onValueChange = { days = it.filter(Char::isDigit).take(3); save() },
+                    singleLine = true, suffix = { Text("d") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
+                )
+                OutlinedTextField(
+                    value = hours, onValueChange = { hours = it.filter(Char::isDigit).take(2); save() },
+                    singleLine = true, suffix = { Text("h") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
                 )
             }
         }

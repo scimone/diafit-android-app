@@ -23,6 +23,21 @@ class DeviceStatusStore(context: Context) {
         _status.value = s
     }
 
+    /** Overlays the fields [s] reports on the stored snapshot (a partial update keeps the other levels). */
+    fun merge(s: DeviceStatus) {
+        val old = _status.value
+        save(
+            DeviceStatus(
+                timestampUtc = maxOf(s.timestampUtc, old?.timestampUtc ?: 0L),
+                reservoirUnits = s.reservoirUnits ?: old?.reservoirUnits,
+                pumpBatteryPercent = s.pumpBatteryPercent ?: old?.pumpBatteryPercent,
+                pumpBatteryVolt = s.pumpBatteryVolt ?: old?.pumpBatteryVolt,
+                uploaderBatteryPercent = s.uploaderBatteryPercent ?: old?.uploaderBatteryPercent,
+                pumpStatus = s.pumpStatus ?: old?.pumpStatus
+            )
+        )
+    }
+
     private fun read(): DeviceStatus? {
         val time = prefs.getLong("time", 0L).takeIf { it > 0 } ?: return null
         fun d(k: String) = prefs.getString(k, null)?.toDoubleOrNull()
