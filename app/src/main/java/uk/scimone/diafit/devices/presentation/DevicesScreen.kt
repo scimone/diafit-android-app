@@ -63,7 +63,7 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
             item {
                 Text(
                     "Neither Nightscout nor AAPS reports an expiry date. It is estimated as the last change logged in the " +
-                        "Journal plus a typical lifetime (sensor 14 days, site and insulin 3 days, battery 30 days).",
+                        "Journal plus the lifetime set in Settings.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

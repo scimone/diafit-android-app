@@ -73,6 +73,7 @@ val syncModule = module {
     }
     single { uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler(androidContext()) }
     single { uk.scimone.diafit.core.data.nightscout.DeviceStatusStore(androidContext()) }
+    single { uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore(androidContext()) }
 
     single { CgmServiceManager(androidContext()) }
 

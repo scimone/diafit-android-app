@@ -32,4 +32,18 @@ class DeviceStatusTest {
         assertEquals((40 + 72 - 100) * 3_600_000L, site.remainingMs)
         assertNull(ages.first { it.kind == DeviceKind.SENSOR }.changedAtUtc)
     }
+
+    @Test fun patchPumpMergesSiteAndInsulin() {
+        fun ev(type: String, t: Long) = PumpEventEntity(userId = 1, timestampUtc = t, createdAtUtc = t, eventType = type, sourceId = "$type$t", rawJson = "{}")
+        val h = 3_600_000L
+        val together = deviceAges(listOf(ev("Site Change", 10 * h), ev("Insulin Change", 10 * h + 30_000)), 50 * h)
+        assertEquals(listOf(DeviceKind.SENSOR, DeviceKind.PATCH), together.map { it.kind })
+        val apart = deviceAges(listOf(ev("Site Change", 10 * h), ev("Insulin Change", 30 * h)), 50 * h)
+        assertEquals(listOf(DeviceKind.SENSOR, DeviceKind.SITE, DeviceKind.INSULIN), apart.map { it.kind })
+    }
+
+    @Test fun batteryHiddenWithoutStatusOrChange() {
+        assertEquals(false, deviceAges(emptyList(), 0L).any { it.kind == DeviceKind.BATTERY })
+        assertEquals(true, deviceAges(emptyList(), 0L, batteryReported = true).any { it.kind == DeviceKind.BATTERY })
+    }
 }

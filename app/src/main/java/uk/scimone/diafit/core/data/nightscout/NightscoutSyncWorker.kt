@@ -36,7 +36,7 @@ class NightscoutSyncWorker(
     override suspend fun doWork(): Result {
         if (Connector.NIGHTSCOUT !in settings.getEnabledConnectors()) return Result.success()
         val types = NightscoutTreatmentImporter.TYPES.filter { settings.getSelection(it) == Connector.NIGHTSCOUT }.toSet()
-        val wantStatus = settings.getSelection(DataType.DEVICE_STATUS) == Connector.NIGHTSCOUT
+        val wantStatus = settings.getSelection(DataType.DEVICE) == Connector.NIGHTSCOUT
         if (types.isEmpty() && !wantStatus) return Result.success()
         val now = System.currentTimeMillis()
         return try {

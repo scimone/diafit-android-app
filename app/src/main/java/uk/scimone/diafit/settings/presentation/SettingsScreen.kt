@@ -196,6 +196,10 @@ fun SettingsScreen(
             }
         }
 
+        SettingsSection(title = "Device lifetimes", icon = Icons.Filled.Sensors) {
+            uk.scimone.diafit.devices.presentation.DeviceLifetimeSettings()
+        }
+
         SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {
             Text(
                 "OpenAI-compatible endpoint used to analyze meal photos for nutrient estimates.",
