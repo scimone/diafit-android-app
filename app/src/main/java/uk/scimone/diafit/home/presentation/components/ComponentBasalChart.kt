@@ -5,19 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import uk.scimone.diafit.core.domain.model.BasalSegment
 import uk.scimone.diafit.home.presentation.utils.ChartGeometry
 import uk.scimone.diafit.home.presentation.utils.ChartTimeWindow
@@ -36,7 +29,7 @@ internal fun formatRate(rate: Double): String = "%.2f".format(java.util.Locale.U
 /**
  * The basal panel: what ran (**filled step line**) on the shared time axis, drawn on a Canvas through the CGM
  * chart's [geometry]. Where the loop's temp basal differs from the profile's scheduled rate, the schedule is
- * shown as a dashed line. The rate at "now" is written at the right end. Nothing is drawn after [ChartTimeWindow.now].
+ * shown as a dashed line. Nothing is drawn after [ChartTimeWindow.now].
  */
 @Composable
 fun ComponentBasalChart(
@@ -45,7 +38,6 @@ fun ComponentBasalChart(
     geometry: State<ChartGeometry?>,
     modifier: Modifier = Modifier
 ) {
-    val textMeasurer = rememberTextMeasurer()
     val axisMax = remember(segments) {
         max(MIN_AXIS_RATE, (segments.maxOfOrNull { max(it.delivered, it.scheduled ?: 0.0) } ?: 0.0) * 1.2)
     }
@@ -99,19 +91,7 @@ fun ComponentBasalChart(
                 if (kotlin.math.abs(sched - s.delivered) < 1e-6) return@forEach
                 val y = yOf(sched)
                 val p = Path().apply { moveTo(g.xOf(s.startUtc), y); lineTo(g.xOf(s.endUtc), y) }
-                drawPath(p, Color.Gray.copy(alpha = 0.8f), style = dash)
-            }
-
-            // Current rate at the right end.
-            segments.lastOrNull()?.takeIf { window.now - it.endUtc <= 2 * 60_000L }?.let { s ->
-                val layout = textMeasurer.measure(
-                    "${formatRate(s.delivered)} U/h",
-                    TextStyle(color = Basal, fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
-                    maxLines = 1
-                )
-                val x = clipRight - layout.size.width - 4.dp.toPx()
-                val y = max(0f, yOf(s.delivered) - layout.size.height - 1.dp.toPx())
-                drawText(layout, topLeft = Offset(x, y))
+                drawPath(p, Basal, style = dash)
             }
         }
     }

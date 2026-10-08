@@ -143,12 +143,16 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
                     modifier = Modifier.weight(ActivityPanelWeight),
                     data = state.activity,
                     connected = state.activityConnected,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
                     window = window,
                     geometry = geometry
                 )
                 BasalDisplay(
                     modifier = Modifier.weight(1f),
                     segments = state.basal,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
                     window = window,
                     geometry = geometry
                 )

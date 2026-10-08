@@ -1,5 +1,17 @@
 package uk.scimone.diafit.home.presentation
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import uk.scimone.diafit.core.domain.model.currentActivityLevel
+import uk.scimone.diafit.core.domain.model.remainingCarbs
+import uk.scimone.diafit.core.domain.model.remainingInsulin
+import uk.scimone.diafit.home.presentation.components.formatRate
+import uk.scimone.diafit.home.presentation.utils.chartPanZoom
+import uk.scimone.diafit.ui.theme.Activity
+import uk.scimone.diafit.ui.theme.Basal
+import uk.scimone.diafit.ui.theme.Carbs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -121,6 +133,9 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val window = remember(nowMinute) { homeTimeWindow(nowMinute) }
+    val headlines = remember(state.cgmUi, state.basal, state.activity, state.insulinActivityHistory, state.carbHistory, nowMinute, state.targetRangeLower, state.targetRangeUpper) {
+        homeHeadlines(state, nowMinute)
+    }
 
     // Where the shared time axis sits on screen, reported by the CGM chart on every frame. Read only
     // in draw/layout lambdas or through derivedStateOf, so panning doesn't recompose the screen.
@@ -252,21 +267,28 @@ fun HomeScreen(
                                         scrollState = chartScrollState,
                                         zoomState = chartZoomState,
                                         window = window,
-                                        onGeometry = onGeometry
+                                        onGeometry = onGeometry,
+                                        headline = headlines.glucose
                                     )
                                 }
                                 ActivityDisplay(
                                     modifier = Modifier.weight(ActivityPanelWeight),
                                     data = state.activity,
                                     connected = state.activityConnected,
+                                    scrollState = chartScrollState,
+                                    zoomState = chartZoomState,
                                     window = window,
-                                    geometry = geometry
+                                    geometry = geometry,
+                                    headline = headlines.activity
                                 )
                                 BasalDisplay(
                                     modifier = Modifier.weight(1f),
                                     segments = state.basal,
+                                    scrollState = chartScrollState,
+                                    zoomState = chartZoomState,
                                     window = window,
-                                    geometry = geometry
+                                    geometry = geometry,
+                                    headline = headlines.basal
                                 )
                                 InsulinActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -274,7 +296,8 @@ fun HomeScreen(
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
                                     window = window,
-                                    highlightTime = cursorTime
+                                    highlightTime = cursorTime,
+                                    headline = headlines.bolus
                                 )
                                 CarbActivityDisplay(
                                     modifier = Modifier.weight(1f),
@@ -282,7 +305,8 @@ fun HomeScreen(
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
                                     window = window,
-                                    highlightTime = cursorTime
+                                    highlightTime = cursorTime,
+                                    headline = headlines.carbs
                                 )
                             }
                         }
@@ -554,15 +578,28 @@ fun HomeTitle(state: HomeState) {
     }
 }
 
-/** Small muted heading in a panel's top-left corner. */
+/** The latest value of a panel, shown next to its heading in the colour of its category: "113" + "mg/dL". */
+data class PanelValue(val text: String, val unit: String, val color: Color)
+
+/** Small muted heading in a panel's top-left corner, with the panel's latest [value] (if any) beside it. */
 @Composable
-private fun BoxScope.PanelTitle(text: String) {
-    Text(
-        text = text,
-        fontSize = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun BoxScope.PanelTitle(text: String, value: PanelValue? = null) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
         modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 2.dp)
-    )
+    ) {
+        Text(text = text, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (value != null) {
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)) { append(value.text) }
+                    if (value.unit.isNotEmpty()) withStyle(SpanStyle(fontSize = 10.sp)) { append(" ${value.unit}") }
+                },
+                color = value.color,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
 }
 
 /** Reserved space (with its heading) for a graph that doesn't exist yet. */
@@ -579,12 +616,15 @@ internal fun ActivityDisplay(
     modifier: Modifier,
     data: ActivityData,
     connected: Boolean,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     window: ChartTimeWindow,
-    geometry: State<ChartGeometry?>
+    geometry: State<ChartGeometry?>,
+    headline: PanelValue? = null
 ) {
-    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
+    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentActivityChart(data = data, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
-        PanelTitle("Activity")
+        PanelTitle("Activity", headline)
         if (data.isEmpty) {
             Text(
                 if (connected) "No activity data in this period" else "No activity data · connect Health Connect in Settings",
@@ -601,12 +641,15 @@ internal fun ActivityDisplay(
 internal fun BasalDisplay(
     modifier: Modifier,
     segments: List<BasalSegment>,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     window: ChartTimeWindow,
-    geometry: State<ChartGeometry?>
+    geometry: State<ChartGeometry?>,
+    headline: PanelValue? = null
 ) {
-    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
+    Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
-        PanelTitle("Basal")
+        PanelTitle("Basal", headline)
         if (segments.isEmpty()) {
             Text(
                 "No basal data yet · run a profile switch in AAPS",
@@ -630,7 +673,8 @@ fun CgmChartDisplay(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
-    onGeometry: (ChartGeometry) -> Unit
+    onGeometry: (ChartGeometry) -> Unit,
+    headline: PanelValue? = null
 ) {
     Box(
         modifier = modifier
@@ -647,7 +691,7 @@ fun CgmChartDisplay(
             window = window,
             onGeometry = onGeometry
         )
-        PanelTitle("Glucose")
+        PanelTitle("Glucose", headline)
     }
 }
 
@@ -663,7 +707,8 @@ fun InsulinActivityDisplay(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
-    highlightTime: Long? = null
+    highlightTime: Long? = null,
+    headline: PanelValue? = null
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble()) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight()) {
@@ -682,7 +727,7 @@ fun InsulinActivityDisplay(
             window = window,
             highlightTime = highlightTime
         )
-        PanelTitle("Bolus")
+        PanelTitle("Bolus", headline)
     }
 }
 
@@ -693,7 +738,8 @@ fun CarbActivityDisplay(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
-    highlightTime: Long? = null
+    highlightTime: Long? = null,
+    headline: PanelValue? = null
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
@@ -710,7 +756,7 @@ fun CarbActivityDisplay(
             window = window,
             highlightTime = highlightTime
         )
-        PanelTitle("Carbohydrates")
+        PanelTitle("Carbohydrates", headline)
     }
 }
 
@@ -761,4 +807,31 @@ fun ChartZoomControls(
         }
         }
     }
+}
+
+
+/** The latest value of each Home panel, shown by its heading. */
+internal data class HomeHeadlines(
+    val glucose: PanelValue? = null,
+    val activity: PanelValue? = null,
+    val basal: PanelValue? = null,
+    val bolus: PanelValue? = null,
+    val carbs: PanelValue? = null
+)
+
+internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
+    val glucose = state.cgmUi?.takeIf { !it.isStale }?.value?.let {
+        PanelValue("$it", "mg/dL", glucoseColor(it, state.targetRangeLower, state.targetRangeUpper))
+    }
+    val activity = currentActivityLevel(state.activity, now)?.let { PanelValue(it.label, "", Activity) }
+    val basal = state.basal.lastOrNull()?.takeIf { now - it.endUtc <= 2 * 60_000L }?.let { PanelValue(formatRate(it.delivered), "U/h", Basal) }
+    val insulin = remainingInsulin(state.insulinActivityHistory.map { it.timeLong to it.value.toDouble() }, now)
+    val carbs = remainingCarbs(state.carbHistory.map { Triple(it.timeLong, it.value.toDouble(), it.durationMinutes) }, now)
+    return HomeHeadlines(
+        glucose = glucose,
+        activity = activity,
+        basal = basal,
+        bolus = PanelValue("%.2f".format(java.util.Locale.US, insulin), "U", Bolus),
+        carbs = PanelValue("${carbs.roundToInt()}", "g", Carbs)
+    )
 }
