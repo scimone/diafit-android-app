@@ -15,10 +15,12 @@ import uk.scimone.diafit.core.domain.model.ActivitySpan
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.model.DayHistoryUi
 import uk.scimone.diafit.history.presentation.model.HistoryLayers
+import uk.scimone.diafit.ui.theme.Bolus
+import uk.scimone.diafit.ui.theme.Carbs
 
 /**
  * One day on the shared 24 h scale: the date as a caption above, then one rounded tile. Glucose is the horizon
- * chart on top; under it, as far as [layers] allow, a lane of carbs and insulin and a lane of activity. Time asleep
+ * chart on top; under it, as far as [layers] allow, bands of carbs, insulin and activity. Time asleep
  * is a grey wash behind the whole tile. Tapping opens the day.
  */
 @Composable
@@ -54,7 +56,9 @@ fun DayTrackRow(
             HorizonChart(day, thresholds, drawBackground = false)
             if (layers.treatments) {
                 Spacer(Modifier.height(2.dp))
-                TreatmentLane(day.carbs, day.insulin, day.dayStartUtc, day.dayEndUtc)
+                TreatmentBand(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)
+                Spacer(Modifier.height(2.dp))
+                TreatmentBand(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
             }
             if (layers.activity) {
                 Spacer(Modifier.height(2.dp))
