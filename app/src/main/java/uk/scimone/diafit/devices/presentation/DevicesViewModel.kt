@@ -26,6 +26,7 @@ data class DevicesUiState(
 /** Age / estimated expiry per consumable (from the stored change events) plus the latest Nightscout levels. */
 class DevicesViewModel(
     private val pumpEvents: PumpEventRepository,
+    private val inputsSource: DeviceInputsSource,
     statusStore: DeviceStatusStore,
     lifetimeStore: DeviceLifetimeStore,
     private val userId: Int
@@ -38,9 +39,8 @@ class DevicesViewModel(
     ) { _, now -> now }
 
     val state: StateFlow<DevicesUiState> = combine(events, statusStore.status, lifetimeStore.lifetimes) { now, status, lifetimes ->
-        val recent = pumpEvents.getBetween(now - LOOKBACK_MS, now, userId).filter { it.isMilestone }
-        DevicesUiState(loaded = true, ages = deviceAges(recent, now, lifetimes, batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true), status = status, nowUtc = now)
+        val inputs = inputsSource.load(userId, now)
+        DevicesUiState(loaded = true, ages = deviceAges(inputs.events, now, lifetimes, batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true, pumpType = inputs.pumpType), status = status, nowUtc = now)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DevicesUiState())
 
-    private companion object { const val LOOKBACK_MS = 60L * 24 * 3_600_000 }
 }

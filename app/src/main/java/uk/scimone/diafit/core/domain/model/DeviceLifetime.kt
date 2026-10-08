@@ -45,20 +45,37 @@ fun siteAndInsulinChangeTogether(events: List<PumpEventEntity>): Boolean {
     return site.all { s -> insulin.any { abs(it - s) <= SAME_TIME_MS } } && insulin.all { i -> site.any { abs(it - i) <= SAME_TIME_MS } }
 }
 
+private val PATCH_PUMP_NAME = Regex("omnipod|eopatch|eoflow|medtrum", RegexOption.IGNORE_CASE)
+private val PATCH_PUMP_TYPE = Regex("\"pumpType\"\\s*:\\s*\"[^\"]*(omnipod|eopatch|eoflow|medtrum)", RegexOption.IGNORE_CASE)
+
+/** What the Devices page and the lifetime settings show: a patch pump has one row for site + insulin. */
+data class DeviceLayout(val patch: Boolean, val showBattery: Boolean)
+
+/**
+ * A patch pump is recognised by the `pumpType` AAPS puts on its treatments (OMNIPOD_DASH, ...): the latest bolus's
+ * ([pumpType], stored on `BolusEntity`) or a stored temp basal's raw JSON; failing that, by site and insulin
+ * always being changed together.
+ * The battery only exists when a level is reported ([batteryReported]) or a battery change was logged.
+ */
+fun deviceLayout(events: List<PumpEventEntity>, batteryReported: Boolean, pumpType: String? = null): DeviceLayout = DeviceLayout(
+    patch = (pumpType != null && PATCH_PUMP_NAME.containsMatchIn(pumpType)) || events.any { PATCH_PUMP_TYPE.containsMatchIn(it.rawJson) } || siteAndInsulinChangeTogether(events),
+    showBattery = batteryReported || events.any { DeviceKind.BATTERY.matches(it.eventType) }
+)
+
 /**
  * Newest change per kind from [events] (any order); a kind with no event has `changedAtUtc == null`.
  * Site and insulin become one [DeviceKind.PATCH] row when they are always changed together, and the battery
  * row is dropped unless a battery level is reported ([batteryReported]) or a battery change was logged.
  */
 fun deviceAges(
-    events: List<PumpEventEntity>, nowUtc: Long, lifetimes: DeviceLifetimes = emptyMap(), batteryReported: Boolean = false
+    events: List<PumpEventEntity>, nowUtc: Long, lifetimes: DeviceLifetimes = emptyMap(), batteryReported: Boolean = false, pumpType: String? = null
 ): List<DeviceAge> {
     fun age(kind: DeviceKind, hours: Int = lifetimes.hours(kind)) = DeviceAge(
         kind, events.filter { kind.matches(it.eventType) && it.timestampUtc <= nowUtc }.maxOfOrNull { it.timestampUtc }, nowUtc, hours
     )
-    val merged = siteAndInsulinChangeTogether(events)
+    val merged = deviceLayout(events, batteryReported, pumpType).patch
     val kinds = DeviceKind.configurable.filter { !(merged && (it == DeviceKind.SITE || it == DeviceKind.INSULIN)) }
     val ages = kinds.map { age(it) }.toMutableList()
     if (merged) ages.add(1.coerceAtMost(ages.size), age(DeviceKind.PATCH, minOf(lifetimes.hours(DeviceKind.SITE), lifetimes.hours(DeviceKind.INSULIN))))
-    return ages.filter { it.kind != DeviceKind.BATTERY || batteryReported || it.changedAtUtc != null }
+    return ages.filter { it.kind != DeviceKind.BATTERY || deviceLayout(events, batteryReported, pumpType).showBattery }
 }

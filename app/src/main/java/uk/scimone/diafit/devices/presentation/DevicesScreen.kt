@@ -60,13 +60,6 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
         ) {
             items(state.ages, key = { it.kind.name }) { AgeCard(it) }
             item { StatusCard(state.status, state.nowUtc) }
-            item {
-                Text(
-                    "Neither Nightscout nor AAPS reports an expiry date. It is estimated as the last change logged in the " +
-                        "Journal plus the lifetime set in Settings.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

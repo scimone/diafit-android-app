@@ -55,4 +55,17 @@ class DeviceStatusTest {
         assertEquals(85.0, s.pumpBatteryPercent!!, 0.0)
         assertNull(uk.scimone.diafit.core.data.repository.syncsource.bolussyncsource.AapsDeviceStatusParser.parse(mapOf("iob" to 1.0), 5L))
     }
+
+    @Test fun patchPumpRecognisedByPumpType() {
+        val t = 1000L
+        val tb = PumpEventEntity(userId = 1, timestampUtc = t, createdAtUtc = t, eventType = "Temp Basal", sourceId = "x",
+            rawJson = """{"eventType":"Temp Basal","pumpType":"OMNIPOD_DASH","rate":0}""")
+        assertEquals(true, uk.scimone.diafit.core.domain.model.deviceLayout(listOf(tb), false).patch)
+        assertEquals(false, uk.scimone.diafit.core.domain.model.deviceLayout(emptyList(), false).patch)
+    }
+
+    @Test fun patchPumpRecognisedByBolusPumpType() {
+        assertEquals(true, uk.scimone.diafit.core.domain.model.deviceLayout(emptyList(), false, "OMNIPOD_DASH").patch)
+        assertEquals(false, uk.scimone.diafit.core.domain.model.deviceLayout(emptyList(), false, "ACCU_CHEK_COMBO").patch)
+    }
 }
