@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.AgpProfile
+import uk.scimone.diafit.core.domain.model.gaussianSmoothCircular
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.history.presentation.components.ActivityStrip
@@ -84,31 +85,16 @@ internal class AgpBands(
 ) {
     val bins: Int get() = median.size
 
-    /**
-     * For display: every curve blurred with a circular Gaussian of [sigmaMinutes] (the day wraps at midnight), so
-     * the chart reads as smooth curves rather than bin-to-bin noise. Empty bins stay empty and don't pull neighbours.
-     */
-    fun smoothed(sigmaMinutes: Float = DISPLAY_SMOOTHING_MINUTES): AgpBands {
-        val sigma = sigmaMinutes / (24 * 60f / bins)
-        val radius = kotlin.math.ceil(3 * sigma).toInt()
-        val kernel = FloatArray(2 * radius + 1) { val d = it - radius; kotlin.math.exp(-d * d / (2 * sigma * sigma)) }
-        fun FloatArray.blur() = FloatArray(size) { i ->
-            if (this[i].isNaN()) Float.NaN else {
-                var sum = 0f
-                var weight = 0f
-                for (k in kernel.indices) {
-                    val v = this[(i + k - radius + size * 2) % size]
-                    if (!v.isNaN()) { sum += v * kernel[k]; weight += kernel[k] }
-                }
-                sum / weight
-            }
+    /** Every curve blurred with [gaussianSmoothCircular], so the chart reads as curves rather than bin-to-bin noise. */
+    fun smoothed(): AgpBands {
+        fun FloatArray.blur(): FloatArray {
+            val d = DoubleArray(size) { this[it].toDouble() }.gaussianSmoothCircular()
+            return FloatArray(size) { d[it].toFloat() }
         }
         return AgpBands(outerLow.blur(), low.blur(), median.blur(), high.blur(), outerHigh.blur())
     }
 }
 
-/** Display smoothing of the AGP curves (Gaussian sigma), shared by History and Patterns. */
-private const val DISPLAY_SMOOTHING_MINUTES = 25f
 
 internal fun AgpProfile.toBands() = AgpBands(p5, p25, median, p75, p95)
 
@@ -124,14 +110,16 @@ internal fun AgpPlot(
     modifier: Modifier,
     highlights: List<Pair<Int, Int>> = emptyList(),
     highlightColor: Color = MaterialTheme.colorScheme.primary,
-    yLabels: Boolean = false
+    yLabels: Boolean = false,
+    /** False when [bands] are already smoothed (the pattern AGP is, so detection sees the drawn curves). */
+    smooth: Boolean = true
 ) {
     val guides = hourGuideColor()
     val targetFill = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
     val dim = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    val bands = remember(bands) { bands.smoothed() }
+    val bands = remember(bands, smooth) { if (smooth) bands.smoothed() else bands }
     val yMax = remember(bands) {
         val top = bands.outerHigh.filter { !it.isNaN() }.maxOrNull() ?: 250f
         maxOf(250f, kotlin.math.ceil(top / 50f) * 50f).coerceAtMost(400f)

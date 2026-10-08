@@ -123,7 +123,8 @@ private fun AgpChartCard(agp: PatternAgp, state: PatternsState, onClear: () -> U
             AgpPlot(
                 bands, state.thresholds!!, Modifier.fillMaxWidth().height(220.dp),
                 highlights = state.highlights.map { it.startHour to it.endHour },
-                yLabels = true
+                yLabels = true,
+                smooth = false
             )
             HourLabels(Modifier.fillMaxWidth().padding(horizontal = 2.dp))
             Text(

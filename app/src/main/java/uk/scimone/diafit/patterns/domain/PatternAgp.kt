@@ -1,11 +1,14 @@
 package uk.scimone.diafit.patterns.domain
 
+import uk.scimone.diafit.core.domain.model.AGP_SMOOTHING_MINUTES
+import uk.scimone.diafit.core.domain.model.gaussianSmoothCircular
 import java.math.BigDecimal
 import java.math.RoundingMode
 
 /**
  * The AGP the pattern detectors run on (see `patterns.md`): 288 five-minute bins (index 0 = 00:00, local time),
- * 10/25/50/75/90th percentiles in mg/dL, rounded to 1 decimal like the backend does before detection.
+ * 10/25/50/75/90th percentiles in mg/dL, Gaussian-smoothed ([AGP_SMOOTHING_MINUTES], unlike the backend, so detection
+ * matches the drawn chart) and rounded to 1 decimal like the backend does before detection.
  * Not the History card's [uk.scimone.diafit.core.domain.model.AgpProfile] (15-min bins, 5/95th percentiles).
  */
 class PatternAgp(
@@ -73,7 +76,9 @@ class PatternAgp(
                 }
                 for (k in FRACTIONS.indices) out[k][bin] = percentile(pooled, n, FRACTIONS[k])
             }
-            return PatternAgp(out[0], out[1], out[2], out[3], out[4], total, dayCount).rounded()
+            // Smoothed like the chart draws it, so a pattern is never raised by a dip the user can't see.
+            val s = out.map { it.gaussianSmoothCircular() }
+            return PatternAgp(s[0], s[1], s[2], s[3], s[4], total, dayCount).rounded()
         }
 
         /** Linear-interpolated percentile (numpy's default) of a histogram of [n] values over the mg/dL levels. */

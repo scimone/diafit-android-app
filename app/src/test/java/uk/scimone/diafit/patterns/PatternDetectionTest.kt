@@ -133,4 +133,14 @@ class PatternDetectionTest {
         val minutes = (0 until 288).filter { it * 5 !in 600 until 780 }.flatMap { b -> List(7) { b * 5 } }.toIntArray()
         assertNull(PatternAgp.build(minutes, IntArray(minutes.size) { 120 }, dayCount = 7))
     }
+
+    @Test
+    fun aOneBinDipIsSmoothedAway() {
+        // 7 days at 120 except a single 5-min reading of 40 each day at 03:00: raw p10 there would be far below 54.
+        val minutes = IntArray(288 * 7) { (it % 288) * 5 }
+        val values = IntArray(minutes.size) { if (it % 288 == 36) 40 else 120 }
+        val agp = PatternAgp.build(minutes, values, dayCount = 7)!!
+        assertTrue(agp.p10.all { it >= 54.0 })
+        assertTrue("Sporadic, very dangerous hypoglycemia during night" !in detectAgpPatternTexts(agp))
+    }
 }
