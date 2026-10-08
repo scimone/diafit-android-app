@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -148,6 +149,10 @@ fun MealTimeline(
         // Each card sits under its meal's data point on the charts (pushed aside only to avoid overlapping
         // a neighbour, and kept on screen at the edges). Geometry is read in the layout pass, so panning
         // moves the cards without recomposing.
+        // The user can also drag the strip sideways (e.g. to reach cards that were pushed together);
+        // moving the charts puts the cards back under their data points.
+        var userShift by remember { mutableFloatStateOf(0f) }
+        val lastOrigin = remember { floatArrayOf(Float.NaN) }
         Layout(
             content = {
                 ordered.forEach { group ->
@@ -161,13 +166,22 @@ fun MealTimeline(
                     }
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dx ->
+                    change.consume()
+                    userShift += dx
+                }
+            }
         ) { measurables, constraints ->
             val size = CardSize.roundToPx()
             val gap = 8.dp.roundToPx()
             val width = constraints.maxWidth
             val placeables = measurables.map { it.measure(Constraints.fixed(size, size)) }
             val g = geometry.value
+            if (g != null && g.originPx != lastOrigin[0]) {
+                if (!lastOrigin[0].isNaN()) userShift = 0f
+                lastOrigin[0] = g.originPx
+            }
             val xs = IntArray(placeables.size) { i ->
                 if (g == null) width - size
                 else (g.xOf(ordered[i].startTime) - size / 2f).toInt()
@@ -183,7 +197,8 @@ fun MealTimeline(
             }
             layout(width, constraints.maxHeight) {
                 val y = (constraints.maxHeight - size) / 2
-                placeables.forEachIndexed { i, p -> p.place(xs[i], y) }
+                val shift = userShift.toInt()
+                placeables.forEachIndexed { i, p -> p.place(xs[i] + shift, y) }
             }
         }
     }

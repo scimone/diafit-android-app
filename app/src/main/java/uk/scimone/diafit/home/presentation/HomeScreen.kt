@@ -314,8 +314,8 @@ fun HomeScreen(
                     if (x in 0f..size.width) {
                         drawLine(
                             color = nowLineColor,
-                            start = Offset(x, 0f),
-                            end = Offset(x, lineBottom),
+                            start = Offset(x, InspectBarHeight.toPx()),
+                            end = Offset(x, lineBottom.coerceAtLeast(InspectBarHeight.toPx())),
                             strokeWidth = 2f,
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
                         )
