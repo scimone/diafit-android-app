@@ -93,7 +93,7 @@ fun HistoryScreen(
                             else (listState.firstVisibleItemScrollOffset / collapseDistancePx).coerceIn(0f, 1f)
                         }
                     }
-                    val expandedHeight = maxHeight * 0.34f
+                    val expandedHeight = maxHeight * 0.28f
                     val collapsedHeight = maxOf(MIN_AGP_HEIGHT, expandedHeight * 0.55f)
                     Column(Modifier.fillMaxSize()) {
                         AgpCard(
