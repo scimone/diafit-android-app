@@ -38,6 +38,22 @@ import uk.scimone.diafit.journal.presentation.model.PumpEventUi
 import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
 import uk.scimone.diafit.ui.theme.Warning
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import uk.scimone.diafit.journal.presentation.components.JournalGlucoseGraph
+import uk.scimone.diafit.journal.presentation.components.JOURNAL_GRAPH_WINDOW_MIN
+import uk.scimone.diafit.journal.presentation.components.mealPeakText
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
@@ -68,6 +84,99 @@ fun JournalScreen(
         visible.sortedByDescending { it.timeUtc }.groupBy { friendlyDateString(it.timeUtc) }.toList()
     }
 
+    // --- Graph <-> list sync -------------------------------------------------------------------------
+    // The highlighted entry is `selected`; the graph's marker sits on its timestamp. Scrolling the list moves
+    // the highlight to the first entry below the sticky day header; dragging or tapping the graph picks the
+    // nearest entry and scrolls the list to it.
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    val glucose by viewModel.glucose.collectAsState()
+    val baseMs = remember { System.currentTimeMillis() / 60_000L * 60_000L - 1000L * 1440 * 60_000L }
+    fun minutesOf(ms: Long) = ((ms - baseMs) / 60_000.0).toFloat()
+    val center = remember { Animatable(minutesOf(System.currentTimeMillis())) }
+    var headerPx by remember { mutableIntStateOf(0) }
+    var listHeightPx by remember { mutableIntStateOf(0) }
+    var selected by remember { mutableIntStateOf(0) }
+    var graphDriving by remember { mutableStateOf(false) }
+    var scrollJob by remember { mutableStateOf<Job?>(null) }
+
+    /** Entries in list order (newest first) and the LazyColumn item index of each. */
+    val flat = remember(days) {
+        var index = 0
+        val entries = ArrayList<JournalEntryUi>()
+        val rows = ArrayList<Int>()
+        days.forEach { (_, list) ->
+            index++  // the day header
+            list.forEach { entries += it; rows += index++ }
+        }
+        FlatEntries(entries, rows.toIntArray())
+    }
+    val selectedIndex = selected.coerceIn(0, (flat.entries.size - 1).coerceAtLeast(0))
+    val selectedEntry = flat.entries.getOrNull(selectedIndex)
+
+    suspend fun moveCenterTo(ms: Long, animate: Boolean) {
+        val target = minutesOf(ms)
+        if (animate && kotlin.math.abs(target - center.value) < JOURNAL_GRAPH_WINDOW_MIN) center.animateTo(target, tween(220))
+        else center.snapTo(target)
+    }
+
+    fun scrollListTo(i: Int) {
+        scrollJob?.cancel()
+        scrollJob = scope.launch { listState.animateScrollToItem(flat.rowIndex[i], -headerPx) }
+    }
+
+    fun nearestTo(minutes: Float): Int {
+        var best = 0
+        var bestDist = Float.MAX_VALUE
+        flat.entries.forEachIndexed { i, e ->
+            val d = kotlin.math.abs(minutesOf(e.timeUtc) - minutes)
+            if (d < bestDist) { bestDist = d; best = i }
+        }
+        return best
+    }
+
+    /** Graph-driven selection of entry [i]: the marker glides there and the list follows. */
+    fun jumpTo(i: Int) {
+        if (flat.entries.isEmpty()) return
+        graphDriving = true
+        selected = i
+        scrollListTo(i)
+        scope.launch {
+            moveCenterTo(flat.entries[i].timeUtc, animate = true)
+            scrollJob?.join()
+            graphDriving = false
+        }
+    }
+
+    // List -> graph: the first entry under the sticky header is the highlighted one.
+    LaunchedEffect(flat) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.firstOrNull {
+                (it.key as? String)?.startsWith("day-") == false && it.offset + it.size / 2 >= headerPx
+            }?.index
+        }.filterNotNull().distinctUntilChanged().collectLatest { itemIndex ->
+            if (graphDriving) return@collectLatest
+            val i = flat.rowIndex.indexOf(itemIndex)
+            if (i < 0) return@collectLatest
+            selected = i
+            moveCenterTo(flat.entries[i].timeUtc, animate = true)
+        }
+    }
+
+    // Load the glucose around the marker as it moves (day-sized pieces), and refresh the current day every minute.
+    LaunchedEffect(Unit) {
+        snapshotFlow { (baseMs + center.value.toLong() * 60_000L) / (30 * 60_000L) }
+            .distinctUntilChanged()
+            .collect { viewModel.ensureGlucose(baseMs + center.value.toLong() * 60_000L) }
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            viewModel.ensureGlucose(baseMs + center.value.toLong() * 60_000L)
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -85,10 +194,40 @@ fun JournalScreen(
                 RangeChip(uiState.range, viewModel::setRange)
             }
 
+            if (flat.entries.isNotEmpty()) {
+                JournalGlucoseGraph(
+                    centerMinutes = { center.value },
+                    baseMs = baseMs,
+                    glucose = glucose,
+                    lower = uiState.target.lowerBound,
+                    upper = uiState.target.upperBound,
+                    label = (selectedEntry as? MealEntityUi)?.let { mealPeakText(it, uiState.target) },
+                    onDragStart = {
+                        graphDriving = true
+                        scope.launch { center.stop() }
+                    },
+                    onDrag = { deltaMin ->
+                        scope.launch {
+                            val first = minutesOf(flat.entries.last().timeUtc)
+                            val last = minutesOf(flat.entries.first().timeUtc)
+                            center.snapTo((center.value + deltaMin).coerceIn(first, last))
+                            val n = nearestTo(center.value)
+                            if (n != selected) {
+                                selected = n
+                                scrollListTo(n)
+                            }
+                        }
+                    },
+                    onDragEnd = { jumpTo(selectedIndex) },
+                    onTap = { offsetMin -> jumpTo(nearestTo(center.value + offsetMin)) },
+                    modifier = Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             PullToRefreshBox(
                 isRefreshing = uiState.isLoading,
                 onRefresh = viewModel::refreshMeals,
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.weight(1f).fillMaxWidth().onSizeChanged { listHeightPx = it.height }
             ) {
                 when {
                     uiState.isLoading && days.isEmpty() ->
@@ -104,16 +243,19 @@ fun JournalScreen(
 
                     else -> LazyColumn(
                         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 24.dp),
+                        state = listState,
+                        // Room below the last entry so that every entry (the oldest too) can reach the top and be highlighted.
+                        contentPadding = PaddingValues(bottom = with(density) { (listHeightPx - headerPx).toDp() - 96.dp }.coerceAtLeast(24.dp)),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         days.forEach { (day, entries) ->
-                            stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries)) }
+                            stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries), Modifier.onSizeChanged { headerPx = it.height }) }
                             items(entries, key = { "${it.kind}-${it.id}" }) { entry ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     JournalEntryCard(
                                         entry,
                                         uiState.target,
+                                        modifier = if (entry === selectedEntry) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier,
                                         onAddPhoto = { uri -> viewModel.addPhoto(entry.id, uri) },
                                         onClick = {
                                             // Profile switches and temporary targets get a detail page; other device events a small dialog.
@@ -139,6 +281,9 @@ fun JournalScreen(
         }
     }
 }
+
+/** The visible entries in list order, and the LazyColumn item index of each. */
+private class FlatEntries(val entries: List<JournalEntryUi>, val rowIndex: IntArray)
 
 /** Details of a device event, with the option to remove it from the journal. */
 @Composable

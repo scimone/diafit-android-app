@@ -92,6 +92,43 @@ class JournalViewModel(
 
     private var observeJob: Job? = null
 
+    private val _glucose = MutableStateFlow<Map<Long, DayGlucose>>(emptyMap())
+    /** Glucose of the days around the graph's position, by local epoch day; loaded on demand, see [ensureGlucose]. */
+    val glucose: StateFlow<Map<Long, DayGlucose>> = _glucose
+    private val glucoseLoading = mutableSetOf<Long>()
+
+    /**
+     * Makes sure the day of [centerMs] and its neighbours are loaded, and drops days far away, so the graph
+     * only ever holds a few days however long the journal range is. Past days are read once; today is re-read
+     * after a minute.
+     */
+    fun ensureGlucose(centerMs: Long) {
+        val zone = ZoneId.systemDefault()
+        val center = java.time.Instant.ofEpochMilli(centerMs).atZone(zone).toLocalDate().toEpochDay()
+        val now = System.currentTimeMillis()
+        val cache = _glucose.value
+        // The visible window (about +-3 h) lies in the center day or an adjacent one: load those, nearest first.
+        listOf(center, center - 1, center + 1).forEach { day ->
+            val loaded = cache[day]
+            val dayEnd = LocalDate.ofEpochDay(day + 1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val stale = loaded != null && loaded.loadedAt < dayEnd && now - loaded.loadedAt > GLUCOSE_REFRESH_MS
+            if ((loaded == null || stale) && day <= LocalDate.now(zone).toEpochDay() && glucoseLoading.add(day)) {
+                viewModelScope.launch {
+                    try {
+                        val start = LocalDate.ofEpochDay(day).atStartOfDay(zone).toInstant().toEpochMilli()
+                        val rows = withContext(Dispatchers.IO) { cgmRepository.getEntriesBetween(start, dayEnd - 1, userId).sortedBy { it.timestamp } }
+                        val loadedDay = DayGlucose(LongArray(rows.size) { rows[it].timestamp }, IntArray(rows.size) { rows[it].valueMgdl }, System.currentTimeMillis())
+                        _glucose.update { map -> (map + (day to loadedDay)).filterKeys { kotlin.math.abs(it - center) <= GLUCOSE_KEEP_DAYS } }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading glucose for the graph", e)
+                    } finally {
+                        glucoseLoading.remove(day)
+                    }
+                }
+            }
+        }
+    }
+
     /** Suggested (not certain enough to auto-merge) pairings of the latest meal list, by imported entry id. */
     private var suggestions: Map<Int, MealMatcher.Match> = emptyMap()
 
@@ -268,6 +305,9 @@ class JournalViewModel(
         const val MAX_EPISODE_DAYS = 180
         const val DAY_MS = 24 * 60 * 60_000L
         const val REFRESH_MS = 5 * 60_000L
+        const val GLUCOSE_REFRESH_MS = 60_000L
+        /** Days (each side of the one in view) whose glucose stays in memory. */
+        const val GLUCOSE_KEEP_DAYS = 3L
     }
 }
 
@@ -299,3 +339,6 @@ data class JournalRange(val customFrom: LocalDate? = null, val customTo: LocalDa
         return from.atStartOfDay(zone).toInstant().toEpochMilli() to to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
     }
 }
+
+/** One local day of glucose readings, ascending by time. [loadedAt] tells when it was read. */
+class DayGlucose(val times: LongArray, val values: IntArray, val loadedAt: Long)
