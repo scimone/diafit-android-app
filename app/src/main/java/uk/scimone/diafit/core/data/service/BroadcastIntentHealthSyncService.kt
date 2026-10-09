@@ -5,10 +5,11 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import uk.scimone.diafit.R
+import org.koin.android.ext.android.inject
 
 class BroadcastIntentHealthSyncService : Service() {
+
+    private val notificationUpdater: SyncNotificationUpdater by inject()
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
@@ -26,6 +27,7 @@ class BroadcastIntentHealthSyncService : Service() {
             NOTIFICATION_ID,
             createNotification()
         )
+        notificationUpdater.start()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -34,6 +36,7 @@ class BroadcastIntentHealthSyncService : Service() {
     }
 
     override fun onDestroy() {
+        notificationUpdater.stop()
         super.onDestroy()
     }
 
@@ -41,12 +44,6 @@ class BroadcastIntentHealthSyncService : Service() {
 
     private fun createNotification(): Notification {
         Log.d("BroadcastIntentHealthSyncService", "Creating notification")
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Health Sync Service")
-            .setContentText("Listening for health data broadcasts")
-            .setSmallIcon(R.drawable.ic_stat_diafit)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .build()
+        return SyncNotificationUpdater.build(this, "Health Sync Service", "Listening for health data broadcasts")
     }
 }
