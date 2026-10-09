@@ -170,6 +170,9 @@ object GlucoseSituation {
         if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return "Delayed post-meal glucose rise"
         if (age >= 120 && c.streakMin { it > c.high } >= 120) return "Prolonged post-meal hyperglycemia"
         if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Slow glucose recovery after a meal"
+        // Nothing more specific fits yet (e.g. right after eating): still say it is the meal.
+        if (age <= 180 && r >= FLAT) return "Glucose rise after a meal"
+        if (age <= 240 && r <= -FLAT) return "Glucose decline after a meal"
         return null
     }
 

@@ -59,6 +59,12 @@ class GlucoseSituationTest {
         assertEquals("Glucose rise after missed or delayed bolus", classify(now, r, listOf(meal(now - 50 * min))))
     }
 
+    @Test fun gentleRiseRightAfterMeal() {
+        val now = at(13)
+        val r = series(now, 30) { 110 + (30 - it) / 2 }
+        assertEquals("Glucose rise after a meal", classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
+    }
+
     @Test fun fastingHypo() {
         val now = at(14)
         val r = series(now, 40) { 62 + it / 10 }
