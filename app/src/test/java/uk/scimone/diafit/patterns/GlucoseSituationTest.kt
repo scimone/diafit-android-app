@@ -65,6 +65,13 @@ class GlucoseSituationTest {
         assertEquals("Glucose rise after lunch", classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
     }
 
+    @Test fun steadyButHighSaysHigh() {
+        val now = at(15)
+        val input = SituationInput(now, zone, series(now, 30) { 190 + (it % 2) }, emptyList(), listOf(meal(now - 100 * min)))
+        assertNull(GlucoseSituation.classify(input))
+        assertEquals("High glucose, steady", GlucoseSituation.trendFallback(input))
+    }
+
     @Test fun fastingHypo() {
         val now = at(14)
         val r = series(now, 40) { 62 + it / 10 }

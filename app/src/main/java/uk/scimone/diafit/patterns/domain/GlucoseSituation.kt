@@ -67,13 +67,22 @@ object GlucoseSituation {
         val c = Context(input)
         val r = c.r ?: return null
         if (c.g == null || c.stale) return null
-        return when {
-            r >= RAPID -> "Glucose rising rapidly"
-            r >= FLAT -> "Glucose rising"
-            r <= -RAPID -> "Glucose falling rapidly"
-            r <= -FLAT -> "Glucose falling"
-            else -> "Glucose steady"
+        val trend = when {
+            r >= RAPID -> "rising rapidly"
+            r >= FLAT -> "rising"
+            r <= -RAPID -> "falling rapidly"
+            r <= -FLAT -> "falling"
+            else -> "steady"
         }
+        val g = c.g
+        val level = when {
+            g > 250 -> "Very high glucose"
+            g > c.high -> "High glucose"
+            g < 54 -> "Very low glucose"
+            g < c.low -> "Low glucose"
+            else -> "Glucose"
+        }
+        return "$level, $trend"
     }
 
     private val rules: List<(Context) -> String?> = listOf(
@@ -198,7 +207,7 @@ object GlucoseSituation {
         if (change >= 30) return "Gradual overnight glucose rise"
         if (change <= -30) return "Gradual overnight glucose decline"
         val range = win.maxOf { it.valueMgdl } - win.minOf { it.valueMgdl }
-        return if (range <= 30 && abs(c.r) < FLAT) "Stable glucose levels overnight" else null
+        return if (range <= 30 && abs(c.r) < FLAT && c.g!! in c.low..c.high) "Stable glucose levels overnight" else null
     }
 
     private fun fastingHigh(c: Context): String? {
@@ -269,7 +278,7 @@ object GlucoseSituation {
         val win = c.window(60)
         if (win.size < 4 || abs(c.r!!) >= FLAT) return null
         val flat = win.maxOf { it.valueMgdl } - win.minOf { it.valueMgdl } <= 30
-        if (flat && (c.mealAgeMin ?: Int.MAX_VALUE) >= 180) {
+        if (flat && g in c.low..c.high && (c.mealAgeMin ?: Int.MAX_VALUE) >= 180) {
             return if (c.night) "Stable glucose levels overnight" else "Stable glucose levels between meals"
         }
         val three = c.window(180)
