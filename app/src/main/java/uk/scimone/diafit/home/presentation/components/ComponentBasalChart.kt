@@ -28,6 +28,8 @@ import kotlin.math.sqrt
 
 private val PlotTopInset = 14.dp
 private val PlotBottomInset = 3.dp
+/** Space the difference view keeps free at the top for the panel title. */
+private val DeviationTitleInset = 22.dp
 /** The y axis always spans at least this many U/h, so a tiny basal doesn't fill the panel. */
 private const val MIN_AXIS_RATE = 0.5
 /** Rate steps use only this share of the plot height (the y axis reaches further up), keeping them low. */
@@ -197,7 +199,8 @@ private fun DeviationCanvas(
         if (clipRight <= g.left) return@Canvas
 
         val triangleMax = TriangleMax.toPx()
-        val plotTop = triangleMax + TriangleGap.toPx()
+        // Leave room for the panel title (top left) above the tallest bar and its SMB triangle.
+        val plotTop = max(triangleMax + TriangleGap.toPx(), DeviationTitleInset.toPx())
         val plotBottom = size.height - triangleMax - TriangleGap.toPx()
         if (plotBottom <= plotTop) return@Canvas
         // Positive deviations are usually much larger than negative ones: the zero line sits lower than the middle.
