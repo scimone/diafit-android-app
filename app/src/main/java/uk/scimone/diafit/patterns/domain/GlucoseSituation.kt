@@ -169,7 +169,7 @@ object GlucoseSituation {
         if (age in 90..360 && r >= FLAT && (rise ?: 0) >= 30 && c.highFat) return "Glucose rise after a high-fat meal"
         if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return "Delayed post-meal glucose rise"
         if (age >= 120 && c.streakMin { it > c.high } >= 120) return "Prolonged post-meal hyperglycemia"
-        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Delayed return to target after a meal"
+        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Slow glucose recovery after a meal"
         return null
     }
 
@@ -206,8 +206,8 @@ object GlucoseSituation {
     private fun longHigh(c: Context): String? {
         val above = c.streakMin { it > c.high }
         if (above >= 360) return "Persistent hyperglycemia"
-        if (above >= 120) return "Prolonged time above target"
-        if (c.g!! < c.low && c.streakMin { it < c.low } >= 60) return "Prolonged time below target"
+        if (above >= 120) return "Prolonged high glucose"
+        if (c.g!! < c.low && c.streakMin { it < c.low } >= 60) return "Prolonged low glucose"
         return null
     }
 
@@ -270,7 +270,7 @@ object GlucoseSituation {
         }
         val three = c.window(180)
         if (three.size >= 20 && three.all { it.valueMgdl in c.low..c.high } && cv(three.map { it.valueMgdl }) < 20 && g in c.low..c.high)
-            return "Stable glucose levels within target range"
+            return "Stable glucose levels in the ${c.partOfDay}"
         if (cv(c.window(24 * 60).map { it.valueMgdl }) >= HIGH_CV) return "Unpredictable glucose variability"
         return null
     }
@@ -314,6 +314,12 @@ object GlucoseSituation {
         val stale = latest == null || now - latest.timestamp > MAX_READING_AGE_MIN * MIN
         val meals = input.meals.filter { it.isValid && it.mealTimeUtc <= now }
         val asleep = input.asleepNow
+        val partOfDay: String = when (Instant.ofEpochMilli(now).atZone(zone).hour) {
+            in 5..11 -> "morning"
+            in 12..16 -> "afternoon"
+            in 17..21 -> "evening"
+            else -> "night"
+        }
         val night: Boolean = asleep || Instant.ofEpochMilli(now).atZone(zone).hour.let { it >= 22 || it < 6 }
 
         /** Least-squares slope over the last 20 minutes in mg/dL per minute. */

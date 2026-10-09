@@ -86,6 +86,12 @@ class GlucoseSituationTest {
         assertEquals("Stable glucose levels between meals", classify(now, series(now, 200) { 110 + (it % 3) }))
     }
 
+    @Test fun stableInTheMorning() {
+        val now = at(9)
+        val r = series(now, 200) { 110 + (it % 3) }
+        assertEquals("Stable glucose levels in the morning", classify(now, r, listOf(meal(now - 120 * min, 15))))
+    }
+
     @Test fun stableOvernight() {
         val now = at(2)
         assertEquals("Stable glucose levels overnight", classify(now, series(now, 200) { 110 + (it % 3) }))
@@ -103,7 +109,7 @@ class GlucoseSituationTest {
 
     @Test fun prolongedAboveTarget() {
         val now = at(15)
-        assertEquals("Prolonged time above target", classify(now, series(now, 150) { 230 + (it % 3) }))
+        assertEquals("Prolonged high glucose", classify(now, series(now, 150) { 230 + (it % 3) }))
     }
 
     @Test fun correctionDecline() {
