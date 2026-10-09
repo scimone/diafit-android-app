@@ -6,6 +6,7 @@ import uk.scimone.diafit.core.domain.model.ExerciseEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealType
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.abs
@@ -93,7 +94,7 @@ object GlucoseSituation {
         if (c.exerciseActive != null) return "Glucose decline during exercise"
         if (c.exerciseEndedMin in 60..480) return "Delayed post-exercise glucose decline"
         if (c.stacking) return "Glucose decline due to insulin stacking"
-        if ((c.mealAgeMin ?: Int.MAX_VALUE) <= 240) return "Post-meal hypoglycemia"
+        if ((c.mealAgeMin ?: Int.MAX_VALUE) <= 240) return "Post-${c.mealWord} hypoglycemia"
         if (c.correctionBolusAgeMin != null) return "Glucose decline after correction insulin"
         return "Fasting hypoglycemia"
     }
@@ -152,8 +153,8 @@ object GlucoseSituation {
         val rise = base?.let { g - it }
 
         if (r <= -RAPID) {
-            return if (base != null && peak - base >= 50 && age <= 240) "Post-meal glucose spike followed by a rapid decline"
-            else if (age <= 240) "Rapid glucose decline after a meal" else null
+            return if (base != null && peak - base >= 50 && age <= 240) "Post-${c.mealWord} glucose spike followed by a rapid decline"
+            else if (age <= 240) "Rapid glucose decline after ${c.mealArticle}" else null
         }
         // Dipped early, then climbed back: a bolus that peaked before the food did.
         if (base != null && age in 90..300) {
@@ -165,14 +166,14 @@ object GlucoseSituation {
         // Rising, and the insulin for it wasn't there on time.
         if (c.mealCarbs >= 20 && age in 20..180 && !c.bolusAtMeal && r >= FLAT && (rise ?: 0) >= 30)
             return "Glucose rise after missed or delayed bolus"
-        if (age <= 120 && r >= RAPID) return "Rapid glucose rise after a meal"
-        if (age in 90..360 && r >= FLAT && (rise ?: 0) >= 30 && c.highFat) return "Glucose rise after a high-fat meal"
-        if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return "Delayed post-meal glucose rise"
-        if (age >= 120 && c.streakMin { it > c.high } >= 120) return "Prolonged post-meal hyperglycemia"
-        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Slow glucose recovery after a meal"
+        if (age <= 120 && r >= RAPID) return "Rapid glucose rise after ${c.mealArticle}"
+        if (age in 90..360 && r >= FLAT && (rise ?: 0) >= 30 && c.highFat) return "Glucose rise after a high-fat ${c.mealWord}"
+        if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return "Delayed post-${c.mealWord} glucose rise"
+        if (age >= 120 && c.streakMin { it > c.high } >= 120) return "Prolonged post-${c.mealWord} hyperglycemia"
+        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Slow glucose recovery after ${c.mealArticle}"
         // Nothing more specific fits yet (e.g. right after eating): still say it is the meal.
-        if (age <= 180 && r >= FLAT) return "Glucose rise after a meal"
-        if (age <= 240 && r <= -FLAT) return "Glucose decline after a meal"
+        if (age <= 180 && r >= FLAT) return "Glucose rise after ${c.mealArticle}"
+        if (age <= 240 && r <= -FLAT) return "Glucose decline after ${c.mealArticle}"
         return null
     }
 
@@ -422,6 +423,10 @@ object GlucoseSituation {
         val mealStart: Long? = mealChain.firstOrNull()?.mealTimeUtc
         val mealAgeMin: Int? = mealStart?.let { ((now - it) / MIN).toInt() }
         val mealCarbs: Int = mealChain.sumOf { it.carbohydrates }
+        /** The kind of the latest meal in the user's words ("breakfast", "snack"...). */
+        val mealWord: String = (mealChain.firstOrNull()?.mealType ?: MealType.SNACK).type.lowercase()
+        /** "breakfast", "lunch", "dinner" or "a snack", as it reads after "after". */
+        val mealArticle: String get() = if (mealWord == "snack") "a snack" else mealWord
         val highFat: Boolean = mealChain.sumOf { it.fats ?: 0 } >= 25 || mealChain.any { it.impactType == ImpactType.LONG }
 
         /** A manual bolus within 30 min before and 20 min after the meal began. */

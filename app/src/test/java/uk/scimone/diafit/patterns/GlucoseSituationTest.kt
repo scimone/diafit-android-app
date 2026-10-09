@@ -23,7 +23,7 @@ class GlucoseSituationTest {
 
     private fun meal(t: Long, carbs: Int = 60, fat: Int = 10) = MealEntity(
         userId = 1, description = null, createdAtUtc = t, mealTimeUtc = t, carbohydrates = carbs, fats = fat,
-        imageId = "", recommendation = null, reasoning = null
+        mealType = uk.scimone.diafit.core.domain.model.MealType.LUNCH, imageId = "", recommendation = null, reasoning = null
     )
 
     private fun bolus(t: Long, u: Float = 4f) = BolusEntity(
@@ -50,7 +50,7 @@ class GlucoseSituationTest {
     @Test fun rapidRiseAfterMeal() {
         val now = at(13)
         val r = series(now, 60) { 100 + (60 - it) * 3 }
-        assertEquals("Rapid glucose rise after a meal", classify(now, r, listOf(meal(now - 40 * min)), listOf(bolus(now - 40 * min))))
+        assertEquals("Rapid glucose rise after lunch", classify(now, r, listOf(meal(now - 40 * min)), listOf(bolus(now - 40 * min))))
     }
 
     @Test fun missedBolus() {
@@ -62,7 +62,7 @@ class GlucoseSituationTest {
     @Test fun gentleRiseRightAfterMeal() {
         val now = at(13)
         val r = series(now, 30) { 110 + (30 - it) / 2 }
-        assertEquals("Glucose rise after a meal", classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
+        assertEquals("Glucose rise after lunch", classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
     }
 
     @Test fun fastingHypo() {
@@ -78,7 +78,7 @@ class GlucoseSituationTest {
 
     @Test fun postMealHypo() {
         val now = at(14)
-        assertEquals("Post-meal hypoglycemia", classify(now, series(now, 40) { 60 + it / 10 }, listOf(meal(now - 120 * min))))
+        assertEquals("Post-lunch hypoglycemia", classify(now, series(now, 40) { 60 + it / 10 }, listOf(meal(now - 120 * min))))
     }
 
     @Test fun reboundAfterLow() {
