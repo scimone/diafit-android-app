@@ -140,13 +140,14 @@ fun JournalGlucoseGraph(
                 t += hourMs
             }
 
-            // Entries that cover a stretch of time mark the whole area; the highlighted one stronger.
+            // The highlighted entry only: a stretch of time marks its whole area.
             val plotTop = padTop
             val plotBottom = padTop + plotH
-            fun drawRanges(highlighted: Boolean) {
-                markers.forEachIndexed { i, m ->
-                    val end = m.endMs ?: return@forEachIndexed
-                    if ((i == selectedMarker) != highlighted || end < startMs || m.startMs > endMs) return@forEachIndexed
+            run {
+                val highlighted = true
+                markers.getOrNull(selectedMarker)?.let { m ->
+                    val end = m.endMs ?: return@let
+                    if (end < startMs || m.startMs > endMs) return@let
                     val x0 = xOf(m.startMs).coerceAtLeast(0f)
                     val x1 = xOf(end).coerceAtMost(size.width)
                     drawRect(m.color.copy(alpha = if (highlighted) 0.30f else 0.14f), Offset(x0, plotTop), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom - plotTop))
@@ -157,8 +158,6 @@ fun JournalGlucoseGraph(
                     }
                 }
             }
-            drawRanges(highlighted = false)
-            drawRanges(highlighted = true)
 
             val radius = 2.5.dp.toPx()
             for (day in firstDay..lastDay) {
@@ -172,12 +171,12 @@ fun JournalGlucoseGraph(
                 }
             }
 
-            // Point entries: a line with a dot on top, the highlighted one bigger and solid.
+            // Point entries: a dot on top, the highlighted one bigger with a line down through the graph.
             fun drawPoints(highlighted: Boolean) {
                 markers.forEachIndexed { i, m ->
                     if (m.endMs != null || (i == selectedMarker) != highlighted || m.startMs < startMs || m.startMs > endMs) return@forEachIndexed
                     val x = xOf(m.startMs)
-                    drawLine(m.color.copy(alpha = if (highlighted) 0.9f else 0.35f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = if (highlighted) 2.dp.toPx() else 1.dp.toPx())
+                    if (highlighted) drawLine(m.color.copy(alpha = 0.9f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = 2.dp.toPx())
                     val r = if (highlighted) 6.dp.toPx() else 4.dp.toPx()
                     drawCircle(ringColor, r + 1.5.dp.toPx(), Offset(x, plotTop))
                     drawCircle(m.color, r, Offset(x, plotTop))
