@@ -61,6 +61,20 @@ object GlucoseSituation {
         return rules.firstNotNullOfOrNull { it(c) }
     }
 
+    /** Plain description of the trend for moments no named situation fits (null when there are no fresh readings). */
+    fun trendFallback(input: SituationInput): String? {
+        val c = Context(input)
+        val r = c.r ?: return null
+        if (c.g == null || c.stale) return null
+        return when {
+            r >= RAPID -> "Glucose rising rapidly"
+            r >= FLAT -> "Glucose rising"
+            r <= -RAPID -> "Glucose falling rapidly"
+            r <= -FLAT -> "Glucose falling"
+            else -> "Glucose steady"
+        }
+    }
+
     private val rules: List<(Context) -> String?> = listOf(
         ::hypoNow, ::afterLow, ::overcorrection, ::exercise, ::insulin, ::meal, ::dawn, ::overnight,
         ::longHigh, ::fastingHigh, ::stress, ::variability, ::recurrent, ::calm
