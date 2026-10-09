@@ -150,12 +150,8 @@ fun JournalGlucoseGraph(
                     if (end < startMs || m.startMs > endMs) return@let
                     val x0 = xOf(m.startMs).coerceAtLeast(0f)
                     val x1 = xOf(end).coerceAtMost(size.width)
-                    drawRect(m.color.copy(alpha = if (highlighted) 0.30f else 0.14f), Offset(x0, plotTop), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom - plotTop))
-                    if (highlighted) {
-                        val edge = 1.5.dp.toPx()
-                        if (xOf(m.startMs) >= 0f) drawLine(m.color, Offset(x0, plotTop), Offset(x0, plotBottom), strokeWidth = edge)
-                        if (xOf(end) <= size.width) drawLine(m.color, Offset(x1, plotTop), Offset(x1, plotBottom), strokeWidth = edge)
-                    }
+                    // Right up to the top of the chart, with no edge lines.
+                    drawRect(m.color.copy(alpha = 0.30f), Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom))
                 }
             }
 

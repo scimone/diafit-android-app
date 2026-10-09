@@ -3,6 +3,7 @@ package uk.scimone.diafit.journal.presentation.components
 import uk.scimone.diafit.home.presentation.components.UriMosaic
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -104,7 +105,7 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
         return
     }
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             MealThumbnail(meal)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -129,8 +130,8 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
             }
             // The numbers to read at a glance.
             Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End) {
-                BigValue("${meal.carbohydrates}", "g", Carbs, compact = true)
-                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus, compact = true) }
+                BigValue("${meal.carbohydrates}", "g", Carbs)
+                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
             }
         }
     }
@@ -143,12 +144,16 @@ private fun PhotolessMealCard(meal: MealEntityUi, onClick: () -> Unit, modifier:
         androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) onAddPhoto?.invoke(uri) }
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(48.dp).background(Carbs.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(Carbs.copy(alpha = 0.16f)).let {
+                    if (onAddPhoto != null) it.clickable(onClickLabel = "Add photo") {
+                        picker.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    } else it
+                },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Outlined.Restaurant, null, tint = Carbs, modifier = Modifier.size(24.dp))
+                Icon(if (onAddPhoto != null) Icons.Outlined.AddAPhoto else Icons.Outlined.Restaurant, if (onAddPhoto != null) "Add photo" else null, tint = Carbs, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -168,16 +173,9 @@ private fun PhotolessMealCard(meal: MealEntityUi, onClick: () -> Unit, modifier:
                 }
                 Text(meal.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (onAddPhoto != null) {
-                androidx.compose.material3.IconButton(onClick = {
-                    picker.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }) {
-                    Icon(Icons.Outlined.AddAPhoto, "Add photo", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
             Column(Modifier.width(MEAL_VALUES_WIDTH), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                BigValue("${meal.carbohydrates}", "g", Carbs, compact = true)
-                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus, compact = true) }
+                BigValue("${meal.carbohydrates}", "g", Carbs)
+                meal.insulinUnits?.takeIf { it > 0.05 }?.let { BigValue(formatUnits(it), "U", Bolus) }
             }
         }
     }
@@ -191,11 +189,26 @@ private fun HeadingDot() {
 /** Fixed, so the numbers column is the same width on every meal card. */
 private val MEAL_VALUES_WIDTH = 56.dp
 
+/** Every journal card is this tall (icon tile 48 dp + padding), whatever its kind. */
+private val ENTRY_HEIGHT = 72.dp
+private fun Modifier.entryRow() = this.fillMaxWidth().height(ENTRY_HEIGHT).padding(horizontal = 12.dp)
+
+/** The figure on the right of a card: the same type size on every kind; the unit sits beside it, or under it with [unitBelow]. */
 @Composable
-private fun BigValue(value: String, unit: String, color: Color, compact: Boolean = false) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
-        Text(" $unit", style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, softWrap = false, modifier = Modifier.padding(bottom = 3.dp))
+private fun BigValue(value: String, unit: String, color: Color, unitBelow: Boolean = false) {
+    val valueText: @Composable () -> Unit = {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
+    }
+    if (unitBelow) {
+        Column(horizontalAlignment = Alignment.End) {
+            valueText()
+            Text(unit, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
+        }
+    } else {
+        Row(verticalAlignment = Alignment.Bottom) {
+            valueText()
+            Text(" $unit", style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false, modifier = Modifier.padding(bottom = 2.dp))
+        }
     }
 }
 
@@ -254,7 +267,7 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
         else -> "High"
     }
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(48.dp).background(color.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
@@ -275,12 +288,7 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${episode.extremeMgdl}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
-                Text(
-                    if (episode.isLow) "lowest mg/dL" else "highest mg/dL",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = color
-                )
+                BigValue("${episode.extremeMgdl}", if (episode.isLow) "lowest mg/dL" else "highest mg/dL", color, unitBelow = true)
             }
         }
     }
@@ -294,7 +302,7 @@ fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
     val grouped = entry.count > 1
     EntrySurface(if (grouped) ({ expanded = !expanded }) else onClick, modifier) {
         Column(Modifier.animateContentSize()) {
-            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(48.dp).background(Bolus.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
@@ -362,7 +370,7 @@ fun formatDuration(ms: Long): String {
 fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(48.dp).background(Device.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
@@ -384,7 +392,7 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                 Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (!entry.notes.isNullOrBlank()) {
                     Text(
-                        entry.notes, style = MaterialTheme.typography.bodyMedium, maxLines = 2,
+                        entry.notes, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         color = if (entry.icon == PumpEventIcon.WARNING) Warning else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -395,22 +403,13 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                 Spacer(Modifier.width(8.dp))
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     entry.target?.let { t ->
-                        SwitchValue(t.valueText.substringBefore(' '), t.unit, InRange)
+                        BigValue(t.valueText.substringBefore(' '), t.unit, InRange, unitBelow = true)
                     }
-                    entry.percentage?.let { SwitchValue("$it", "%", Basal) }
-                    entry.timeShiftHours?.let { SwitchValue("${if (it > 0) "+" else "−"}${kotlin.math.abs(it)}", "h shift", MaterialTheme.colorScheme.tertiary) }
+                    entry.percentage?.let { BigValue("$it", "%", Basal) }
+                    entry.timeShiftHours?.let { BigValue("${if (it > 0) "+" else "−"}${kotlin.math.abs(it)}", "h shift", MaterialTheme.colorScheme.tertiary) }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SwitchValue(value: String, unit: String, color: Color) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
-        Spacer(Modifier.width(3.dp))
-        Text(unit, style = MaterialTheme.typography.labelSmall, color = color, modifier = Modifier.padding(bottom = 2.dp))
     }
 }
 
@@ -427,8 +426,8 @@ private fun SleepStage.color(): Color = when (this) {
 fun SleepCard(entry: SleepEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     EntrySurface(onClick, modifier) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column {
+            Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(48.dp).background(Sleep.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
@@ -441,30 +440,7 @@ fun SleepCard(entry: SleepEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
                     )
                     Text("Sleep", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatDuration(entry.asleepMs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Sleep)
-                    Text(" asleep", style = MaterialTheme.typography.labelSmall, color = Sleep, modifier = Modifier.padding(bottom = 2.dp))
-                }
-            }
-            if (entry.hasStages) {
-                val total = entry.stageMs.values.sum().coerceAtLeast(1L)
-                Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    // Deep first, awake last: the shape of a good night at a glance.
-                    listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).forEach { stage ->
-                        val ms = entry.stageMs[stage] ?: return@forEach
-                        Box(Modifier.weight(ms / total.toFloat()).fillMaxHeight().background(stage.color()))
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).forEach { stage ->
-                        val ms = entry.stageMs[stage] ?: return@forEach
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(8.dp).background(stage.color(), CircleShape))
-                            Spacer(Modifier.width(4.dp))
-                            Text("${stage.label} ${formatDuration(ms)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                BigValue(formatDuration(entry.asleepMs), "asleep", Sleep)
             }
         }
     }
@@ -475,7 +451,7 @@ fun SleepCard(entry: SleepEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
 fun ExerciseCard(entry: ExerciseEntryUi, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     EntrySurface(onClick, modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(48.dp).background(Activity.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
@@ -489,9 +465,7 @@ fun ExerciseCard(entry: ExerciseEntryUi, onClick: (() -> Unit)?, modifier: Modif
                 Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatDuration(entry.durationMs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Activity)
-                }
+                BigValue(formatDuration(entry.durationMs), "", Activity)
                 if (entry.avgBpm != null) {
                     Text(
                         "avg ${entry.avgBpm}" + (entry.maxBpm?.let { " · max $it" } ?: "") + " bpm",
