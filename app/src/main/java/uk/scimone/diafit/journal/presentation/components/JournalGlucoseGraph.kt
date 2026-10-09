@@ -40,6 +40,12 @@ private const val MIN_MS = 60_000L
 private const val DAY_MS = 24 * 60 * MIN_MS
 
 /**
+ * A journal entry on the graph: a point in time (meal, insulin, device event) when [endMs] is null, else the
+ * whole stretch it covers (low/high, sleep, workout).
+ */
+class GraphMarker(val startMs: Long, val endMs: Long?, val color: Color)
+
+/**
  * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
  * coloured by range) but fixed at one zoom level. It is drawn directly from the few cached days in
  * [glucose], so scrolling never has to build a chart model. [centerMinutes] is the marker position in minutes
@@ -52,6 +58,8 @@ fun JournalGlucoseGraph(
     glucose: Map<Long, DayGlucose>,
     lower: Int,
     upper: Int,
+    markers: List<GraphMarker>,
+    selectedMarker: Int,
     label: AnnotatedString?,
     onDragStart: () -> Unit,
     onDrag: (deltaMinutes: Float) -> Unit,
@@ -62,7 +70,7 @@ fun JournalGlucoseGraph(
     val measurer = rememberTextMeasurer(cacheSize = 32)
     val band = targetRangeBandColor()
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    val markerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    val ringColor = MaterialTheme.colorScheme.surface
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelStyle = TextStyle(color = labelColor, fontSize = 10.sp)
     val dragStart by rememberUpdatedState(onDragStart)
@@ -132,6 +140,26 @@ fun JournalGlucoseGraph(
                 t += hourMs
             }
 
+            // Entries that cover a stretch of time mark the whole area; the highlighted one stronger.
+            val plotTop = padTop
+            val plotBottom = padTop + plotH
+            fun drawRanges(highlighted: Boolean) {
+                markers.forEachIndexed { i, m ->
+                    val end = m.endMs ?: return@forEachIndexed
+                    if ((i == selectedMarker) != highlighted || end < startMs || m.startMs > endMs) return@forEachIndexed
+                    val x0 = xOf(m.startMs).coerceAtLeast(0f)
+                    val x1 = xOf(end).coerceAtMost(size.width)
+                    drawRect(m.color.copy(alpha = if (highlighted) 0.30f else 0.14f), Offset(x0, plotTop), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom - plotTop))
+                    if (highlighted) {
+                        val edge = 1.5.dp.toPx()
+                        if (xOf(m.startMs) >= 0f) drawLine(m.color, Offset(x0, plotTop), Offset(x0, plotBottom), strokeWidth = edge)
+                        if (xOf(end) <= size.width) drawLine(m.color, Offset(x1, plotTop), Offset(x1, plotBottom), strokeWidth = edge)
+                    }
+                }
+            }
+            drawRanges(highlighted = false)
+            drawRanges(highlighted = true)
+
             val radius = 2.5.dp.toPx()
             for (day in firstDay..lastDay) {
                 val d = glucose[day] ?: continue
@@ -144,8 +172,19 @@ fun JournalGlucoseGraph(
                 }
             }
 
-            // The marker: the highlighted entry's timestamp.
-            drawMarker(markerColor, padTop, padTop + plotH)
+            // Point entries: a line with a dot on top, the highlighted one bigger and solid.
+            fun drawPoints(highlighted: Boolean) {
+                markers.forEachIndexed { i, m ->
+                    if (m.endMs != null || (i == selectedMarker) != highlighted || m.startMs < startMs || m.startMs > endMs) return@forEachIndexed
+                    val x = xOf(m.startMs)
+                    drawLine(m.color.copy(alpha = if (highlighted) 0.9f else 0.35f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = if (highlighted) 2.dp.toPx() else 1.dp.toPx())
+                    val r = if (highlighted) 6.dp.toPx() else 4.dp.toPx()
+                    drawCircle(ringColor, r + 1.5.dp.toPx(), Offset(x, plotTop))
+                    drawCircle(m.color, r, Offset(x, plotTop))
+                }
+            }
+            drawPoints(highlighted = false)
+            drawPoints(highlighted = true)
         }
         if (label != null) {
             Row(Modifier.fillMaxSize().padding(top = 6.dp)) {
@@ -165,12 +204,6 @@ fun JournalGlucoseGraph(
             }
         }
     }
-}
-
-private fun DrawScope.drawMarker(color: Color, top: Float, bottom: Float) {
-    val x = size.width / 2f
-    drawLine(color, Offset(x, top), Offset(x, bottom), strokeWidth = 1.5.dp.toPx())
-    drawCircle(color, 3.5.dp.toPx(), Offset(x, top), style = Stroke(1.5.dp.toPx()))
 }
 
 private fun dayOf(ms: Long): Long = Math.floorDiv(ms + java.util.TimeZone.getDefault().getOffset(ms), DAY_MS)

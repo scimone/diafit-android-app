@@ -52,6 +52,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.journal.presentation.components.JournalGlucoseGraph
+import uk.scimone.diafit.journal.presentation.components.GraphMarker
+import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
+import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
+import uk.scimone.diafit.ui.theme.AboveRange
+import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.journal.presentation.components.JOURNAL_GRAPH_WINDOW_MIN
 import uk.scimone.diafit.journal.presentation.components.mealPeakText
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -112,6 +117,7 @@ fun JournalScreen(
         }
         FlatEntries(entries, rows.toIntArray())
     }
+    val markers = remember(flat) { flat.entries.map { it.toGraphMarker() } }
     val selectedIndex = selected.coerceIn(0, (flat.entries.size - 1).coerceAtLeast(0))
     val selectedEntry = flat.entries.getOrNull(selectedIndex)
 
@@ -201,6 +207,8 @@ fun JournalScreen(
                     glucose = glucose,
                     lower = uiState.target.lowerBound,
                     upper = uiState.target.upperBound,
+                    markers = markers,
+                    selectedMarker = selectedIndex,
                     label = (selectedEntry as? MealEntityUi)?.let { mealPeakText(it, uiState.target) },
                     onDragStart = {
                         graphDriving = true
@@ -280,6 +288,14 @@ fun JournalScreen(
             })
         }
     }
+}
+
+/** How an entry shows on the graph: its time, or the stretch it covers, in its kind's colour. */
+private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
+    is GlucoseEpisodeUi -> GraphMarker(episode.startUtc, episode.endUtc, if (episode.isLow) BelowRange else AboveRange)
+    is SleepEntryUi -> GraphMarker(startUtc, timeUtc, kind.accent)
+    is ExerciseEntryUi -> GraphMarker(timeUtc, endUtc, kind.accent)
+    else -> GraphMarker(timeUtc, null, kind.accent)
 }
 
 /** The visible entries in list order, and the LazyColumn item index of each. */
