@@ -288,7 +288,8 @@ class MainActivity : ComponentActivity() {
                                     when (entry) {
                                         is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
                                         // A low or high opens its day in History, where the trace around it is visible.
-                                        is BolusEntryUi, is uk.scimone.diafit.journal.presentation.model.SleepEntryUi, is uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi -> Unit
+                                        is uk.scimone.diafit.journal.presentation.model.SleepEntryUi -> overlays.add(Overlay.SleepDetail(entry))
+                                        is BolusEntryUi, is uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi -> Unit
                                         // Only profile switches reach here; other device events open a dialog in the Journal.
                                         is PumpEventUi -> overlays.add(Overlay.ProfileSwitchDetail(entry.id))
                                         is GlucoseEpisodeUi -> overlays.add(
@@ -345,11 +346,12 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                             when (overlay) {
+                                is Overlay.SleepDetail -> uk.scimone.diafit.journal.presentation.detail.SleepDetailScreen(overlay.entry, onBack = { overlays.remove(overlay) })
                                 is Overlay.MealDetail -> MealDetailScreen(
                                     userId = userId,
                                     mealId = overlay.mealId,
@@ -437,6 +439,7 @@ private sealed interface Overlay {
     data class Patterns(val highlighted: List<String> = emptyList()) : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
+    data class SleepDetail(val entry: uk.scimone.diafit.journal.presentation.model.SleepEntryUi) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
     /** One day of History in full; swipeable to neighbouring days. */
     data class DayDetail(val epochDay: Long) : Overlay

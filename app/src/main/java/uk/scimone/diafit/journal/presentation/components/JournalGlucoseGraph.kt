@@ -151,7 +151,11 @@ fun JournalGlucoseGraph(
                     val x0 = xOf(m.startMs).coerceAtLeast(0f)
                     val x1 = xOf(end).coerceAtMost(size.width)
                     // Right up to the top of the chart, with no edge lines.
-                    drawRect(m.color.copy(alpha = 0.30f), Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom))
+                    drawRect(m.color.copy(alpha = 0.14f), Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom))
+                    // Subtle edges, only where the stretch really starts / ends inside the view.
+                    val edge = 1.dp.toPx()
+                    if (xOf(m.startMs) >= 0f) drawLine(m.color.copy(alpha = 0.4f), Offset(x0, 0f), Offset(x0, plotBottom), strokeWidth = edge)
+                    if (xOf(end) <= size.width) drawLine(m.color.copy(alpha = 0.4f), Offset(x1, 0f), Offset(x1, plotBottom), strokeWidth = edge)
                 }
             }
 

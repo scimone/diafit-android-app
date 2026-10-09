@@ -136,7 +136,7 @@ fun JournalScreen(
         var best = 0
         var bestDist = Float.MAX_VALUE
         flat.entries.forEachIndexed { i, e ->
-            val d = kotlin.math.abs(minutesOf(e.timeUtc) - minutes)
+            val d = kotlin.math.abs(minutesOf(e.graphTimeUtc()) - minutes)
             if (d < bestDist) { bestDist = d; best = i }
         }
         return best
@@ -149,7 +149,7 @@ fun JournalScreen(
         selected = i
         scrollListTo(i)
         scope.launch {
-            moveCenterTo(flat.entries[i].timeUtc, animate = true)
+            moveCenterTo(flat.entries[i].graphTimeUtc(), animate = true)
             scrollJob?.join()
             graphDriving = false
         }
@@ -166,7 +166,7 @@ fun JournalScreen(
             val i = flat.rowIndex.indexOf(itemIndex)
             if (i < 0) return@collectLatest
             selected = i
-            moveCenterTo(flat.entries[i].timeUtc, animate = true)
+            moveCenterTo(flat.entries[i].graphTimeUtc(), animate = true)
         }
     }
 
@@ -216,8 +216,8 @@ fun JournalScreen(
                     },
                     onDrag = { deltaMin ->
                         scope.launch {
-                            val first = minutesOf(flat.entries.last().timeUtc)
-                            val last = minutesOf(flat.entries.first().timeUtc)
+                            val first = flat.entries.minOf { minutesOf(it.graphTimeUtc()) }
+                            val last = flat.entries.maxOf { minutesOf(it.graphTimeUtc()) }
                             center.snapTo((center.value + deltaMin).coerceIn(first, last))
                             val n = nearestTo(center.value)
                             if (n != selected) {
@@ -291,6 +291,14 @@ fun JournalScreen(
 }
 
 /** How an entry shows on the graph: its time, or the stretch it covers, in its kind's colour. */
+/** Where the graph centres on an entry: the middle of a stretch (sleep, workout, low/high), else its time. */
+private fun JournalEntryUi.graphTimeUtc(): Long = when (this) {
+    is GlucoseEpisodeUi -> (episode.startUtc + episode.endUtc) / 2
+    is SleepEntryUi -> (startUtc + timeUtc) / 2
+    is ExerciseEntryUi -> (timeUtc + endUtc) / 2
+    else -> timeUtc
+}
+
 private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
     is GlucoseEpisodeUi -> GraphMarker(episode.startUtc, episode.endUtc, if (episode.isLow) BelowRange else AboveRange)
     is SleepEntryUi -> GraphMarker(startUtc, timeUtc, kind.accent)

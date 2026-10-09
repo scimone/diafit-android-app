@@ -413,7 +413,7 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
     }
 }
 
-private fun SleepStage.color(): Color = when (this) {
+internal fun SleepStage.stageColor(): Color = when (this) {
     SleepStage.AWAKE -> uk.scimone.diafit.ui.theme.SleepAwake
     SleepStage.REM -> uk.scimone.diafit.ui.theme.SleepRem
     SleepStage.LIGHT -> uk.scimone.diafit.ui.theme.SleepLight
