@@ -1,6 +1,7 @@
 package uk.scimone.diafit.stats.presentation
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +31,12 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -97,7 +103,7 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (state.needsVitalsPermission) {
                     item(key = "permission") {
@@ -107,11 +113,16 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
                 state.errorMessage?.let { item(key = "error") { Text(it, color = MaterialTheme.colorScheme.error) } }
                 if (state.period == StatsPeriod.DAY) {
                     val day = state.days.firstOrNull()
-                    items(StatsCards.day, key = { "day-${it.name}" }) { metric -> DayCard(metric, day) }
+                    // Cards without data are left out, so what is shown is what there is.
+                    val shown = StatsCards.day.filter { day != null && hasDayData(it, day) }
+                    items(shown, key = { "day-${it.name}" }) { metric -> DayCard(metric, day!!) }
+                    if (shown.isEmpty() && !state.isLoading) item(key = "empty") { EmptyState() }
                 } else {
-                    items(StatsCards.bars, key = { "bars-${it.name}" }) { metric ->
+                    val shown = StatsCards.bars.filter { it.daysWithData(state.days) > 0 }
+                    items(shown, key = { "bars-${it.name}" }) { metric ->
                         BarCard(metric, state.window, state.days, onClick = { onOpenMetric(metric, state.period, state.offset) })
                     }
+                    if (shown.isEmpty() && !state.isLoading) item(key = "empty") { EmptyState() }
                 }
             }
             if (state.isLoading && state.days.isEmpty()) {
@@ -169,31 +180,67 @@ private fun VitalsPermissionCard(onAllow: () -> Unit) {
     }
 }
 
-// ---------------------------------------------------------------- day cards
+// ---------------------------------------------------------------- card building blocks
 
+private val CardShape = RoundedCornerShape(20.dp)
+
+/** The app's card surface (as in the Journal): rounded, hairline border, no fill change. */
+@Composable
+internal fun StatsSurface(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    val color = MaterialTheme.colorScheme.surface
+    if (onClick != null) Surface(onClick = onClick, shape = CardShape, color = color, border = border, modifier = modifier.fillMaxWidth(), content = content)
+    else Surface(shape = CardShape, color = color, border = border, modifier = modifier.fillMaxWidth(), content = content)
+}
+
+/** The tinted rounded tile with the metric's glyph that every Journal entry uses. */
+@Composable
+internal fun IconTile(icon: ImageVector, accent: Color, size: Dp = 44.dp) {
+    Box(Modifier.size(size).background(accent.copy(alpha = 0.16f), RoundedCornerShape(size * 0.3f)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = accent, modifier = Modifier.size(size * 0.5f))
+    }
+}
+
+/** The figure on the right of a card: same type size everywhere, unit beneath it. */
+@Composable
+internal fun FigureBlock(value: String, unit: String, color: Color) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
+        if (unit.isNotEmpty()) Text(unit, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
+    }
+}
+
+/** Icon tile + title/subtitle, with an optional figure on the right: the head of every card. */
+@Composable
+internal fun CardHeader(
+    metric: StatsMetric,
+    title: String,
+    subtitle: String?,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconTile(metric.icon(), metric.accent())
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        trailing?.invoke()
+    }
+}
+
+/** A titled block of the detail pages. */
 @Composable
 internal fun StatsCardFrame(
+    metric: StatsMetric,
     title: String,
-    accent: Color,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            Modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).background(accent, CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                if (onClick != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+    StatsSurface(modifier) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CardHeader(metric, title, null)
             content()
         }
     }
@@ -214,72 +261,99 @@ private fun LabeledValue(label: String, value: String, unit: String, color: Colo
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = color)
-            if (unit.isNotEmpty()) Text(" $unit", Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+            if (unit.isNotEmpty()) Text(" $unit", Modifier.padding(bottom = 1.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun NoData() {
-    Text("No data", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun EmptyState() {
+    Column(Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Filled.Insights, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp))
+        Text("Nothing recorded in this period", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Try an earlier period, or connect more data sources in Settings.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
+        )
+    }
 }
 
+// ---------------------------------------------------------------- day cards
+
+private fun hasDayData(metric: StatsMetric, day: StatsDay): Boolean =
+    if (metric == StatsMetric.HEART_RATE) day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
+    else metric.segments(day) != null
+
 @Composable
-private fun DayCard(metric: StatsMetric, day: StatsDay?) {
+private fun DayCard(metric: StatsMetric, day: StatsDay) {
     val accent = metric.accent()
     val title = if (metric == StatsMetric.ACTIVITY) "Activity" else metric.title
-    StatsCardFrame(title, accent) {
-        if (day == null || (metric != StatsMetric.HEART_RATE && metric.segments(day) == null) ||
-            (metric == StatsMetric.HEART_RATE && day.avgBpm == null && day.restingBpm == null && day.hrvMs == null)
-        ) {
-            NoData(); return@StatsCardFrame
+    when (metric) {
+        // One figure: a compact row.
+        StatsMetric.STEPS, StatsMetric.ACTIVITY, StatsMetric.BOLUS, StatsMetric.BASAL, StatsMetric.CALORIES -> StatsSurface {
+            val f = metric.format(metric.primary(day)!!)
+            val sub = if (metric == StatsMetric.CALORIES && day.activeKcal != null) {
+                "Active ${day.activeKcal.roundToInt()} · Resting ${(day.totalKcal!! - day.activeKcal).roundToInt()}"
+            } else null
+            CardHeader(metric, title, sub, Modifier.padding(12.dp)) { FigureBlock(f.value, f.unit, accent) }
         }
-        when (metric) {
-            StatsMetric.HEART_RATE -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledValue("Resting", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                LabeledValue("Average", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                LabeledValue("Variability", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", StatsMetric.HEART_RATE_VARIABILITY.accent(), Modifier.weight(1f))
-            }
-            StatsMetric.SLEEP -> SleepDayContent(day.sleep!!)
-            StatsMetric.CALORIES -> {
-                val total = day.totalKcal!!
-                metric.format(total).let { BigValue(it.value, it.unit, accent) }
-                day.activeKcal?.let {
-                    Text(
-                        "Active ${it.roundToInt()} · Resting ${(total - it).roundToInt()} kcal",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        StatsMetric.HEART_RATE -> StatsSurface {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(metric, title, null)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledValue("Resting", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("Average", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("Variability", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", StatsMetric.HEART_RATE_VARIABILITY.accent(), Modifier.weight(1f))
                 }
             }
-            StatsMetric.MEALS -> {
-                BigValue(day.carbs!!.roundToInt().toString(), "g carbs", accent)
+        }
+        StatsMetric.SLEEP -> StatsSurface {
+            val night = day.sleep!!
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(metric, title, sleepRange(night)) {
+                    FigureBlock(formatDurationHM(night.asleepMs / 3_600_000.0), "asleep", SleepLight)
+                }
+                SleepStages(night)
+            }
+        }
+        StatsMetric.MEALS -> StatsSurface {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(metric, title, null) { FigureBlock("${day.carbs!!.roundToInt()}", "g carbs", accent) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                     LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                     LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                 }
             }
-            StatsMetric.GLUCOSE -> GlucoseDayContent(day.glucose!!)
-            else -> metric.format(metric.primary(day)!!).let { BigValue(it.value, it.unit, accent) }
         }
+        StatsMetric.GLUCOSE -> StatsSurface {
+            val g = day.glucose!!
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(metric, title, null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "% in range", InRange) }
+                GlucoseDayContent(g)
+            }
+        }
+        else -> Unit
     }
 }
 
 private val clock = DateTimeFormatter.ofPattern("HH:mm")
 
-@Composable
-private fun SleepDayContent(night: SleepNight) {
+private fun sleepRange(night: SleepNight): String? {
+    if (night.endUtc <= 0) return null
     val zone = ZoneId.systemDefault()
     fun at(utc: Long) = clock.format(Instant.ofEpochMilli(utc).atZone(zone))
-    BigValue(formatDurationHM(night.asleepMs / 3_600_000.0), "asleep", SleepLight)
-    if (night.endUtc > 0) {
-        Text("${at(night.startUtc)} – ${at(night.endUtc)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    return "${at(night.startUtc)} – ${at(night.endUtc)}"
+}
+
+@Composable
+private fun SleepStages(night: SleepNight) {
     if (night.hasStages && night.spans.isNotEmpty()) {
         // Stages in the order they happened, so the night's shape (deep early, REM late) is visible.
         val total = night.spans.sumOf { it.endUtc - it.startUtc }.coerceAtLeast(1L)
-        SegmentedBar(night.spans.map { ((it.endUtc - it.startUtc) / total.toFloat()) to sleepStageColor(it.stage) }, height = 18.dp)
+        SegmentedBar(night.spans.map { ((it.endUtc - it.startUtc) / total.toFloat()) to sleepStageColor(it.stage) }, height = 14.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             StageLegend("Deep", night.deepMs, SleepDeep)
             StageLegend("REM", night.remMs, SleepRem)
@@ -313,16 +387,13 @@ private fun StageLegend(label: String, ms: Long, color: Color) {
 
 @Composable
 private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        BigValue((g.inRangeShare * 100).roundToInt().toString(), "% in range", InRange)
-    }
     SegmentedBar(
         listOf(
             g.belowShare.toFloat() to BelowRange,
             g.inRangeShare.toFloat() to InRange,
             g.aboveShare.toFloat() to AboveRange
         ),
-        height = 18.dp
+        height = 14.dp
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         ZoneLegend("Below", g.belowShare, BelowRange)
@@ -346,28 +417,49 @@ private fun ZoneLegend(label: String, share: Double, color: Color) {
     }
 }
 
-// ---------------------------------------------------------------- week / month / year cards
+// ---------------------------------------------------------------- week / month / year rows
 
 /** The bars a W/M/Y chart draws: one per bucket, the mean of its days that have data. */
 internal fun buildBars(metric: StatsMetric, window: StatsWindow, days: List<StatsDay>): List<BarData> =
     window.buckets.map { bucket -> BarData(bucket.label, metric.barSegments(days.filter { it.date in bucket })) }
 
+/** One compact row per metric (icon, name, tiny chart, average) so many can be compared at a glance. */
 @Composable
 private fun BarCard(metric: StatsMetric, window: StatsWindow, days: List<StatsDay>, onClick: () -> Unit) {
-    val has = metric.daysWithData(days) > 0
-    StatsCardFrame(metric.title, metric.accent(), onClick = if (has) onClick else null) {
-        if (!has) { NoData(); return@StatsCardFrame }
-        val bars = buildBars(metric, window, days)
-        Headline(metric, days, window.period)
-        if (metric == StatsMetric.SLEEP_SCHEDULE) {
-            SleepScheduleChart(bars, metric.colors().first(), height = 110.dp)
-        } else {
-            StatsBarChart(bars, metric.colors(), height = 80.dp, fixedMax = if (metric == StatsMetric.GLUCOSE) 100.0 else null)
+    val bars = remember(metric, window, days) { buildBars(metric, window, days) }
+    val figure = headlineFigure(metric, days)
+    StatsSurface(onClick = onClick) {
+        Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(metric.icon(), metric.accent())
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(metric.shortTitle(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(metric.subtitle(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+            Spacer(Modifier.width(8.dp))
+            if (metric == StatsMetric.SLEEP_SCHEDULE) {
+                SleepScheduleChart(bars, metric.colors().first(), Modifier.width(76.dp), height = 40.dp, compact = true)
+            } else {
+                StatsBarChart(bars, metric.colors(), Modifier.width(76.dp), height = 40.dp, fixedMax = if (metric == StatsMetric.GLUCOSE) 100.0 else null)
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(Modifier.width(72.dp), contentAlignment = Alignment.CenterEnd) {
+                FigureBlock(figure.value, figure.unit, metric.accent())
+            }
         }
     }
 }
 
-/** "Daily average" with the number, in the card's accent colour. */
+/** The average a compact row shows (sleep schedule: the typical bedtime). */
+internal fun headlineFigure(metric: StatsMetric, days: List<StatsDay>): Formatted {
+    if (metric == StatsMetric.SLEEP_SCHEDULE) {
+        val nights = days.mapNotNull { metric.segments(it) }
+        return Formatted(metric.format(nights.map { it[0] }.average()).value, "→ " + metric.format(nights.map { it[1] }.average()).value)
+    }
+    return metric.format(metric.average(days) ?: 0.0)
+}
+
+/** "Daily average" with the number, in the card's accent colour (detail pages). */
 @Composable
 internal fun Headline(metric: StatsMetric, days: List<StatsDay>, period: StatsPeriod) {
     val accent = metric.accent()
@@ -382,10 +474,7 @@ internal fun Headline(metric: StatsMetric, days: List<StatsDay>, period: StatsPe
     }
     val avg = metric.average(days) ?: return
     Column {
-        Text(
-            "Daily average",
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text("Daily average", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         metric.format(avg).let { BigValue(it.value, it.unit, accent) }
     }
 }

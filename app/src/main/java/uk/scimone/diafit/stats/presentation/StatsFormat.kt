@@ -1,6 +1,18 @@
 package uk.scimone.diafit.stats.presentation
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import uk.scimone.diafit.stats.domain.SleepNight
 import uk.scimone.diafit.stats.domain.StatsMetric
 import uk.scimone.diafit.ui.theme.AboveRange
@@ -94,3 +106,41 @@ fun StatsMetric.formatBar(segments: List<Double>): String = when (this) {
 /** "−4%" / "+12%": the change from [previous] to [current], null when it can't be told. */
 fun changePercent(current: Double?, previous: Double?): Int? =
     if (current == null || previous == null || previous == 0.0) null else ((current - previous) / previous * 100).roundToInt()
+
+fun StatsMetric.icon(): ImageVector = when (this) {
+    StatsMetric.STEPS -> Icons.AutoMirrored.Filled.DirectionsWalk
+    StatsMetric.HEART_RATE -> Icons.Filled.Favorite
+    StatsMetric.RESTING_HEART_RATE -> Icons.Filled.Favorite
+    StatsMetric.HEART_RATE_VARIABILITY -> Icons.Filled.MonitorHeart
+    StatsMetric.SLEEP -> Icons.Filled.Bedtime
+    StatsMetric.SLEEP_SCHEDULE -> Icons.Filled.Schedule
+    StatsMetric.ACTIVITY -> Icons.Filled.FitnessCenter
+    StatsMetric.CALORIES -> Icons.Filled.LocalFireDepartment
+    StatsMetric.MEALS -> Icons.Filled.Restaurant
+    StatsMetric.GLUCOSE -> Icons.Filled.WaterDrop
+    StatsMetric.BOLUS, StatsMetric.BASAL -> Icons.Filled.Vaccines
+}
+
+/** The title on a compact row, short enough to sit beside a chart and a figure. */
+fun StatsMetric.shortTitle(): String = when (this) {
+    StatsMetric.HEART_RATE_VARIABILITY -> "HRV"
+    StatsMetric.RESTING_HEART_RATE -> "Resting HR"
+    StatsMetric.HEART_RATE -> "Heart rate"
+    StatsMetric.SLEEP_SCHEDULE -> "Sleep schedule"
+    StatsMetric.ACTIVITY -> "Active time"
+    StatsMetric.CALORIES -> "Calories"
+    StatsMetric.BOLUS -> "Bolus"
+    StatsMetric.BASAL -> "Basal"
+    else -> title
+}
+
+/** What the figure on a compact W/M/Y row is. */
+fun StatsMetric.subtitle(): String = when (this) {
+    StatsMetric.GLUCOSE -> "Time in range"
+    StatsMetric.SLEEP_SCHEDULE -> "Bed → wake, average"
+    StatsMetric.CALORIES -> "Burned per day"
+    StatsMetric.SLEEP -> "Asleep per night"
+    StatsMetric.MEALS -> "Carbs per day"
+    StatsMetric.HEART_RATE_VARIABILITY -> "Daily average"
+    else -> "Daily average"
+}

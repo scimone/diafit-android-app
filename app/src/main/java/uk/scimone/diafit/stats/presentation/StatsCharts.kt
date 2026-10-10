@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -105,24 +106,25 @@ fun StatsBarChart(
             val x = axisW + slot * i + (slot - barW) / 2
             val dim = selected != null && selected != i
             val segments = bar.segments
-            if (segments == null || segments.sum() <= 0.0) {
+            val total = segments?.sum() ?: 0.0
+            if (segments == null || total <= 0.0) {
                 // A hairline marks "no data" so the gap doesn't read as a zero.
                 drawLine(grid, Offset(x, plotH - 1.dp.toPx()), Offset(x + barW, plotH - 1.dp.toPx()), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
             } else {
-                var bottom = plotH
-                val gap = 1.dp.toPx()
-                segments.forEachIndexed { s, v ->
-                    if (v <= 0) return@forEachIndexed
-                    val h = (plotH * (v / top)).toFloat().coerceAtLeast(2f)
-                    val isTop = segments.drop(s + 1).all { it <= 0 }
-                    val r = if (isTop) CornerRadius(barW / 3, barW / 3) else CornerRadius.Zero
-                    drawRoundRect(
-                        colors[s].copy(alpha = if (dim) 0.35f else 1f),
-                        topLeft = Offset(x, bottom - h),
-                        size = Size(barW, (h - if (isTop) 0f else gap).coerceAtLeast(1f)),
-                        cornerRadius = r
-                    )
-                    bottom -= h
+                val barH = (plotH * (total / top)).toFloat().coerceIn(3.dp.toPx(), plotH)
+                val r = minOf(barW / 3, barH / 2)
+                val shape = Path().apply {
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(x, plotH - barH, x + barW, plotH, CornerRadius(r), CornerRadius(r), CornerRadius.Zero, CornerRadius.Zero))
+                }
+                // Segments are plain rectangles inside one rounded outline, so the stack reads as a single bar.
+                clipPath(shape) {
+                    var bottom = plotH
+                    segments.forEachIndexed { s, v ->
+                        if (v <= 0) return@forEachIndexed
+                        val h = barH * (v / total).toFloat()
+                        drawRect(colors[s].copy(alpha = if (dim) 0.35f else 1f), Offset(x, bottom - h), Size(barW, h))
+                        bottom -= h
+                    }
                 }
             }
             if (showAxis && (i % labelEvery == 0)) {
@@ -146,7 +148,9 @@ fun SleepScheduleChart(
     modifier: Modifier = Modifier,
     height: androidx.compose.ui.unit.Dp = 220.dp,
     selected: Int? = null,
-    onSelect: ((Int?) -> Unit)? = null
+    onSelect: ((Int?) -> Unit)? = null,
+    /** The overview form: no axis, labels or gridlines. */
+    compact: Boolean = false
 ) {
     val measurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -168,13 +172,13 @@ fun SleepScheduleChart(
                 }
             }
     ) {
-        val axisW = AXIS_WIDTH_DP.dp.toPx() + 8.dp.toPx()
-        val labelH = 16.dp.toPx()
+        val axisW = if (compact) 0f else AXIS_WIDTH_DP.dp.toPx() + 8.dp.toPx()
+        val labelH = if (compact) 0f else 16.dp.toPx()
         val plotH = size.height - labelH
         val plotW = size.width - axisW
         fun y(minutes: Double) = (plotH * (minutes - lo) / (hi - lo)).toFloat()
         var t = lo
-        while (t <= hi) {
+        while (!compact && t <= hi) {
             drawLine(grid, Offset(axisW, y(t.toDouble())), Offset(size.width, y(t.toDouble())), strokeWidth = 1.dp.toPx())
             val text = measurer.measure(formatClock(SleepNight.axisToClock(t)), labelStyle)
             drawText(text, topLeft = Offset(0f, (y(t.toDouble()) - text.size.height / 2f).coerceIn(0f, plotH - text.size.height)))
@@ -194,7 +198,7 @@ fun SleepScheduleChart(
                     cornerRadius = CornerRadius(barW / 3, barW / 3)
                 )
             }
-            if (i % labelEvery == 0) {
+            if (!compact && i % labelEvery == 0) {
                 val text = measurer.measure(bar.label, labelStyle)
                 drawText(text, topLeft = Offset(x + barW / 2 - text.size.width / 2f, plotH + 2.dp.toPx()))
             }

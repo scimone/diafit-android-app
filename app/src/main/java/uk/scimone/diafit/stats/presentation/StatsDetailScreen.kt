@@ -73,7 +73,7 @@ fun StatsDetailScreen(userId: Int, metric: StatsMetric, period: StatsPeriod, off
             }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             val metrics = if (metric in SLEEP_METRICS) listOf(StatsMetric.SLEEP, StatsMetric.SLEEP_SCHEDULE) else listOf(metric)
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 metrics.forEach { m -> MetricSection(m, state, showTitle = metrics.size > 1) }
                 TrendSection(metric, state)
                 Spacer(Modifier.size(16.dp))
@@ -89,7 +89,7 @@ private fun MetricSection(metric: StatsMetric, state: StatsDetailState, showTitl
     val accent = metric.accent()
     val hasData = bars.any { it.segments != null }
 
-    StatsCardFrame(if (showTitle) (if (metric == StatsMetric.SLEEP) "Duration" else "Regularity") else metric.title, accent) {
+    StatsCardFrame(metric, if (showTitle) (if (metric == StatsMetric.SLEEP) "Sleep duration" else "Sleep regularity") else metric.title) {
         if (!hasData) {
             Text("No data in this period", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@StatsCardFrame
@@ -199,7 +199,7 @@ private fun TrendSection(metric: StatsMetric, state: StatsDetailState) {
     val unitWord = when (state.period) { StatsPeriod.WEEK -> "weeks"; StatsPeriod.MONTH -> "months"; else -> "years" }
     // The sleep schedule has no single number to trend, so sleep trends its duration.
     val trendMetric = if (metric == StatsMetric.SLEEP_SCHEDULE) StatsMetric.SLEEP else metric
-    StatsCardFrame("Trend", trendMetric.accent()) {
+    StatsCardFrame(trendMetric, "Trend") {
         if (state.trend.isEmpty()) {
             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp)) }
             return@StatsCardFrame
