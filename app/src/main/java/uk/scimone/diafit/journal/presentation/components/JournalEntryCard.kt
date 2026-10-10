@@ -468,7 +468,7 @@ fun ExerciseCard(entry: ExerciseEntryUi, onClick: (() -> Unit)?, modifier: Modif
                 BigValue(formatDuration(entry.durationMs), "", Activity)
                 if (entry.avgBpm != null) {
                     Text(
-                        "avg ${entry.avgBpm}" + (entry.maxBpm?.let { " · max $it" } ?: "") + " bpm",
+                        if (entry.avgBpm < 110) "Easy" else if (entry.avgBpm < 140) "Moderate" else "Hard",
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

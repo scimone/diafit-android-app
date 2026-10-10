@@ -59,7 +59,7 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(state.ages, key = { it.kind.name }) { AgeCard(it) }
-            item { StatusCard(state.status, state.nowUtc) }
+            item { StatusCard(state.status, state.nowUtc, state.omnipod) }
         }
     }
 }
@@ -102,7 +102,7 @@ private fun AgeCard(age: DeviceAge) {
 }
 
 @Composable
-private fun StatusCard(status: DeviceStatus?, now: Long) {
+private fun StatusCard(status: DeviceStatus?, now: Long, omnipod: Boolean) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Levels", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
@@ -112,7 +112,7 @@ private fun StatusCard(status: DeviceStatus?, now: Long) {
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                status.reservoirUnits?.let { LevelRow("Reservoir", "%.0f U".format(it)) }
+                status.reservoirUnits?.let { LevelRow("Reservoir", if (omnipod && it >= 50) "50+ U" else "%.0f U".format(it)) }
                 status.pumpBatteryPercent?.let { LevelRow("Pump battery", "%.0f %%".format(it)) }
                 status.pumpBatteryVolt?.let { LevelRow("Pump battery", "%.2f V".format(it)) }
                 status.uploaderBatteryPercent?.let { LevelRow("Phone (uploader) battery", "%.0f %%".format(it)) }

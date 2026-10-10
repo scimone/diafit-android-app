@@ -19,5 +19,5 @@ fun newPatternAlerts(
 
 /** Notification title and text for a batch of new patterns. */
 fun patternAlertMessage(patterns: List<AgpPattern>): Pair<String, String> =
-    if (patterns.size == 1) "New glucose pattern" to "${patterns[0].text}. Tap to see it on your AGP."
+    if (patterns.size == 1) "New glucose pattern" to "${patterns[0].text}."
     else "${patterns.size} new glucose patterns" to patterns.joinToString("\n") { "• ${it.text}" }

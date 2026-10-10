@@ -12,7 +12,7 @@ enum class DeviceKind(val label: String, val defaultHours: Int, private val patt
     SITE("Infusion site", 72, Regex("site change|pod change|cannula", RegexOption.IGNORE_CASE)),
     INSULIN("Insulin / cartridge", 72, Regex("insulin change|reservoir|pod change", RegexOption.IGNORE_CASE)),
     BATTERY("Pump battery", 30 * 24, Regex("battery", RegexOption.IGNORE_CASE)),
-    PATCH("Patch pump (site & insulin)", 72, Regex("site change|pod change|cannula|insulin change|reservoir", RegexOption.IGNORE_CASE));
+    PATCH("Patch pump", 72, Regex("site change|pod change|cannula|insulin change|reservoir", RegexOption.IGNORE_CASE));
 
     fun matches(eventType: String) = pattern.containsMatchIn(eventType)
 

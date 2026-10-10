@@ -794,7 +794,7 @@ fun CarbActivityDisplay(
     }
 }
 
-private const val DEFAULT_VISIBLE_PAST_HOURS = 6
+private const val DEFAULT_VISIBLE_PAST_HOURS = 8
 
 /** X-range (ms) to show: [pastHours] of history plus [futureHours] of headroom (Home's shared future by default). */
 internal fun visibleHoursMillis(pastHours: Int, futureHours: Int = TIME_AXIS_FUTURE_HOURS): Double =
@@ -820,7 +820,7 @@ fun ChartZoomControls(
     ) {
         // Drop Material's 48dp minimum touch target so the buttons can actually be small.
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-        listOf(3, 6, 12, 24).forEach { hours ->
+        listOf(3, 8, 12, 24).forEach { hours ->
             Surface(
                 onClick = {
                     scope.launch {

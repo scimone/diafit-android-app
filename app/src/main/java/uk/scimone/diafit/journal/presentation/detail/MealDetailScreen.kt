@@ -488,7 +488,6 @@ private fun AapsLinkCard(meal: MealEntityUi, onUnlink: () -> Unit) {
             buildString {
                 append("Dosed in AAPS: ${meal.carbohydrates} g")
                 meal.estimatedCarbs?.let { append(" (estimate was $it g)") }
-                append(". The separate AAPS carb entry is hidden so these carbs aren't counted twice.")
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant

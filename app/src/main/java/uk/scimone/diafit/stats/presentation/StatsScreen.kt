@@ -124,11 +124,7 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
                 }
                 state.errorMessage?.let { item(key = "error") { Text(it, color = MaterialTheme.colorScheme.error) } }
                 if (state.period == StatsPeriod.DAY) {
-                    val day = state.days.firstOrNull()
-                    // Cards without data are left out, so what is shown is what there is.
-                    val shown = StatsCards.day.filter { day != null && hasDayData(it, day) }
-                    items(shown, key = { "day-${it.name}" }) { card -> DayCard(card, day!!) }
-                    if (shown.isEmpty() && !state.isLoading) item(key = "empty") { EmptyState() }
+                    dayCardItems(state.days.firstOrNull(), state.isLoading)
                 } else {
                     val shown = StatsCards.bars(state.period).filter { it.daysWithData(state.days) > 0 }
                     items(shown, key = { "bars-${it.name}" }) { metric ->
@@ -324,6 +320,13 @@ private fun EmptyState() {
 }
 
 // ---------------------------------------------------------------- day cards
+
+/** One day's cards (cards without data are left out, so what is shown is what there is); also used by History's day page. */
+internal fun androidx.compose.foundation.lazy.LazyListScope.dayCardItems(day: StatsDay?, isLoading: Boolean) {
+    val shown = StatsCards.day.filter { day != null && hasDayData(it, day) }
+    items(shown, key = { "day-${it.name}" }) { card -> DayCard(card, day!!) }
+    if (shown.isEmpty() && !isLoading) item(key = "empty") { EmptyState() }
+}
 
 private fun hasDayData(card: StatsCards.DayCard, day: StatsDay): Boolean = when (card) {
     StatsCards.DayCard.GLUCOSE -> day.glucose != null

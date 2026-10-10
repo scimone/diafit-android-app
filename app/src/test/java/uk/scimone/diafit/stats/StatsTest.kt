@@ -84,7 +84,7 @@ class StatsTest {
     @Test fun macrosAndCaloriesSplit() {
         val day = StatsDay(today, carbs = 100.0, protein = 30.0, fat = null, totalKcal = 2400.0, activeKcal = 600.0)
         assertEquals(listOf(30.0), StatsMetric.PROTEIN.segments(day))
-        assertEquals(listOf(0.0), StatsMetric.FAT.segments(day))
+        assertNull(StatsMetric.FAT.segments(day)) // zero fat counts as missing data
         assertNull(StatsMetric.PROTEIN.segments(StatsDay(today)))
         assertEquals(listOf(2400.0), StatsMetric.CALORIES.segments(day))
         assertEquals(listOf(600.0), StatsMetric.ACTIVE_CALORIES.segments(day))

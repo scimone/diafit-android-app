@@ -135,7 +135,7 @@ fun StatsBarChart(
                     }
                 }
                 if (formatValue != null) {
-                    val t = measurer.measure(formatValue(total), labelStyle)
+                    val t = measurer.measure(formatValue(total), labelStyle.copy(color = colors.firstOrNull() ?: labelColor, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
                     drawText(t, topLeft = Offset(x + barW / 2 - t.size.width / 2f, plotH - barH - t.size.height - 1.dp.toPx()))
                 }
             }

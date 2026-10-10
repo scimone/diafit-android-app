@@ -5,11 +5,11 @@ import androidx.compose.runtime.saveable.listSaver
 /** Which context layers the History charts draw next to glucose (glucose itself is always on). */
 data class HistoryLayers(
     /** Carb dots and insulin ticks. */
-    val treatments: Boolean = true,
+    val treatments: Boolean = false,
     /** Grey wash behind glucose while asleep. */
-    val sleep: Boolean = true,
+    val sleep: Boolean = false,
     /** Heart-rate / steps intensity and workouts. */
-    val activity: Boolean = true
+    val activity: Boolean = false
 ) {
     companion object {
         val Saver = listSaver<HistoryLayers, Boolean>(

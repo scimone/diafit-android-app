@@ -46,8 +46,8 @@ enum class StatsMetric(
             BOLUS -> day.bolusUnits
             BASAL -> day.basalUnits
             CARBS -> day.carbs
-            PROTEIN -> day.carbs?.let { day.protein ?: 0.0 }
-            FAT -> day.carbs?.let { day.fat ?: 0.0 }
+            PROTEIN -> day.protein?.takeIf { it > 0 }
+            FAT -> day.fat?.takeIf { it > 0 }
             CALORIES -> day.totalKcal
             ACTIVE_CALORIES -> day.activeKcal
             STEPS -> day.steps?.toDouble()

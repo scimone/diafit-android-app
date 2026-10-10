@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -172,18 +173,34 @@ fun JournalGlucoseGraph(
             }
 
             // Point entries: a dot on top, the highlighted one bigger with a line down through the graph.
-            fun drawPoints(highlighted: Boolean) {
-                markers.forEachIndexed { i, m ->
-                    if (m.endMs != null || (i == selectedMarker) != highlighted || m.startMs < startMs || m.startMs > endMs) return@forEachIndexed
-                    val x = xOf(m.startMs)
-                    if (highlighted) drawLine(m.color.copy(alpha = 0.9f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = 2.dp.toPx())
-                    val r = if (highlighted) 6.dp.toPx() else 4.dp.toPx()
-                    drawCircle(ringColor, r + 1.5.dp.toPx(), Offset(x, plotTop))
-                    drawCircle(m.color, r, Offset(x, plotTop))
+            // Dots that sit on top of each other share one circle, split vertically into their colours.
+            val points = markers.withIndex().filter { (_, m) ->
+                m.endMs == null && m.startMs >= startMs && m.startMs <= endMs
+            }
+            val used = HashSet<Int>()
+            fun drawGroup(group: List<IndexedValue<GraphMarker>>) {
+                val x = xOf(group.first().value.startMs)
+                val picked = group.any { it.index == selectedMarker }
+                val r = if (picked) 6.dp.toPx() else 4.dp.toPx()
+                if (picked) drawLine(group.first { it.index == selectedMarker }.value.color.copy(alpha = 0.9f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = 2.dp.toPx())
+                drawCircle(ringColor, r + 1.5.dp.toPx(), Offset(x, plotTop))
+                val colors = group.map { it.value.color }.distinct()
+                val sliceW = 2 * r / colors.size
+                colors.forEachIndexed { k, c ->
+                    clipRect(left = x - r + sliceW * k, top = plotTop - r, right = x - r + sliceW * (k + 1), bottom = plotTop + r) {
+                        drawCircle(c, r, Offset(x, plotTop))
+                    }
                 }
             }
-            drawPoints(highlighted = false)
-            drawPoints(highlighted = true)
+            val groups = ArrayList<List<IndexedValue<GraphMarker>>>()
+            for (pt in points) {
+                if (!used.add(pt.index)) continue
+                val x = xOf(pt.value.startMs)
+                val group = listOf(pt) + points.filter { o -> o.index !in used && kotlin.math.abs(xOf(o.value.startMs) - x) < 6.dp.toPx() }.onEach { used.add(it.index) }
+                groups.add(group)
+            }
+            groups.filter { g -> g.none { it.index == selectedMarker } }.forEach(::drawGroup)
+            groups.filter { g -> g.any { it.index == selectedMarker } }.forEach(::drawGroup)
         }
         if (label != null) {
             Row(Modifier.fillMaxSize().padding(top = 6.dp)) {

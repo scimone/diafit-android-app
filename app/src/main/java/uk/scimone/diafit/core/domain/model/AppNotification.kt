@@ -45,6 +45,6 @@ fun expiryAlerts(ages: List<DeviceAge>, formatTime: (Long) -> String): List<Expi
     ExpiryAlert(
         key = "${age.kind.name}-$changed-$threshold",
         title = "${age.kind.label} expires in $left",
-        text = "Due ${formatTime(age.expiresAtUtc!!)}. Change it and log the change so the countdown restarts."
+        text = "Due ${formatTime(age.expiresAtUtc!!)}."
     )
 }

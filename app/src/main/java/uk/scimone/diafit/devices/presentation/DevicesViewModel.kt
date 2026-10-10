@@ -20,7 +20,8 @@ data class DevicesUiState(
     val loaded: Boolean = false,
     val ages: List<DeviceAge> = emptyList(),
     val status: DeviceStatus? = null,
-    val nowUtc: Long = System.currentTimeMillis()
+    val nowUtc: Long = System.currentTimeMillis(),
+    val omnipod: Boolean = false
 )
 
 /** Age / estimated expiry per consumable (from the stored change events) plus the latest Nightscout levels. */
@@ -40,7 +41,7 @@ class DevicesViewModel(
 
     val state: StateFlow<DevicesUiState> = combine(events, statusStore.status, lifetimeStore.lifetimes) { now, status, lifetimes ->
         val inputs = inputsSource.load(userId, now)
-        DevicesUiState(loaded = true, ages = deviceAges(inputs.events, now, lifetimes, batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true, pumpType = inputs.pumpType), status = status, nowUtc = now)
+        DevicesUiState(loaded = true, ages = deviceAges(inputs.events, now, lifetimes, batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true, pumpType = inputs.pumpType), status = status, nowUtc = now, omnipod = inputs.pumpType?.contains("omnipod", ignoreCase = true) == true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DevicesUiState())
 
 }

@@ -2,6 +2,7 @@ package uk.scimone.diafit.history.presentation.detail
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +23,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.settings.domain.model.toCore
+import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
+import uk.scimone.diafit.stats.data.LoadStatsDaysUseCase
+import uk.scimone.diafit.stats.domain.StatsDay
+import uk.scimone.diafit.stats.presentation.dayCardItems
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
@@ -86,13 +93,39 @@ fun DayDetailScreen(
     val shown = LocalDate.ofEpochDay(epochDayOf(pagerState.currentPage))
     // The selected tab stays the same while moving between days.
     var tab by rememberSaveable { mutableStateOf(DayTab.CHARTS) }
+    var picking by remember { mutableStateOf(false) }
+
+    if (picking) {
+        val utc = java.time.ZoneOffset.UTC
+        val todayMillis = LocalDate.ofEpochDay(today).atStartOfDay(utc).toInstant().toEpochMilli()
+        val firstMillis = LocalDate.ofEpochDay(today - (pageCount - 1)).atStartOfDay(utc).toInstant().toEpochMilli()
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = shown.atStartOfDay(utc).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis in firstMillis..todayMillis
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { ms ->
+                        val day = java.time.Instant.ofEpochMilli(ms).atZone(utc).toLocalDate().toEpochDay()
+                        scope.launch { pagerState.scrollToPage((pageCount - 1 - (today - day)).toInt().coerceIn(0, pageCount - 1)) }
+                    }
+                    picking = false
+                }) { Text("Go") }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+        ) { DatePicker(state = pickerState) }
+    }
 
     Scaffold(
         topBar = {
             Column {
                 TopAppBar(
                     title = {
-                        Column {
+                        Column(Modifier.clip(RoundedCornerShape(8.dp)).clickable { picking = true }) {
                             Text(relativeDayName(shown, LocalDate.ofEpochDay(today)))
                             Text(
                                 shown.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())),
@@ -153,20 +186,14 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
         state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         state.isEmpty -> EmptyNote(state.errorMessage ?: "No glucose readings, meals, insulin or activity on this day.")
         else -> when (tab) {
-            DayTab.STATS -> LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                item { SummaryCard(state) }
-                state.activityStats?.let { stats -> item { Spacer(Modifier.height(14.dp)); ActivityCard(stats) } }
-            }
+            DayTab.STATS -> DayStatsTab(userId, epochDay)
             DayTab.CHARTS -> DayCharts(state, onOpenMeal)
             DayTab.JOURNAL -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows, highs, sleep or exercise on this day.") else LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(state.entries, key = { "${it.kind}-${it.id}" }) { entry ->
+                items(state.entries.asReversed(), key = { "${it.kind}-${it.id}" }) { entry ->
                     JournalEntryCard(
                         entry,
                         state.target,
@@ -180,6 +207,27 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
             }
         }
     }
+}
+
+/** The Stats tab's day view, for this day. */
+@Composable
+private fun DayStatsTab(userId: Int, epochDay: Long) {
+    val load = org.koin.compose.koinInject<LoadStatsDaysUseCase>()
+    val getTarget = org.koin.compose.koinInject<GetTargetRangeUseCase>()
+    val day by produceState<StatsDay?>(null, epochDay) {
+        val date = LocalDate.ofEpochDay(epochDay)
+        val thresholds = GlucoseThresholds.from(getTarget().toCore())
+        while (true) {
+            runCatching { load(userId, date, date.plusDays(1), thresholds).firstOrNull() }.onSuccess { value = it }
+            if (date.plusDays(1) <= LocalDate.now()) break
+            delay(60_000L)
+        }
+    }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) { dayCardItems(day, isLoading = false) }
 }
 
 @Composable
