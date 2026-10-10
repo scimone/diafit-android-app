@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -64,7 +65,12 @@ fun StatsBarChart(
     onSelect: ((Int?) -> Unit)? = null,
     /** Fixed top of the scale (e.g. 100 for percentages); otherwise the tallest bar, rounded up. */
     fixedMax: Double? = null,
-    formatAxis: (Double) -> String = { it.roundToInt().toString() }
+    formatAxis: (Double) -> String = { it.roundToInt().toString() },
+    /** Writes each bar's value above it (for the few bars of a week). */
+    formatValue: ((Double) -> String)? = null,
+    /** A dashed line at the period's average, to read each bar against it. */
+    average: Double? = null,
+    avgColor: Color? = null
 ) {
     val measurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -87,8 +93,10 @@ fun StatsBarChart(
     ) {
         val axisW = if (showAxis) AXIS_WIDTH_DP.dp.toPx() else 0f
         val labelH = if (showAxis) 16.dp.toPx() else 0f
-        val plotH = size.height - labelH
+        val topPad = if (formatValue != null) 16.dp.toPx() else 0f
+        val plotH = size.height - labelH - topPad
         val plotW = size.width - axisW
+        translate(top = topPad) {
         if (showAxis) {
             val lines = 5
             for (i in 0..lines) {
@@ -126,11 +134,23 @@ fun StatsBarChart(
                         bottom -= h
                     }
                 }
+                if (formatValue != null) {
+                    val t = measurer.measure(formatValue(total), labelStyle)
+                    drawText(t, topLeft = Offset(x + barW / 2 - t.size.width / 2f, plotH - barH - t.size.height - 1.dp.toPx()))
+                }
             }
             if (showAxis && (i % labelEvery == 0)) {
                 val text = measurer.measure(bar.label, labelStyle)
                 drawText(text, topLeft = Offset(x + barW / 2 - text.size.width / 2f, plotH + 2.dp.toPx()))
             }
+        }
+        if (average != null && average > 0 && average <= top) {
+            val y = plotH - (plotH * (average / top)).toFloat()
+            drawLine(
+                (avgColor ?: Color.White).copy(alpha = 0.55f), Offset(axisW, y), Offset(size.width, y),
+                strokeWidth = 1.5.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+            )
+        }
         }
     }
 }

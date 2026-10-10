@@ -7,6 +7,7 @@ import org.junit.Test
 import uk.scimone.diafit.stats.data.offsetSegments
 import uk.scimone.diafit.stats.domain.GlucoseDay
 import uk.scimone.diafit.stats.domain.SleepNight
+import uk.scimone.diafit.stats.domain.StatsCards
 import uk.scimone.diafit.stats.domain.StatsDay
 import uk.scimone.diafit.stats.domain.StatsMetric
 import uk.scimone.diafit.stats.domain.StatsPeriod
@@ -49,34 +50,47 @@ class StatsTest {
         assertNull(StatsMetric.STEPS.average(listOf(StatsDay(today))))
     }
 
-    @Test fun glucoseSegmentsAreZoneShares() {
+    @Test fun glucoseMetricsAreSeparateCards() {
         val g = GlucoseDay.from(n = 100, sum = 12000, sumSq = 12000L * 120 + 100 * 400, below = 10, above = 20)!!
         assertEquals(0.1, g.belowShare, 1e-9)
-        assertEquals(0.7, g.inRangeShare, 1e-9)
-        assertEquals(0.2, g.aboveShare, 1e-9)
         assertEquals(120.0, g.meanMgdl, 1e-9)
         assertEquals(20.0, g.sdMgdl, 1e-6)
-        assertEquals(3.31 + 0.02392 * 120, g.gmi, 1e-9)
-        val seg = StatsMetric.GLUCOSE.segments(StatsDay(today, glucose = g))!!
-        assertEquals(70.0, seg[1], 1e-9)
-        assertEquals(70.0, StatsMetric.GLUCOSE.primary(StatsDay(today, glucose = g))!!, 1e-9)
+        val day = StatsDay(today, glucose = g)
+        assertEquals(listOf(10.0), StatsMetric.GLUCOSE_BELOW.segments(day))
+        assertEquals(listOf(70.0), StatsMetric.GLUCOSE_IN_RANGE.segments(day))
+        assertEquals(listOf(20.0), StatsMetric.GLUCOSE_ABOVE.segments(day))
+        assertEquals(listOf(120.0), StatsMetric.GLUCOSE_MEAN.segments(day))
+        assertEquals(3.31 + 0.02392 * 120, StatsMetric.GLUCOSE_A1C.primary(day)!!, 1e-9)
+        assertNull(StatsMetric.GLUCOSE_MEAN.segments(StatsDay(today)))
     }
 
-    @Test fun caloriesSplitIntoActiveAndResting() {
-        val seg = StatsMetric.CALORIES.segments(StatsDay(today, totalKcal = 2400.0, activeKcal = 600.0))!!
-        assertEquals(listOf(600.0, 1800.0), seg)
-        assertEquals(2400.0, StatsMetric.CALORIES.primary(StatsDay(today, totalKcal = 2400.0, activeKcal = 600.0))!!, 1e-9)
-        assertNull(StatsMetric.CALORIES.segments(StatsDay(today, activeKcal = 600.0)))
+    @Test fun a1cOnlyOnMonthAndYear() {
+        assertEquals(false, StatsMetric.GLUCOSE_A1C in StatsCards.bars(StatsPeriod.WEEK))
+        assertEquals(true, StatsMetric.GLUCOSE_A1C in StatsCards.bars(StatsPeriod.MONTH))
+        assertEquals(true, StatsMetric.GLUCOSE_A1C in StatsCards.bars(StatsPeriod.YEAR))
+        assertEquals(StatsMetric.GLUCOSE_IN_RANGE, StatsCards.bars(StatsPeriod.WEEK).first())
     }
 
-    @Test fun sleepSegmentsAndScheduleAxis() {
+    @Test fun macrosAndCaloriesSplit() {
+        val day = StatsDay(today, carbs = 100.0, protein = 30.0, fat = null, totalKcal = 2400.0, activeKcal = 600.0)
+        assertEquals(listOf(30.0), StatsMetric.PROTEIN.segments(day))
+        assertEquals(listOf(0.0), StatsMetric.FAT.segments(day))
+        assertNull(StatsMetric.PROTEIN.segments(StatsDay(today)))
+        assertEquals(listOf(2400.0), StatsMetric.CALORIES.segments(day))
+        assertEquals(listOf(600.0), StatsMetric.ACTIVE_CALORIES.segments(day))
+    }
+
+    @Test fun sleepStagesScheduleAndAxis() {
         val hour = 3_600_000L
         val night = SleepNight(deepMs = hour, remMs = 2 * hour, lightMs = 4 * hour, awakeMs = hour, bedMinutes = 330, wakeMinutes = 780)
         val day = StatsDay(today, sleep = night)
-        assertEquals(listOf(1.0, 2.0, 4.0), StatsMetric.SLEEP.segments(day))
-        assertEquals(7.0, StatsMetric.SLEEP.primary(day)!!, 1e-9)
+        assertEquals(listOf(7.0), StatsMetric.SLEEP.segments(day))
+        assertEquals(listOf(1.0), StatsMetric.DEEP_SLEEP.segments(day))
+        assertEquals(listOf(2.0), StatsMetric.REM_SLEEP.segments(day))
         assertEquals(listOf(330.0, 780.0), StatsMetric.SLEEP_SCHEDULE.segments(day))
-        // 330 min after 18:00 is 23:30, 780 is 07:00.
+        // A source without stages (everything "light") has no deep/REM card.
+        val noStages = StatsDay(today, sleep = night.copy(deepMs = 0, remMs = 0))
+        assertNull(StatsMetric.DEEP_SLEEP.segments(noStages))
         assertEquals(23 * 60 + 30, SleepNight.axisToClock(330))
         assertEquals(7 * 60, SleepNight.axisToClock(780))
         assertEquals(330, SleepNight.clockToAxis(23 * 60 + 30))

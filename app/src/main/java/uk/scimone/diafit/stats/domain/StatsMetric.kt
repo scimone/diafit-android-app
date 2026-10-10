@@ -1,64 +1,82 @@
 package uk.scimone.diafit.stats.domain
 
 /**
- * What a Stats card shows. A metric reduces a [StatsDay] to a few stacked [segments] (one for most; sleep
- * stages, macros or glucose zones for the stacked ones) whose sum is the bar, and to one [primary] number.
+ * What a W/M/Y card shows: one number per day. Everything is single-valued (a stacked quantity such as glucose zones
+ * or macros is several metrics, each with its own card) except [SLEEP_SCHEDULE], whose two values are bedtime and
+ * wake-up. [segments] is the value list of one day's bar, null when the day has no data.
  */
 enum class StatsMetric(
     val title: String,
-    val unit: String,
-    /** Whole days add up (steps, insulin...): the detail page also shows a total. Others (heart rate, sleep...) only average. */
-    val additive: Boolean,
-    val segmentLabels: List<String>
+    /** Whole days add up (steps, insulin...): the detail page also shows a total. Others only average. */
+    val additive: Boolean = false,
+    /** Shown only on these pages (A1c is meaningless over a week); null = every W/M/Y page. */
+    val periods: Set<StatsPeriod>? = null
 ) {
-    STEPS("Steps", "steps", true, listOf("Steps")),
-    HEART_RATE("Heart rate", "bpm", false, listOf("Average")),
-    RESTING_HEART_RATE("Resting heart rate", "bpm", false, listOf("Resting")),
-    HEART_RATE_VARIABILITY("Heart rate variability", "ms", false, listOf("HRV (RMSSD)")),
-    SLEEP("Sleep", "h", false, listOf("Deep", "REM", "Light")),
-    SLEEP_SCHEDULE("Sleep schedule", "", false, listOf("Bedtime", "Wake-up")),
-    ACTIVITY("Active time", "min", true, listOf("Active")),
-    CALORIES("Calories burned", "kcal", true, listOf("Active", "Resting")),
-    MEALS("Meals", "g carbs", true, listOf("Carbs", "Protein", "Fat")),
-    GLUCOSE("Glucose", "% in range", false, listOf("Below", "In range", "Above")),
-    BOLUS("Bolus insulin", "U", true, listOf("Bolus")),
-    BASAL("Basal insulin", "U", true, listOf("Basal"));
+    GLUCOSE_IN_RANGE("In range"),
+    GLUCOSE_BELOW("Below range"),
+    GLUCOSE_ABOVE("Above range"),
+    GLUCOSE_MEAN("Mean glucose"),
+    GLUCOSE_SD("Glucose std dev"),
+    GLUCOSE_CV("Glucose variability (CV)"),
+    GLUCOSE_A1C("A1c (GMI)", periods = setOf(StatsPeriod.MONTH, StatsPeriod.YEAR)),
+    BOLUS("Bolus insulin", additive = true),
+    BASAL("Basal insulin", additive = true),
+    CARBS("Carbs", additive = true),
+    PROTEIN("Protein", additive = true),
+    FAT("Fat", additive = true),
+    CALORIES("Calories burned", additive = true),
+    ACTIVE_CALORIES("Active calories", additive = true),
+    STEPS("Steps", additive = true),
+    ACTIVITY("Active time", additive = true),
+    HEART_RATE("Heart rate"),
+    RESTING_HEART_RATE("Resting heart rate"),
+    HEART_RATE_VARIABILITY("Heart rate variability"),
+    SLEEP("Sleep"),
+    DEEP_SLEEP("Deep sleep"),
+    REM_SLEEP("REM sleep"),
+    LIGHT_SLEEP("Light sleep"),
+    SLEEP_SCHEDULE("Sleep schedule");
 
-    /** The segments of one day's bar (same order as [segmentLabels]), or null when the day has no data for this metric. */
-    fun segments(day: StatsDay): List<Double>? = when (this) {
-        STEPS -> day.steps?.let { listOf(it.toDouble()) }
-        HEART_RATE -> day.avgBpm?.let { listOf(it) }
-        RESTING_HEART_RATE -> day.restingBpm?.let { listOf(it) }
-        HEART_RATE_VARIABILITY -> day.hrvMs?.let { listOf(it) }
-        SLEEP -> day.sleep?.takeIf { it.asleepMs > 0 }?.let { listOf(it.deepMs.hours, it.remMs.hours, it.lightMs.hours) }
-        SLEEP_SCHEDULE -> day.sleep?.takeIf { it.asleepMs > 0 }?.let { listOf(it.bedMinutes.toDouble(), it.wakeMinutes.toDouble()) }
-        ACTIVITY -> day.activeMinutes?.let { listOf(it) }
-        CALORIES -> day.totalKcal?.let { total ->
-            val active = (day.activeKcal ?: 0.0).coerceIn(0.0, total)
-            listOf(active, total - active)
+    /** The values of one day's bar, or null when the day has no data for this metric. */
+    fun segments(day: StatsDay): List<Double>? {
+        val v: Double? = when (this) {
+            GLUCOSE_IN_RANGE -> day.glucose?.let { it.inRangeShare * 100 }
+            GLUCOSE_BELOW -> day.glucose?.let { it.belowShare * 100 }
+            GLUCOSE_ABOVE -> day.glucose?.let { it.aboveShare * 100 }
+            GLUCOSE_MEAN -> day.glucose?.meanMgdl
+            GLUCOSE_SD -> day.glucose?.sdMgdl
+            GLUCOSE_CV -> day.glucose?.cvPercent
+            GLUCOSE_A1C -> day.glucose?.gmi
+            BOLUS -> day.bolusUnits
+            BASAL -> day.basalUnits
+            CARBS -> day.carbs
+            PROTEIN -> day.carbs?.let { day.protein ?: 0.0 }
+            FAT -> day.carbs?.let { day.fat ?: 0.0 }
+            CALORIES -> day.totalKcal
+            ACTIVE_CALORIES -> day.activeKcal
+            STEPS -> day.steps?.toDouble()
+            ACTIVITY -> day.activeMinutes
+            HEART_RATE -> day.avgBpm
+            RESTING_HEART_RATE -> day.restingBpm
+            HEART_RATE_VARIABILITY -> day.hrvMs
+            SLEEP -> day.sleep?.takeIf { it.asleepMs > 0 }?.let { it.asleepMs.hours }
+            // Stage cards need a source that tells stages apart.
+            DEEP_SLEEP -> day.sleep?.takeIf { it.hasStages }?.let { it.deepMs.hours }
+            REM_SLEEP -> day.sleep?.takeIf { it.hasStages }?.let { it.remMs.hours }
+            LIGHT_SLEEP -> day.sleep?.takeIf { it.hasStages }?.let { it.lightMs.hours }
+            SLEEP_SCHEDULE -> return day.sleep?.takeIf { it.asleepMs > 0 }?.let { listOf(it.bedMinutes.toDouble(), it.wakeMinutes.toDouble()) }
         }
-        MEALS -> day.carbs?.let { listOf(it, day.protein ?: 0.0, day.fat ?: 0.0) }
-        GLUCOSE -> day.glucose?.let { listOf(it.belowShare * 100, it.inRangeShare * 100, it.aboveShare * 100) }
-        BOLUS -> day.bolusUnits?.let { listOf(it) }
-        BASAL -> day.basalUnits?.let { listOf(it) }
+        return v?.let { listOf(it) }
     }
 
-    /** The one number that stands for the day (what the card headline averages). */
-    fun primary(day: StatsDay): Double? {
-        val s = segments(day) ?: return null
-        return when (this) {
-            MEALS -> s[0]
-            GLUCOSE -> s[1]
-            SLEEP_SCHEDULE -> s[0]
-            else -> s.sum()
-        }
-    }
+    /** The one number that stands for the day (for the schedule: bedtime). */
+    fun primary(day: StatsDay): Double? = segments(day)?.first()
 
-    /** Mean of every segment over the days of [days] that have data; null when none do. Used for a bar that spans several days. */
+    /** Mean of every value over the days of [days] that have data; null when none do. Used for a bar that spans several days. */
     fun barSegments(days: List<StatsDay>): List<Double>? {
         val all = days.mapNotNull(::segments)
         if (all.isEmpty()) return null
-        return List(segmentLabels.size) { i -> all.sumOf { it[i] } / all.size }
+        return List(all.first().size) { i -> all.sumOf { it[i] } / all.size }
     }
 
     /** Mean of [primary] over the days with data. */
@@ -71,20 +89,17 @@ enum class StatsMetric(
     private val Long.hours: Double get() = this / 3_600_000.0
 }
 
-/** The metrics shown as cards, in order, for each kind of page. */
+/** The cards of each page, in order: glucose first, then insulin, meals, calories burned, then the rest. */
 object StatsCards {
-    /** Day page: sleep schedule and per-signal heart-rate cards are folded into their parent card. */
-    val day = listOf(
-        StatsMetric.STEPS, StatsMetric.HEART_RATE, StatsMetric.SLEEP, StatsMetric.ACTIVITY, StatsMetric.CALORIES,
-        StatsMetric.MEALS, StatsMetric.GLUCOSE, StatsMetric.BOLUS, StatsMetric.BASAL
-    )
+    /** Day page: one card per group (heart rate and sleep fold their parts in). */
+    enum class DayCard { GLUCOSE, BOLUS, BASAL, MEALS, CALORIES, STEPS, ACTIVITY, HEART_RATE, SLEEP }
+
+    val day = DayCard.entries
 
     /** Week / month / year pages: one card per metric. */
-    val bars = listOf(
-        StatsMetric.STEPS, StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE, StatsMetric.HEART_RATE_VARIABILITY,
-        StatsMetric.SLEEP, StatsMetric.SLEEP_SCHEDULE, StatsMetric.ACTIVITY, StatsMetric.CALORIES,
-        StatsMetric.MEALS, StatsMetric.GLUCOSE, StatsMetric.BOLUS, StatsMetric.BASAL
-    )
+    val bars: List<StatsMetric> = StatsMetric.entries
+
+    fun bars(period: StatsPeriod): List<StatsMetric> = bars.filter { it.periods?.contains(period) ?: true }
 }
 
 /** The average of [metric] over each window in a row of consecutive periods, oldest first (the Trends chart). */

@@ -115,10 +115,10 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
                     val day = state.days.firstOrNull()
                     // Cards without data are left out, so what is shown is what there is.
                     val shown = StatsCards.day.filter { day != null && hasDayData(it, day) }
-                    items(shown, key = { "day-${it.name}" }) { metric -> DayCard(metric, day!!) }
+                    items(shown, key = { "day-${it.name}" }) { card -> DayCard(card, day!!) }
                     if (shown.isEmpty() && !state.isLoading) item(key = "empty") { EmptyState() }
                 } else {
-                    val shown = StatsCards.bars.filter { it.daysWithData(state.days) > 0 }
+                    val shown = StatsCards.bars(state.period).filter { it.daysWithData(state.days) > 0 }
                     items(shown, key = { "bars-${it.name}" }) { metric ->
                         BarCard(metric, state.window, state.days, onClick = { onOpenMetric(metric, state.period, state.offset) })
                     }
@@ -282,60 +282,75 @@ private fun EmptyState() {
 
 // ---------------------------------------------------------------- day cards
 
-private fun hasDayData(metric: StatsMetric, day: StatsDay): Boolean =
-    if (metric == StatsMetric.HEART_RATE) day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
-    else metric.segments(day) != null
+private fun hasDayData(card: StatsCards.DayCard, day: StatsDay): Boolean = when (card) {
+    StatsCards.DayCard.GLUCOSE -> day.glucose != null
+    StatsCards.DayCard.BOLUS -> day.bolusUnits != null
+    StatsCards.DayCard.BASAL -> day.basalUnits != null
+    StatsCards.DayCard.MEALS -> day.carbs != null
+    StatsCards.DayCard.CALORIES -> day.totalKcal != null
+    StatsCards.DayCard.STEPS -> day.steps != null
+    StatsCards.DayCard.ACTIVITY -> day.activeMinutes != null
+    StatsCards.DayCard.HEART_RATE -> day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
+    StatsCards.DayCard.SLEEP -> day.sleep?.let { it.asleepMs > 0 } == true
+}
+
+/** A one-figure day card: tile, name and the day's value. */
+@Composable
+private fun SimpleDayCard(metric: StatsMetric, title: String, subtitle: String?, value: Double) {
+    val f = metric.format(value)
+    StatsSurface { CardHeader(metric, title, subtitle, Modifier.padding(12.dp)) { FigureBlock(f.value, f.unit, metric.accent()) } }
+}
 
 @Composable
-private fun DayCard(metric: StatsMetric, day: StatsDay) {
-    val accent = metric.accent()
-    val title = if (metric == StatsMetric.ACTIVITY) "Activity" else metric.title
-    when (metric) {
-        // One figure: a compact row.
-        StatsMetric.STEPS, StatsMetric.ACTIVITY, StatsMetric.BOLUS, StatsMetric.BASAL, StatsMetric.CALORIES -> StatsSurface {
-            val f = metric.format(metric.primary(day)!!)
-            val sub = if (metric == StatsMetric.CALORIES && day.activeKcal != null) {
-                "Active ${day.activeKcal.roundToInt()} · Resting ${(day.totalKcal!! - day.activeKcal).roundToInt()}"
-            } else null
-            CardHeader(metric, title, sub, Modifier.padding(12.dp)) { FigureBlock(f.value, f.unit, accent) }
-        }
-        StatsMetric.HEART_RATE -> StatsSurface {
+private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
+    val ink = MaterialTheme.colorScheme.onSurface
+    when (card) {
+        StatsCards.DayCard.GLUCOSE -> StatsSurface {
+            val g = day.glucose!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(metric, title, null)
+                CardHeader(StatsMetric.GLUCOSE_IN_RANGE, "Glucose", null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "% in range", InRange) }
+                GlucoseDayContent(g)
+            }
+        }
+        StatsCards.DayCard.BOLUS -> SimpleDayCard(StatsMetric.BOLUS, "Bolus insulin", null, day.bolusUnits!!)
+        StatsCards.DayCard.BASAL -> SimpleDayCard(StatsMetric.BASAL, "Basal insulin", null, day.basalUnits!!)
+        StatsCards.DayCard.MEALS -> StatsSurface {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(StatsMetric.CARBS, "Meals", null) { FigureBlock("${day.carbs!!.roundToInt()}", "g carbs", StatsMetric.CARBS.accent()) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Resting", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("Average", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("Variability", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", StatsMetric.HEART_RATE_VARIABILITY.accent(), Modifier.weight(1f))
+                    LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), Modifier.weight(1f))
+                    LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), Modifier.weight(1f))
+                    LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, Modifier.weight(1f))
                 }
             }
         }
-        StatsMetric.SLEEP -> StatsSurface {
+        StatsCards.DayCard.CALORIES -> SimpleDayCard(
+            StatsMetric.CALORIES, "Calories burned",
+            day.activeKcal?.let { "Active ${it.roundToInt()} · Resting ${(day.totalKcal!! - it).roundToInt()}" },
+            day.totalKcal!!
+        )
+        StatsCards.DayCard.STEPS -> SimpleDayCard(StatsMetric.STEPS, "Steps", null, day.steps!!.toDouble())
+        StatsCards.DayCard.ACTIVITY -> SimpleDayCard(StatsMetric.ACTIVITY, "Activity", null, day.activeMinutes!!)
+        StatsCards.DayCard.HEART_RATE -> StatsSurface {
+            val accent = StatsMetric.HEART_RATE.accent()
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CardHeader(StatsMetric.HEART_RATE, "Heart rate", null)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledValue("Resting", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("Average", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("Variability", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, Modifier.weight(1f))
+                }
+            }
+        }
+        StatsCards.DayCard.SLEEP -> StatsSurface {
             val night = day.sleep!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(metric, title, sleepRange(night)) {
+                CardHeader(StatsMetric.SLEEP, "Sleep", sleepRange(night)) {
                     FigureBlock(formatDurationHM(night.asleepMs / 3_600_000.0), "asleep", SleepLight)
                 }
                 SleepStages(night)
             }
         }
-        StatsMetric.MEALS -> StatsSurface {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(metric, title, null) { FigureBlock("${day.carbs!!.roundToInt()}", "g carbs", accent) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                    LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                    LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                }
-            }
-        }
-        StatsMetric.GLUCOSE -> StatsSurface {
-            val g = day.glucose!!
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(metric, title, null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "% in range", InRange) }
-                GlucoseDayContent(g)
-            }
-        }
-        else -> Unit
     }
 }
 
@@ -423,38 +438,40 @@ private fun ZoneLegend(label: String, share: Double, color: Color) {
 internal fun buildBars(metric: StatsMetric, window: StatsWindow, days: List<StatsDay>): List<BarData> =
     window.buckets.map { bucket -> BarData(bucket.label, metric.barSegments(days.filter { it.date in bucket })) }
 
-/** One compact row per metric (icon, name, tiny chart, average) so many can be compared at a glance. */
+/** One card per metric: its average up top and a large bar chart (a bar per day, per month for a year) to compare the periods. */
 @Composable
 private fun BarCard(metric: StatsMetric, window: StatsWindow, days: List<StatsDay>, onClick: () -> Unit) {
     val bars = remember(metric, window, days) { buildBars(metric, window, days) }
     val figure = headlineFigure(metric, days)
+    val accent = metric.accent()
     StatsSurface(onClick = onClick) {
-        Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconTile(metric.icon(), metric.accent())
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(metric.shortTitle(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(metric.subtitle(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CardHeader(metric, metric.title, metric.subtitle()) {
+                if (metric == StatsMetric.SLEEP_SCHEDULE) {
+                    Text(figure.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = accent, maxLines = 1, softWrap = false)
+                } else FigureBlock(figure.value, figure.unit, accent)
             }
-            Spacer(Modifier.width(8.dp))
             if (metric == StatsMetric.SLEEP_SCHEDULE) {
-                SleepScheduleChart(bars, metric.colors().first(), Modifier.width(76.dp), height = 40.dp, compact = true)
+                SleepScheduleChart(bars, accent, height = 170.dp)
             } else {
-                StatsBarChart(bars, metric.colors(), Modifier.width(76.dp), height = 40.dp, fixedMax = if (metric == StatsMetric.GLUCOSE) 100.0 else null)
-            }
-            Spacer(Modifier.width(12.dp))
-            Box(Modifier.width(72.dp), contentAlignment = Alignment.CenterEnd) {
-                FigureBlock(figure.value, figure.unit, metric.accent())
+                StatsBarChart(
+                    bars, metric.colors(), height = if (bars.size <= 12) 150.dp else 140.dp, showAxis = true,
+                    fixedMax = if (metric == StatsMetric.GLUCOSE_IN_RANGE) 100.0 else null,
+                    formatAxis = { metric.axisLabel(it) },
+                    // The few bars of a week carry their value; a month is too dense for labels.
+                    formatValue = if (bars.size <= 7) { v -> metric.format(v).value } else null,
+                    average = metric.average(days), avgColor = accent
+                )
             }
         }
     }
 }
 
-/** The average a compact row shows (sleep schedule: the typical bedtime). */
+/** The average a card shows (sleep schedule: bedtime – wake-up, both in the same size). */
 internal fun headlineFigure(metric: StatsMetric, days: List<StatsDay>): Formatted {
     if (metric == StatsMetric.SLEEP_SCHEDULE) {
         val nights = days.mapNotNull { metric.segments(it) }
-        return Formatted(metric.format(nights.map { it[0] }.average()).value, "→ " + metric.format(nights.map { it[1] }.average()).value)
+        return Formatted(metric.format(nights.map { it[0] }.average()).value + " – " + metric.format(nights.map { it[1] }.average()).value, "")
     }
     return metric.format(metric.average(days) ?: 0.0)
 }

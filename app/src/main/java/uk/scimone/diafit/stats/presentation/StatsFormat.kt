@@ -2,7 +2,12 @@ package uk.scimone.diafit.stats.presentation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -28,36 +33,31 @@ import uk.scimone.diafit.ui.theme.SleepRem
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val HeartColor = Color(0xFFE5575F)
-private val HrvColor = Color(0xFF26A69A)
-private val BurnActive = Color(0xFFFF7043)
-private val BurnResting = Color(0xFFFFAB91)
 private val Protein = Color(0xFFEF9A9A)
 private val Fat = Color(0xFFFFB74D)
+/** Glucose measures that aren't a zone (mean, spread, A1c): a cool tone apart from the in/below/above colours. */
+private val GlucoseNeutral = Color(0xFF4DD0E1)
 
-/** One colour per segment of a metric's stacked bar, bottom segment first. */
-fun StatsMetric.colors(): List<Color> = when (this) {
-    StatsMetric.STEPS -> listOf(Activity)
-    StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE -> listOf(HeartColor)
-    StatsMetric.HEART_RATE_VARIABILITY -> listOf(HrvColor)
-    StatsMetric.SLEEP -> listOf(SleepDeep, SleepRem, SleepLight)
-    StatsMetric.SLEEP_SCHEDULE -> listOf(SleepLight, SleepLight)
-    StatsMetric.ACTIVITY -> listOf(Activity)
-    StatsMetric.CALORIES -> listOf(BurnActive, BurnResting)
-    StatsMetric.MEALS -> listOf(Carbs, Protein, Fat)
-    StatsMetric.GLUCOSE -> listOf(BelowRange, InRange, AboveRange)
-    StatsMetric.BOLUS -> listOf(Bolus)
-    StatsMetric.BASAL -> listOf(Basal)
-}
-
-/** The colour that stands for the metric as a whole (card accent, headline value). */
+/** The colour of a metric's bars and figure. Heart rate, calories, steps and active time all share the activity colour. */
 fun StatsMetric.accent(): Color = when (this) {
-    StatsMetric.GLUCOSE -> InRange
-    StatsMetric.MEALS -> Carbs
-    StatsMetric.CALORIES -> BurnActive
-    StatsMetric.SLEEP -> SleepLight
-    else -> colors().first()
+    StatsMetric.GLUCOSE_IN_RANGE -> InRange
+    StatsMetric.GLUCOSE_BELOW -> BelowRange
+    StatsMetric.GLUCOSE_ABOVE -> AboveRange
+    StatsMetric.GLUCOSE_MEAN, StatsMetric.GLUCOSE_SD, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C -> GlucoseNeutral
+    StatsMetric.BOLUS -> Bolus
+    StatsMetric.BASAL -> Basal
+    StatsMetric.CARBS -> Carbs
+    StatsMetric.PROTEIN -> Protein
+    StatsMetric.FAT -> Fat
+    StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES, StatsMetric.STEPS, StatsMetric.ACTIVITY,
+    StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE, StatsMetric.HEART_RATE_VARIABILITY -> Activity
+    StatsMetric.SLEEP, StatsMetric.SLEEP_SCHEDULE -> SleepLight
+    StatsMetric.DEEP_SLEEP -> SleepDeep
+    StatsMetric.REM_SLEEP -> SleepRem
+    StatsMetric.LIGHT_SLEEP -> SleepLight
 }
+
+fun StatsMetric.colors(): List<Color> = listOf(accent())
 
 /** A formatted value and its unit, kept apart so the number can be drawn large and the unit small. */
 data class Formatted(val value: String, val unit: String)
@@ -72,75 +72,72 @@ fun formatClock(clockMinutes: Int): String {
     return "%02d:%02d".format(m / 60, m % 60)
 }
 
+private fun grouped(v: Double) = String.format(Locale.getDefault(), "%,d", v.roundToInt())
+
 fun StatsMetric.format(value: Double): Formatted = when (this) {
-    StatsMetric.STEPS -> Formatted(String.format(Locale.getDefault(), "%,d", value.roundToInt()), "steps")
+    StatsMetric.STEPS -> Formatted(grouped(value), "steps")
     StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE -> Formatted(value.roundToInt().toString(), "bpm")
     StatsMetric.HEART_RATE_VARIABILITY -> Formatted(value.roundToInt().toString(), "ms")
-    StatsMetric.SLEEP -> formatDurationHM(value).let { Formatted(it, "") }
+    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> Formatted(formatDurationHM(value), "")
     StatsMetric.SLEEP_SCHEDULE -> Formatted(formatClock(SleepNight.axisToClock(value.roundToInt())), "")
-    StatsMetric.ACTIVITY -> if (value >= 60) formatDurationHM(value / 60).let { Formatted(it, "") } else Formatted(value.roundToInt().toString(), "min")
-    StatsMetric.CALORIES -> Formatted(String.format(Locale.getDefault(), "%,d", value.roundToInt()), "kcal")
-    StatsMetric.MEALS -> Formatted(value.roundToInt().toString(), "g carbs")
-    StatsMetric.GLUCOSE -> Formatted(value.roundToInt().toString(), "% in range")
+    StatsMetric.ACTIVITY -> if (value >= 60) Formatted(formatDurationHM(value / 60), "") else Formatted(value.roundToInt().toString(), "min")
+    StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES -> Formatted(grouped(value), "kcal")
+    StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Formatted(value.roundToInt().toString(), "g")
+    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV ->
+        Formatted(value.roundToInt().toString(), "%")
+    StatsMetric.GLUCOSE_MEAN, StatsMetric.GLUCOSE_SD -> Formatted(value.roundToInt().toString(), "mg/dL")
+    StatsMetric.GLUCOSE_A1C -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "%")
     StatsMetric.BOLUS, StatsMetric.BASAL -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "U")
 }
 
-/** The readout for one segment of a bar (a stage, a macro, a zone): "Deep 1 h 20", "Carbs 45 g". */
-fun StatsMetric.formatSegment(index: Int, value: Double): String = when (this) {
-    StatsMetric.SLEEP -> formatDurationHM(value)
-    StatsMetric.GLUCOSE -> "${value.roundToInt()}%"
-    StatsMetric.MEALS -> "${value.roundToInt()} g"
-    StatsMetric.CALORIES -> "${value.roundToInt()} kcal"
-    else -> format(value).let { "${it.value} ${it.unit}".trim() }
-}
+/** The figure joined with its unit on one line, for readouts: "45 g", "7 h 18". */
+fun StatsMetric.formatInline(value: Double): String = format(value).let { "${it.value} ${it.unit}".trim() }
 
-/** What a stacked bar adds up to, for the readout above a selected bar. */
-fun StatsMetric.formatBar(segments: List<Double>): String = when (this) {
-    StatsMetric.SLEEP -> formatDurationHM(segments.sum())
-    StatsMetric.MEALS -> "${segments[0].roundToInt()} g carbs"
-    StatsMetric.GLUCOSE -> "${segments[1].roundToInt()}% in range"
-    StatsMetric.SLEEP_SCHEDULE -> "${formatClock(SleepNight.axisToClock(segments[0].roundToInt()))} – ${formatClock(SleepNight.axisToClock(segments[1].roundToInt()))}"
-    else -> format(segments.sum()).let { "${it.value} ${it.unit}".trim() }
-}
+/** What a selected bar reads (the schedule shows both times). */
+fun StatsMetric.formatBar(segments: List<Double>): String =
+    if (this == StatsMetric.SLEEP_SCHEDULE) {
+        "${formatClock(SleepNight.axisToClock(segments[0].roundToInt()))} – ${formatClock(SleepNight.axisToClock(segments[1].roundToInt()))}"
+    } else formatInline(segments[0])
 
 /** "−4%" / "+12%": the change from [previous] to [current], null when it can't be told. */
 fun changePercent(current: Double?, previous: Double?): Int? =
     if (current == null || previous == null || previous == 0.0) null else ((current - previous) / previous * 100).roundToInt()
 
 fun StatsMetric.icon(): ImageVector = when (this) {
-    StatsMetric.STEPS -> Icons.AutoMirrored.Filled.DirectionsWalk
-    StatsMetric.HEART_RATE -> Icons.Filled.Favorite
-    StatsMetric.RESTING_HEART_RATE -> Icons.Filled.Favorite
-    StatsMetric.HEART_RATE_VARIABILITY -> Icons.Filled.MonitorHeart
-    StatsMetric.SLEEP -> Icons.Filled.Bedtime
-    StatsMetric.SLEEP_SCHEDULE -> Icons.Filled.Schedule
-    StatsMetric.ACTIVITY -> Icons.Filled.FitnessCenter
-    StatsMetric.CALORIES -> Icons.Filled.LocalFireDepartment
-    StatsMetric.MEALS -> Icons.Filled.Restaurant
-    StatsMetric.GLUCOSE -> Icons.Filled.WaterDrop
+    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_MEAN -> Icons.Filled.WaterDrop
+    StatsMetric.GLUCOSE_BELOW -> Icons.Filled.ArrowDownward
+    StatsMetric.GLUCOSE_ABOVE -> Icons.Filled.ArrowUpward
+    StatsMetric.GLUCOSE_SD -> Icons.Filled.ShowChart
+    StatsMetric.GLUCOSE_CV -> Icons.Filled.Percent
+    StatsMetric.GLUCOSE_A1C -> Icons.Filled.Science
     StatsMetric.BOLUS, StatsMetric.BASAL -> Icons.Filled.Vaccines
+    StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Icons.Filled.Restaurant
+    StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES -> Icons.Filled.LocalFireDepartment
+    StatsMetric.STEPS -> Icons.AutoMirrored.Filled.DirectionsWalk
+    StatsMetric.ACTIVITY -> Icons.Filled.FitnessCenter
+    StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE -> Icons.Filled.Favorite
+    StatsMetric.HEART_RATE_VARIABILITY -> Icons.Filled.MonitorHeart
+    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> Icons.Filled.Bedtime
+    StatsMetric.SLEEP_SCHEDULE -> Icons.Filled.Schedule
 }
 
-/** The title on a compact row, short enough to sit beside a chart and a figure. */
-fun StatsMetric.shortTitle(): String = when (this) {
-    StatsMetric.HEART_RATE_VARIABILITY -> "HRV"
-    StatsMetric.RESTING_HEART_RATE -> "Resting HR"
-    StatsMetric.HEART_RATE -> "Heart rate"
-    StatsMetric.SLEEP_SCHEDULE -> "Sleep schedule"
-    StatsMetric.ACTIVITY -> "Active time"
-    StatsMetric.CALORIES -> "Calories"
-    StatsMetric.BOLUS -> "Bolus"
-    StatsMetric.BASAL -> "Basal"
-    else -> title
-}
-
-/** What the figure on a compact W/M/Y row is. */
+/** Line under the title of a W/M/Y card. */
 fun StatsMetric.subtitle(): String = when (this) {
-    StatsMetric.GLUCOSE -> "Time in range"
-    StatsMetric.SLEEP_SCHEDULE -> "Bed → wake, average"
-    StatsMetric.CALORIES -> "Burned per day"
-    StatsMetric.SLEEP -> "Asleep per night"
-    StatsMetric.MEALS -> "Carbs per day"
-    StatsMetric.HEART_RATE_VARIABILITY -> "Daily average"
+    StatsMetric.GLUCOSE_IN_RANGE -> "Time in range, daily average"
+    StatsMetric.GLUCOSE_BELOW -> "Time below range, daily average"
+    StatsMetric.GLUCOSE_ABOVE -> "Time above range, daily average"
+    StatsMetric.SLEEP_SCHEDULE -> "Average bedtime and wake-up"
+    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> "Per night, average"
     else -> "Daily average"
+}
+
+/** The y axis labels of a metric's chart. */
+fun StatsMetric.axisLabel(v: Double): String = when (this) {
+    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV -> "${v.roundToInt()}%"
+    StatsMetric.STEPS, StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES ->
+        if (v >= 1000) "${(v / 1000).let { if (it % 1.0 == 0.0) it.roundToInt().toString() else "%.1f".format(it) }}k" else v.roundToInt().toString()
+    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP ->
+        "${if (v % 1.0 == 0.0) v.roundToInt().toString() else "%.1f".format(v)}h"
+    StatsMetric.BOLUS, StatsMetric.BASAL, StatsMetric.GLUCOSE_A1C -> if (v % 1.0 == 0.0) v.roundToInt().toString() else "%.1f".format(v)
+    else -> v.roundToInt().toString()
 }
