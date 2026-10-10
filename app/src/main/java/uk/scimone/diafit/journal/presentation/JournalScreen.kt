@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.journal.presentation.components.JournalGlucoseGraph
+import uk.scimone.diafit.journal.presentation.components.CarbCurve
 import uk.scimone.diafit.journal.presentation.components.GraphMarker
 import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
 import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
@@ -314,7 +315,13 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
         afterMs = endTimeUtc + impactType.durationMinutes * 60_000L,
         extraColor = Bolus.takeIf { (insulinUnits ?: 0.0) > 0.0 },
         peakMs = peakTimeUtc?.takeIf { peakMgdl != null && (startMgdl == null || peakMgdl > startMgdl) },
-        peakMgdl = peakMgdl
+        peakMgdl = peakMgdl,
+        carbs = carbohydrates.takeIf { it > 0 }?.let { g ->
+            val n = courseCount.coerceAtLeast(1)
+            val times = if (n == 1 || endTimeUtc <= mealTimeUtc) List(n) { mealTimeUtc }
+            else List(n) { mealTimeUtc + (endTimeUtc - mealTimeUtc) * it / (n - 1) }
+            CarbCurve(g.toDouble(), times, impactType.durationMinutes)
+        }
     )
     else -> GraphMarker(timeUtc, null, kind.accent)
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
+import uk.scimone.diafit.core.domain.model.CarbActivity
 import uk.scimone.diafit.journal.presentation.DayGlucose
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -58,10 +59,15 @@ class GraphMarker(
     val extraColor: Color? = null,
     /** The glucose peak after a meal, marked on the graph with its value and time. */
     val peakMs: Long? = null,
-    val peakMgdl: Int? = null
+    val peakMgdl: Int? = null,
+    /** A meal's carb absorption curve, drawn faintly at the bottom: grams, per-course times and duration. */
+    val carbs: CarbCurve? = null
 ) {
     val colors: List<Color> get() = listOfNotNull(color, extraColor)
 }
+
+/** [courseTimesMs] each take an equal share of [grams], absorbed over [durationMinutes]. */
+class CarbCurve(val grams: Double, val courseTimesMs: List<Long>, val durationMinutes: Int)
 
 /**
  * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
@@ -194,6 +200,30 @@ fun JournalGlucoseGraph(
                     if (xOf(m.startMs) >= 0f) drawLine(m.color.copy(alpha = 0.4f), Offset(x0, 0f), Offset(x0, plotBottom), strokeWidth = edge)
                     if (xOf(end) <= size.width) drawLine(m.color.copy(alpha = 0.4f), Offset(x1, 0f), Offset(x1, plotBottom), strokeWidth = edge)
                 }
+            }
+
+            // A meal's carb activity: a very faint area along the bottom, behind the readings.
+            markers.getOrNull(selectedMarker)?.carbs?.let { c ->
+                if (c.courseTimesMs.isEmpty() || c.grams <= 0.0) return@let
+                val share = c.grams / c.courseTimesMs.size
+                val stepMs = 3 * MIN_MS
+                fun rate(t: Long) = c.courseTimesMs.sumOf { CarbActivity.calculate(share, it, t, c.durationMinutes) }
+                val from = maxOf(startMs, c.courseTimesMs.first())
+                val to = minOf(endMs, c.courseTimesMs.last() + c.durationMinutes * MIN_MS)
+                if (to <= from) return@let
+                var peakRate = 0.0
+                var t0 = c.courseTimesMs.first()
+                while (t0 <= c.courseTimesMs.last() + c.durationMinutes * MIN_MS) { peakRate = maxOf(peakRate, rate(t0)); t0 += stepMs }
+                if (peakRate <= 0.0) return@let
+                val maxH = plotH * 0.4f
+                val path = androidx.compose.ui.graphics.Path()
+                path.moveTo(xOf(from), plotBottom)
+                var t1 = from
+                while (t1 < to) { path.lineTo(xOf(t1), plotBottom - (rate(t1) / peakRate).toFloat() * maxH); t1 += stepMs }
+                path.lineTo(xOf(to), plotBottom - (rate(to) / peakRate).toFloat() * maxH)
+                path.lineTo(xOf(to), plotBottom)
+                path.close()
+                drawPath(path, markers[selectedMarker].color.copy(alpha = 0.16f))
             }
 
             val radius = 2.5.dp.toPx()

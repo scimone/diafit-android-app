@@ -87,8 +87,8 @@ enum class StatsMetric(
 
 /** The cards of each page, in order: glucose first, then meals, insulin, sleep, heart rate, calories burned, then the rest. */
 object StatsCards {
-    /** Day page: one card per group (heart rate and sleep fold their parts in). */
-    enum class DayCard { GLUCOSE, MEALS, BOLUS, BASAL, SLEEP, HEART_RATE, CALORIES, STEPS, ACTIVITY }
+    /** Day page: one card per group (insulin = bolus + basal; activity = steps, active time, calories, heart rate). */
+    enum class DayCard { GLUCOSE, MEALS, INSULIN, ACTIVITY, SLEEP }
 
     val day = DayCard.entries
 

@@ -3,40 +3,40 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-  <!-- pump, tube, plaster and needle -->
+  <!-- pump with window and buttons, looping tube, round patch with its needle -->
   <path
-      android:pathData="M4.5 3H9.5A1.5 1.5 0 0 1 11 4.5V9.5A1.5 1.5 0 0 1 9.5 11H4.5A1.5 1.5 0 0 1 3 9.5V4.5A1.5 1.5 0 0 1 4.5 3Z"
+      android:pathData="M4 9.5H9A1.5 1.5 0 0 1 10.5 11V19A1.5 1.5 0 0 1 9 20.5H4A1.5 1.5 0 0 1 2.5 19V11A1.5 1.5 0 0 1 4 9.5Z"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
-      android:strokeWidth="1.8"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M5.5 6H8.5"
+      android:pathData="M4.8 12.2H7.2V17.8H4.8Z"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
-      android:strokeWidth="1.8"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M7 11V14C7 16.5 12 15.5 16.5 15.5"
+      android:pathData="M9.2 12.5V12.5M9.2 15.2V15.2M9.2 17.9V17.9"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
-      android:strokeWidth="1.8"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M13 14.5H21A1 1 0 0 1 22 15.5V16.5A1 1 0 0 1 21 17.5H13A1 1 0 0 1 12 16.5V15.5A1 1 0 0 1 13 14.5Z"
+      android:pathData="M6.5 9.5V7A3.35 3.35 0 0 1 13.2 7V16A2.4 2.4 0 0 0 18 16V6.5"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
-      android:strokeWidth="1.8"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M16.5 17.5V21.5"
+      android:pathData="M18 2.7A3.8 3.8 0 0 1 18 10.3A3.8 3.8 0 0 1 18 2.7Z"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
-      android:strokeWidth="1.8"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
 </vector>

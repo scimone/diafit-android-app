@@ -18,6 +18,9 @@ private fun typicalInterval(samples: List<GlucoseSample>): Long {
 /** Out-of-range stretches shorter than this are noise, not an episode worth listing. */
 const val MIN_EPISODE_MS = 15 * 60_000L
 
+/** Two lows (or two highs) with a break of at most this long between them are one episode. */
+const val EPISODE_MERGE_GAP_MS = 15 * 60_000L
+
 /** One CGM value, reduced to what the statistics need. */
 data class GlucoseSample(val timeUtc: Long, val mgdl: Int)
 
@@ -108,16 +111,14 @@ data class DayGlucoseStats(
                 val start = run.first().timeUtc
                 // The episode lasts until the last out-of-range reading's own time slot ends.
                 val end = run.last().timeUtc + interval
-                if (end - start >= MIN_EPISODE_MS) {
-                    val extreme = if (runIsLow) run.minOf { it.mgdl } else run.maxOf { it.mgdl }
-                    result += GlucoseEpisode(
-                        isLow = runIsLow,
-                        startUtc = start,
-                        endUtc = end,
-                        extremeMgdl = extreme,
-                        isSevere = if (runIsLow) extreme < t.veryLow else extreme > t.veryHigh
-                    )
-                }
+                val extreme = if (runIsLow) run.minOf { it.mgdl } else run.maxOf { it.mgdl }
+                result += GlucoseEpisode(
+                    isLow = runIsLow,
+                    startUtc = start,
+                    endUtc = end,
+                    extremeMgdl = extreme,
+                    isSevere = if (runIsLow) extreme < t.veryLow else extreme > t.veryHigh
+                )
                 run = mutableListOf()
             }
 
@@ -133,7 +134,23 @@ data class DayGlucoseStats(
                 }
             }
             close()
-            return result
+            return mergeEpisodes(result).filter { it.durationMs >= MIN_EPISODE_MS }
+        }
+
+        /** Joins neighbouring episodes of the same kind that are at most [EPISODE_MERGE_GAP_MS] apart. */
+        private fun mergeEpisodes(raw: List<GlucoseEpisode>): List<GlucoseEpisode> {
+            val merged = mutableListOf<GlucoseEpisode>()
+            raw.forEach { e ->
+                val last = merged.lastOrNull()
+                if (last != null && last.isLow == e.isLow && e.startUtc - last.endUtc <= EPISODE_MERGE_GAP_MS) {
+                    merged[merged.lastIndex] = last.copy(
+                        endUtc = maxOf(last.endUtc, e.endUtc),
+                        extremeMgdl = if (e.isLow) minOf(last.extremeMgdl, e.extremeMgdl) else maxOf(last.extremeMgdl, e.extremeMgdl),
+                        isSevere = last.isSevere || e.isSevere
+                    )
+                } else merged += e
+            }
+            return merged
         }
     }
 }

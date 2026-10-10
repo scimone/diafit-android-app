@@ -38,6 +38,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -330,21 +331,11 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.dayCardItems(day: St
 
 private fun hasDayData(card: StatsCards.DayCard, day: StatsDay): Boolean = when (card) {
     StatsCards.DayCard.GLUCOSE -> day.glucose != null
-    StatsCards.DayCard.BOLUS -> day.bolusUnits != null
-    StatsCards.DayCard.BASAL -> day.basalUnits != null
+    StatsCards.DayCard.INSULIN -> day.bolusUnits != null || day.basalUnits != null
     StatsCards.DayCard.MEALS -> day.carbs != null
-    StatsCards.DayCard.CALORIES -> day.totalKcal != null
-    StatsCards.DayCard.STEPS -> day.steps != null
-    StatsCards.DayCard.ACTIVITY -> day.activeMinutes != null
-    StatsCards.DayCard.HEART_RATE -> day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
+    StatsCards.DayCard.ACTIVITY ->
+        day.steps != null || day.activeMinutes != null || day.totalKcal != null || day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
     StatsCards.DayCard.SLEEP -> day.sleep?.let { it.asleepMs > 0 } == true
-}
-
-/** A one-figure day card: tile, name and the day's value. */
-@Composable
-private fun SimpleDayCard(metric: StatsMetric, title: String, subtitle: String?, value: Double) {
-    val f = metric.format(value)
-    StatsSurface { CardHeader(metric, title, subtitle, Modifier.padding(12.dp)) { FigureBlock(f.value, f.unit, metric.accent()) } }
 }
 
 @Composable
@@ -358,8 +349,7 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
                 GlucoseDayContent(g)
             }
         }
-        StatsCards.DayCard.BOLUS -> SimpleDayCard(StatsMetric.BOLUS, "Bolus insulin", null, day.bolusUnits!!)
-        StatsCards.DayCard.BASAL -> SimpleDayCard(StatsMetric.BASAL, "Basal insulin", null, day.basalUnits!!)
+        StatsCards.DayCard.INSULIN -> InsulinDayCard(day)
         StatsCards.DayCard.MEALS -> StatsSurface {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CardHeader(StatsMetric.CARBS, "Meals", null) { FigureBlock("${day.carbs!!.roundToInt()}", "g carbs", StatsMetric.CARBS.accent()) }
@@ -370,24 +360,7 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
                 }
             }
         }
-        StatsCards.DayCard.CALORIES -> SimpleDayCard(
-            StatsMetric.CALORIES, "Calories burned",
-            day.activeKcal?.let { "Active ${it.roundToInt()} · Resting ${(day.totalKcal!! - it).roundToInt()}" },
-            day.totalKcal!!
-        )
-        StatsCards.DayCard.STEPS -> SimpleDayCard(StatsMetric.STEPS, "Steps", null, day.steps!!.toDouble())
-        StatsCards.DayCard.ACTIVITY -> SimpleDayCard(StatsMetric.ACTIVITY, "Activity", null, day.activeMinutes!!)
-        StatsCards.DayCard.HEART_RATE -> StatsSurface {
-            val accent = StatsMetric.HEART_RATE.accent()
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.HEART_RATE, "Heart rate", null)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Resting", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("Average", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("Variability", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, Modifier.weight(1f))
-                }
-            }
-        }
+        StatsCards.DayCard.ACTIVITY -> ActivityDayCard(day)
         StatsCards.DayCard.SLEEP -> StatsSurface {
             val night = day.sleep!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -395,6 +368,65 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
                     FigureBlock(formatDurationHM(night.asleepMs / 3_600_000.0), "asleep", SleepLight)
                 }
                 SleepStages(night)
+            }
+        }
+    }
+}
+
+/** Total daily insulin as the headline; the bar and legend show how much of it was basal vs bolus. */
+@Composable
+private fun InsulinDayCard(day: StatsDay) {
+    val bolus = day.bolusUnits ?: 0.0
+    val basal = day.basalUnits ?: 0.0
+    val total = bolus + basal
+    val bolusColor = StatsMetric.BOLUS.accent()
+    val basalColor = StatsMetric.BASAL.accent()
+    StatsSurface {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CardHeader(StatsMetric.BOLUS, "Insulin", "Total daily dose") {
+                val f = StatsMetric.BOLUS.format(total)
+                FigureBlock(f.value, f.unit, MaterialTheme.colorScheme.onSurface)
+            }
+            if (total > 0 && day.bolusUnits != null && day.basalUnits != null) {
+                SegmentedBar(listOf((basal / total).toFloat() to basalColor, (bolus / total).toFloat() to bolusColor), height = 14.dp)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                day.basalUnits?.let {
+                    val f = StatsMetric.BASAL.format(it)
+                    LabeledValue(if (total > 0) "Basal · ${(it / total * 100).roundToInt()}%" else "Basal", f.value, f.unit, basalColor, Modifier.weight(1f))
+                }
+                day.bolusUnits?.let {
+                    val f = StatsMetric.BOLUS.format(it)
+                    LabeledValue(if (total > 0) "Bolus · ${(it / total * 100).roundToInt()}%" else "Bolus", f.value, f.unit, bolusColor, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/** Movement and body load in one card: steps lead, then active time and calories; heart rate sits under a divider. */
+@Composable
+private fun ActivityDayCard(day: StatsDay) {
+    val accent = StatsMetric.ACTIVITY.accent()
+    val hasHeart = day.restingBpm != null || day.avgBpm != null || day.hrvMs != null
+    StatsSurface {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CardHeader(StatsMetric.ACTIVITY, "Activity", day.activeKcal?.let { "Active ${it.roundToInt()} kcal · Resting ${((day.totalKcal ?: it) - it).roundToInt()} kcal" }) {
+                day.steps?.let { FigureBlock(StatsMetric.STEPS.format(it.toDouble()).value, "steps", accent) }
+            }
+            if (day.activeMinutes != null || day.totalKcal != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    day.activeMinutes?.let { val f = StatsMetric.ACTIVITY.format(it); LabeledValue("Active time", f.value, f.unit, accent, Modifier.weight(1f)) }
+                    day.totalKcal?.let { val f = StatsMetric.CALORIES.format(it); LabeledValue("Calories burned", f.value, f.unit, accent, Modifier.weight(1f)) }
+                }
+            }
+            if (hasHeart) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledValue("Resting HR", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("Average HR", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
+                    LabeledValue("HRV", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, Modifier.weight(1f))
+                }
             }
         }
     }
