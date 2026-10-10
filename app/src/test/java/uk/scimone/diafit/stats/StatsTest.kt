@@ -35,6 +35,16 @@ class StatsTest {
         assertEquals(LocalDate.of(2026, 1, 1), y.first)
     }
 
+    @Test fun datePickerOffsets() {
+        assertEquals(0, StatsWindow.offsetOf(StatsPeriod.DAY, today, today))
+        assertEquals(-3, StatsWindow.offsetOf(StatsPeriod.DAY, today, today.minusDays(3)))
+        assertEquals(0, StatsWindow.offsetOf(StatsPeriod.DAY, today, today.plusDays(3)))
+        assertEquals(-1, StatsWindow.offsetOf(StatsPeriod.WEEK, today, LocalDate.of(2026, 10, 4))) // the Sunday before this week
+        assertEquals(0, StatsWindow.offsetOf(StatsPeriod.WEEK, today, LocalDate.of(2026, 10, 5)))
+        assertEquals(-2, StatsWindow.offsetOf(StatsPeriod.MONTH, today, LocalDate.of(2026, 8, 31)))
+        assertEquals(-1, StatsWindow.offsetOf(StatsPeriod.YEAR, today, LocalDate.of(2025, 12, 31)))
+    }
+
     @Test fun dayWindowLabels() {
         assertEquals("Today", StatsWindow.of(StatsPeriod.DAY, today).label(today))
         assertEquals("Yesterday", StatsWindow.of(StatsPeriod.DAY, today, -1).label(today))
@@ -59,9 +69,9 @@ class StatsTest {
         assertEquals(listOf(10.0), StatsMetric.GLUCOSE_BELOW.segments(day))
         assertEquals(listOf(70.0), StatsMetric.GLUCOSE_IN_RANGE.segments(day))
         assertEquals(listOf(20.0), StatsMetric.GLUCOSE_ABOVE.segments(day))
-        assertEquals(listOf(120.0), StatsMetric.GLUCOSE_MEAN.segments(day))
+        assertEquals(listOf(g.cvPercent), StatsMetric.GLUCOSE_CV.segments(day))
         assertEquals(3.31 + 0.02392 * 120, StatsMetric.GLUCOSE_A1C.primary(day)!!, 1e-9)
-        assertNull(StatsMetric.GLUCOSE_MEAN.segments(StatsDay(today)))
+        assertNull(StatsMetric.GLUCOSE_CV.segments(StatsDay(today)))
     }
 
     @Test fun a1cOnlyOnMonthAndYear() {

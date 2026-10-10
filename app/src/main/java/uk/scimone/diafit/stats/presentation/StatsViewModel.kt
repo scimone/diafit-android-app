@@ -64,6 +64,15 @@ class StatsViewModel(
         load()
     }
 
+    /** Jumps to the day / week / month / year containing [date] (a later date stops at the current one). */
+    fun goTo(date: LocalDate) {
+        val s = _state.value
+        val offset = StatsWindow.offsetOf(s.period, LocalDate.now(), date)
+        if (offset == s.offset) return
+        _state.update { it.copy(offset = offset, window = StatsWindow.of(s.period, LocalDate.now(), offset), isLoading = true) }
+        load()
+    }
+
     fun older() = page(-1)
     fun newer() = page(+1)
 

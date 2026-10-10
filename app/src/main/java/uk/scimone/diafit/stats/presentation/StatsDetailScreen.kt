@@ -63,7 +63,7 @@ fun StatsDetailScreen(userId: Int, metric: StatsMetric, period: StatsPeriod, off
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            PagerRow(state.window.label(LocalDate.now()), state.canGoNewer, viewModel::older, viewModel::newer)
+            PagerRow(state.window.label(LocalDate.now()), state.canGoNewer, state.window.first, viewModel::older, viewModel::newer, viewModel::goTo)
             if (state.isLoading) {
                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 return@Column

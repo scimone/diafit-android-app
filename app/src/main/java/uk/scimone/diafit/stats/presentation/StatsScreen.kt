@@ -24,6 +24,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,9 +105,11 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
             period = state.period,
             label = state.window.label(LocalDate.now()),
             canGoNewer = state.canGoNewer,
+            current = state.window.first,
             onPeriod = viewModel::setPeriod,
             onOlder = viewModel::older,
-            onNewer = viewModel::newer
+            onNewer = viewModel::newer,
+            onPick = viewModel::goTo
         )
         Box(Modifier.fillMaxSize()) {
             LazyColumn(
@@ -137,9 +149,11 @@ private fun PeriodHeader(
     period: StatsPeriod,
     label: String,
     canGoNewer: Boolean,
+    current: LocalDate,
     onPeriod: (StatsPeriod) -> Unit,
     onOlder: () -> Unit,
-    onNewer: () -> Unit
+    onNewer: () -> Unit,
+    onPick: (LocalDate) -> Unit
 ) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -152,17 +166,46 @@ private fun PeriodHeader(
                 )
             }
         }
-        PagerRow(label, canGoNewer, onOlder, onNewer)
+        PagerRow(label, canGoNewer, current, onOlder, onNewer, onPick)
     }
 }
 
-/** ‹ label › : the previous and next period around the title. */
+/** ‹ label › : the previous and next period around the title; tapping the title opens a date picker. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PagerRow(label: String, canGoNewer: Boolean, onOlder: () -> Unit, onNewer: () -> Unit) {
+internal fun PagerRow(label: String, canGoNewer: Boolean, current: LocalDate, onOlder: () -> Unit, onNewer: () -> Unit, onPick: (LocalDate) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Earlier") }
-        Text(label, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(
+            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { picking = true }.padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Filled.CalendarMonth, "Pick a date", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        }
         IconButton(onClick = onNewer, enabled = canGoNewer) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Later") }
+    }
+    if (picking) {
+        val zone = java.time.ZoneId.systemDefault()
+        val todayMillis = LocalDate.now().atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = current.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayMillis
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate()) }
+                    picking = false
+                }) { Text("Go") }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+        ) { DatePicker(state = state) }
     }
 }
 

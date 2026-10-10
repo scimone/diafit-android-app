@@ -15,15 +15,13 @@ enum class StatsMetric(
     GLUCOSE_IN_RANGE("In range"),
     GLUCOSE_BELOW("Below range"),
     GLUCOSE_ABOVE("Above range"),
-    GLUCOSE_MEAN("Mean glucose"),
-    GLUCOSE_SD("Glucose std dev"),
     GLUCOSE_CV("Glucose variability (CV)"),
     GLUCOSE_A1C("A1c (GMI)", periods = setOf(StatsPeriod.MONTH, StatsPeriod.YEAR)),
-    BOLUS("Bolus insulin", additive = true),
-    BASAL("Basal insulin", additive = true),
     CARBS("Carbs", additive = true),
     PROTEIN("Protein", additive = true),
     FAT("Fat", additive = true),
+    BOLUS("Bolus insulin", additive = true),
+    BASAL("Basal insulin", additive = true),
     CALORIES("Calories burned", additive = true),
     ACTIVE_CALORIES("Active calories", additive = true),
     STEPS("Steps", additive = true),
@@ -43,8 +41,6 @@ enum class StatsMetric(
             GLUCOSE_IN_RANGE -> day.glucose?.let { it.inRangeShare * 100 }
             GLUCOSE_BELOW -> day.glucose?.let { it.belowShare * 100 }
             GLUCOSE_ABOVE -> day.glucose?.let { it.aboveShare * 100 }
-            GLUCOSE_MEAN -> day.glucose?.meanMgdl
-            GLUCOSE_SD -> day.glucose?.sdMgdl
             GLUCOSE_CV -> day.glucose?.cvPercent
             GLUCOSE_A1C -> day.glucose?.gmi
             BOLUS -> day.bolusUnits
@@ -89,10 +85,10 @@ enum class StatsMetric(
     private val Long.hours: Double get() = this / 3_600_000.0
 }
 
-/** The cards of each page, in order: glucose first, then insulin, meals, calories burned, then the rest. */
+/** The cards of each page, in order: glucose first, then meals, insulin, calories burned, then the rest. */
 object StatsCards {
     /** Day page: one card per group (heart rate and sleep fold their parts in). */
-    enum class DayCard { GLUCOSE, BOLUS, BASAL, MEALS, CALORIES, STEPS, ACTIVITY, HEART_RATE, SLEEP }
+    enum class DayCard { GLUCOSE, MEALS, BOLUS, BASAL, CALORIES, STEPS, ACTIVITY, HEART_RATE, SLEEP }
 
     val day = DayCard.entries
 

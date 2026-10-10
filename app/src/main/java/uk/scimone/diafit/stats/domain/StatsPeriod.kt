@@ -79,6 +79,18 @@ data class StatsWindow(val period: StatsPeriod, val first: LocalDate, val lastEx
             StatsPeriod.YEAR -> today.withDayOfYear(1).plusYears(offset.toLong()).let { StatsWindow(period, it, it.plusYears(1)) }
         }
 
+        /** How many pages [date] lies from the page containing [today] (0 for today and for any future date). */
+        fun offsetOf(period: StatsPeriod, today: LocalDate, date: LocalDate): Int {
+            val target = of(period, date).first
+            val current = of(period, today).first
+            return when (period) {
+                StatsPeriod.DAY -> java.time.temporal.ChronoUnit.DAYS.between(current, target)
+                StatsPeriod.WEEK -> java.time.temporal.ChronoUnit.WEEKS.between(current, target)
+                StatsPeriod.MONTH -> java.time.temporal.ChronoUnit.MONTHS.between(current, target)
+                StatsPeriod.YEAR -> java.time.temporal.ChronoUnit.YEARS.between(current, target)
+            }.toInt().coerceAtMost(0)
+        }
+
         private val dayFormat = DateTimeFormatter.ofPattern("EEE d MMM")
         private val monthFormat = DateTimeFormatter.ofPattern("MMMM yyyy")
         private val shortMonthFormat = DateTimeFormatter.ofPattern("MMM")

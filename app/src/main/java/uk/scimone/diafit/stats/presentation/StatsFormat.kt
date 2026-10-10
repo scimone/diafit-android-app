@@ -6,7 +6,6 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Favorite
@@ -43,7 +42,7 @@ fun StatsMetric.accent(): Color = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE -> InRange
     StatsMetric.GLUCOSE_BELOW -> BelowRange
     StatsMetric.GLUCOSE_ABOVE -> AboveRange
-    StatsMetric.GLUCOSE_MEAN, StatsMetric.GLUCOSE_SD, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C -> GlucoseNeutral
+    StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C -> GlucoseNeutral
     StatsMetric.BOLUS -> Bolus
     StatsMetric.BASAL -> Basal
     StatsMetric.CARBS -> Carbs
@@ -85,7 +84,6 @@ fun StatsMetric.format(value: Double): Formatted = when (this) {
     StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Formatted(value.roundToInt().toString(), "g")
     StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV ->
         Formatted(value.roundToInt().toString(), "%")
-    StatsMetric.GLUCOSE_MEAN, StatsMetric.GLUCOSE_SD -> Formatted(value.roundToInt().toString(), "mg/dL")
     StatsMetric.GLUCOSE_A1C -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "%")
     StatsMetric.BOLUS, StatsMetric.BASAL -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "U")
 }
@@ -104,10 +102,9 @@ fun changePercent(current: Double?, previous: Double?): Int? =
     if (current == null || previous == null || previous == 0.0) null else ((current - previous) / previous * 100).roundToInt()
 
 fun StatsMetric.icon(): ImageVector = when (this) {
-    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_MEAN -> Icons.Filled.WaterDrop
+    StatsMetric.GLUCOSE_IN_RANGE -> Icons.Filled.WaterDrop
     StatsMetric.GLUCOSE_BELOW -> Icons.Filled.ArrowDownward
     StatsMetric.GLUCOSE_ABOVE -> Icons.Filled.ArrowUpward
-    StatsMetric.GLUCOSE_SD -> Icons.Filled.ShowChart
     StatsMetric.GLUCOSE_CV -> Icons.Filled.Percent
     StatsMetric.GLUCOSE_A1C -> Icons.Filled.Science
     StatsMetric.BOLUS, StatsMetric.BASAL -> Icons.Filled.Vaccines

@@ -50,6 +50,14 @@ class StatsDetailViewModel(
 
     init { load() }
 
+    fun goTo(date: LocalDate) {
+        val s = _state.value
+        val offset = StatsWindow.offsetOf(s.period, LocalDate.now(), date)
+        if (offset == s.offset) return
+        _state.update { it.copy(offset = offset, window = StatsWindow.of(s.period, LocalDate.now(), offset), isLoading = true, trend = emptyList()) }
+        load()
+    }
+
     fun older() = page(-1)
     fun newer() = page(+1)
 
