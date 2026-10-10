@@ -61,7 +61,7 @@ import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_POINT
 import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_STRETCH
 import uk.scimone.diafit.journal.presentation.components.JOURNAL_GRAPH_WINDOW_MIN
-import uk.scimone.diafit.journal.presentation.components.mealPeakText
+import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
 import uk.scimone.diafit.journal.presentation.model.MealEntityUi
 import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
@@ -216,7 +216,6 @@ fun JournalScreen(
                     upper = uiState.target.upperBound,
                     markers = markers,
                     selectedMarker = selectedIndex,
-                    label = (selectedEntry as? MealEntityUi)?.let { mealPeakText(it, uiState.target) },
                     onDragStart = {
                         graphDriving = true
                         scope.launch { center.stop() }
@@ -310,7 +309,13 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
     is GlucoseEpisodeUi -> GraphMarker(episode.startUtc, episode.endUtc, if (episode.isLow) BelowRange else AboveRange)
     is SleepEntryUi -> GraphMarker(startUtc, timeUtc, kind.accent)
     is ExerciseEntryUi -> GraphMarker(timeUtc, endUtc, kind.accent)
-    is MealEntityUi -> GraphMarker(timeUtc, null, kind.accent, afterMs = endTimeUtc + impactType.durationMinutes * 60_000L)
+    is MealEntityUi -> GraphMarker(
+        timeUtc, null, kind.accent,
+        afterMs = endTimeUtc + impactType.durationMinutes * 60_000L,
+        extraColor = Bolus.takeIf { (insulinUnits ?: 0.0) > 0.0 },
+        peakMs = peakTimeUtc?.takeIf { peakMgdl != null && (startMgdl == null || peakMgdl > startMgdl) },
+        peakMgdl = peakMgdl
+    )
     else -> GraphMarker(timeUtc, null, kind.accent)
 }
 

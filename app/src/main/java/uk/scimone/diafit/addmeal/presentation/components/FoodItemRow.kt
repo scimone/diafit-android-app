@@ -45,6 +45,8 @@ fun FoodItemRow(
     onWeightChange: (Double) -> Unit,
     onMacrosChange: (carbs: Double?, protein: Double?, fat: Double?) -> Unit,
     onRemove: () -> Unit,
+    /** Removing is offered only while another food would remain. */
+    canRemove: Boolean,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -96,6 +98,11 @@ fun FoodItemRow(
             }
             Spacer(Modifier.width(8.dp))
             WeightField(component.weightG, onWeightChange)
+            if (canRemove) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.DeleteOutline, "Remove ${component.name}", tint = muted, modifier = Modifier.size(20.dp))
+                }
+            }
             IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Filled.ExpandMore, if (expanded) "Hide nutrients" else "Edit nutrients", tint = muted, modifier = Modifier.rotate(rotation))
             }
@@ -116,9 +123,6 @@ fun FoodItemRow(
                         color = muted,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Outlined.DeleteOutline, "Remove ${component.name}", tint = muted, modifier = Modifier.size(20.dp))
-                    }
                 }
                 when {
                     uncertain -> Text(

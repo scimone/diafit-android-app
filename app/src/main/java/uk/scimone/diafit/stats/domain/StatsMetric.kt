@@ -22,18 +22,18 @@ enum class StatsMetric(
     FAT("Fat", additive = true),
     BOLUS("Bolus insulin", additive = true),
     BASAL("Basal insulin", additive = true),
-    CALORIES("Calories burned", additive = true),
-    ACTIVE_CALORIES("Active calories", additive = true),
-    STEPS("Steps", additive = true),
-    ACTIVITY("Active time", additive = true),
-    HEART_RATE("Heart rate"),
-    RESTING_HEART_RATE("Resting heart rate"),
-    HEART_RATE_VARIABILITY("Heart rate variability"),
     SLEEP("Sleep"),
     DEEP_SLEEP("Deep sleep"),
     REM_SLEEP("REM sleep"),
     LIGHT_SLEEP("Light sleep"),
-    SLEEP_SCHEDULE("Sleep schedule");
+    SLEEP_SCHEDULE("Sleep schedule"),
+    HEART_RATE("Heart rate"),
+    RESTING_HEART_RATE("Resting heart rate"),
+    HEART_RATE_VARIABILITY("Heart rate variability"),
+    CALORIES("Calories burned", additive = true),
+    ACTIVE_CALORIES("Active calories", additive = true),
+    STEPS("Steps", additive = true),
+    ACTIVITY("Active time", additive = true);
 
     /** The values of one day's bar, or null when the day has no data for this metric. */
     fun segments(day: StatsDay): List<Double>? {
@@ -85,10 +85,10 @@ enum class StatsMetric(
     private val Long.hours: Double get() = this / 3_600_000.0
 }
 
-/** The cards of each page, in order: glucose first, then meals, insulin, calories burned, then the rest. */
+/** The cards of each page, in order: glucose first, then meals, insulin, sleep, heart rate, calories burned, then the rest. */
 object StatsCards {
     /** Day page: one card per group (heart rate and sleep fold their parts in). */
-    enum class DayCard { GLUCOSE, MEALS, BOLUS, BASAL, CALORIES, STEPS, ACTIVITY, HEART_RATE, SLEEP }
+    enum class DayCard { GLUCOSE, MEALS, BOLUS, BASAL, SLEEP, HEART_RATE, CALORIES, STEPS, ACTIVITY }
 
     val day = DayCard.entries
 

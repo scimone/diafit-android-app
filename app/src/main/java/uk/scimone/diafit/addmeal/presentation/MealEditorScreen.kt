@@ -565,7 +565,8 @@ private fun FoodsCard(
                         component = component,
                         onWeightChange = { onWeightChange(index, it) },
                         onMacrosChange = { c, p, f -> onMacrosChange(index, c, p, f) },
-                        onRemove = { onRemove(index) }
+                        onRemove = { onRemove(index) },
+                        canRemove = state.components.size > 1
                     )
                 }
             }

@@ -316,8 +316,7 @@ class AddMealViewModel(
         }
     }
 
-    fun onComponentRemoved(index: Int) = updateComponents { list -> list.filterIndexed { i, _ -> i != index } }
-
+    fun onComponentRemoved(index: Int) = updateComponents { list -> if (list.size <= 1) list else list.filterIndexed { i, _ -> i != index } }
     /** Edits to the components re-sum the nutrition totals (overwriting manually typed ones). */
     private fun updateComponents(change: (List<MealComponent>) -> List<MealComponent>) {
         _uiState.update {

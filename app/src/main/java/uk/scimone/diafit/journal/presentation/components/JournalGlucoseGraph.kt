@@ -28,6 +28,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.journal.presentation.DayGlucose
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -48,7 +49,19 @@ private const val DAY_MS = 24 * 60 * MIN_MS
  * A journal entry on the graph: a point in time (meal, insulin, device event) when [endMs] is null, else the
  * whole stretch it covers (low/high, sleep, workout).
  */
-class GraphMarker(val startMs: Long, val endMs: Long?, val color: Color, val afterMs: Long? = null)
+class GraphMarker(
+    val startMs: Long,
+    val endMs: Long?,
+    val color: Color,
+    val afterMs: Long? = null,
+    /** A second colour for an entry that stands for two things (a meal with insulin): the dot is split in two. */
+    val extraColor: Color? = null,
+    /** The glucose peak after a meal, marked on the graph with its value and time. */
+    val peakMs: Long? = null,
+    val peakMgdl: Int? = null
+) {
+    val colors: List<Color> get() = listOfNotNull(color, extraColor)
+}
 
 /**
  * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
@@ -66,7 +79,6 @@ fun JournalGlucoseGraph(
     upper: Int,
     markers: List<GraphMarker>,
     selectedMarker: Int,
-    label: AnnotatedString?,
     onDragStart: () -> Unit,
     onDrag: (deltaMinutes: Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -131,6 +143,14 @@ fun JournalGlucoseGraph(
 
             drawRect(band, Offset(0f, yOf(upper)), androidx.compose.ui.geometry.Size(size.width, yOf(lower) - yOf(upper)))
 
+            // The selected meal's glucose peak: its time goes at the bottom, replacing any axis label it would overlap.
+            val peakMarker = markers.getOrNull(selectedMarker)?.takeIf { it.peakMs != null && it.peakMgdl != null && it.peakMs in startMs..endMs }
+            val peakTime = peakMarker?.let {
+                val t = measurer.measure(java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(it.peakMs!!)), labelStyle.copy(fontWeight = FontWeight.Bold, color = it.color))
+                val left = (xOf(it.peakMs!!) - t.size.width / 2f).coerceIn(0f, size.width - t.size.width)
+                t to left
+            }
+
             // Hour gridlines with small clock labels.
             val hourMs = 60 * MIN_MS
             val offset = java.util.TimeZone.getDefault().getOffset(startMs)
@@ -141,7 +161,9 @@ fun JournalGlucoseGraph(
                 val hour = (Math.floorMod(t + offset, DAY_MS) / hourMs).toInt()
                 if (hour % 2 == 0) {
                     val text = measurer.measure("%02d:00".format(hour), labelStyle)
-                    drawText(text, topLeft = Offset(x - text.size.width / 2f, size.height - padBottom + 2.dp.toPx()))
+                    val left = x - text.size.width / 2f
+                    val clashes = peakTime?.let { (pt, pl) -> left < pl + pt.size.width + 4.dp.toPx() && left + text.size.width + 4.dp.toPx() > pl } == true
+                    if (!clashes) drawText(text, topLeft = Offset(left, size.height - padBottom + 2.dp.toPx()))
                 }
                 t += hourMs
             }
@@ -198,7 +220,7 @@ fun JournalGlucoseGraph(
                 val r = if (picked) 6.dp.toPx() else 4.dp.toPx()
                 if (picked) drawLine(group.first { it.index == selectedMarker }.value.color.copy(alpha = 0.9f), Offset(x, plotTop), Offset(x, plotBottom), strokeWidth = 2.dp.toPx())
                 drawCircle(ringColor, r + 1.5.dp.toPx(), Offset(x, plotTop))
-                val colors = group.map { it.value.color }.distinct()
+                val colors = group.flatMap { it.value.colors }.distinct()
                 val sliceW = 2 * r / colors.size
                 colors.forEachIndexed { k, c ->
                     clipRect(left = x - r + sliceW * k, top = plotTop - r, right = x - r + sliceW * (k + 1), bottom = plotTop + r) {
@@ -215,22 +237,17 @@ fun JournalGlucoseGraph(
             }
             groups.filter { g -> g.none { it.index == selectedMarker } }.forEach(::drawGroup)
             groups.filter { g -> g.any { it.index == selectedMarker } }.forEach(::drawGroup)
-        }
-        if (label != null) {
-            Row(Modifier.fillMaxSize().padding(top = 6.dp)) {
-                Box(Modifier.weight(1f))
-                Box(Modifier.weight(1f), contentAlignment = Alignment.TopStart) {
-                    Text(
-                        label,
-                        Modifier
-                            .padding(start = 8.dp)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = labelColor,
-                        maxLines = 1
-                    )
-                }
+
+            if (peakMarker != null && peakTime != null) {
+                val px = xOf(peakMarker.peakMs!!)
+                val py = yOf(peakMarker.peakMgdl!!)
+                val pc = when { peakMarker.peakMgdl < lower -> BelowRange; peakMarker.peakMgdl > upper -> AboveRange; else -> InRange }
+                drawCircle(ringColor, 6.dp.toPx(), Offset(px, py))
+                drawCircle(pc, 4.5.dp.toPx(), Offset(px, py))
+                val num = measurer.measure("${peakMarker.peakMgdl}", labelStyle.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = pc))
+                val nx = if (px + 9.dp.toPx() + num.size.width > size.width) px - 9.dp.toPx() - num.size.width else px + 9.dp.toPx()
+                drawText(num, topLeft = Offset(nx, (py - num.size.height / 2f).coerceIn(0f, plotBottom - num.size.height)))
+                drawText(peakTime.first, topLeft = Offset(peakTime.second, size.height - padBottom + 2.dp.toPx()))
             }
         }
     }

@@ -38,7 +38,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-internal enum class HistoryTab(val label: String) { CHARTS("Charts"), STATS("Stats") }
 
 /**
  * A selectable time frame (1 week to 3 months) at a glance, in two views: the (sticky) glucose profile chart, and one compact
@@ -53,7 +52,6 @@ fun HistoryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val today = remember { LocalDate.now().toEpochDay() }
-    var tab by rememberSaveable { mutableStateOf(HistoryTab.CHARTS) }
     var layers by rememberSaveable(stateSaver = HistoryLayers.Saver) { mutableStateOf(HistoryLayers()) }
 
     Column(Modifier.fillMaxSize()) {
@@ -63,8 +61,6 @@ fun HistoryScreen(
             range = state.range,
             isLatest = state.page == 0,
             onRange = viewModel::setRange,
-            tab = tab,
-            onTab = { tab = it },
             weekdays = state.weekdays,
             onWeekdays = viewModel::setWeekdays,
             layers = layers,
@@ -81,7 +77,6 @@ fun HistoryScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                tab == HistoryTab.STATS -> HistoryStatsView(state, today, onOpenDay)
                 else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                     val listState = rememberLazyListState()
                     val density = LocalDensity.current
@@ -141,8 +136,6 @@ private fun PeriodHeader(
     range: HistoryRange,
     isLatest: Boolean,
     onRange: (HistoryRange) -> Unit,
-    tab: HistoryTab,
-    onTab: (HistoryTab) -> Unit,
     weekdays: Set<DayOfWeek>,
     onWeekdays: (Set<DayOfWeek>) -> Unit,
     layers: HistoryLayers,
@@ -172,12 +165,7 @@ private fun PeriodHeader(
         }
         IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
         WeekdayFilterButton(weekdays, onWeekdays)
-        if (tab == HistoryTab.CHARTS) LayersButton(layers, onLayers)
-        // View switch: shows the icon of the view it leads to.
-        FilledTonalIconButton(onClick = { onTab(if (tab == HistoryTab.CHARTS) HistoryTab.STATS else HistoryTab.CHARTS) }, Modifier.size(40.dp)) {
-            if (tab == HistoryTab.CHARTS) Icon(Icons.Outlined.BarChart, "Show statistics")
-            else Icon(Icons.AutoMirrored.Outlined.ShowChart, "Show charts")
-        }
+        LayersButton(layers, onLayers)
     }
 }
 
