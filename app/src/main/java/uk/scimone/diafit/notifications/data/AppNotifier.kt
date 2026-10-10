@@ -33,6 +33,10 @@ class AppNotifier(private val context: Context, private val dao: NotificationDao
         return true
     }
 
+    /** Pushes to the phone only, without a bell entry (for things that have their own page and badge). */
+    fun pushOnly(channel: NotificationChannelSpec, key: String, title: String, text: String, link: String) =
+        push(channel, key.hashCode(), title, text, link)
+
     /** Takes the push for [key] off the phone's notification shade, if it's still there. */
     fun cancel(key: String) = NotificationManagerCompat.from(context).cancel(key.hashCode())
 

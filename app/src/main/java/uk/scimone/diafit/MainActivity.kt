@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
     private val pumpEventRepair: uk.scimone.diafit.core.data.repository.PumpEventRepair by inject()
     private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler by inject()
     private val deviceExpiryScheduler: uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler by inject()
-    private val patternScheduler: uk.scimone.diafit.patterns.data.PatternScheduler by inject()
+    private val insightScheduler: uk.scimone.diafit.insights.data.InsightScheduler by inject()
     /** Link of a tapped push notification, consumed once the UI has opened its page. */
     private val pendingLink = mutableStateOf<String?>(null)
     private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
         nightscoutSyncScheduler.schedulePeriodic()
         nightscoutSyncScheduler.syncNow()
         deviceExpiryScheduler.checkNow()
-        patternScheduler.checkNow()
+        insightScheduler.checkNow()
         if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
             org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.backendsync.data.BackendSyncScheduler>(
                 uk.scimone.diafit.backendsync.data.BackendSyncScheduler::class.java
@@ -174,10 +174,16 @@ class MainActivity : ComponentActivity() {
                 }
                 val onMealDeleted: (Int) -> Unit = { mealId -> onMealsDeleted(listOf(mealId), "Deleted") }
                 val addCourse: (Int) -> Unit = { mealId -> overlays.add(Overlay.MealEditor(mealId = null, addToMealId = mealId)) }
-                // What a notification opens: the Patterns page with its patterns highlighted, else the Devices page.
+                // What a notification opens: an insight, the Insights list, else the Devices page.
                 val openLink: (String?) -> Unit = { link ->
-                    val patterns = uk.scimone.diafit.notifications.domain.parsePatternsLink(link)
-                    overlays.add(if (patterns != null) Overlay.Patterns(patterns) else Overlay.Devices)
+                    val insightId = uk.scimone.diafit.notifications.domain.parseInsightLink(link)
+                    overlays.add(
+                        when {
+                            insightId != null -> Overlay.InsightDetail(insightId)
+                            uk.scimone.diafit.notifications.domain.isInsightsListLink(link) -> Overlay.Insights
+                            else -> Overlay.Devices
+                        }
+                    )
                 }
                 val link by pendingLink
                 LaunchedEffect(link) {
@@ -205,6 +211,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             actions = {
+                                val insightsViewModel: uk.scimone.diafit.insights.presentation.InsightsViewModel = org.koin.androidx.compose.koinViewModel()
+                                val unreadInsights by insightsViewModel.unreadCount.collectAsState()
                                 val notificationsViewModel: uk.scimone.diafit.notifications.presentation.NotificationsViewModel = org.koin.androidx.compose.koinViewModel()
                                 val unread by notificationsViewModel.unreadCount.collectAsState()
                                 IconButton(onClick = { overlays.add(Overlay.Notifications) }) {
@@ -215,10 +223,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 IconButton(onClick = { overflowMenuExpanded = true }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.MoreVert,
-                                        contentDescription = "More options"
-                                    )
+                                    BadgedBox(badge = {
+                                        if (unreadInsights > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.MoreVert,
+                                            contentDescription = "More options"
+                                        )
+                                    }
                                 }
                                 DropdownMenu(
                                     expanded = overflowMenuExpanded,
@@ -233,11 +245,16 @@ class MainActivity : ComponentActivity() {
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Patterns") },
-                                        leadingIcon = { Icon(imageVector = Icons.Filled.Insights, contentDescription = null) },
+                                        text = { Text("Insights") },
+                                        leadingIcon = {
+                                            BadgedBox(badge = { if (unreadInsights > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935)) }) {
+                                                Icon(imageVector = Icons.Filled.Insights, contentDescription = null)
+                                            }
+                                        },
+                                        trailingIcon = if (unreadInsights > 0) ({ Text("$unreadInsights new", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }) else null,
                                         onClick = {
                                             overflowMenuExpanded = false
-                                            overlays.add(Overlay.Patterns())
+                                            overlays.add(Overlay.Insights)
                                         }
                                     )
                                     DropdownMenuItem(
@@ -350,7 +367,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Insights || overlay is Overlay.InsightDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -375,9 +392,12 @@ class MainActivity : ComponentActivity() {
                                     onBack = { overlays.remove(overlay) },
                                     onOpen = { link -> overlays.remove(overlay); openLink(link) }
                                 )
-                                is Overlay.Patterns -> uk.scimone.diafit.patterns.presentation.PatternsScreen(
-                                    userId = userId,
-                                    highlighted = overlay.highlighted,
+                                is Overlay.Insights -> uk.scimone.diafit.insights.presentation.InsightsScreen(
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpen = { id -> overlays.add(Overlay.InsightDetail(id)) }
+                                )
+                                is Overlay.InsightDetail -> uk.scimone.diafit.insights.presentation.InsightDetailScreen(
+                                    id = overlay.id,
                                     onBack = { overlays.remove(overlay) }
                                 )
                                 is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
@@ -446,8 +466,9 @@ private sealed interface Overlay {
     data object Profile : Overlay
     data object Devices : Overlay
     data object Notifications : Overlay
-    /** The 14-day AGP and its patterns; [highlighted] (pattern texts) start highlighted. */
-    data class Patterns(val highlighted: List<String> = emptyList()) : Overlay
+    /** The insight cards (recurring glucose patterns with tips). */
+    data object Insights : Overlay
+    data class InsightDetail(val id: String) : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
     /** One Stats metric over a week / month / year ([offset] pages back from the current one). */

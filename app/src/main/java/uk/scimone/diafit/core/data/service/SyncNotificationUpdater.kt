@@ -58,13 +58,8 @@ class SyncNotificationUpdater(
     private val boluses: BolusRepository,
     private val meals: MealRepository,
     private val activity: ActivityRepository,
-    private val targetRange: GetTargetRangeUseCase,
-    private val notifications: uk.scimone.diafit.core.data.local.NotificationDao
+    private val targetRange: GetTargetRangeUseCase
 ) {
-    private val prefs = context.getSharedPreferences("situation_log", Context.MODE_PRIVATE)
-    private var candidate: String? = null
-    private var candidateSince = 0L
-    private var candidateSeen = 0
 
     private var scope: CoroutineScope? = null
     private var history: List<CgmEntity> = emptyList()
@@ -110,29 +105,9 @@ class SyncNotificationUpdater(
                 history = loadHistory(now), targetLow = range.lowerBound, targetHigh = range.upperBound
             )
             val situation = GlucoseSituation.classify(input)
-            logSituation(situation, now)
             situation ?: GlucoseSituation.trendFallback(input) ?: "Updated ${DateTimeFormatter.ofPattern("HH:mm").format(Instant.ofEpochMilli(latest.timestamp).atZone(ZoneId.systemDefault()))}"
         }
         NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text))
-    }
-
-    /**
-     * Adds a new situation to the in-app notification list, stamped with when it was first seen. A situation must
-     * hold for 3 consecutive checks first, so flickering between two labels doesn't fill the list. No push.
-     */
-    private suspend fun logSituation(situation: String?, now: Long) {
-        if (situation == null) { candidate = null; return }
-        if (situation != candidate) { candidate = situation; candidateSince = now; candidateSeen = 1; return }
-        candidateSeen++
-        if (candidateSeen < 3 || prefs.getString(LAST_LOGGED, null) == situation) return
-        notifications.insert(
-            uk.scimone.diafit.core.domain.model.AppNotificationEntity(
-                timestampUtc = candidateSince, title = "Glucose pattern", text = situation,
-                dedupeKey = "situation-$situation-${candidateSince / 60_000}",
-                link = uk.scimone.diafit.notifications.domain.patternsLink(emptyList())
-            )
-        )
-        prefs.edit().putString(LAST_LOGGED, situation).apply()
     }
 
     /** About 13 days of CGM thinned to one reading per 5 min, reloaded hourly (only the recurrence rules need it). */
@@ -150,7 +125,6 @@ class SyncNotificationUpdater(
         private const val TAG = "SyncNotification"
         private const val USER_ID = 1
         private const val HOUR = 3_600_000L
-        private const val LAST_LOGGED = "last_logged"
         const val CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
 
         fun build(context: Context, title: String, text: String): Notification {

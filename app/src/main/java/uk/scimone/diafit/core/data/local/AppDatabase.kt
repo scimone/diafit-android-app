@@ -20,9 +20,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class,
         HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
         uk.scimone.diafit.core.domain.model.AppNotificationEntity::class,
-        uk.scimone.diafit.core.domain.model.HealthMetricEntity::class
+        uk.scimone.diafit.core.domain.model.HealthMetricEntity::class,
+        uk.scimone.diafit.insights.data.InsightEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -38,6 +39,7 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mealDao(): MealDao
+    abstract fun insightDao(): uk.scimone.diafit.insights.data.InsightDao
     abstract fun cgmDao(): CgmDao
     abstract fun bolusDao(): BolusDao
     abstract fun pumpEventDao(): PumpEventDao
@@ -55,6 +57,20 @@ abstract class AppDatabase : RoomDatabase() {
                         "`userId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `timeUtc` INTEGER NOT NULL, `value` REAL NOT NULL)"
                 )
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_HealthMetricEntity_type_timeUtc` ON `HealthMetricEntity` (`type`, `timeUtc`)")
+            }
+        }
+
+        /** Insights (own page and badge); the glucose-pattern and situation entries leave the bell list. */
+        val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `InsightEntity` (`id` TEXT NOT NULL, `state` TEXT NOT NULL, `isRead` INTEGER NOT NULL, " +
+                        "`priority` REAL NOT NULL, `firstSeenUtc` INTEGER NOT NULL, `lastSeenUtc` INTEGER NOT NULL, " +
+                        "`missedScans` INTEGER NOT NULL, `referenceEffect` REAL NOT NULL, `notifiedAtUtc` INTEGER, " +
+                        "`payload` TEXT NOT NULL, PRIMARY KEY(`id`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_InsightEntity_state` ON `InsightEntity` (`state`)")
+                db.execSQL("DELETE FROM AppNotificationEntity WHERE link LIKE 'patterns:%' OR dedupeKey LIKE 'situation-%'")
             }
         }
 
