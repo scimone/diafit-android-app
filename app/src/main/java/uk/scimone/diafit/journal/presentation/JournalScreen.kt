@@ -39,6 +39,7 @@ import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
 import uk.scimone.diafit.ui.theme.Warning
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -57,6 +58,8 @@ import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
 import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
+import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_POINT
+import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_STRETCH
 import uk.scimone.diafit.journal.presentation.components.JOURNAL_GRAPH_WINDOW_MIN
 import uk.scimone.diafit.journal.presentation.components.mealPeakText
 import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
@@ -120,6 +123,9 @@ fun JournalScreen(
     val markers = remember(flat) { flat.entries.map { it.toGraphMarker() } }
     val selectedIndex = selected.coerceIn(0, (flat.entries.size - 1).coerceAtLeast(0))
     val selectedEntry = flat.entries.getOrNull(selectedIndex)
+    val anchorFraction by animateFloatAsState(
+        if (markers.getOrNull(selectedIndex)?.endMs != null) JOURNAL_ANCHOR_STRETCH else JOURNAL_ANCHOR_POINT, tween(220), label = "anchor"
+    )
 
     suspend fun moveCenterTo(ms: Long, animate: Boolean) {
         val target = minutesOf(ms)
@@ -203,6 +209,7 @@ fun JournalScreen(
             if (flat.entries.isNotEmpty()) {
                 JournalGlucoseGraph(
                     centerMinutes = { center.value },
+                    anchorFraction = { anchorFraction },
                     baseMs = baseMs,
                     glucose = glucose,
                     lower = uiState.target.lowerBound,
@@ -303,6 +310,7 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
     is GlucoseEpisodeUi -> GraphMarker(episode.startUtc, episode.endUtc, if (episode.isLow) BelowRange else AboveRange)
     is SleepEntryUi -> GraphMarker(startUtc, timeUtc, kind.accent)
     is ExerciseEntryUi -> GraphMarker(timeUtc, endUtc, kind.accent)
+    is MealEntityUi -> GraphMarker(timeUtc, null, kind.accent, afterMs = endTimeUtc + impactType.durationMinutes * 60_000L)
     else -> GraphMarker(timeUtc, null, kind.accent)
 }
 

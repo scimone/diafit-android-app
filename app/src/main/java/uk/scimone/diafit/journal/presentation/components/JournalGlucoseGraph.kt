@@ -35,7 +35,11 @@ import uk.scimone.diafit.ui.theme.InRange
 import uk.scimone.diafit.ui.theme.targetRangeBandColor
 
 /** The graph shows this many minutes, with the marker (the highlighted entry's timestamp) in the middle. */
-const val JOURNAL_GRAPH_WINDOW_MIN = 360f
+const val JOURNAL_GRAPH_WINDOW_MIN = 480f
+
+/** Where the selected entry sits across the graph: 2 h in for a point (so its aftermath shows), the middle for a stretch. */
+const val JOURNAL_ANCHOR_POINT = 0.25f
+const val JOURNAL_ANCHOR_STRETCH = 0.5f
 
 private const val MIN_MS = 60_000L
 private const val DAY_MS = 24 * 60 * MIN_MS
@@ -44,7 +48,7 @@ private const val DAY_MS = 24 * 60 * MIN_MS
  * A journal entry on the graph: a point in time (meal, insulin, device event) when [endMs] is null, else the
  * whole stretch it covers (low/high, sleep, workout).
  */
-class GraphMarker(val startMs: Long, val endMs: Long?, val color: Color)
+class GraphMarker(val startMs: Long, val endMs: Long?, val color: Color, val afterMs: Long? = null)
 
 /**
  * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
@@ -55,6 +59,7 @@ class GraphMarker(val startMs: Long, val endMs: Long?, val color: Color)
 @Composable
 fun JournalGlucoseGraph(
     centerMinutes: () -> Float,
+    anchorFraction: () -> Float,
     baseMs: Long,
     glucose: Map<Long, DayGlucose>,
     lower: Int,
@@ -78,6 +83,7 @@ fun JournalGlucoseGraph(
     val drag by rememberUpdatedState(onDrag)
     val dragEnd by rememberUpdatedState(onDragEnd)
     val tap by rememberUpdatedState(onTap)
+    val anchor by rememberUpdatedState(anchorFraction)
 
     Box(modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))) {
         Canvas(
@@ -96,14 +102,13 @@ fun JournalGlucoseGraph(
                     )
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures { pos -> tap((pos.x - size.width / 2f) / (size.width / JOURNAL_GRAPH_WINDOW_MIN)) }
+                    detectTapGestures { pos -> tap((pos.x - size.width * anchor()) / (size.width / JOURNAL_GRAPH_WINDOW_MIN)) }
                 }
         ) {
-            val half = JOURNAL_GRAPH_WINDOW_MIN / 2f
             val center = centerMinutes()
             val centerMs = baseMs + (center * MIN_MS).toLong()
-            val startMs = centerMs - (half * MIN_MS).toLong()
-            val endMs = centerMs + (half * MIN_MS).toLong()
+            val startMs = centerMs - (JOURNAL_GRAPH_WINDOW_MIN * anchor() * MIN_MS).toLong()
+            val endMs = startMs + (JOURNAL_GRAPH_WINDOW_MIN * MIN_MS).toLong()
             val pxPerMs = size.width / (JOURNAL_GRAPH_WINDOW_MIN * MIN_MS)
             fun xOf(ms: Long) = (ms - startMs) * pxPerMs
 
@@ -144,6 +149,15 @@ fun JournalGlucoseGraph(
             // The highlighted entry only: a stretch of time marks its whole area.
             val plotTop = padTop
             val plotBottom = padTop + plotH
+            // A meal: the hours its carbs keep acting after it was eaten.
+            markers.getOrNull(selectedMarker)?.let { m ->
+                val after = m.afterMs ?: return@let
+                if (after < startMs || m.startMs > endMs) return@let
+                val x0 = xOf(m.startMs).coerceAtLeast(0f)
+                val x1 = xOf(after).coerceAtMost(size.width)
+                drawRect(m.color.copy(alpha = 0.14f), Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom))
+                if (xOf(after) <= size.width) drawLine(m.color.copy(alpha = 0.4f), Offset(x1, 0f), Offset(x1, plotBottom), strokeWidth = 1.dp.toPx())
+            }
             run {
                 val highlighted = true
                 markers.getOrNull(selectedMarker)?.let { m ->
