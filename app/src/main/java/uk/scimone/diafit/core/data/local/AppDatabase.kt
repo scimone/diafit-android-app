@@ -19,9 +19,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
     entities = [
         MealEntity::class, CgmEntity::class, BolusEntity::class, PumpEventEntity::class,
         HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
-        uk.scimone.diafit.core.domain.model.AppNotificationEntity::class
+        uk.scimone.diafit.core.domain.model.AppNotificationEntity::class,
+        uk.scimone.diafit.core.domain.model.HealthMetricEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -46,6 +47,17 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao
 
     companion object {
+        /** Resting heart rate, HRV and calories from Health Connect (Stats). */
+        val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `HealthMetricEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`userId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `timeUtc` INTEGER NOT NULL, `value` REAL NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_HealthMetricEntity_type_timeUtc` ON `HealthMetricEntity` (`type`, `timeUtc`)")
+            }
+        }
+
         /** Notifications can be removed by the user (soft delete, so they aren't raised again). */
         val MIGRATION_19_20 = object : Migration(19, 20) {
             override fun migrate(db: SupportSQLiteDatabase) {

@@ -67,4 +67,7 @@ interface MealDao {
 
     @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :startTime AND userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc ASC")
     fun getAllMealsSince(startTime: Long, userId: Int): Flow<List<MealEntity>>
+
+    @Query("SELECT * FROM MealEntity WHERE mealTimeUtc >= :start AND mealTimeUtc < :end AND userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc ASC")
+    suspend fun getMealsBetween(start: Long, end: Long, userId: Int): List<MealEntity>
 }

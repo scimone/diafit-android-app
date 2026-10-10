@@ -10,6 +10,10 @@ import uk.scimone.diafit.core.domain.model.ExerciseEntity
 import uk.scimone.diafit.core.domain.model.HeartRateBucket
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
+import uk.scimone.diafit.core.domain.model.HealthMetricEntity
+import uk.scimone.diafit.core.domain.model.HeartRateDayRow
+import uk.scimone.diafit.core.domain.model.MetricDayRow
+import uk.scimone.diafit.core.domain.model.StepsDayRow
 import uk.scimone.diafit.core.domain.model.StepsEntity
 
 @Dao
@@ -71,4 +75,21 @@ interface ActivityDao {
     /** Heart rate averaged per 5-minute slot: compact enough to scan months of data for elevated activity. */
     @Query("SELECT (timestamp / 300000) * 300000 AS startUtc, AVG(bpm) AS bpm FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start GROUP BY startUtc ORDER BY startUtc ASC")
     fun observeHeartRateBucketsSince(start: Long, userId: Int): Flow<List<HeartRateBucket>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMetrics(rows: List<HealthMetricEntity>)
+
+    /** Heart rate averaged per 5-minute slot between two instants (for finding raised activity over a stats period). */
+    @Query("SELECT (timestamp / 300000) * 300000 AS startUtc, AVG(bpm) AS bpm FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end GROUP BY startUtc ORDER BY startUtc ASC")
+    suspend fun getHeartRateBucketsBetween(start: Long, end: Long, userId: Int): List<HeartRateBucket>
+
+    /** [offsetMs] is the UTC offset that turns an instant into local time, so `day` is the local epoch day. */
+    @Query("SELECT (timestamp + :offsetMs) / 86400000 AS day, AVG(bpm) AS avg, COUNT(*) AS n FROM HeartRateEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end GROUP BY day")
+    suspend fun getDailyHeartRate(start: Long, end: Long, offsetMs: Long, userId: Int): List<HeartRateDayRow>
+
+    @Query("SELECT (startUtc + :offsetMs) / 86400000 AS day, SUM(count) AS total FROM StepsEntity WHERE userId == :userId AND startUtc >= :start AND startUtc < :end GROUP BY day")
+    suspend fun getDailySteps(start: Long, end: Long, offsetMs: Long, userId: Int): List<StepsDayRow>
+
+    @Query("SELECT (timeUtc + :offsetMs) / 86400000 AS day, SUM(value) AS sum, AVG(value) AS avg, COUNT(*) AS n FROM HealthMetricEntity WHERE userId == :userId AND type == :type AND timeUtc >= :start AND timeUtc < :end GROUP BY day")
+    suspend fun getDailyMetric(type: Int, start: Long, end: Long, offsetMs: Long, userId: Int): List<MetricDayRow>
 }

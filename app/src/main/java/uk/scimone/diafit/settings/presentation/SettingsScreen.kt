@@ -95,7 +95,7 @@ fun SettingsScreen(
     }
     val connectHealthConnect = {
         healthConnectPermissions.launch(
-            HealthConnectPermissions.activity + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND + HealthConnectPermissions.HISTORY
+            HealthConnectPermissions.activity + HealthConnectPermissions.vitals + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND + HealthConnectPermissions.HISTORY
         )
     }
 

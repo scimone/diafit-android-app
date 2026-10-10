@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.ActivityOverview
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
+import uk.scimone.diafit.core.domain.model.HealthMetricEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
@@ -28,4 +29,5 @@ interface ActivityRepository {
     suspend fun saveSteps(rows: List<StepsEntity>)
     suspend fun saveSleep(sessionIds: List<String>, rows: List<SleepStageEntity>)
     suspend fun saveExercise(rows: List<ExerciseEntity>)
+    suspend fun saveMetrics(rows: List<HealthMetricEntity>)
 }

@@ -196,6 +196,7 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     Text(
                                         when (selectedTab) {
+                                            1 -> "Stats"
                                             2 -> "Journal"
                                             3 -> "History"
                                             else -> "Diafit"
@@ -281,7 +282,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when (selectedTab) {
                             0 -> HomeScreen(userId = userId, onAddCourse = addCourse, onOpenMeal = { overlays.add(Overlay.MealDetail(it)) })
-                            1 -> Greeting("Stats")
+                            1 -> uk.scimone.diafit.stats.presentation.StatsScreen(
+                                userId = userId,
+                                onOpenMetric = { metric, period, offset -> overlays.add(Overlay.StatsDetail(metric, period, offset)) }
+                            )
                             2 -> JournalScreen(
                                 userId = userId,
                                 onOpenEntry = { entry ->
@@ -346,11 +350,18 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                             when (overlay) {
+                                is Overlay.StatsDetail -> uk.scimone.diafit.stats.presentation.StatsDetailScreen(
+                                    userId = userId,
+                                    metric = overlay.metric,
+                                    period = overlay.period,
+                                    offset = overlay.offset,
+                                    onBack = { overlays.remove(overlay) }
+                                )
                                 is Overlay.SleepDetail -> uk.scimone.diafit.journal.presentation.detail.SleepDetailScreen(overlay.entry, onBack = { overlays.remove(overlay) })
                                 is Overlay.MealDetail -> MealDetailScreen(
                                     userId = userId,
@@ -439,6 +450,12 @@ private sealed interface Overlay {
     data class Patterns(val highlighted: List<String> = emptyList()) : Overlay
     /** One Profile Switch as a before/after diff. */
     data class ProfileSwitchDetail(val eventId: Int) : Overlay
+    /** One Stats metric over a week / month / year ([offset] pages back from the current one). */
+    data class StatsDetail(
+        val metric: uk.scimone.diafit.stats.domain.StatsMetric,
+        val period: uk.scimone.diafit.stats.domain.StatsPeriod,
+        val offset: Int
+    ) : Overlay
     data class SleepDetail(val entry: uk.scimone.diafit.journal.presentation.model.SleepEntryUi) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
     /** One day of History in full; swipeable to neighbouring days. */

@@ -38,7 +38,8 @@ class DiafitApp : Application() {
                     syncModule,
                     settingsModule,
                     profileModule,
-                    patternsModule
+                    patternsModule,
+                    uk.scimone.diafit.stats.di.statsModule
                 ) + if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()
             )
         }

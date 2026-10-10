@@ -1,7 +1,11 @@
 package uk.scimone.diafit.core.data.healthconnect
 
 import android.util.Log
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -17,6 +21,8 @@ import kotlinx.coroutines.sync.withLock
 import uk.scimone.diafit.core.data.local.CgmDao
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
+import uk.scimone.diafit.core.domain.model.HealthMetricEntity
+import uk.scimone.diafit.core.domain.model.HealthMetricType
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
@@ -87,6 +93,8 @@ class HealthConnectSyncer(
                     if (wants[DataType.SLEEP] == true) sleep += readSleep(start, end)
                     if (wants[DataType.EXERCISE] == true) exercise += readExercise(start, end)
                 }
+                // Optional extras for the Stats tab: skipped (not an error) until the user allows them.
+                if (HealthConnectPermissions.vitals.all { it in granted }) readVitals(start, end)
             }
             val summary = HealthConnectImportSummary(heartRate, steps, sleep, exercise, days)
             Log.i(TAG, "Imported ${days}d: $heartRate heart-rate samples, $steps step slots, $sleep sleep sessions, $exercise workouts")
@@ -132,7 +140,7 @@ class HealthConnectSyncer(
             val e = Instant.ofEpochMilli(minOf(start + dayMs, range.end))
             found += when (type) {
                 DataType.CGM -> importGlucose(s, e)
-                DataType.HEART_RATE -> readHeartRate(s, e)
+                DataType.HEART_RATE -> readHeartRate(s, e).also { readVitalsIfAllowed(granted, s, e) }
                 DataType.STEPS -> readSteps(s, e)
                 DataType.SLEEP -> readSleep(s, e)
                 DataType.EXERCISE -> readExercise(s, e)
@@ -184,6 +192,55 @@ class HealthConnectSyncer(
         cgmDao.insertAll(entities)
         Log.d(TAG, "Imported ${entities.size} glucose readings")
         return entities.size
+    }
+
+    private suspend fun readVitalsIfAllowed(granted: Set<String>, start: Instant, end: Instant) {
+        if (HealthConnectPermissions.vitals.all { it in granted }) readVitals(start, end)
+    }
+
+    /** Resting heart rate, HRV (RMSSD) and calories burned (summed per hour, so overlapping sources aren't double counted). */
+    private suspend fun readVitals(start: Instant, end: Instant) {
+        val rows = mutableListOf<HealthMetricEntity>()
+        var pageToken: String? = null
+        do {
+            val response = manager.client.readRecords(
+                ReadRecordsRequest(RestingHeartRateRecord::class, TimeRangeFilter.between(start, end), pageSize = PAGE_SIZE, pageToken = pageToken)
+            )
+            response.records.forEach {
+                rows += HealthMetricEntity(userId = userId, type = HealthMetricType.RESTING_HEART_RATE.code, timeUtc = it.time.toEpochMilli(), value = it.beatsPerMinute.toDouble())
+            }
+            pageToken = response.pageToken
+        } while (pageToken != null)
+        do {
+            val response = manager.client.readRecords(
+                ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, TimeRangeFilter.between(start, end), pageSize = PAGE_SIZE, pageToken = pageToken)
+            )
+            response.records.forEach {
+                rows += HealthMetricEntity(userId = userId, type = HealthMetricType.HEART_RATE_VARIABILITY.code, timeUtc = it.time.toEpochMilli(), value = it.heartRateVariabilityMillis)
+            }
+            pageToken = response.pageToken
+        } while (pageToken != null)
+
+        val hourMs = 3_600_000L
+        val alignedStart = Instant.ofEpochMilli(start.toEpochMilli() / hourMs * hourMs)
+        val groups = manager.client.aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(
+                metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                timeRangeFilter = TimeRangeFilter.between(alignedStart, end),
+                timeRangeSlicer = Duration.ofHours(1)
+            )
+        )
+        groups.forEach { g ->
+            val time = g.startTime.toEpochMilli()
+            g.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.takeIf { it > 0 }?.let {
+                rows += HealthMetricEntity(userId = userId, type = HealthMetricType.TOTAL_CALORIES.code, timeUtc = time, value = it)
+            }
+            g.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.takeIf { it > 0 }?.let {
+                rows += HealthMetricEntity(userId = userId, type = HealthMetricType.ACTIVE_CALORIES.code, timeUtc = time, value = it)
+            }
+        }
+        // Several resting-HR / HRV samples can share a millisecond; the unique (type, time) index wants one.
+        activityRepository.saveMetrics(rows.distinctBy { it.type to it.timeUtc })
     }
 
     private suspend fun readHeartRate(start: Instant, end: Instant): Int {

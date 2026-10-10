@@ -9,6 +9,7 @@ import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.ActivityOverview
 import uk.scimone.diafit.core.domain.model.ElevatedActivity
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
+import uk.scimone.diafit.core.domain.model.HealthMetricEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
@@ -58,4 +59,5 @@ class ActivityRepositoryImpl(private val dao: ActivityDao) : ActivityRepository 
     override suspend fun saveSleep(sessionIds: List<String>, rows: List<SleepStageEntity>) =
         dao.replaceSleepSessions(sessionIds, rows)
     override suspend fun saveExercise(rows: List<ExerciseEntity>) = dao.insertExercise(rows)
+    override suspend fun saveMetrics(rows: List<HealthMetricEntity>) = dao.insertMetrics(rows)
 }
