@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
         nightscoutSyncScheduler.schedulePeriodic()
         nightscoutSyncScheduler.syncNow()
         deviceExpiryScheduler.checkNow()
-        patternScheduler.checkNow()
+        if (!handlePatternDebug(intent)) patternScheduler.checkNow()
         if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
             org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.backendsync.data.BackendSyncScheduler>(
                 uk.scimone.diafit.backendsync.data.BackendSyncScheduler::class.java
@@ -436,6 +436,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getStringExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK)?.let { pendingLink.value = it }
+        handlePatternDebug(intent)
+    }
+
+    /** Debug builds only: `--el pattern_as_of <epoch ms>` previews the patterns as of that moment, `--ez pattern_reset true` goes back to real data. */
+    private fun handlePatternDebug(intent: Intent?): Boolean {
+        if (!BuildConfig.DEBUG || intent == null) return false
+        if (intent.getBooleanExtra("pattern_reset", false)) { patternScheduler.reset(); return true }
+        val asOf = intent.getLongExtra("pattern_as_of", 0L)
+        if (asOf > 0) { patternScheduler.simulate(asOf); return true }
+        return false
     }
 
     private fun createNotificationChannel() {

@@ -56,6 +56,10 @@ private val SKETCHES: Map<String, Sketch> = mapOf(
     "sleep-short" to Sketch(emptyList(), bars = listOf(.9f, .45f)),
     "sleep-restless" to Sketch(listOf(0f to .5f, .12f to .15f, .25f to .8f, .38f to .2f, .52f to .75f, .68f to .3f, .84f to .65f, 1f to .5f), second = listOf(0f to .5f, .3f to .55f, .6f to .45f, 1f to .5f)),
     "sleep-irregular" to Sketch(emptyList(), bars = listOf(.8f, .4f, .7f, .35f)),
+    "trend-tir" to Sketch(emptyList(), bars = listOf(.45f, .6f, .8f)),
+    "trend-mean" to Sketch(listOf(0f to .75f, .35f to .6f, .65f to .4f, 1f to .2f), guides = listOf(.5f)),
+    "trend-variability" to Sketch(listOf(0f to .5f, .15f to .35f, .3f to .6f, .5f to .2f, .7f to .8f, .85f to .1f, 1f to .9f)),
+    "trend-lows" to Sketch(listOf(0f to .4f, .2f to .45f, .35f to .9f, .5f to .4f, .7f to .85f, .85f to .4f, 1f to .88f), guides = listOf(.7f)),
     "meal-bolus" to Sketch(listOf(0f to .75f, .15f to .75f, .38f to .5f, .6f to .68f, 1f to .75f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .4f to .15f, .65f to .5f, 1f to .72f))
 )
 

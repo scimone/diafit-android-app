@@ -403,6 +403,48 @@ object PatternTips {
                 "A steady routine is a good habit to hold on to."
             )
         ),
+        TipTopic.TREND_BETTER to Set(
+            understand = listOf(
+                "Steadier stretches often follow more regular meals, sleep and activity, which may be what is behind this.",
+                "A calmer period can come from routines settling in, which may be linked to this."
+            ),
+            act = listOf(
+                "Think about what has been different lately and try to keep it going.",
+                "Stick with the routines of the past two weeks while they are working."
+            ),
+            maintain = listOf(
+                "Keep doing what you have been doing, as it seems to be paying off.",
+                "Build on this good run one day at a time."
+            )
+        ),
+        TipTopic.TREND_WORSE to Set(
+            understand = listOf(
+                "Illness, stress, a new sensor or a change in routine can all move glucose for a couple of weeks.",
+                "Changes in sleep, meals or activity may be linked to this shift."
+            ),
+            act = listOf(
+                "Ease back towards the routines that worked for you before.",
+                "A regular rhythm of meals, sleep and movement often helps glucose settle."
+            ),
+            maintain = listOf(
+                "Small steady habits tend to bring the numbers back over time.",
+                "Pick one routine to tighten up first and build from there."
+            )
+        ),
+        TipTopic.TREND_LOWS_UP to Set(
+            understand = listOf(
+                "Lows becoming more frequent can follow changes in activity, meals or routine.",
+                "More lows can come from a stretch of extra activity or lighter eating, which may be linked to this."
+            ),
+            act = listOf(
+                "Keep fast-acting carbs with you wherever you go.",
+                "Carry a quick snack for the times of day when lows tend to show up."
+            ),
+            maintain = listOf(
+                "Because lows are becoming more frequent, it's worth raising them with your diabetes team.",
+                "Having fast-acting carbs at hand keeps a low short."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

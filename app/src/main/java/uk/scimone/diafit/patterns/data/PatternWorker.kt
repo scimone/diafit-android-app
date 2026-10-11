@@ -32,6 +32,7 @@ import uk.scimone.diafit.patterns.domain.PatternPipeline
 import uk.scimone.diafit.patterns.domain.PatternState
 import uk.scimone.diafit.patterns.domain.SleepDetector
 import uk.scimone.diafit.patterns.domain.SleepNights
+import uk.scimone.diafit.patterns.domain.TrendDetector
 import uk.scimone.diafit.patterns.domain.TimeOfDayDetector
 import uk.scimone.diafit.notifications.data.AppNotifier
 import uk.scimone.diafit.notifications.data.NotificationChannelSpec
@@ -58,7 +59,11 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
     override suspend fun doWork(): Result {
         return try {
-            RUN_LOCK.withLock { scan() }
+            RUN_LOCK.withLock {
+                if (inputData.getBoolean(KEY_RESET, false)) store.replaceAll(emptyList())
+                val asOf = inputData.getLong(KEY_AS_OF, 0L)
+                if (asOf > 0) scan(asOf, simulated = true) else scan(System.currentTimeMillis(), simulated = false)
+            }
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Pattern scan failed", e)
@@ -66,8 +71,12 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         }
     }
 
-    private suspend fun scan() {
-        val now = System.currentTimeMillis()
+    /**
+     * [simulated]: a debug preview as if it were [now] (an earlier moment with complete data): the stored patterns are
+     * cleared first, nothing is pushed and nothing is marked as notified.
+     */
+    private suspend fun scan(now: Long, simulated: Boolean) {
+        if (simulated) store.replaceAll(emptyList())
         val from = now - (TimeOfDayDetector.WEEKEND_WINDOW_DAYS + 1) * 24 * 3_600_000L
         val readings = withContext(Dispatchers.IO) { cgm.getEntriesBetween(from, now, USER_ID) }
         val zone = ZoneId.systemDefault()
@@ -83,7 +92,7 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         )
 
         val stored = store.getAll()
-        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input) + SleepDetector.detect(input)
+        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input) + SleepDetector.detect(input) + TrendDetector.detect(input)
         val cards = PatternPipeline.finalize(
             candidates,
             existingTips = stored.associate { it.card.id to it.card.tips },
@@ -91,22 +100,25 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         )
         val result = PatternLifecycle.reconcile(stored, cards, now)
         store.replaceAll(result.patterns)
-        if (result.toNotify.isNotEmpty()) {
+        if (result.toNotify.isNotEmpty() && !simulated) {
             val single = result.toNotify.singleOrNull()
             val title = if (single != null) "New pattern" else "${result.toNotify.size} new patterns"
             val text = result.toNotify.joinToString("\n") { it.card.title }
             notifier.pushOnly(CHANNEL, "patterns-${result.toNotify.map { it.card.id }.sorted().hashCode()}", title, text, single?.let { patternLink(it.card.id) } ?: PATTERNS_LINK)
             store.markNotified(result.toNotify.map { it.card.id }, now)
         }
-        Log.i(TAG, "${candidates.size} candidates, ${cards.size} surfaced, ${result.toNotify.size} notified over ${days.size} days")
+        Log.i(TAG, "events=${input.events.size} (${input.events.count { it.isWorkout }} workouts) nights=${input.nights.size} meals=${sittings.size}")
+        Log.i(TAG, "${candidates.size} candidates, ${cards.size} surfaced (${cards.joinToString(",") { it.id }}), ${result.toNotify.size} to notify over ${days.size} days")
     }
 
-    private companion object {
-        const val TAG = "Patterns"
-        const val USER_ID = 1
-        const val MIN_DAYS_TO_SCAN = 7
-        val RUN_LOCK = Mutex()
-        val CHANNEL = NotificationChannelSpec(
+    companion object {
+        const val KEY_AS_OF = "as_of"
+        const val KEY_RESET = "reset"
+        private const val TAG = "Patterns"
+        private const val USER_ID = 1
+        private const val MIN_DAYS_TO_SCAN = 7
+        private val RUN_LOCK = Mutex()
+        private val CHANNEL = NotificationChannelSpec(
             "GLUCOSE_PATTERNS_CHANNEL", "Glucose patterns",
             "New patterns found in your glucose data", NotificationManager.IMPORTANCE_DEFAULT
         )
@@ -123,6 +135,23 @@ class PatternScheduler(private val context: Context) {
         workManager.enqueueUniquePeriodicWork(
             "pattern_scan_periodic", ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequestBuilder<PatternWorker>(12, TimeUnit.HOURS).build()
+        )
+    }
+
+    /** Debug preview: runs the detectors as if it were [asOfUtc] (see [PatternWorker.scan]). */
+    fun simulate(asOfUtc: Long) {
+        workManager.enqueueUniqueWork(
+            "pattern_scan_sim", ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<PatternWorker>().setInputData(androidx.work.workDataOf(PatternWorker.KEY_AS_OF to asOfUtc)).build()
+        )
+    }
+
+    /** Clears every stored pattern and scans the real data again. */
+    fun reset() {
+        workManager.cancelUniqueWork("pattern_scan_sim")
+        workManager.enqueueUniqueWork(
+            "pattern_scan_now", ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<PatternWorker>().setInputData(androidx.work.workDataOf(PatternWorker.KEY_RESET to true)).build()
         )
     }
 
