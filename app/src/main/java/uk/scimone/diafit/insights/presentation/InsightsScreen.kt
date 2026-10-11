@@ -57,7 +57,7 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Insights") },
+                title = { Text("Patterns") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = { if (unread > 0) TextButton(onClick = viewModel::markAllRead) { Text("Mark all read") } }
             )
@@ -74,7 +74,7 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 if (active.isEmpty() && resolved.isEmpty() && dismissed.isEmpty()) {
                     Box(Modifier.fillMaxSize().padding(padding).padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "No insights yet. They appear once there are at least a week of CGM readings and a pattern that keeps coming back.",
+                            "No patterns yet. They appear once there are at least a week of CGM readings and something that keeps coming back.",
                             textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

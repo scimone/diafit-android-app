@@ -17,7 +17,10 @@ import kotlinx.coroutines.sync.withLock
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import uk.scimone.diafit.core.domain.model.toSittings
+import uk.scimone.diafit.core.domain.repository.ActivityRepository
 import uk.scimone.diafit.core.domain.repository.BolusRepository
+import uk.scimone.diafit.insights.domain.ActivityEvents
+import uk.scimone.diafit.insights.domain.ExerciseDetector
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.insights.domain.MealDetector
@@ -46,6 +49,7 @@ class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     private val cgm: CgmRepository by inject()
     private val mealRepository: MealRepository by inject()
     private val bolusRepository: BolusRepository by inject()
+    private val activityRepository: ActivityRepository by inject()
     private val getTargetRange: GetTargetRangeUseCase by inject()
     private val store: InsightStore by inject()
     private val notifier: AppNotifier by inject()
@@ -70,10 +74,11 @@ class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         if (days.size < MIN_DAYS_TO_SCAN) return
         val sittings = withContext(Dispatchers.IO) { mealRepository.getUnmergedSince(USER_ID, from) }.toSittings()
         val boluses = withContext(Dispatchers.IO) { bolusRepository.getBolusBetween(from, now, USER_ID) }
-        val input = DetectionInput(days, getTargetRange().toCore().toThresholds(), now, zone, sittings, boluses)
+        val events = ActivityEvents.build(withContext(Dispatchers.IO) { activityRepository.getBetween(from, now, USER_ID) })
+        val input = DetectionInput(days, getTargetRange().toCore().toThresholds(), now, zone, sittings, boluses, events)
 
         val stored = store.getAll()
-        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input)
+        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input)
         val cards = InsightPipeline.finalize(
             candidates,
             existingTips = stored.associate { it.card.id to it.card.tips },
@@ -83,7 +88,7 @@ class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         store.replaceAll(result.insights)
         if (result.toNotify.isNotEmpty()) {
             val single = result.toNotify.singleOrNull()
-            val title = if (single != null) "New insight" else "${result.toNotify.size} new insights"
+            val title = if (single != null) "New pattern" else "${result.toNotify.size} new patterns"
             val text = result.toNotify.joinToString("\n") { it.card.title }
             notifier.pushOnly(CHANNEL, "insights-${result.toNotify.map { it.card.id }.sorted().hashCode()}", title, text, single?.let { insightLink(it.card.id) } ?: INSIGHTS_LINK)
             store.markNotified(result.toNotify.map { it.card.id }, now)
@@ -97,7 +102,7 @@ class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         const val MIN_DAYS_TO_SCAN = 7
         val RUN_LOCK = Mutex()
         val CHANNEL = NotificationChannelSpec(
-            "GLUCOSE_INSIGHTS_CHANNEL", "Glucose insights",
+            "GLUCOSE_INSIGHTS_CHANNEL", "Glucose patterns",
             "New patterns found in your glucose data", NotificationManager.IMPORTANCE_DEFAULT
         )
     }

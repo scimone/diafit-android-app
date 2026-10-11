@@ -349,21 +349,9 @@ object MealDetector {
 
     // ---- graph ----------------------------------------------------------------------------------------------------
 
-    private fun responseGraph(g: List<Response>, compare: List<Response>?, aLabel: String, bLabel: String?): MiniGraph {
-        fun series(group: List<Response>, fraction: Double): List<Int> {
-            var last = 0
-            return (FIRST_K..LAST_K step GRAPH_STEP).map { k ->
-                val vs = group.mapNotNull { r ->
-                    (k until k + GRAPH_STEP).map { r.values[it.coerceAtMost(LAST_K) - FIRST_K] - r.baseline }.filter { !it.isNaN() }.takeIf { it.isNotEmpty() }?.average()
-                }.sorted()
-                if (vs.size >= maxOf(3, group.size / 2)) last = vs[((vs.size - 1) * fraction).roundToInt()].roundToInt()
-                last
-            }
-        }
-        return MiniGraph.MealResponse(
-            startMinute = FIRST_K * BIN_MINUTES, stepMinutes = GRAPH_STEP * BIN_MINUTES,
-            median = series(g, 0.5), p25 = series(g, 0.25), p75 = series(g, 0.75), aLabel = aLabel,
-            compare = compare?.let { series(it, 0.5) }, bLabel = bLabel
+    private fun responseGraph(g: List<Response>, compare: List<Response>?, aLabel: String, bLabel: String?): MiniGraph =
+        eventGraph(
+            g.map { EventCurve(it.values, it.baseline) }, compare?.map { EventCurve(it.values, it.baseline) },
+            FIRST_K, LAST_K, GRAPH_STEP, aLabel, bLabel, "meal", null, listOf(0, 60, 120, 180, 240)
         )
-    }
 }

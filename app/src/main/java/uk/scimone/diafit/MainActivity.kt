@@ -241,7 +241,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Insights") },
+                                        text = { Text("Patterns") },
                                         leadingIcon = { Icon(imageVector = Icons.Filled.Insights, contentDescription = null) },
                                         onClick = {
                                             overflowMenuExpanded = false

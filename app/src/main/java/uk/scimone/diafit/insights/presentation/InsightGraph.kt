@@ -46,22 +46,22 @@ internal fun InsightGraph(graph: MiniGraph, thresholds: GlucoseThresholds, large
                 )
             }
             is MiniGraph.ProfileComparison -> ComparisonPlot(graph, thresholds, large, Modifier.fillMaxWidth().height(height))
-            is MiniGraph.MealResponse -> MealPlot(graph, large, Modifier.fillMaxWidth().height(height))
+            is MiniGraph.EventResponse -> MealPlot(graph, large, Modifier.fillMaxWidth().height(height))
         }
-        if (graph is MiniGraph.MealResponse) MealLabels(graph, Modifier.fillMaxWidth().padding(top = 2.dp))
+        if (graph is MiniGraph.EventResponse) MealLabels(graph, Modifier.fillMaxWidth().padding(top = 2.dp))
         else HourLabels(Modifier.fillMaxWidth().padding(top = 2.dp))
         if (graph is MiniGraph.ProfileComparison) {
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Legend(MaterialTheme.colorScheme.primary, graph.aLabel)
                 Legend(MaterialTheme.colorScheme.onSurfaceVariant, graph.bLabel)
             }
-        } else if (graph is MiniGraph.MealResponse) {
+        } else if (graph is MiniGraph.EventResponse) {
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Legend(MaterialTheme.colorScheme.primary, graph.aLabel)
                 graph.bLabel?.let { Legend(MaterialTheme.colorScheme.onSurfaceVariant, it) }
             }
             if (large) Text(
-                "Change in glucose from the level at the start of each meal; line = typical, band = middle half of meals",
+                "Change in glucose from the starting level of each ${if (graph.eventLabel == "meal") "meal" else "session"}; line = typical, band = middle half",
                 Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else if (graph is MiniGraph.AgpWindow && large) {
@@ -117,7 +117,7 @@ private fun HourLabels(modifier: Modifier) {
 }
 
 @Composable
-private fun MealPlot(graph: MiniGraph.MealResponse, large: Boolean, modifier: Modifier) {
+private fun MealPlot(graph: MiniGraph.EventResponse, large: Boolean, modifier: Modifier) {
     val a = MaterialTheme.colorScheme.primary
     val b = MaterialTheme.colorScheme.onSurfaceVariant
     val guide = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
@@ -131,6 +131,10 @@ private fun MealPlot(graph: MiniGraph.MealResponse, large: Boolean, modifier: Mo
         // The starting level (zero) and the meal itself.
         drawLine(guide, Offset(0f, y(0)), Offset(size.width, y(0)), strokeWidth = 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
         val mealX = x(-graph.startMinute / graph.stepMinutes)
+        graph.spanMinutes?.let { span ->
+            val end = size.width * (-graph.startMinute + span).toFloat() / graph.stepMinutes / (n - 1)
+            drawRect(a.copy(alpha = 0.10f), Offset(mealX, 0f), Size((end - mealX).coerceAtLeast(0f), size.height))
+        }
         drawLine(guide, Offset(mealX, 0f), Offset(mealX, size.height), strokeWidth = 1.dp.toPx())
         val band = Path().apply {
             graph.p75.forEachIndexed { i, v -> if (i == 0) moveTo(x(i), y(v)) else lineTo(x(i), y(v)) }
@@ -152,15 +156,16 @@ private fun MealPlot(graph: MiniGraph.MealResponse, large: Boolean, modifier: Mo
     }
 }
 
-/** "meal", 1h, 2h, 3h, 4h under a [MiniGraph.MealResponse]. */
+/** The labelled minutes under a [MiniGraph.EventResponse]: the event itself at 0, then whole hours. */
 @Composable
-private fun MealLabels(graph: MiniGraph.MealResponse, modifier: Modifier) {
+private fun MealLabels(graph: MiniGraph.EventResponse, modifier: Modifier) {
     val span = (graph.median.size - 1) * graph.stepMinutes
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.height(14.dp)) {
-        for ((minute, label) in listOf(0 to "meal", 60 to "1h", 120 to "2h", 180 to "3h", 240 to "4h")) {
+        for (minute in graph.axis) {
             val frac = (minute - graph.startMinute).toFloat() / span
             Text(
-                label, Modifier.padding(start = (maxWidth * frac - 10.dp).coerceIn(0.dp, maxWidth - 24.dp)),
+                if (minute == 0) graph.eventLabel else "${minute / 60}h",
+                Modifier.padding(start = (maxWidth * frac - 10.dp).coerceIn(0.dp, maxWidth - 24.dp)),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

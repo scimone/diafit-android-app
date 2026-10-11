@@ -74,7 +74,7 @@ class MealDetectorTest {
         assertEquals(8, low.card.positiveCount)
         assertEquals(23, low.card.sampleSize)
         assertEquals("meals", low.card.sampleUnit)
-        assertTrue(low.card.miniGraph is uk.scimone.diafit.insights.domain.MiniGraph.MealResponse)
+        assertTrue(low.card.miniGraph is uk.scimone.diafit.insights.domain.MiniGraph.EventResponse)
         assertTrue(low.card.examples.isNotEmpty())
     }
 

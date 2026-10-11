@@ -49,7 +49,7 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Insight") },
+                title = { Text("Pattern") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
             )
         }
@@ -94,7 +94,7 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             Panel("Three tips") { card.tips.forEach { Bullet(it, tint) } }
 
             when (insight.state) {
-                InsightState.DISMISSED -> OutlinedButton(onClick = viewModel::restore, Modifier.fillMaxWidth()) { Text("Show this insight again") }
+                InsightState.DISMISSED -> OutlinedButton(onClick = viewModel::restore, Modifier.fillMaxWidth()) { Text("Show this pattern again") }
                 InsightState.RESOLVED -> Text(
                     "This pattern isn't showing in the latest data.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

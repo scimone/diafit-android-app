@@ -54,6 +54,17 @@ import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import uk.scimone.diafit.insights.presentation.InsightCardView
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.domain.model.DeviceKind
+import uk.scimone.diafit.insights.presentation.GlyphTile
+import uk.scimone.diafit.ui.theme.Warning
 import java.util.Date
 import java.util.Locale
 
@@ -90,7 +101,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onOpenAllInsights) { Text("See all insights") }
+                    TextButton(onClick = onOpenAllInsights) { Text("See all patterns") }
                 }
             }
         } else {
@@ -102,13 +113,13 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 if (insights.isNotEmpty()) {
                     item(key = "insights-header") {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("New insights", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("New patterns", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             TextButton(onClick = onOpenAllInsights) { Text("See all") }
                         }
                     }
                     items(insights, key = { "insight-" + it.card.id }) { InsightCardView(it, onClick = { onOpenInsight(it.card.id) }) }
                 } else item(key = "insights-link") {
-                    TextButton(onClick = onOpenAllInsights) { Text("See all insights") }
+                    TextButton(onClick = onOpenAllInsights) { Text("See all patterns") }
                 }
                 items(items, key = { it.id }) { n ->
                     // Swipe either way, or tap the ✕, to remove.
@@ -121,7 +132,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                         modifier = Modifier.animateItem(),
                         backgroundContent = {
                             Box(
-                                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer, CardDefaults.shape).padding(horizontal = 20.dp),
+                                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(16.dp)).padding(horizontal = 20.dp),
                                 contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Alignment.CenterEnd else Alignment.CenterStart
                             ) {
                                 Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
@@ -136,25 +147,49 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
     }
 }
 
+/** The same card shape as a pattern: tinted icon tile, title, one or two lines of text, small date, ✕. */
 @Composable
 private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRemove: () -> Unit) {
-    Card(
+    val (icon, tint) = notificationVisual(n)
+    Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (n.isRead) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f) else tint.copy(alpha = 0.6f))
     ) {
-        Row(Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.padding(top = 6.dp).size(8.dp).background(if (n.isRead) Color.Transparent else Color(0xFFE53935), CircleShape))
+        Row(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GlyphTile(tint) { icon() }
             Column(Modifier.weight(1f)) {
-                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                Text(n.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    n.text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     SimpleDateFormat("EEE d MMM HH:mm", Locale.getDefault()).format(Date(n.timestampUtc)),
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
-            IconButton(onClick = onRemove, modifier = Modifier.padding(top = 0.dp).size(36.dp).offset(y = (-8).dp)) {
+            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+}
+
+/** Icon and colour for a notification, by what raised it (the device-expiry alerts are keyed "<KIND>-<time>-<hours>"). */
+@Composable
+private fun notificationVisual(n: AppNotificationEntity): Pair<@Composable () -> Unit, Color> {
+    val kind = n.dedupeKey.substringBefore('-')
+    val tint = if (DeviceKind.entries.any { it.name == kind }) Warning else MaterialTheme.colorScheme.primary
+    val icon: @Composable () -> Unit = {
+        when (kind) {
+            DeviceKind.SENSOR.name -> Icon(painterResource(R.drawable.ic_sensor), null, tint = tint, modifier = Modifier.size(26.dp))
+            DeviceKind.SITE.name, DeviceKind.INSULIN.name, DeviceKind.PATCH.name ->
+                Icon(painterResource(R.drawable.ic_insulin_pump), null, tint = tint, modifier = Modifier.size(26.dp))
+            DeviceKind.BATTERY.name -> Icon(Icons.Filled.BatteryAlert, null, tint = tint, modifier = Modifier.size(26.dp))
+            else -> Icon(Icons.Filled.Notifications, null, tint = tint, modifier = Modifier.size(26.dp))
+        }
+    }
+    return icon to tint
 }

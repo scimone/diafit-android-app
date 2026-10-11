@@ -58,7 +58,9 @@ class DetectionInput(
     val zone: ZoneId,
     /** Meals as the user thinks of them (courses grouped), for the meal detectors. */
     val sittings: List<MealSitting> = emptyList(),
-    val boluses: List<BolusEntity> = emptyList()
+    val boluses: List<BolusEntity> = emptyList(),
+    /** Workouts and stretches of raised activity, for the exercise detectors. */
+    val events: List<ActivityEvent> = emptyList()
 ) {
     val today: LocalDate get() = Instant.ofEpochMilli(nowUtc).atZone(zone).toLocalDate()
 

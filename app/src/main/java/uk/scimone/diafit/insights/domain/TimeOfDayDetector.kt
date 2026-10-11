@@ -73,7 +73,7 @@ object TimeOfDayDetector {
 
     private class Ctx(val input: DetectionInput, val days: List<DayGlucose>) {
         val t = input.thresholds
-        val agp: PatternAgp? by lazy { agpOf(days) }
+        val agp: PatternAgp? by lazy { agpOfDays(days) }
         val fromUtc = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))
         val overallCv: Double by lazy {
             val v = days.flatMap { d -> d.bins.filter { !it.isNaN() } }
@@ -368,8 +368,8 @@ object TimeOfDayDetector {
         val diff = a.average() - b.average()
         val se = sqrt(variance(a) / a.size + variance(b) / b.size)
         if (abs(diff) < WEEKEND_MIN_DIFF || abs(diff) < WEEKEND_MIN_SE_FACTOR * se) return emptyList()
-        val agpWeekend = agpOf(weekend) ?: return emptyList()
-        val agpWeekdays = agpOf(weekdays) ?: return emptyList()
+        val agpWeekend = agpOfDays(weekend) ?: return emptyList()
+        val agpWeekdays = agpOfDays(weekdays) ?: return emptyList()
         val better = diff > 0
         val from = input.startOfDayUtc(input.today.minusDays((WEEKEND_WINDOW_DAYS - 1).toLong()))
         return listOf(
@@ -401,12 +401,6 @@ object TimeOfDayDetector {
     /** Relevance weight x size of the effect x how much data backs it. */
     private fun rank(base: Double, effect: Double, validDays: Int): Double =
         base * (0.6 + 0.4 * effect) * (0.7 + 0.3 * (validDays / WINDOW_DAYS.toDouble()).coerceAtMost(1.0))
-
-    private fun agpOf(days: List<DayGlucose>): PatternAgp? {
-        val minutes = ArrayList<Int>(); val values = ArrayList<Int>()
-        for (d in days) for (i in d.bins.indices) if (!d.bins[i].isNaN()) { minutes += i * BIN_MINUTES; values += d.bins[i].roundToInt() }
-        return PatternAgp.build(minutes.toIntArray(), values.toIntArray(), days.size)
-    }
 }
 
 /** 15-minute averages of the 5-minute AGP, whole mg/dL: small enough to store with the card. */

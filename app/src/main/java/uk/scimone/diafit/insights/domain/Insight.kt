@@ -37,18 +37,23 @@ sealed interface MiniGraph {
     ) : MiniGraph
 
     /**
-     * Glucose around meals, aligned on the start of the meal: [median] with a 25–75 % band ([p25]/[p75]) for the
-     * main group, optionally the median of a [compare] group (dashed). Values are the change in mg/dL from each meal's
-     * own starting level, so meals that start at different levels line up. Points are [stepMinutes] apart from
-     * [startMinute] (negative = before the meal).
+     * Glucose around an event (a meal, a workout), aligned on its start: [median] with a 25-75 % band
+     * ([p25]/[p75]) for the main group, optionally the median of a [compare] group (dashed). Values are the change in
+     * mg/dL from each event's own starting level, so events that start at different levels line up. Points are
+     * [stepMinutes] apart from [startMinute] (negative = before the event). [spanMinutes] shades how long the event
+     * itself lasted; [axis] are the minutes labelled under the plot (0 is named [eventLabel]).
+     * Serialized as "meal" for compatibility with cards stored before workouts used it too.
      */
     @Serializable
     @SerialName("meal")
-    data class MealResponse(
+    data class EventResponse(
         val startMinute: Int, val stepMinutes: Int,
         val median: List<Int>, val p25: List<Int>, val p75: List<Int>,
         val aLabel: String,
-        val compare: List<Int>? = null, val bLabel: String? = null
+        val compare: List<Int>? = null, val bLabel: String? = null,
+        val eventLabel: String = "meal",
+        val spanMinutes: Int? = null,
+        val axis: List<Int> = listOf(0, 60, 120, 180, 240)
     ) : MiniGraph
 
     /** Two median profiles by time of day (mg/dL), e.g. weekdays vs weekends. */
@@ -97,7 +102,8 @@ data class InsightCard(
 enum class TipTopic(val isLow: Boolean = false) {
     LOW_NIGHT(true), LOW_DAY(true), HIGH_NIGHT, HIGH_DAY, VARIABILITY, DAWN,
     STEADY_NIGHT, STEADY_DAY, WEEKEND_BETTER, WEEKEND_WORSE,
-    MEAL_LOW(true), MEAL_SPIKE, MEAL_SLOW, MEAL_GOOD, MEAL_RICH, MEAL_TYPE, MEAL_BOLUS
+    MEAL_LOW(true), MEAL_SPIKE, MEAL_SLOW, MEAL_GOOD, MEAL_RICH, MEAL_TYPE, MEAL_BOLUS,
+    EX_DROP, EX_LOW_NOW(true), EX_LOW_LATER(true), EX_RISE, EX_GOOD, EX_LONG, EX_EVENING, EX_NEXTDAY, EX_INTENSITY
 }
 
 /** A detector's raw finding: the card minus its tips, plus what is needed to choose them. */

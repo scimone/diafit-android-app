@@ -235,6 +235,132 @@ object InsightTips {
                 "Reuse the routines of your smoother meals."
             )
         ),
+        TipTopic.EX_DROP to Set(
+            understand = listOf(
+                "Your muscles use extra glucose while you move, so glucose can drop during activity.",
+                "Insulin that is still active from earlier may play a part in dips during activity."
+            ),
+            act = listOf(
+                "Keep a quick carb source with you when you're active.",
+                "Stay alert to the signs of a low while you move."
+            ),
+            maintain = listOf(
+                "Notice which activities keep you steadier and make them a habit.",
+                "Keep the routines that go well around your workouts."
+            )
+        ),
+        TipTopic.EX_LOW_NOW to Set(
+            understand = listOf(
+                "Muscles keep taking up glucose right after activity, which may be linked to lows soon afterwards.",
+                "Insulin that is still active may add to a low in the first hours after activity."
+            ),
+            act = listOf(
+                "Keep fast-acting carbs handy for the first hours after activity.",
+                "Stay alert to the signs of a low after you finish."
+            ),
+            maintain = listOf(
+                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
+                "Treating a low promptly, as your plan describes, keeps it short."
+            )
+        ),
+        TipTopic.EX_LOW_LATER to Set(
+            understand = listOf(
+                "Your muscles may keep using extra glucose for hours after exercise.",
+                "Refilling the body's glucose stores can lower glucose long after a workout."
+            ),
+            act = listOf(
+                "Keep an eye on your glucose for several hours after a workout.",
+                "Keep fast-acting carbs close by in the evening after a workout."
+            ),
+            maintain = listOf(
+                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
+                "Longer workouts may need extra planning under your usual exercise management plan."
+            )
+        ),
+        TipTopic.EX_RISE to Set(
+            understand = listOf(
+                "Intense or short bursts of activity can make glucose rise for a while.",
+                "Stress hormones during hard efforts may push glucose up."
+            ),
+            act = listOf(
+                "A gentle cool-down or walk afterwards may help glucose settle.",
+                "Be patient after hard efforts, as glucose often comes back down on its own."
+            ),
+            maintain = listOf(
+                "Keep the workouts that leave you feeling good and steady.",
+                "Reuse the types of activity that keep your glucose calmer."
+            )
+        ),
+        TipTopic.EX_GOOD to Set(
+            understand = listOf(
+                "Your glucose stays steady during activity, which suggests your routine around it works.",
+                "Steady responses like this often come from consistent timing and fuelling."
+            ),
+            act = listOf(
+                "Keep the way you prepare for and recover from activity much as it is.",
+                "Reuse this routine when you try new activities."
+            ),
+            maintain = listOf(
+                "Build on this, one session at a time.",
+                "Keep doing what works around your workouts."
+            )
+        ),
+        TipTopic.EX_LONG to Set(
+            understand = listOf(
+                "Longer sessions use more glucose, which may be linked to lower glucose afterwards.",
+                "The longer you move, the longer muscles can keep taking up glucose."
+            ),
+            act = listOf(
+                "Plan some extra care for glucose in the hours after longer sessions.",
+                "Keep fast-acting carbs close by after longer sessions."
+            ),
+            maintain = listOf(
+                "Shorter sessions seem to go smoothly, so keep them in your routine.",
+                "Longer workouts may need extra planning under your usual exercise management plan."
+            )
+        ),
+        TipTopic.EX_EVENING to Set(
+            understand = listOf(
+                "Evening activity can keep glucose lower into the night, which may be linked to this.",
+                "Overnight insulin and recovery after an evening workout may play a part."
+            ),
+            act = listOf(
+                "Keep fast-acting carbs near your bed after evening activity.",
+                "Be extra alert to the signs of a low after evening activity."
+            ),
+            maintain = listOf(
+                "Earlier sessions seem to leave you steadier, so keep them in the mix.",
+                "Keep the habits that work on the days you move earlier."
+            )
+        ),
+        TipTopic.EX_NEXTDAY to Set(
+            understand = listOf(
+                "Regular movement can help the body use insulin more effectively the next day.",
+                "Active days may be linked to steadier glucose the day after."
+            ),
+            act = listOf(
+                "Try to keep a bit of movement in most of your days.",
+                "Short walks add up, so fit them in where you can."
+            ),
+            maintain = listOf(
+                "Keep the activity habits that work for you.",
+                "Build on this one active day at a time."
+            )
+        ),
+        TipTopic.EX_INTENSITY to Set(
+            understand = listOf(
+                "Harder efforts can change how much glucose the body uses and releases.",
+                "Higher heart rates during activity may be linked to this bigger change."
+            ),
+            act = listOf(
+                "Plan a little extra care around your harder sessions.",
+                "A steady, easier pace may suit you better when you want glucose to stay level."
+            ),
+            maintain = listOf(
+                "Keep the intensity that leaves your glucose steadier.",
+                "Reuse the kind of session that keeps your glucose calm."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

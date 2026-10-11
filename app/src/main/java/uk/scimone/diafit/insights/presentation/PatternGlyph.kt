@@ -26,7 +26,9 @@ private class Sketch(
     val guides: List<Float> = emptyList(),
     val meal: Float? = null,
     val second: List<Pair<Float, Float>>? = null,
-    val bars: List<Float>? = null
+    val bars: List<Float>? = null,
+    /** A shaded stretch (the activity itself), as x from-to. */
+    val span: Pair<Float, Float>? = null
 )
 
 private val SKETCHES: Map<String, Sketch> = mapOf(
@@ -42,6 +44,15 @@ private val SKETCHES: Map<String, Sketch> = mapOf(
     "meal-good" to Sketch(listOf(0f to .65f, .15f to .65f, .4f to .42f, .65f to .55f, .85f to .65f, 1f to .65f), meal = .15f),
     "meal-rich" to Sketch(listOf(0f to .75f, .15f to .75f, .4f to .35f, .65f to .25f, .85f to .3f, 1f to .35f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .35f to .5f, .6f to .7f, 1f to .75f)),
     "meal-type" to Sketch(emptyList(), bars = listOf(.85f, .5f, .6f)),
+    "ex-drop" to Sketch(listOf(0f to .4f, .15f to .4f, .35f to .6f, .5f to .85f, .75f to .8f, 1f to .75f), guides = listOf(.7f), span = .15f to .5f),
+    "ex-low" to Sketch(listOf(0f to .4f, .15f to .4f, .5f to .5f, .7f to .9f, 1f to .78f), guides = listOf(.7f), span = .15f to .4f),
+    "ex-delayed" to Sketch(listOf(0f to .4f, .3f to .4f, .55f to .5f, .8f to .92f, 1f to .9f), guides = listOf(.7f), span = .1f to .3f),
+    "ex-rise" to Sketch(listOf(0f to .7f, .15f to .7f, .4f to .2f, .65f to .35f, 1f to .6f), guides = listOf(.4f), span = .15f to .45f),
+    "ex-good" to Sketch(listOf(0f to .5f, .2f to .5f, .5f to .52f, 1f to .5f), guides = listOf(.28f, .72f), span = .2f to .5f),
+    "ex-long" to Sketch(listOf(0f to .4f, .1f to .4f, .6f to .6f, .85f to .9f, 1f to .85f), guides = listOf(.7f), span = .1f to .6f),
+    "ex-evening" to Sketch(listOf(0f to .4f, .55f to .4f, .8f to .75f, 1f to .9f), guides = listOf(.7f), span = .55f to .75f),
+    "ex-nextday" to Sketch(emptyList(), bars = listOf(.45f, .85f)),
+    "ex-intensity" to Sketch(listOf(0f to .5f, .15f to .5f, .4f to .1f, .7f to .5f, 1f to .5f), second = listOf(0f to .5f, .15f to .5f, .4f to .35f, .7f to .5f, 1f to .5f), span = .15f to .5f),
     "meal-bolus" to Sketch(listOf(0f to .75f, .15f to .75f, .38f to .5f, .6f to .68f, 1f to .75f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .4f to .15f, .65f to .5f, 1f to .72f))
 )
 
@@ -69,13 +80,16 @@ private fun DrawScope.curve(points: List<Pair<Float, Float>>, color: Color, widt
 @Composable
 fun PatternGlyph(detector: String, tint: Color, modifier: Modifier = Modifier, size: Dp = 48.dp) {
     val sketch = SKETCHES[detector] ?: SKETCHES.getValue("steady")
-    Box(modifier.size(size).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.12f))) {
+    GlyphTile(tint, modifier, size) {
         Canvas(Modifier.fillMaxSize().padding(7.dp)) {
             val stroke = 2.2.dp.toPx()
             val faint = tint.copy(alpha = 0.4f)
             for (g in sketch.guides) {
                 val y = g * this.size.height
                 drawLine(faint, Offset(0f, y), Offset(this.size.width, y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f)))
+            }
+            sketch.span?.let { (from, to) ->
+                drawRect(tint.copy(alpha = 0.18f), Offset(from * this.size.width, 0f), androidx.compose.ui.geometry.Size((to - from) * this.size.width, this.size.height))
             }
             sketch.meal?.let { drawLine(faint, Offset(it * this.size.width, 0f), Offset(it * this.size.width, this.size.height), strokeWidth = 1.dp.toPx()) }
             sketch.bars?.let { bars ->
@@ -88,5 +102,13 @@ fun PatternGlyph(detector: String, tint: Color, modifier: Modifier = Modifier, s
             sketch.second?.let { curve(it, faint, stroke, dashed = true) }
             curve(sketch.main, tint, stroke)
         }
+    }
+}
+
+/** The rounded, softly tinted tile on the left of every card in the bell and the patterns list. */
+@Composable
+fun GlyphTile(tint: Color, modifier: Modifier = Modifier, size: Dp = 48.dp, content: @Composable () -> Unit) {
+    Box(modifier.size(size).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.12f)), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        content()
     }
 }
