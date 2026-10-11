@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -15,6 +16,22 @@ import uk.scimone.diafit.ui.theme.Activity
 import kotlin.math.max
 
 val ACTIVITY_LANE_HEIGHT = TREATMENT_BAND_HEIGHT
+
+/** Raised activity as a faint wash behind the whole tile (stronger with more intensity), workouts a little stronger. */
+@Composable
+fun Modifier.activityWash(elevated: List<ActivitySpan>, workouts: List<ActivitySpan>, dayStartUtc: Long, dayEndUtc: Long): Modifier {
+    if (elevated.isEmpty() && workouts.isEmpty()) return this
+    return drawBehind {
+        val axis = DayXAxis(dayStartUtc, dayEndUtc, size.width)
+        fun wash(span: ActivitySpan, alpha: Float) {
+            val x0 = axis.x(span.startUtc).coerceAtLeast(0f)
+            val x1 = axis.x(span.endUtc).coerceAtMost(size.width)
+            if (x1 > x0) drawRect(Activity.copy(alpha = alpha), Offset(x0, 0f), Size(x1 - x0, size.height))
+        }
+        elevated.forEach { wash(it, 0.08f + 0.10f * it.intensity) }
+        workouts.forEach { wash(it, 0.22f) }
+    }
+}
 
 /**
  * How active the day was, on its own lane under the treatments. Every stretch of raised activity found in

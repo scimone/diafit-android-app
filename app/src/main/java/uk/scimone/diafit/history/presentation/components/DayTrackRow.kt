@@ -52,6 +52,7 @@ fun DayTrackRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(stripBackground())
                 .then(if (layers.sleep) Modifier.sleepWash(sessions, day.dayStartUtc, day.dayEndUtc) else Modifier)
+                .then(if (layers.activity) Modifier.activityWash(day.elevatedActivity, workouts, day.dayStartUtc, day.dayEndUtc) else Modifier)
         ) {
             // Today is still running: its horizon chart is left out.
             if (!isToday) HorizonChart(day, thresholds, drawBackground = false)
@@ -61,11 +62,7 @@ fun DayTrackRow(
                 Spacer(Modifier.height(2.dp))
                 TreatmentBand(day.insulin, day.dayStartUtc, day.dayEndUtc, Bolus, INSULIN_FULL_INTENSITY_U)
             }
-            if (layers.activity) {
-                Spacer(Modifier.height(2.dp))
-                ActivityLane(day.elevatedActivity, workouts, day.dayStartUtc, day.dayEndUtc)
-            }
-            if (layers.treatments || layers.activity) Spacer(Modifier.height(3.dp))
+            if (layers.treatments) Spacer(Modifier.height(3.dp))
         }
     }
 }

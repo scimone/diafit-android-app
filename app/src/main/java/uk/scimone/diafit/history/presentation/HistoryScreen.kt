@@ -102,7 +102,8 @@ fun HistoryScreen(
                             // Room to scroll past the collapse, so shrinking the card can never clamp the scroll back to the top.
                             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 12.dp + (expandedHeight - collapsedHeight))
                         ) {
-                            itemsIndexed(state.days, key = { _, day -> day.epochDay }) { index, day ->
+                            // Today is still running, so it is left out of the overview.
+                            itemsIndexed(state.days.filter { it.epochDay != today }, key = { _, day -> day.epochDay }) { index, day ->
                                 // Newest first: a Sunday starts a new (older) week, so give it some air.
                                 val weekBreak = index > 0 && LocalDate.ofEpochDay(day.epochDay).dayOfWeek == DayOfWeek.SUNDAY
                                 DayTrackRow(
@@ -207,7 +208,6 @@ private fun FilterButton(
             Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Show", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Column {
-                    LayerItem("Glucose", true, enabled = false) {}
                     LayerItem("Meals and insulin", layers.treatments) { onLayers(layers.copy(treatments = !layers.treatments)) }
                     LayerItem("Activity", layers.activity) { onLayers(layers.copy(activity = !layers.activity)) }
                     LayerItem("Sleep", layers.sleep) { onLayers(layers.copy(sleep = !layers.sleep)) }

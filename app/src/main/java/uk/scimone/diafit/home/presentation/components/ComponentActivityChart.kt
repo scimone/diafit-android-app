@@ -101,15 +101,22 @@ fun ComponentActivityChart(
         val clipRight = min(g.right, nowX)
         if (clipRight <= g.left) return@Canvas
 
-        val laneH = LaneHeight.toPx()
-        val laneTop = size.height - laneH
-        val plotBottom = laneTop - LaneGap.toPx()
+        val plotBottom = size.height - LaneGap.toPx()
         // The heart-rate plot stays small however tall the panel is; the lane sits right under it.
         val plotTop = max(PlotTopInset.toPx(), plotBottom - PlotMaxHeight.toPx())
         val plotHeight = plotBottom - plotTop
         fun yOf(bpm: Float) = plotBottom - ((bpm - HR_MIN) / (hrMax - HR_MIN)).coerceIn(0f, 1f) * plotHeight
 
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
+            // Sleep and workouts: a wash behind everything, full panel height, with a small label at the top.
+            sessions.forEach { s ->
+                drawWash(g.xOf(s.startUtc), g.xOf(s.endUtc), g, size.height, Sleep, "Sleep ${formatDuration(s.asleepMs)}", textMeasurer)
+            }
+            data.exercise.forEach { e ->
+                val title = e.title ?: "Exercise"
+                drawWash(g.xOf(e.startUtc), g.xOf(e.endUtc), g, size.height, Activity, "$title ${formatDuration(e.durationMs)}", textMeasurer, fallback = title)
+            }
+
             // Steps.
             val barMax = plotHeight * STEPS_BAR_FRACTION
             data.steps.forEach { st ->
@@ -142,31 +149,23 @@ fun ComponentActivityChart(
                 drawPath(line, Activity, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
 
-            // Lane: one capsule per sleep session / workout.
-            sessions.forEach { s ->
-                drawCapsule(g.xOf(s.startUtc), g.xOf(s.endUtc), g, laneTop, laneH, Sleep, "Sleep ${formatDuration(s.asleepMs)}", textMeasurer)
-            }
-            data.exercise.forEach { e ->
-                val title = e.title ?: "Exercise"
-                drawCapsule(g.xOf(e.startUtc), g.xOf(e.endUtc), g, laneTop, laneH, Activity, "$title ${formatDuration(e.durationMs)}", textMeasurer, fallback = title)
-            }
         }
     }
 }
 
-/** A plain filled capsule over [x0]..[x1]; the label is written inside when it fits (the short [fallback] if only that does). */
-private fun DrawScope.drawCapsule(
-    x0: Float, x1: Float, g: ChartGeometry, laneTop: Float, laneH: Float, color: Color,
+/** A faint full-height fill over [x0]..[x1]; the label is written at its top when it fits (the short [fallback] if only that does). */
+private fun DrawScope.drawWash(
+    x0: Float, x1: Float, g: ChartGeometry, height: Float, color: Color,
     label: String, textMeasurer: TextMeasurer, fallback: String? = null
 ) {
     if (x1 < g.left || x0 > g.right) return
-    drawRoundRect(color, Offset(x0, laneTop), Size(max(3f, x1 - x0), laneH), CornerRadius(5.dp.toPx()))
-    val style = TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+    drawRect(color.copy(alpha = 0.16f), Offset(x0, 0f), Size(max(3f, x1 - x0), height))
+    val style = TextStyle(color = color, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
     val textX = max(x0, g.left) + 5.dp.toPx()
     for (candidate in listOfNotNull(label, fallback)) {
         val layout = textMeasurer.measure(candidate, style, maxLines = 1)
         if (x1 - textX >= layout.size.width + 4.dp.toPx()) {
-            drawText(layout, topLeft = Offset(textX, laneTop + (laneH - layout.size.height) / 2))
+            drawText(layout, topLeft = Offset(textX, 2.dp.toPx()))
             return
         }
     }

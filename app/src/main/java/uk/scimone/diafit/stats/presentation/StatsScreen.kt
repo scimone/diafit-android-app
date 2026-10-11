@@ -243,12 +243,15 @@ internal fun IconTile(icon: ImageVector, accent: Color, size: Dp = 44.dp) {
 
 /** The figure on the right of a card: same type size everywhere, unit beneath it. */
 @Composable
-internal fun FigureBlock(value: String, unit: String, color: Color) {
+internal fun FigureBlock(value: String, unit: String, color: Color, caption: String? = null) {
     if (unit.length in 1..2) {
         // A short unit (U, g, %, ms) sits right next to the number.
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
-            Text(" $unit", Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, softWrap = false)
+        Column(horizontalAlignment = Alignment.End) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
+                Text(" $unit", Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, softWrap = false)
+            }
+            if (caption != null) Text(caption, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
         }
         return
     }
@@ -353,7 +356,7 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
         StatsCards.DayCard.GLUCOSE -> StatsSurface {
             val g = day.glucose!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.GLUCOSE_IN_RANGE, "Glucose", null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "% in range", InRange) }
+                CardHeader(StatsMetric.GLUCOSE_IN_RANGE, "Glucose", null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "%", InRange, caption = "in range") }
                 GlucoseDayContent(g)
             }
         }
@@ -480,13 +483,13 @@ private fun SleepStages(night: SleepNight) {
             Triple("Light", SleepStage.LIGHT, night.lightMs to SleepLight),
             Triple("Deep", SleepStage.DEEP, night.deepMs to SleepDeep)
         )
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column {
             rows.forEach { (label, stage, ms) ->
                 val spans = night.spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage == SleepStage.SLEEPING) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium, color = ms.second)
                     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(6.dp))) {
+                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(18.dp)) {
                         drawRect(track)
                         spans.forEach {
                             val x0 = (it.startUtc - from) / total * size.width
@@ -496,7 +499,7 @@ private fun SleepStages(night: SleepNight) {
                     }
                     Text(
                         formatDurationHM(ms.first / 3_600_000.0), Modifier.width(60.dp),
-                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End
+                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, color = ms.second
                     )
                 }
             }
