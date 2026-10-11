@@ -168,7 +168,7 @@ fun ActivityBackdrop(data: ActivityData, window: ChartTimeWindow, geometry: Stat
     }
 }
 
-private const val WASH_ALPHA = 0.09f
+private const val WASH_ALPHA = 0.05f
 /** Where the wash label sits: below the panel title. */
 private val WashLabelTop = 22.dp
 

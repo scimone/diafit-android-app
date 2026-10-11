@@ -308,8 +308,8 @@ internal fun BigValue(value: String, unit: String, color: Color, modifier: Modif
 }
 
 @Composable
-private fun LabeledValue(label: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier, unitColor: Color = Color.Unspecified) {
-    Column(modifier) {
+private fun LabeledValue(label: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier, unitColor: Color = Color.Unspecified, end: Boolean = false) {
+    Column(modifier, horizontalAlignment = if (end) Alignment.End else Alignment.Start) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.Bottom) {
             Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
@@ -409,7 +409,7 @@ private fun InsulinDayCard(day: StatsDay) {
                     LabeledValue("Basal · ${(basal / total * 100).roundToInt()}%", it.value, it.unit, basalColor, Modifier.weight(1f))
                 }
                 StatsMetric.BOLUS.format(bolus).let {
-                    LabeledValue("Bolus · ${(bolus / total * 100).roundToInt()}%", it.value, it.unit, bolusColor, Modifier.weight(1f))
+                    LabeledValue("Bolus · ${(bolus / total * 100).roundToInt()}%", it.value, it.unit, bolusColor, Modifier.weight(1f), end = true)
                 }
             }
         }
@@ -434,9 +434,9 @@ private fun ActivityDayCard(day: StatsDay) {
                     day.totalKcal?.let {
                         val f = StatsMetric.CALORIES.format(it)
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text("Burned ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(f.value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = accent)
-                            Text(" ${f.unit}", style = MaterialTheme.typography.labelMedium, color = accent)
+                            Text("Burned ", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(f.value, Modifier.alignByBaseline(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = accent)
+                            Text(" ${f.unit}", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = accent)
                         }
                     }
                 }
@@ -448,7 +448,7 @@ private fun ActivityDayCard(day: StatsDay) {
                 SegmentedBar(listOf((resting / day.totalKcal).toFloat() to accent.copy(alpha = 0.4f), (active / day.totalKcal).toFloat() to accent), height = 14.dp)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LabeledValue("Resting", grouped(resting), "kcal", accent.copy(alpha = 0.6f), Modifier.weight(1f))
-                    LabeledValue("Active", grouped(active), "kcal", accent, Modifier.weight(1f))
+                    LabeledValue("Active", grouped(active), "kcal", accent, Modifier.weight(1f), end = true)
                 }
             }
             if (hasHeart) {
@@ -542,8 +542,8 @@ private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
             ZoneValue("Low", lowOnly, lowColor)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ZoneValue("Very high", g.veryHighShare, AboveRange)
-            ZoneValue("High", highOnly, highColor)
+            ZoneValue("Very high", g.veryHighShare, AboveRange, end = true)
+            ZoneValue("High", highOnly, highColor, end = true)
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -559,9 +559,14 @@ private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
 }
 
 @Composable
-private fun ZoneValue(label: String, share: Double, color: Color) {
+private fun ZoneValue(label: String, share: Double, color: Color, end: Boolean = false) {
     val pct = share * 100
-    LabeledValue(label, if (pct > 0 && pct < 1) "<1" else "${pct.roundToInt()}", "%", color)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (end) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
+        Text(label, Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(6.dp))
+        Text(if (pct > 0 && pct < 1) "<1" else "${pct.roundToInt()}", Modifier.alignByBaseline(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+        Text(" %", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelSmall, color = color)
+    }
 }
 
 // ---------------------------------------------------------------- week / month / year rows
