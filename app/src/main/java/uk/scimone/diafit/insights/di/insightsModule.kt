@@ -13,6 +13,6 @@ val insightsModule = module {
     single { AppNotifier(androidContext(), get()) }
     single { InsightStore(get<uk.scimone.diafit.core.data.local.AppDatabase>().insightDao()) }
     single { InsightScheduler(androidContext()) }
-    viewModel { InsightsViewModel(get(), get()) }
+    viewModel { InsightsViewModel(get()) }
     viewModel { (id: String) -> InsightDetailViewModel(get(), get(), id) }
 }

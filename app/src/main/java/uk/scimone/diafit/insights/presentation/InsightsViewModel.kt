@@ -17,21 +17,12 @@ import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 
 /** The insight list and the unread badge (one instance for the whole activity, so the menu badge and the page agree). */
-class InsightsViewModel(private val store: InsightStore, private val getTargetRange: GetTargetRangeUseCase) : ViewModel() {
+class InsightsViewModel(private val store: InsightStore) : ViewModel() {
     val insights: StateFlow<List<StoredInsight>?> =
         store.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val unreadCount: StateFlow<Int> =
         store.observeUnreadCount().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    private val _thresholds = MutableStateFlow<GlucoseThresholds?>(null)
-    val thresholds: StateFlow<GlucoseThresholds?> = _thresholds
-
-    init {
-        viewModelScope.launch {
-            try { _thresholds.value = getTargetRange().toCore().toThresholds() } catch (e: Exception) { Log.e("Insights", "No target range", e) }
-        }
-    }
 
     fun markAllRead() { viewModelScope.launch(NonCancellable) { store.markAllRead() } }
 }

@@ -36,6 +36,21 @@ sealed interface MiniGraph {
         val highlights: List<HourSpan> = emptyList()
     ) : MiniGraph
 
+    /**
+     * Glucose around meals, aligned on the start of the meal: [median] with a 25–75 % band ([p25]/[p75]) for the
+     * main group, optionally the median of a [compare] group (dashed). Values are the change in mg/dL from each meal's
+     * own starting level, so meals that start at different levels line up. Points are [stepMinutes] apart from
+     * [startMinute] (negative = before the meal).
+     */
+    @Serializable
+    @SerialName("meal")
+    data class MealResponse(
+        val startMinute: Int, val stepMinutes: Int,
+        val median: List<Int>, val p25: List<Int>, val p75: List<Int>,
+        val aLabel: String,
+        val compare: List<Int>? = null, val bLabel: String? = null
+    ) : MiniGraph
+
     /** Two median profiles by time of day (mg/dL), e.g. weekdays vs weekends. */
     @Serializable
     @SerialName("compare")
@@ -81,7 +96,8 @@ data class InsightCard(
 /** Which tip set a detector's finding uses (see [InsightTips]). */
 enum class TipTopic(val isLow: Boolean = false) {
     LOW_NIGHT(true), LOW_DAY(true), HIGH_NIGHT, HIGH_DAY, VARIABILITY, DAWN,
-    STEADY_NIGHT, STEADY_DAY, WEEKEND_BETTER, WEEKEND_WORSE
+    STEADY_NIGHT, STEADY_DAY, WEEKEND_BETTER, WEEKEND_WORSE,
+    MEAL_LOW(true), MEAL_SPIKE, MEAL_SLOW, MEAL_GOOD, MEAL_RICH, MEAL_TYPE, MEAL_BOLUS
 }
 
 /** A detector's raw finding: the card minus its tips, plus what is needed to choose them. */

@@ -38,9 +38,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
-import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.insights.domain.InsightState
 import uk.scimone.diafit.insights.domain.InsightTone
 import uk.scimone.diafit.insights.domain.StoredInsight
@@ -53,7 +53,6 @@ import uk.scimone.diafit.ui.theme.Warning
 fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     val viewModel: InsightsViewModel = koinViewModel()
     val insights by viewModel.insights.collectAsState()
-    val thresholds by viewModel.thresholds.collectAsState()
     val unread by viewModel.unreadCount.collectAsState()
     Scaffold(
         topBar = {
@@ -65,9 +64,8 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
         }
     ) { padding ->
         val list = insights
-        val t = thresholds
         when {
-            list == null || t == null -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            list == null -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             else -> {
                 val active = list.filter { it.state != InsightState.RESOLVED && it.state != InsightState.DISMISSED }
                     .sortedWith(compareByDescending<StoredInsight> { it.isUnreviewed }.thenByDescending { it.card.priority })
@@ -83,12 +81,12 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 } else LazyColumn(
                     Modifier.fillMaxSize().padding(padding),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (active.isEmpty()) item {
                         Text("Nothing to report right now.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    items(active, key = { it.card.id }) { InsightCardView(it, t) { onOpen(it.card.id) } }
+                    items(active, key = { it.card.id }) { InsightCardView(it, onClick = { onOpen(it.card.id) }) }
                     if (resolved.isNotEmpty()) {
                         item { SectionTitle("No longer observed") }
                         items(resolved, key = { "r-" + it.card.id }) { CompactRow(it) { onOpen(it.card.id) } }
@@ -115,36 +113,28 @@ internal fun toneVisuals(tone: InsightTone): Pair<ImageVector, Color> = when (to
     InsightTone.MIXED -> Icons.Filled.Insights to MaterialTheme.colorScheme.primary
 }
 
+/** The compact card: a sketch of the pattern, its short name and one line of numbers. Everything else is on the detail page. */
 @Composable
-private fun InsightCardView(item: StoredInsight, thresholds: GlucoseThresholds, onClick: () -> Unit) {
+internal fun InsightCardView(item: StoredInsight, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val card = item.card
     val (icon, tint) = toneVisuals(card.tone)
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, if (item.isUnreviewed) tint.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-                Text(card.title, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                if (item.isUnreviewed) StateChip(item.state.label, tint)
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PatternGlyph(card.detector, tint)
+            Column(Modifier.weight(1f)) {
+                Text(card.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "${card.category.label} · ${card.effectLabel}",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
             }
-            InsightGraph(card.miniGraph, thresholds, large = false)
-            Text(card.summary, style = MaterialTheme.typography.bodyMedium)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                card.tips.forEach { tip ->
-                    Row {
-                        Text("•", Modifier.padding(end = 8.dp), color = tint)
-                        Text(tip, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-            Text(
-                "${card.category.label} · ${card.effectLabel} · last ${card.sampleSize} ${card.sampleUnit}",
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (item.isUnreviewed) StateChip(item.state.label, tint) else Icon(icon, null, tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
         }
     }
 }

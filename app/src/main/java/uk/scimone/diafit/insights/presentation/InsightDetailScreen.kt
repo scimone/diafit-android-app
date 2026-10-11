@@ -67,6 +67,7 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                PatternGlyph(card.detector, tint, Modifier.padding(end = 12.dp))
                 Text(card.title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 if (insight.state != InsightState.ONGOING) StateChip(insight.state.label, tint)
             }
@@ -74,6 +75,9 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             Panel { InsightGraph(card.miniGraph, t, large = true) }
 
             Panel("The numbers") {
+                (card.miniGraph as? uk.scimone.diafit.insights.domain.MiniGraph.AgpWindow)?.highlights?.takeIf { it.isNotEmpty() }?.let { spans ->
+                    Fact("Time window", spans.joinToString(", ") { it.label })
+                }
                 Fact("Looked at", period(card.observationFromUtc, card.observationToUtc))
                 card.baselineLabel?.let { Fact("Compared with", it) }
                 Fact("Observations", "${card.sampleSize} ${card.sampleUnit}" + (card.positiveCount?.let { " ($it showed it)" } ?: ""))

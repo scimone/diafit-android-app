@@ -217,20 +217,16 @@ class MainActivity : ComponentActivity() {
                                 val unread by notificationsViewModel.unreadCount.collectAsState()
                                 IconButton(onClick = { overlays.add(Overlay.Notifications) }) {
                                     BadgedBox(badge = {
-                                        if (unread > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
+                                        if (unread + unreadInsights > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
                                     }) {
                                         Icon(imageVector = Icons.Filled.Notifications, contentDescription = "Notifications")
                                     }
                                 }
                                 IconButton(onClick = { overflowMenuExpanded = true }) {
-                                    BadgedBox(badge = {
-                                        if (unreadInsights > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.MoreVert,
-                                            contentDescription = "More options"
-                                        )
-                                    }
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = "More options"
+                                    )
                                 }
                                 DropdownMenu(
                                     expanded = overflowMenuExpanded,
@@ -246,12 +242,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Insights") },
-                                        leadingIcon = {
-                                            BadgedBox(badge = { if (unreadInsights > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935)) }) {
-                                                Icon(imageVector = Icons.Filled.Insights, contentDescription = null)
-                                            }
-                                        },
-                                        trailingIcon = if (unreadInsights > 0) ({ Text("$unreadInsights new", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }) else null,
+                                        leadingIcon = { Icon(imageVector = Icons.Filled.Insights, contentDescription = null) },
                                         onClick = {
                                             overflowMenuExpanded = false
                                             overlays.add(Overlay.Insights)
@@ -390,7 +381,9 @@ class MainActivity : ComponentActivity() {
                                 )
                                 is Overlay.Notifications -> uk.scimone.diafit.notifications.presentation.NotificationsScreen(
                                     onBack = { overlays.remove(overlay) },
-                                    onOpen = { link -> overlays.remove(overlay); openLink(link) }
+                                    onOpen = { link -> overlays.remove(overlay); openLink(link) },
+                                    onOpenInsight = { id -> overlays.remove(overlay); overlays.add(Overlay.InsightDetail(id)) },
+                                    onOpenAllInsights = { overlays.remove(overlay); overlays.add(Overlay.Insights) }
                                 )
                                 is Overlay.Insights -> uk.scimone.diafit.insights.presentation.InsightsScreen(
                                     onBack = { overlays.remove(overlay) },

@@ -55,7 +55,7 @@ class InsightTipsTest {
     @Test fun careTeamIsOnlyMentionedForRecurringLows() {
         for ((topic, tips) in all) {
             val mentions = tips.count { "team" in it.lowercase() }
-            if (topic.isLow) assertEquals(1, mentions) else assertEquals("$topic", 0, mentions)
+            if (topic.isLow) assertEquals(1, mentions) else if (topic == TipTopic.MEAL_BOLUS) assertEquals(1, mentions) else assertEquals("$topic", 0, mentions)
         }
         // And first for escalated lows, last (replaced by a practical line) otherwise.
         assertTrue("team" in InsightTips.select(TipTopic.LOW_NIGHT, escalate = true)[2].lowercase())
@@ -69,7 +69,7 @@ class InsightTipsTest {
     }
 
     @Test fun favourableTopicsIncludeAWayToKeepWhatWorks() {
-        for (topic in listOf(TipTopic.STEADY_NIGHT, TipTopic.STEADY_DAY, TipTopic.WEEKEND_BETTER)) {
+        for (topic in listOf(TipTopic.STEADY_NIGHT, TipTopic.STEADY_DAY, TipTopic.WEEKEND_BETTER, TipTopic.MEAL_GOOD)) {
             val keep = Regex("\\b(keep|stick|build|reuse|borrow)\\b", RegexOption.IGNORE_CASE)
             assertTrue("$topic", InsightTips.select(topic, false).drop(1).any { keep.containsMatchIn(it) })
         }

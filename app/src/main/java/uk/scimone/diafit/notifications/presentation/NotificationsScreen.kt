@@ -52,15 +52,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
+import uk.scimone.diafit.insights.presentation.InsightCardView
+import androidx.compose.material3.TextButton
 import java.util.Date
 import java.util.Locale
 
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
+fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onOpenInsight: (id: String) -> Unit, onOpenAllInsights: () -> Unit) {
     val viewModel: NotificationsViewModel = koinViewModel()
     val items by viewModel.recent.collectAsState()
+    val insights by viewModel.insights.collectAsState()
     val markRead = rememberUpdatedState(viewModel::markAllRead)
     DisposableEffect(Unit) { onDispose { markRead.value() } }
     val snackbar = remember { SnackbarHostState() }
@@ -83,9 +86,12 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
             )
         }
     ) { padding ->
-        if (items.isEmpty()) {
+        if (items.isEmpty() && insights.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = onOpenAllInsights) { Text("See all insights") }
+                }
             }
         } else {
             LazyColumn(
@@ -93,6 +99,17 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (insights.isNotEmpty()) {
+                    item(key = "insights-header") {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("New insights", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = onOpenAllInsights) { Text("See all") }
+                        }
+                    }
+                    items(insights, key = { "insight-" + it.card.id }) { InsightCardView(it, onClick = { onOpenInsight(it.card.id) }) }
+                } else item(key = "insights-link") {
+                    TextButton(onClick = onOpenAllInsights) { Text("See all insights") }
+                }
                 items(items, key = { it.id }) { n ->
                     // Swipe either way, or tap the ✕, to remove.
                     val dismissState = rememberSwipeToDismissBoxState()

@@ -137,6 +137,104 @@ object InsightTips {
                 "Keep what works on weekends going."
             )
         ),
+        TipTopic.MEAL_LOW to Set(
+            understand = listOf(
+                "Insulin taken for a meal can still be working a few hours later, which may be linked to lows after eating.",
+                "A lighter meal than usual may play a part in a dip a few hours after eating."
+            ),
+            act = listOf(
+                "Keep fast-acting carbs handy in the hours after meals.",
+                "Stay alert to the signs of a low in the hours after you eat."
+            ),
+            maintain = listOf(
+                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
+                "Treating a low promptly, as your plan describes, keeps it short."
+            )
+        ),
+        TipTopic.MEAL_SPIKE to Set(
+            understand = listOf(
+                "Fast-digesting carbs can push glucose up quickly after a meal.",
+                "Meal size and the type of carbs may both play a part in a big rise."
+            ),
+            act = listOf(
+                "Pairing carbs with protein or fibre may slow the rise.",
+                "A short walk after eating often takes the edge off a rise."
+            ),
+            maintain = listOf(
+                "Notice which meals give you smaller rises and make them your regulars.",
+                "Keep the meals that stay gentle on your glucose in rotation."
+            )
+        ),
+        TipTopic.MEAL_SLOW to Set(
+            understand = listOf(
+                "Fat and protein can slow digestion, so glucose may stay up for hours after a meal.",
+                "A large meal can keep glucose elevated for longer."
+            ),
+            act = listOf(
+                "A walk a little while after eating may help glucose come down sooner.",
+                "Smaller portions may be easier on the hours after eating."
+            ),
+            maintain = listOf(
+                "Reuse the meals after which your glucose settles back sooner.",
+                "Keep the habits that help glucose come back down."
+            )
+        ),
+        TipTopic.MEAL_GOOD to Set(
+            understand = listOf(
+                "Your glucose rises gently and comes back down, which suggests these meals suit you.",
+                "Steady responses like this often come from consistent portions and food choices."
+            ),
+            act = listOf(
+                "Keep portions and food choices close to what they are for these meals.",
+                "Reuse these meals when you want a predictable result."
+            ),
+            maintain = listOf(
+                "Build on this one meal at a time.",
+                "Save the meals that give you predictable results."
+            )
+        ),
+        TipTopic.MEAL_RICH to Set(
+            understand = listOf(
+                "Fat and protein can make a meal affect your glucose for longer.",
+                "Slow-digesting meals may keep glucose up for hours."
+            ),
+            act = listOf(
+                "Pay attention to your glucose a few hours after richer meals.",
+                "Plan for a longer-lasting effect when you have richer meals."
+            ),
+            maintain = listOf(
+                "Save meals that give you more predictable results.",
+                "Keep the richer meals that sit well with you."
+            )
+        ),
+        TipTopic.MEAL_TYPE to Set(
+            understand = listOf(
+                "The time of day can change how your body handles food, which may play a part.",
+                "Typical foods at this meal may be linked to its bigger rises."
+            ),
+            act = listOf(
+                "Try the choices from your steadier meals at this meal, too.",
+                "A short walk afterwards is an easy thing to add to this meal."
+            ),
+            maintain = listOf(
+                "Keep what works at your steadier meals.",
+                "Build on the meals that stay gentle."
+            )
+        ),
+        TipTopic.MEAL_BOLUS to Set(
+            understand = listOf(
+                "Insulin that starts working before the food does may help keep a rise smaller.",
+                "Timing may play a part in how big the rise after a meal is."
+            ),
+            act = listOf(
+                "If you'd like to explore different insulin timing, your diabetes team can help you plan it.",
+                "Planning meals a little ahead makes it easier to time things well."
+            ),
+            maintain = listOf(
+                "Keep doing what works on the meals that went smoothly.",
+                "Reuse the routines of your smoother meals."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

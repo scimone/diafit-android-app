@@ -1,6 +1,8 @@
 package uk.scimone.diafit.insights.domain
 
+import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
+import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import java.time.Instant
 import java.time.LocalDate
@@ -53,7 +55,10 @@ class DetectionInput(
     val days: List<DayGlucose>,
     val thresholds: GlucoseThresholds,
     val nowUtc: Long,
-    val zone: ZoneId
+    val zone: ZoneId,
+    /** Meals as the user thinks of them (courses grouped), for the meal detectors. */
+    val sittings: List<MealSitting> = emptyList(),
+    val boluses: List<BolusEntity> = emptyList()
 ) {
     val today: LocalDate get() = Instant.ofEpochMilli(nowUtc).atZone(zone).toLocalDate()
 
@@ -61,4 +66,15 @@ class DetectionInput(
     fun lastDays(n: Int): List<DayGlucose> = days.filter { it.date > today.minusDays(n.toLong()) && it.date <= today }
 
     fun startOfDayUtc(date: LocalDate): Long = date.atStartOfDay(zone).toInstant().toEpochMilli()
+}
+
+/** Glucose at an arbitrary instant, from the same five-minute bins. NaN where nothing was recorded. */
+class GlucoseLookup(days: List<DayGlucose>, private val zone: ZoneId) {
+    private val byDate = days.associateBy { it.date }
+
+    fun at(utcMs: Long): Float {
+        val local = Instant.ofEpochMilli(utcMs).atZone(zone)
+        val day = byDate[local.toLocalDate()] ?: return Float.NaN
+        return day.bins[((local.hour * 60 + local.minute) / BIN_MINUTES).coerceIn(0, BINS_PER_DAY - 1)]
+    }
 }

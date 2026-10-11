@@ -115,7 +115,20 @@ object TimeOfDayDetector {
 
     private fun isNight(r: IntRange) = r.last < 8 * BINS_PER_HOUR || r.first >= 22 * BINS_PER_HOUR
 
-    private fun title(prefix: String, r: IntRange) = "$prefix ${spanOf(r).label.replace("–", " and ")}"
+    /** "at night", "in the evening"...: the part of the day a window is mostly in, for short titles. */
+    private fun partOfDay(r: IntRange): String {
+        val centre = (r.first + r.last + 1) / 2 / BINS_PER_HOUR
+        return when {
+            centre < 5 -> "at night"
+            centre < 9 -> "in the early morning"
+            centre < 12 -> "in the morning"
+            centre < 14 -> "around midday"
+            centre < 18 -> "in the afternoon"
+            else -> "in the evening"
+        }
+    }
+
+    private fun title(prefix: String, r: IntRange) = "$prefix ${partOfDay(r)}"
 
     private fun id(kind: String, r: IntRange) = "tod.$kind.%02d-%02d".format(r.first / BINS_PER_HOUR, (r.last + 1) / BINS_PER_HOUR % 24)
 
@@ -166,7 +179,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = id("low", r), category = InsightCategory.TIME_OF_DAY, detector = "low",
-                    title = title("Low glucose between", r),
+                    title = title("Low glucose", r),
                     summary = "Glucose dropped below ${c.t.low} mg/dL for at least 15 minutes on ${f.lowDays.size} of ${f.valid.size} days" +
                         " in this window" + if (severe) ", and below ${c.t.veryLow} mg/dL on ${f.severeDays}." else ".",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
@@ -211,7 +224,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = id("high", r), category = InsightCategory.TIME_OF_DAY, detector = "high",
-                    title = title("High glucose between", r),
+                    title = title("High glucose", r),
                     summary = "Glucose was above ${c.t.high} mg/dL ${pct(f.tar)} of the time in this window, and for a quarter of it or more on ${f.highDays.size} of ${f.valid.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
                     sampleSize = f.valid.size, sampleUnit = "days", positiveCount = f.highDays.size,
@@ -248,7 +261,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = id("var", r), category = InsightCategory.TIME_OF_DAY, detector = "variability",
-                    title = title("Glucose varies a lot between", r),
+                    title = title("Variable glucose", r),
                     summary = "In this window glucose swings more than at other times of the day (variability ${f.cv.roundToInt()} % compared with ${c.overallCv.roundToInt()} % overall).",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
                     sampleSize = f.valid.size, sampleUnit = "days",
@@ -286,7 +299,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = "tod.dawn", category = InsightCategory.TIME_OF_DAY, detector = "dawn",
-                    title = "Glucose rises in the early morning",
+                    title = "Rising glucose at dawn",
                     summary = "Between about 03:00 and 07:00 glucose climbed by a typical ${medianRise.roundToInt()} mg/dL, on ${rising.size} of ${rises.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
                     sampleSize = rises.size, sampleUnit = "days", positiveCount = rising.size,
@@ -321,7 +334,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = id("steady", r), category = InsightCategory.TIME_OF_DAY, detector = "steady",
-                    title = title("Steady glucose between", r),
+                    title = title("Steady glucose", r),
                     summary = "Glucose stayed between ${c.t.low} and ${c.t.high} mg/dL ${pct(f.tir)} of the time in this window over ${f.valid.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
                     sampleSize = f.valid.size, sampleUnit = "days",
@@ -363,7 +376,7 @@ object TimeOfDayDetector {
             InsightCandidate(
                 card = InsightCard(
                     id = "tod.weekend", category = InsightCategory.TIME_OF_DAY, detector = "weekend",
-                    title = if (better) "Glucose is steadier on weekends" else "Time in range is lower on weekends",
+                    title = if (better) "Steadier glucose on weekends" else "Less time in range on weekends",
                     summary = "Time in range was ${a.average().roundToInt()} % on weekends and ${b.average().roundToInt()} % on weekdays.",
                     miniGraph = MiniGraph.ProfileComparison("Weekends", agpWeekend.medianGraph(), "Weekdays", agpWeekdays.medianGraph()),
                     observationFromUtc = from, observationToUtc = input.nowUtc,

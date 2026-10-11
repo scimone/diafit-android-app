@@ -16,7 +16,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import uk.scimone.diafit.core.domain.model.toSittings
+import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
+import uk.scimone.diafit.core.domain.repository.MealRepository
+import uk.scimone.diafit.insights.domain.MealDetector
 import uk.scimone.diafit.history.presentation.model.toThresholds
 import uk.scimone.diafit.insights.domain.DayGlucose
 import uk.scimone.diafit.insights.domain.DetectionInput
@@ -40,6 +44,8 @@ import java.util.concurrent.TimeUnit
  */
 class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params), KoinComponent {
     private val cgm: CgmRepository by inject()
+    private val mealRepository: MealRepository by inject()
+    private val bolusRepository: BolusRepository by inject()
     private val getTargetRange: GetTargetRangeUseCase by inject()
     private val store: InsightStore by inject()
     private val notifier: AppNotifier by inject()
@@ -62,10 +68,12 @@ class InsightWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         val days = DayGlucose.from(readings, zone)
         // Too little data says nothing about which insights are gone: keep the stored state as it is.
         if (days.size < MIN_DAYS_TO_SCAN) return
-        val input = DetectionInput(days, getTargetRange().toCore().toThresholds(), now, zone)
+        val sittings = withContext(Dispatchers.IO) { mealRepository.getUnmergedSince(USER_ID, from) }.toSittings()
+        val boluses = withContext(Dispatchers.IO) { bolusRepository.getBolusBetween(from, now, USER_ID) }
+        val input = DetectionInput(days, getTargetRange().toCore().toThresholds(), now, zone, sittings, boluses)
 
         val stored = store.getAll()
-        val candidates = TimeOfDayDetector.detect(input)
+        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input)
         val cards = InsightPipeline.finalize(
             candidates,
             existingTips = stored.associate { it.card.id to it.card.tips },
