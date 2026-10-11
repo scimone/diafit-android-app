@@ -53,7 +53,8 @@ fun DayTrackRow(
                 .background(stripBackground())
                 .then(if (layers.sleep) Modifier.sleepWash(sessions, day.dayStartUtc, day.dayEndUtc) else Modifier)
         ) {
-            HorizonChart(day, thresholds, drawBackground = false)
+            // Today is still running: its horizon chart is left out.
+            if (!isToday) HorizonChart(day, thresholds, drawBackground = false)
             if (layers.treatments) {
                 Spacer(Modifier.height(2.dp))
                 TreatmentBand(day.carbs, day.dayStartUtc, day.dayEndUtc, Carbs, CARBS_FULL_INTENSITY_G)

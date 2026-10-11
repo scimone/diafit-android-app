@@ -73,6 +73,12 @@ data class MealEntity(
             }
         }
 
+        /** Under this many grams of carbs a meal is always a snack. */
+        const val SNACK_CARBS_LIMIT_G = 20
+
+        fun suggestMealType(hour: Int, carbs: Int?): MealType =
+            if (carbs != null && carbs < SNACK_CARBS_LIMIT_G) MealType.SNACK else inferMealType(hour)
+
         fun inferMealType(hour: Int): MealType {
             return when (hour) {
                 in 5 until 10 -> MealType.BREAKFAST

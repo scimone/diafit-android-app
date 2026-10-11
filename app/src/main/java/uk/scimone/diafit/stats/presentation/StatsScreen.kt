@@ -244,6 +244,14 @@ internal fun IconTile(icon: ImageVector, accent: Color, size: Dp = 44.dp) {
 /** The figure on the right of a card: same type size everywhere, unit beneath it. */
 @Composable
 internal fun FigureBlock(value: String, unit: String, color: Color) {
+    if (unit.length in 1..2) {
+        // A short unit (U, g, %, ms) sits right next to the number.
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
+            Text(" $unit", Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, softWrap = false)
+        }
+        return
+    }
     Column(horizontalAlignment = Alignment.End) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color, maxLines = 1, softWrap = false)
         if (unit.isNotEmpty()) Text(unit, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
@@ -331,7 +339,7 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.dayCardItems(day: St
 
 private fun hasDayData(card: StatsCards.DayCard, day: StatsDay): Boolean = when (card) {
     StatsCards.DayCard.GLUCOSE -> day.glucose != null
-    StatsCards.DayCard.INSULIN -> day.bolusUnits != null || day.basalUnits != null
+    StatsCards.DayCard.INSULIN -> day.hasInsulin
     StatsCards.DayCard.MEALS -> day.carbs != null
     StatsCards.DayCard.ACTIVITY ->
         day.steps != null || day.activeMinutes != null || day.totalKcal != null || day.avgBpm != null || day.restingBpm != null || day.hrvMs != null
@@ -352,7 +360,7 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
         StatsCards.DayCard.INSULIN -> InsulinDayCard(day)
         StatsCards.DayCard.MEALS -> StatsSurface {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.CARBS, "Meals", null) { FigureBlock("${day.carbs!!.roundToInt()}", "g carbs", StatsMetric.CARBS.accent()) }
+                CardHeader(StatsMetric.CARBS, "Meals", "Carbohydrates") { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), Modifier.weight(1f))
                     LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), Modifier.weight(1f))
@@ -385,19 +393,18 @@ private fun InsulinDayCard(day: StatsDay) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CardHeader(StatsMetric.BOLUS, "Insulin", "Total daily dose") {
                 val f = StatsMetric.BOLUS.format(total)
-                FigureBlock(f.value, f.unit, MaterialTheme.colorScheme.onSurface)
+                FigureBlock(f.value, f.unit, bolusColor)
             }
-            if (total > 0 && day.bolusUnits != null && day.basalUnits != null) {
+            if (total > 0) {
                 SegmentedBar(listOf((basal / total).toFloat() to basalColor, (bolus / total).toFloat() to bolusColor), height = 14.dp)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                day.basalUnits?.let {
-                    val f = StatsMetric.BASAL.format(it)
-                    LabeledValue(if (total > 0) "Basal · ${(it / total * 100).roundToInt()}%" else "Basal", f.value, f.unit, basalColor, Modifier.weight(1f))
+                // Both are shown even when one is zero.
+                StatsMetric.BASAL.format(basal).let {
+                    LabeledValue("Basal · ${(basal / total * 100).roundToInt()}%", it.value, it.unit, basalColor, Modifier.weight(1f))
                 }
-                day.bolusUnits?.let {
-                    val f = StatsMetric.BOLUS.format(it)
-                    LabeledValue(if (total > 0) "Bolus · ${(it / total * 100).roundToInt()}%" else "Bolus", f.value, f.unit, bolusColor, Modifier.weight(1f))
+                StatsMetric.BOLUS.format(bolus).let {
+                    LabeledValue("Bolus · ${(bolus / total * 100).roundToInt()}%", it.value, it.unit, bolusColor, Modifier.weight(1f))
                 }
             }
         }
@@ -420,6 +427,15 @@ private fun ActivityDayCard(day: StatsDay) {
                     day.totalKcal?.let { val f = StatsMetric.CALORIES.format(it); LabeledValue("Calories burned", f.value, f.unit, accent, Modifier.weight(1f)) }
                 }
             }
+            if (day.activeKcal != null && day.totalKcal != null && day.totalKcal > 0) {
+                val active = day.activeKcal.coerceIn(0.0, day.totalKcal)
+                val resting = day.totalKcal - active
+                SegmentedBar(listOf((resting / day.totalKcal).toFloat() to accent.copy(alpha = 0.4f), (active / day.totalKcal).toFloat() to accent), height = 14.dp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    KcalLegend("Resting", resting, accent.copy(alpha = 0.4f))
+                    KcalLegend("Active", active, accent)
+                }
+            }
             if (hasHeart) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -431,6 +447,17 @@ private fun ActivityDayCard(day: StatsDay) {
         }
     }
 }
+
+@Composable
+private fun KcalLegend(label: String, kcal: Double, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).background(color, CircleShape))
+        Spacer(Modifier.width(4.dp))
+        Text("$label ${grouped(kcal)} kcal", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun grouped(v: Double) = String.format(java.util.Locale.getDefault(), "%,d", v.roundToInt())
 
 private val clock = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -444,14 +471,35 @@ private fun sleepRange(night: SleepNight): String? {
 @Composable
 private fun SleepStages(night: SleepNight) {
     if (night.hasStages && night.spans.isNotEmpty()) {
-        // Stages in the order they happened, so the night's shape (deep early, REM late) is visible.
-        val total = night.spans.sumOf { it.endUtc - it.startUtc }.coerceAtLeast(1L)
-        SegmentedBar(night.spans.map { ((it.endUtc - it.startUtc) / total.toFloat()) to sleepStageColor(it.stage) }, height = 14.dp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            StageLegend("Deep", night.deepMs, SleepDeep)
-            StageLegend("REM", night.remMs, SleepRem)
-            StageLegend("Light", night.lightMs, SleepLight)
-            StageLegend("Awake", night.awakeMs, SleepAwake)
+        // One lane per stage on the night's own time line, so the shape of the night (deep early, REM late) stays visible.
+        val from = night.spans.minOf { it.startUtc }
+        val total = (night.spans.maxOf { it.endUtc } - from).coerceAtLeast(1L).toFloat()
+        val rows = listOf(
+            Triple("Awake", SleepStage.AWAKE, night.awakeMs to SleepAwake),
+            Triple("REM", SleepStage.REM, night.remMs to SleepRem),
+            Triple("Light", SleepStage.LIGHT, night.lightMs to SleepLight),
+            Triple("Deep", SleepStage.DEEP, night.deepMs to SleepDeep)
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            rows.forEach { (label, stage, ms) ->
+                val spans = night.spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage == SleepStage.SLEEPING) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium, color = ms.second)
+                    val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(6.dp))) {
+                        drawRect(track)
+                        spans.forEach {
+                            val x0 = (it.startUtc - from) / total * size.width
+                            val x1 = (it.endUtc - from) / total * size.width
+                            drawRect(ms.second, androidx.compose.ui.geometry.Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(1.5f), size.height))
+                        }
+                    }
+                    Text(
+                        formatDurationHM(ms.first / 3_600_000.0), Modifier.width(60.dp),
+                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End
+                    )
+                }
+            }
         }
     } else {
         Text("No sleep stages were recorded for this night.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -464,18 +512,6 @@ internal fun sleepStageColor(stage: SleepStage): Color = when (stage) {
     SleepStage.LIGHT -> SleepLight
     SleepStage.DEEP -> SleepDeep
     SleepStage.SLEEPING -> SleepLight
-}
-
-@Composable
-private fun StageLegend(label: String, ms: Long, color: Color) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(8.dp).background(color, CircleShape))
-            Spacer(Modifier.width(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text(formatDurationHM(ms / 3_600_000.0), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-    }
 }
 
 @Composable
@@ -498,6 +534,10 @@ private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
         LabeledValue("Std dev", g.sdMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
         LabeledValue("CV", "${g.cvPercent.roundToInt()}", "%", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
         LabeledValue("GMI", String.format("%.1f", g.gmi), "% A1c", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LabeledValue("Data coverage", "${(g.coverage * 100).roundToInt()}", "%", StatsMetric.GLUCOSE_COVERAGE.accent(), Modifier.weight(1f))
+        LabeledValue("Readings", g.readingCount.toString(), "", MaterialTheme.colorScheme.onSurface, Modifier.weight(3f))
     }
 }
 

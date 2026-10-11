@@ -40,7 +40,9 @@ data class GlucoseDay(
     /** Shares 0..1. */
     val belowShare: Double,
     val inRangeShare: Double,
-    val aboveShare: Double
+    val aboveShare: Double,
+    /** Share 0..1 of the readings the sensor should have delivered (so far, for today). */
+    val coverage: Double = 1.0
 ) {
     val cvPercent: Double get() = if (meanMgdl > 0) sdMgdl / meanMgdl * 100 else 0.0
     /** Glucose Management Indicator, the A1c a CGM mean predicts (%). */
@@ -81,4 +83,7 @@ data class StatsDay(
     /** All bolus insulin of the day, automatic microboluses included. */
     val bolusUnits: Double? = null,
     val basalUnits: Double? = null
-)
+) {
+    /** Bolus and basal show up together, as long as one of them is above zero. */
+    val hasInsulin: Boolean get() = (bolusUnits ?: 0.0) > 0.0 || (basalUnits ?: 0.0) > 0.0
+}

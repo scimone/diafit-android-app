@@ -17,6 +17,7 @@ enum class StatsMetric(
     GLUCOSE_ABOVE("Above range"),
     GLUCOSE_CV("Glucose variability (CV)"),
     GLUCOSE_A1C("A1c (GMI)", periods = setOf(StatsPeriod.MONTH, StatsPeriod.YEAR)),
+    GLUCOSE_COVERAGE("Data coverage"),
     CARBS("Carbs", additive = true),
     PROTEIN("Protein", additive = true),
     FAT("Fat", additive = true),
@@ -43,8 +44,9 @@ enum class StatsMetric(
             GLUCOSE_ABOVE -> day.glucose?.let { it.aboveShare * 100 }
             GLUCOSE_CV -> day.glucose?.cvPercent
             GLUCOSE_A1C -> day.glucose?.gmi
-            BOLUS -> day.bolusUnits
-            BASAL -> day.basalUnits
+            GLUCOSE_COVERAGE -> day.glucose?.let { it.coverage * 100 }
+            BOLUS -> if (day.hasInsulin) day.bolusUnits ?: 0.0 else null
+            BASAL -> if (day.hasInsulin) day.basalUnits ?: 0.0 else null
             CARBS -> day.carbs
             PROTEIN -> day.protein?.takeIf { it > 0 }
             FAT -> day.fat?.takeIf { it > 0 }

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Favorite
@@ -42,7 +43,7 @@ fun StatsMetric.accent(): Color = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE -> InRange
     StatsMetric.GLUCOSE_BELOW -> BelowRange
     StatsMetric.GLUCOSE_ABOVE -> AboveRange
-    StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C -> GlucoseNeutral
+    StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C, StatsMetric.GLUCOSE_COVERAGE -> GlucoseNeutral
     StatsMetric.BOLUS -> Bolus
     StatsMetric.BASAL -> Basal
     StatsMetric.CARBS -> Carbs
@@ -82,7 +83,7 @@ fun StatsMetric.format(value: Double): Formatted = when (this) {
     StatsMetric.ACTIVITY -> if (value >= 60) Formatted(formatDurationHM(value / 60), "") else Formatted(value.roundToInt().toString(), "min")
     StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES -> Formatted(grouped(value), "kcal")
     StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Formatted(value.roundToInt().toString(), "g")
-    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV ->
+    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_COVERAGE ->
         Formatted(value.roundToInt().toString(), "%")
     StatsMetric.GLUCOSE_A1C -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "%")
     StatsMetric.BOLUS, StatsMetric.BASAL -> Formatted(String.format(Locale.getDefault(), "%.1f", value), "U")
@@ -106,6 +107,7 @@ fun StatsMetric.icon(): ImageVector = when (this) {
     StatsMetric.GLUCOSE_BELOW -> Icons.Filled.ArrowDownward
     StatsMetric.GLUCOSE_ABOVE -> Icons.Filled.ArrowUpward
     StatsMetric.GLUCOSE_CV -> Icons.Filled.Percent
+    StatsMetric.GLUCOSE_COVERAGE -> Icons.Filled.Sensors
     StatsMetric.GLUCOSE_A1C -> Icons.Filled.Science
     StatsMetric.BOLUS, StatsMetric.BASAL -> Icons.Filled.Vaccines
     StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Icons.Filled.Restaurant
@@ -123,6 +125,7 @@ fun StatsMetric.subtitle(): String = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE -> "Time in range, daily average"
     StatsMetric.GLUCOSE_BELOW -> "Time below range, daily average"
     StatsMetric.GLUCOSE_ABOVE -> "Time above range, daily average"
+    StatsMetric.GLUCOSE_COVERAGE -> "Share of sensor readings received, daily average"
     StatsMetric.SLEEP_SCHEDULE -> "Average bedtime and wake-up"
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> "Per night, average"
     else -> "Daily average"
@@ -130,7 +133,7 @@ fun StatsMetric.subtitle(): String = when (this) {
 
 /** The y axis labels of a metric's chart. */
 fun StatsMetric.axisLabel(v: Double): String = when (this) {
-    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV -> "${v.roundToInt()}%"
+    StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_COVERAGE -> "${v.roundToInt()}%"
     StatsMetric.STEPS, StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES ->
         if (v >= 1000) "${(v / 1000).let { if (it % 1.0 == 0.0) it.roundToInt().toString() else "%.1f".format(it) }}k" else v.roundToInt().toString()
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP ->

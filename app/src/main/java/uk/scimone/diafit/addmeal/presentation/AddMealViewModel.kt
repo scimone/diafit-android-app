@@ -13,7 +13,7 @@ import uk.scimone.diafit.core.domain.model.totals
 import uk.scimone.diafit.core.domain.model.withMacros
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferImpactType
-import uk.scimone.diafit.core.domain.model.MealEntity.Companion.inferMealType
+import uk.scimone.diafit.core.domain.model.MealEntity.Companion.suggestMealType
 import uk.scimone.diafit.core.domain.model.MealPhoto
 import uk.scimone.diafit.core.domain.model.MealSitting
 import uk.scimone.diafit.core.domain.model.MealType
@@ -78,7 +78,7 @@ class AddMealViewModel(
         val now = LocalDateTime.now()
         _uiState.value = AddMealState(
             mealTime = localDateTimeToInstant(now).toEpochMilli(),
-            mealType = inferMealType(now.hour),
+            mealType = suggestMealType(now.hour, null),
             description = ""
         )
         baseline = _uiState.value.formFields()
@@ -285,7 +285,7 @@ class AddMealViewModel(
                             isAnalyzing = false,
                             aiRequestOpen = false,
                             snackbarMessage = "AI estimate ready. Check the values before saving"
-                        )
+                        ).withSuggestedType()
                     }
                 }
                 .onFailure { error ->
@@ -329,7 +329,7 @@ class AddMealViewModel(
                 fats = if (components.isEmpty()) it.fats else totals.fat,
                 calories = if (components.isEmpty()) it.calories else totals.calories
             )
-            if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next
+            (if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next).withSuggestedType()
         }
     }
 
@@ -417,6 +417,13 @@ class AddMealViewModel(
         _uiState.update { it.copy(aiNotes = notes) }
     }
 
+    /** While the type is still auto-suggested: a snack for under 20 g of carbs, else by time of day. */
+    private fun AddMealState.withSuggestedType(): AddMealState {
+        if (!mealTypeAuto) return this
+        val hour = java.time.Instant.ofEpochMilli(mealTime ?: System.currentTimeMillis()).atZone(java.time.ZoneId.systemDefault()).hour
+        return copy(mealType = suggestMealType(hour, carbohydrates))
+    }
+
     fun onMealNameChanged(name: String) {
         _uiState.update { it.copy(mealName = name) }
     }
@@ -429,7 +436,7 @@ class AddMealViewModel(
         _uiState.update {
             it.copy(
                 mealTime = localDateTimeToInstant(newMealTime).toEpochMilli(),
-                mealType = if (it.mealTypeAuto) inferMealType(newMealTime.hour) else it.mealType
+                mealType = if (it.mealTypeAuto) suggestMealType(newMealTime.hour, it.carbohydrates) else it.mealType
             )
         }
     }
@@ -444,7 +451,7 @@ class AddMealViewModel(
     private fun onMacroChanged(change: (AddMealState) -> AddMealState) {
         _uiState.update {
             val next = change(it)
-            if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next
+            (if (next.impactAuto) next.copy(impactType = inferImpactType(next.carbohydrates, next.proteins, next.fats)) else next).withSuggestedType()
         }
     }
 

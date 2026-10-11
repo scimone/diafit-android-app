@@ -119,14 +119,14 @@ fun GlucoseResponseChart(
 
             // Target band
             drawRect(
-                InRange.copy(alpha = 0.10f),
+                InRange.copy(alpha = 0.05f),
                 topLeft = Offset(0f, yOf(target.upperBound.toFloat())),
                 size = Size(size.width, yOf(target.lowerBound.toFloat()) - yOf(target.upperBound.toFloat()))
             )
             // Window the event is expected to influence
             val effX0 = xOf(eventTimeUtc)
             val effX1 = xOf(min(effectEndUtc, end))
-            drawRect(eventColor.copy(alpha = 0.08f), Offset(effX0, 0f), Size(effX1 - effX0, plotH))
+            drawRect(eventColor.copy(alpha = 0.04f), Offset(effX0, 0f), Size(effX1 - effX0, plotH))
 
             // Y guides at the target bounds
             listOf(target.lowerBound, target.upperBound).forEach { v ->

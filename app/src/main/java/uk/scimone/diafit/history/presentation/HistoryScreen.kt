@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
@@ -164,26 +163,10 @@ private fun PeriodHeader(
             }
         }
         IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
-        WeekdayFilterButton(weekdays, onWeekdays)
-        LayersButton(layers, onLayers)
+        FilterButton(weekdays, onWeekdays, layers, onLayers)
     }
 }
 
-
-/** Which context layers the charts draw besides glucose, as a menu behind one icon. */
-@Composable
-private fun LayersButton(layers: HistoryLayers, onChange: (HistoryLayers) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }, Modifier.size(40.dp)) { Icon(Icons.Outlined.Layers, "Choose layers") }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            LayerItem("Glucose", true, enabled = false) {}
-            LayerItem("Meals and insulin", layers.treatments) { onChange(layers.copy(treatments = !layers.treatments)) }
-            LayerItem("Activity", layers.activity) { onChange(layers.copy(activity = !layers.activity)) }
-            LayerItem("Sleep", layers.sleep) { onChange(layers.copy(sleep = !layers.sleep)) }
-        }
-    }
-}
 
 @Composable
 private fun LayerItem(label: String, checked: Boolean, enabled: Boolean = true, onToggle: () -> Unit) {
@@ -204,7 +187,12 @@ private val WORK_DAYS = WEEKDAYS.toSet()
  * popup with seven round day toggles (none chosen = all days) and shortcuts for Mon–Fri and Sat–Sun, which a second tap clears.
  */
 @Composable
-private fun WeekdayFilterButton(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) {
+private fun FilterButton(
+    selected: Set<DayOfWeek>,
+    onChange: (Set<DayOfWeek>) -> Unit,
+    layers: HistoryLayers,
+    onLayers: (HistoryLayers) -> Unit
+) {
     var open by remember { mutableStateOf(false) }
     val active = selected.isNotEmpty()
     Box {
@@ -217,6 +205,14 @@ private fun WeekdayFilterButton(selected: Set<DayOfWeek>, onChange: (Set<DayOfWe
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Show", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column {
+                    LayerItem("Glucose", true, enabled = false) {}
+                    LayerItem("Meals and insulin", layers.treatments) { onLayers(layers.copy(treatments = !layers.treatments)) }
+                    LayerItem("Activity", layers.activity) { onLayers(layers.copy(activity = !layers.activity)) }
+                    LayerItem("Sleep", layers.sleep) { onLayers(layers.copy(sleep = !layers.sleep)) }
+                }
+                HorizontalDivider()
                 Text("Weekdays", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DayOfWeek.entries.forEach { d ->
