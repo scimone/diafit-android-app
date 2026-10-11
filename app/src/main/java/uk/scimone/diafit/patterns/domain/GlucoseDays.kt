@@ -88,6 +88,9 @@ class DetectionInput(
     fun startOfDayUtc(date: LocalDate): Long = date.atStartOfDay(zone).toInstant().toEpochMilli()
 }
 
+/** How far back the multi-factor detectors (sleep, combined, context) look: more nights and meals fill more groups. */
+const val LONG_WINDOW_DAYS = 90
+
 /** The usual standard deviation of CGM glucose (mg/dL) that the fixed effect-size thresholds were written for. */
 const val REFERENCE_SD = 45.0
 

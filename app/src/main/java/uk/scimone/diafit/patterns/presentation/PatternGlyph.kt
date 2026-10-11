@@ -71,6 +71,9 @@ private val SKETCHES: Map<String, Sketch> = mapOf(
     "ctx-mealweekend" to Sketch(emptyList(), bars = listOf(.5f, .5f, .5f, .5f, .5f, .85f, .8f)),
     "ctx-mealactivity" to Sketch(listOf(0f to .7f, .25f to .7f, .45f to .45f, .7f to .6f, 1f to .7f), second = listOf(0f to .7f, .25f to .7f, .45f to .15f, .7f to .5f, 1f to .7f), span = .02f to .2f, meal = .25f),
     "ctx-night" to Sketch(listOf(0f to .5f, .3f to .48f, .6f to .52f, 1f to .5f), second = listOf(0f to .5f, .2f to .25f, .45f to .75f, .7f to .3f, 1f to .6f), guides = listOf(.28f, .72f)),
+    "ctx-sleepactivity" to Sketch(emptyList(), bars = listOf(.85f, .4f, .8f, .65f)),
+    "ctx-sleepgood" to Sketch(emptyList(), bars = listOf(.45f, .9f)),
+    "ctx-latedinnerrich" to Sketch(listOf(0f to .7f, .2f to .6f, .45f to .22f, .7f to .15f, 1f to .22f), second = listOf(0f to .7f, .2f to .6f, .45f to .45f, .7f to .55f, 1f to .62f), guides = listOf(.4f), meal = .2f),
     "meal-bolus" to Sketch(listOf(0f to .75f, .15f to .75f, .38f to .5f, .6f to .68f, 1f to .75f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .4f to .15f, .65f to .5f, 1f to .72f))
 )
 

@@ -20,6 +20,7 @@ import uk.scimone.diafit.patterns.domain.PatternCard
 import uk.scimone.diafit.patterns.domain.PatternCategory
 import uk.scimone.diafit.patterns.domain.PatternPipeline
 import uk.scimone.diafit.patterns.domain.PatternTone
+import uk.scimone.diafit.patterns.domain.SleepNight
 import uk.scimone.diafit.patterns.domain.TipTopic
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -115,6 +116,35 @@ class ContextDetectorTest {
     @Test fun nothingWithoutVariation() {
         val meals = (0 until 27).map { meal(it, 12) }
         assertTrue(detect(days(12) { _, m -> 110f + bump(m, 50f) }, meals).isEmpty())
+    }
+
+    private fun nightOf(d: Int, asleep: Int, bed: Int = 120) = SleepNight(date(d), ms(d, 7) - asleep * 60_000L, ms(d, 7), asleep, null, bed)
+
+    @Test fun shortSleepMattersMoreAfterQuietDaysIsFound() {
+        // d % 4: 0 short+active, 1 long+active, 2 short+quiet, 3 long+quiet. Only short+quiet is followed by a bad day.
+        val nights = (0 until 27).map { nightOf(it, if (it % 2 == 0) 330 else 480) }
+        val events = (1 until 27).filter { (it % 4) < 2 }.map { ActivityEvent(ms(it - 1, 10), ms(it - 1, 11), "Activity", false) }
+        val g = (0 until 28).map { d -> DayGlucose(date(d), FloatArray(BINS_PER_DAY) { if (d % 4 == 2 && it >= 96) 230f else 120f }) }
+        val c = ContextDetector.detect(DetectionInput(g, thresholds, now, zone, events = events, nights = nights)).single { it.card.id == "ctx.sleepactivity" }
+        assertEquals(PatternTone.UNFAVORABLE, c.card.tone)
+    }
+
+    @Test fun fullRegularNightsAfterActiveDaysAreFavourable() {
+        val nights = (0 until 27).map { nightOf(it, if (it % 3 != 0) 480 else 330) }
+        val events = (1 until 27).filter { it % 2 == 1 }.map { ActivityEvent(ms(it - 1, 10), ms(it - 1, 11), "Activity", false) }
+        fun good(d: Int) = d in 1 until 27 && d % 3 != 0 && d % 2 == 1
+        val g = (0 until 28).map { d -> DayGlucose(date(d), FloatArray(BINS_PER_DAY) { if (!good(d) && it >= 96 && it % 2 == 0) 230f else 120f }) }
+        val c = ContextDetector.detect(DetectionInput(g, thresholds, now, zone, events = events, nights = nights)).single { it.card.id == "ctx.sleepgood" }
+        assertEquals(PatternTone.FAVORABLE, c.card.tone)
+    }
+
+    @Test fun lateRichDinnersKeepingNightsHigherAreFound() {
+        fun late(d: Int) = d % 2 == 1
+        fun rich(d: Int) = d % 4 == 1
+        val meals = (0 until 27).map { meal(it, if (late(it)) 22 else 19, 60, protein = if (late(it) && rich(it)) 20 else 5, fat = if (late(it) && rich(it)) 30 else 0) }
+        val g = (0 until 28).map { d -> DayGlucose(date(d), FloatArray(BINS_PER_DAY) { if (it < 72 && d > 0 && late(d - 1) && rich(d - 1)) 190f else 110f }) }
+        val found = ContextDetector.detect(DetectionInput(g, thresholds, now, zone, meals.toSittings())).map { it.card.id }
+        assertTrue(found.toString(), "ctx.latedinnerrich" in found)
     }
 
     private fun candidate(id: String, tone: PatternTone) = PatternCandidate(

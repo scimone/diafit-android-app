@@ -44,7 +44,7 @@ import kotlin.math.sqrt
  * (no safe, useful tips can be written for a co-occurrence), sleep-context combinations (same sample problem).
  */
 object ContextDetector {
-    const val WINDOW_DAYS = 28
+    const val WINDOW_DAYS = LONG_WINDOW_DAYS
 
     private const val MIN_GROUP = 6
     private const val SE_STRONG = 2.5
@@ -67,15 +67,23 @@ object ContextDetector {
     private const val NIGHT_END_BIN = 6 * BINS_PER_HOUR
     private const val MIN_COVERAGE = 0.7
     private const val MIN_ACTIVE_DAY_MIN = 15
+    /** Multi-factor comparisons (several conditions at once) need this much evidence for the interaction itself. */
+    private const val INTERACTION_SE = 3.0
+    private const val SLEEP_TIR_DIFF = 10.0
+    private const val SLEEP_GAP_MIN = 60
+    private const val GOOD_NIGHTS = 8
+    private const val REGULAR_BED_MIN = 60
+    private const val LATE_GAP_MIN = 60
+    private const val LATE_RICH_DIFF = 20.0
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
         val c = Ctx(input)
-        val meals = MealDetector.responses(input)
-        val ex = ExerciseDetector.responses(input)
+        val meals = MealDetector.responses(input, WINDOW_DAYS)
+        val ex = ExerciseDetector.responses(input, WINDOW_DAYS)
         return listOfNotNull(
             exPre(c, ex), exGap(c, ex), exType(c, ex),
             mealDelay(c, meals), mealTime(c, meals), mealWeekend(c, meals), mealActivity(c, meals),
-            night(c)
+            night(c), sleepActivity(c), sleepGood(c), lateDinnerRich(c)
         )
     }
 
@@ -409,6 +417,142 @@ object ContextDetector {
             active.sortedBy { it.tir }.let { if (better) it.takeLast(3).reversed() else it.take(3) }.map { "${dateLabel(input.startOfDayUtc(it.date), zone)} · ${it.minutes} min active · ${it.tir.roundToInt()} % in range overnight" },
             if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE, rank(if (better) 28.0 else 40.0, cm.z, active.size + quiet.size),
             "Nights after quieter days", if (better) TipTopic.CTX_NIGHT_BETTER else TipTopic.CTX_NIGHT_WORSE
+        )
+    }
+
+    // ---- sleep x previous-day activity -----------------------------------------------------------------------------
+
+    private fun dailyMinutes(c: Ctx): Map<LocalDate, Int> =
+        c.input.events.groupBy { Instant.ofEpochMilli(it.startUtc).atZone(c.zone).toLocalDate() }.mapValues { (_, e) -> e.sumOf { it.durationMin } }
+
+    private fun activeCut(minutes: Map<LocalDate, Int>): Int? {
+        val nonZero = minutes.values.filter { it > 0 }.sorted()
+        return if (nonZero.size < MIN_GROUP) null else maxOf(MIN_ACTIVE_DAY_MIN, nonZero[nonZero.size / 2])
+    }
+
+    private fun sleepGraph(hit: List<SleepDetector.Night>, rest: List<SleepDetector.Night>, a: String, b: String): MiniGraph? {
+        val agpA = agpOfDays(hit.map { it.day }) ?: return null
+        val agpB = agpOfDays(rest.map { it.day }) ?: return null
+        return MiniGraph.ProfileComparison(a, agpA.medianGraph(), b, agpB.medianGraph())
+    }
+
+    /**
+     * Does the short-sleep penalty depend on how active the day before was? Four groups (short / longer night x active /
+     * quieter previous day), each >= 6 nights; the difference between the two penalties must itself be 3x its standard
+     * error. Differs from `sleep.short`, which pools all nights and never looks at the previous day.
+     */
+    private fun sleepActivity(c: Ctx): PatternCandidate? {
+        val nights = SleepDetector.nights(c.input, WINDOW_DAYS)
+        val minutes = dailyMinutes(c)
+        val cutMin = activeCut(minutes) ?: return null
+        if (nights.size < 4 * MIN_GROUP) return null
+        val sleepCut = median(nights.map { it.n.asleepMin.toDouble() })
+        val (short, long) = nights.partition { it.n.asleepMin < sleepCut }.let { (s, l) -> if (s.size >= 2 * MIN_GROUP) s to l else nights.partition { it.n.asleepMin <= sleepCut } }
+        if (median(long.map { it.n.asleepMin.toDouble() }) - median(short.map { it.n.asleepMin.toDouble() }) < SLEEP_GAP_MIN) return null
+        fun active(n: SleepDetector.Night) = (minutes[n.n.wakeDate.minusDays(1)] ?: 0) >= cutMin
+        val sA = short.filter(::active); val sQ = short.filter { !active(it) }; val lA = long.filter(::active); val lQ = long.filter { !active(it) }
+        if (listOf(sA, sQ, lA, lQ).any { it.size < MIN_GROUP }) return null
+        val penA = cmp(lA, sA) { it.tir }; val penQ = cmp(lQ, sQ) { it.tir }
+        val inter = penQ.diff - penA.diff
+        val seI = sqrt(penQ.se * penQ.se + penA.se * penA.se)
+        if (abs(inter) < SLEEP_TIR_DIFF || abs(inter) < INTERACTION_SE * seI) return null
+        val quietWorse = inter > 0
+        val big = if (quietWorse) penQ else penA
+        val hit = if (quietWorse) sQ else sA
+        // The larger penalty must itself be real and hold in both halves of the period.
+        if (!solid(Cmp(big.hit, big.rest, big.diff, big.se), SLEEP_TIR_DIFF, { it.n.endUtc }, { it.tir })) return null
+        val small = if (quietWorse) penA else penQ
+        val which = if (quietWorse) "quieter" else "active"
+        val graph = sleepGraph(hit, big.hit, "Short night after $which day", "Longer night after $which day") ?: return null
+        return card(
+            c, "ctx.sleepactivity", "ctx-sleepactivity", "Short sleep matters more after ${if (quietWorse) "quiet" else "active"} days",
+            "After a $which day, nights under ${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min (${hit.size}) were followed by ${pct(hit.map { it.tir }.average())} of the rest of the day in range, against ${pct(big.hit.map { it.tir }.average())} after longer nights (${big.hit.size}); after ${if (quietWorse) "active" else "quieter"} days the gap was only ${abs(small.diff).roundToInt()} points.",
+            graph, "nights", Cmp(hit, big.hit, -big.diff, big.se), "${big.diff.roundToInt()} points lower in range (vs ${small.diff.roundToInt()} the other way)",
+            "The two gaps differ by ${abs(inter).roundToInt()} points, about ${"%.1f".format(abs(inter) / seI.coerceAtLeast(0.01))}× the margin of error of that difference (±${seI.roundToInt()} points), so this needs more evidence than a single comparison; the larger gap holds in both halves of the period.",
+            listOf(
+                "Four groups of at least $MIN_GROUP nights each are compared over up to $WINDOW_DAYS days; days with under 70 % sensor data after waking are left out.",
+                "An active previous day means at least $cutMin minutes of activity (your typical active day); days without activity data count as quieter.",
+                "Meals and routine differ between days too, so this can't show that sleep or activity is the reason."
+            ),
+            hit.sortedBy { it.tir }.take(3).map { "${dateLabel(it.n.endUtc, c.zone)} · ${it.n.asleepMin / 60} h ${"%02d".format(it.n.asleepMin % 60)} min asleep · ${it.tir.roundToInt()} % in range" },
+            PatternTone.UNFAVORABLE, rank(42.0, abs(inter) / seI, nights.size), "Longer nights after $which days", TipTopic.CTX_SLEEP_ACTIVITY
+        )
+    }
+
+    // ---- good sleep context -----------------------------------------------------------------------------------------
+
+    /**
+     * The favourable counterpart: nights that were long enough, started near the usual bedtime and followed an active
+     * day, against all other nights, judged on the rest of the wake-up day. Several conditions at once, so >= 8 nights in
+     * the group and 3x the margin of error.
+     */
+    private fun sleepGood(c: Ctx): PatternCandidate? {
+        val nights = SleepDetector.nights(c.input, WINDOW_DAYS)
+        val cutMin = activeCut(dailyMinutes(c)) ?: return null
+        if (nights.size < GOOD_NIGHTS + MIN_GROUP) return null
+        val minutes = dailyMinutes(c)
+        val sleepCut = median(nights.map { it.n.asleepMin.toDouble() }); val bedMed = median(nights.map { it.n.bedtimeMin.toDouble() })
+        val (good, rest) = nights.partition {
+            it.n.asleepMin >= sleepCut && abs(it.n.bedtimeMin - bedMed) < REGULAR_BED_MIN && (minutes[it.n.wakeDate.minusDays(1)] ?: 0) >= cutMin
+        }
+        if (good.size < GOOD_NIGHTS || rest.size < MIN_GROUP) return null
+        val cm = cmp(good, rest) { it.tir }
+        if (cm.diff <= 0 || cm.diff < SLEEP_TIR_DIFF || cm.diff < INTERACTION_SE * cm.se || !solid(cm, SLEEP_TIR_DIFF, { it.n.endUtc }, { it.tir })) return null
+        val graph = sleepGraph(good, rest, "After a full, regular night", "Other nights") ?: return null
+        fun clock(m: Double) = (((m.roundToInt() + 18 * 60) % 1440).let { "%02d:%02d".format(it / 60, it % 60) })
+        return card(
+            c, "ctx.sleepgood", "ctx-sleepgood", "Steadier days after full, regular nights",
+            "After nights with at least ${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min of sleep, a bedtime within an hour of your usual ${clock(bedMed)} and an active day before (${good.size}) you spent ${pct(good.map { it.tir }.average())} of the rest of the day in range, against ${pct(rest.map { it.tir }.average())} after other nights (${rest.size}).",
+            graph, "nights", cm, "+${cm.diff.roundToInt()} points in range", margin(cm, "points"),
+            listOf(
+                "All three conditions must hold at once, so this group is small; $GOOD_NIGHTS nights are needed and the evidence bar is higher than for a single comparison.",
+                "Active means at least $cutMin minutes of activity the day before; sleep length and bedtime are compared with your own median.",
+                "Meals and routine differ between days too, so this can't show what exactly is helping."
+            ),
+            good.sortedByDescending { it.tir }.take(3).map { "${dateLabel(it.n.endUtc, c.zone)} · ${it.n.asleepMin / 60} h ${"%02d".format(it.n.asleepMin % 60)} min asleep · ${it.tir.roundToInt()} % in range" },
+            PatternTone.FAVORABLE, rank(30.0, cm.z, nights.size), "All other nights", TipTopic.CTX_SLEEP_GOOD
+        )
+    }
+
+    // ---- late dinner x composition ------------------------------------------------------------------------------------
+
+    /**
+     * Within late dinners, does recorded composition matter? Rich (>= median fat + protein of late dinners) against
+     * lighter late dinners of similar carbohydrates, on glucose between midnight and 06:00. Differs from
+     * `combo.latedinner`, which compares late with early dinners; it replaces that card when it fires.
+     */
+    private fun lateDinnerRich(c: Ctx): PatternCandidate? {
+        val dinners = CombinedDetector.dinnersOf(c.input, WINDOW_DAYS)
+        if (dinners.size < 3 * MIN_GROUP) return null
+        val cut = median(dinners.map { it.minute })
+        val late = dinners.partition { it.minute > cut }.let { (l, _) -> if (l.size >= 2 * MIN_GROUP) l else dinners.filter { it.minute >= cut } }
+        val early = dinners - late.toSet()
+        if (early.isEmpty() || median(late.map { it.minute }) - median(early.map { it.minute }) < LATE_GAP_MIN) return null
+        val comp = late.filter { it.fatProtein != null }
+        if (comp.size < 2 * MIN_GROUP) return null
+        val fpCut = median(comp.map { it.fatProtein!!.toDouble() })
+        if (fpCut < RICH_MIN_CUT_G) return null
+        val (rich, light) = comp.partition { it.fatProtein!! > fpCut }.let { (r, l) -> if (r.size >= MIN_GROUP) r to l else comp.partition { it.fatProtein!! >= fpCut } }
+        if (rich.size < MIN_GROUP || light.size < MIN_GROUP) return null
+        if (median(rich.map { it.fatProtein!!.toDouble() }) < RICH_RATIO * median(light.map { it.fatProtein!!.toDouble() })) return null
+        val cr = median(rich.map { it.carbs.toDouble() }); val cl = median(light.map { it.carbs.toDouble() })
+        if (maxOf(cr, cl) > CARBS_RATIO * minOf(cr, cl)) return null
+        val cm = cmp(rich, light) { it.night }
+        if (cm.diff <= 0 || cm.diff < INTERACTION_SE * cm.se || !solid(cm, c.input.scaled(LATE_RICH_DIFF), { it.startUtc }, { it.night })) return null
+        fun curves(l: List<CombinedDetector.Dinner>) = l.map { EventCurve(it.values, it.baseline) }
+        val graph = eventGraph(curves(rich), curves(light), -6, 120, 6, "Late rich dinners", "Late lighter dinners", "dinner", null, listOf(0, 120, 240, 360, 480, 600))
+        fun hhmm(m: Double) = "%02d:%02d".format(m.roundToInt() / 60, m.roundToInt() % 60)
+        return card(
+            c, "ctx.latedinnerrich", "ctx-latedinnerrich", "Late rich dinners keep glucose higher overnight",
+            "After late dinners (from about ${hhmm(median(late.map { it.minute }))}) with ${fpCut.roundToInt()} g or more of recorded fat and protein (${rich.size}) glucose between midnight and 06:00 averaged ${cm.diff.roundToInt()} mg/dL more than after lighter late dinners of similar carbs (${light.size}).",
+            graph, "dinners", cm, "+${cm.diff.roundToInt()} mg/dL overnight", margin(cm, "mg/dL"),
+            listOf(
+                "Only late dinners (later than your median dinner time) with recorded fat or protein and similar carbohydrates (within ${(CARBS_RATIO * 100 - 100).roundToInt()} % of each other) are compared; the logged absorption is not used.",
+                "Multi-factor finding: the evidence bar is 3x the margin of error, over up to $WINDOW_DAYS days.",
+                "Insulin, activity and what else happened that evening can't be separated out, so this can't show that the fat and protein are the reason."
+            ),
+            rich.sortedByDescending { it.night }.take(3).map { "${dateLabel(it.startUtc, c.zone)} · dinner ${hhmm(it.minute)} · ${it.fatProtein} g fat+protein · ${it.night.roundToInt()} mg/dL overnight" },
+            PatternTone.UNFAVORABLE, rank(52.0, cm.z, rich.size + light.size), "Lighter late dinners of similar size", TipTopic.CTX_LATE_RICH
         )
     }
 }

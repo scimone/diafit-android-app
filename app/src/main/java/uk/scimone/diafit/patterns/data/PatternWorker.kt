@@ -26,6 +26,7 @@ import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.patterns.domain.MealDetector
 import uk.scimone.diafit.history.presentation.model.toThresholds
 import uk.scimone.diafit.patterns.domain.DayGlucose
+import uk.scimone.diafit.patterns.domain.LONG_WINDOW_DAYS
 import uk.scimone.diafit.patterns.domain.DetectionInput
 import uk.scimone.diafit.patterns.domain.PatternLifecycle
 import uk.scimone.diafit.patterns.domain.PatternPipeline
@@ -79,7 +80,7 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
      */
     private suspend fun scan(now: Long, simulated: Boolean) {
         if (simulated) store.replaceAll(emptyList())
-        val from = now - (TimeOfDayDetector.WEEKEND_WINDOW_DAYS + 1) * 24 * 3_600_000L
+        val from = now - (LONG_WINDOW_DAYS + 1) * 24 * 3_600_000L
         val readings = withContext(Dispatchers.IO) { cgm.getEntriesBetween(from, now, USER_ID) }
         val zone = ZoneId.systemDefault()
         val days = DayGlucose.from(readings, zone)

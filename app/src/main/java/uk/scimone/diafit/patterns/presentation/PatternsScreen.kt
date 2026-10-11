@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
+import uk.scimone.diafit.patterns.domain.PatternCard
 import uk.scimone.diafit.patterns.domain.PatternCategory
 import uk.scimone.diafit.patterns.domain.PatternState
 import uk.scimone.diafit.patterns.domain.PatternTone
@@ -113,6 +114,13 @@ private fun SectionTitle(text: String) {
     Text(text, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
 }
 
+/** Icon and colour of a pattern: low / high glucose patterns use the colour of that zone, the rest follow the tone. */
+@Composable
+internal fun cardVisuals(card: PatternCard): Pair<ImageVector, Color> {
+    val (icon, tint) = cardVisuals(card)
+    return icon to (card.glucoseSide()?.color ?: tint)
+}
+
 @Composable
 internal fun toneVisuals(tone: PatternTone): Pair<ImageVector, Color> = when (tone) {
     PatternTone.FAVORABLE -> Icons.Filled.CheckCircle to InRange
@@ -124,7 +132,7 @@ internal fun toneVisuals(tone: PatternTone): Pair<ImageVector, Color> = when (to
 @Composable
 internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val card = item.card
-    val (icon, tint) = toneVisuals(card.tone)
+    val (icon, tint) = cardVisuals(card)
     Surface(
         modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),

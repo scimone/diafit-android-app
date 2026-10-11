@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * the noise (twice its standard error), the same direction in both halves of the period. Associations only.
  */
 object CombinedDetector {
-    const val WINDOW_DAYS = 28
+    const val WINDOW_DAYS = LONG_WINDOW_DAYS
 
     private const val MIN_GROUP = 5
     private const val MIN_COVERAGE = 0.7
@@ -46,12 +46,12 @@ object CombinedDetector {
     private const val BREAKFAST_LAST_K = 48 // 4 h
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
-        val c = Ctx(input)
+        val c = Ctx(input, WINDOW_DAYS)
         return listOfNotNull(lateDinner(c), eveningLow(c), shortSleepBreakfast(c))
     }
 
-    private class Ctx(val input: DetectionInput) {
-        val first: LocalDate = input.today.minusDays((WINDOW_DAYS - 1).toLong())
+    private class Ctx(val input: DetectionInput, windowDays: Int) {
+        val first: LocalDate = input.today.minusDays((windowDays - 1).toLong())
         val from = input.startOfDayUtc(first)
         val byDate = input.days.associateBy { it.date }
         val lookup = GlucoseLookup(input.days, input.zone)
@@ -89,12 +89,15 @@ object CombinedDetector {
 
     // ---- late dinner -> glucose overnight -------------------------------------------------------------------------
 
-    private class Dinner(val date: LocalDate, val minute: Double, val startUtc: Long, val night: Double, val values: FloatArray, val baseline: Float)
+    /** One evening's last big meal and the glucose that night; [fatProtein] is null when neither was recorded. */
+    internal class Dinner(val date: LocalDate, val minute: Double, val startUtc: Long, val night: Double, val values: FloatArray, val baseline: Float, val fatProtein: Int?, val carbs: Int)
 
-    private fun lateDinner(c: Ctx): PatternCandidate? {
+    internal fun dinnersOf(input: DetectionInput, windowDays: Int): List<Dinner> = dinners(Ctx(input, windowDays))
+
+    private fun dinners(c: Ctx): List<Dinner> {
         val zone = c.input.zone
         val step = BIN_MINUTES * 60_000L
-        val dinners = c.input.sittings.groupBy { Instant.ofEpochMilli(it.startTime).atZone(zone).toLocalDate() }.mapNotNull { (date, list) ->
+        return c.input.sittings.groupBy { Instant.ofEpochMilli(it.startTime).atZone(zone).toLocalDate() }.mapNotNull { (date, list) ->
             if (date < c.first || date >= c.input.today.minusDays(1)) return@mapNotNull null
             val s = list.filter { it.totalCarbs >= MIN_DINNER_CARBS && Instant.ofEpochMilli(it.startTime).atZone(zone).hour >= DINNER_FROM_HOUR }
                 .maxByOrNull { it.startTime } ?: return@mapNotNull null
@@ -103,8 +106,15 @@ object CombinedDetector {
             val values = FloatArray(LAST_K - FIRST_K + 1) { c.lookup.at(s.startTime + (it + FIRST_K) * step) }
             val before = (-2..0).map { values[it - FIRST_K] }.filter { !it.isNaN() }
             if (before.isEmpty()) return@mapNotNull null
-            Dinner(date, (local.hour * 60 + local.minute).toDouble(), s.startTime, next.mean(0 until NIGHT_END_BIN).toDouble(), values, before.average().toFloat())
+            Dinner(
+                date, (local.hour * 60 + local.minute).toDouble(), s.startTime, next.mean(0 until NIGHT_END_BIN).toDouble(), values, before.average().toFloat(),
+                s.courses.sumOf { (it.proteins ?: 0) + (it.fats ?: 0) }.takeIf { it > 0 }, s.totalCarbs
+            )
         }
+    }
+
+    private fun lateDinner(c: Ctx): PatternCandidate? {
+        val dinners = dinners(c)
         if (dinners.size < 2 * MIN_GROUP) return null
         val cut = median(dinners.map { it.minute })
         val (late, early) = dinners.partition { it.minute > cut }.let { (l, e) -> if (l.size >= MIN_GROUP) l to e else dinners.partition { it.minute >= cut } }

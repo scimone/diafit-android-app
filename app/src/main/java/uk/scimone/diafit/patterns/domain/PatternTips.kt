@@ -599,6 +599,48 @@ object PatternTips {
                 "Pick one evening habit and keep it up on active days."
             )
         ),
+        TipTopic.CTX_SLEEP_ACTIVITY to Set(
+            understand = listOf(
+                "Activity the day before can change how much a short night affects the next day, which may play a part.",
+                "Movement and sleep both influence how well the body copes the next day, which may be linked to this."
+            ),
+            act = listOf(
+                "On days when a short night is likely, plan a little extra care for the next day.",
+                "Try a bit more movement or an earlier night when you expect to sleep less."
+            ),
+            maintain = listOf(
+                "Keep a regular bedtime where you can, as it seems to make the following day steadier.",
+                "Build on the nights of full sleep, since they seem to go with steadier days."
+            )
+        ),
+        TipTopic.CTX_SLEEP_GOOD to Set(
+            understand = listOf(
+                "A full, regular night after an active day often gives the body a good reset, which may be linked to this.",
+                "Sleep, routine and movement tend to support each other, which may play a part."
+            ),
+            act = listOf(
+                "Aim to repeat this combination of an active day, a regular bedtime and enough sleep.",
+                "Keep your bedtime steady on the evenings after an active day."
+            ),
+            maintain = listOf(
+                "Keep this routine going, as it seems to work well for you.",
+                "Stick with the rhythm that gives you these steadier days."
+            )
+        ),
+        TipTopic.CTX_LATE_RICH to Set(
+            understand = listOf(
+                "Fat and protein slow digestion, so a late rich meal may still be releasing glucose into the night.",
+                "Rich food late in the evening often lingers into the night, which may be linked to this."
+            ),
+            act = listOf(
+                "Try keeping dinners that are rich in fat and protein a little earlier.",
+                "On late evenings, a lighter meal may sit more gently overnight."
+            ),
+            maintain = listOf(
+                "Keep the lighter late dinners going, as they seem to give calmer nights.",
+                "Stick with the dinner choices that leave your nights steadier."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

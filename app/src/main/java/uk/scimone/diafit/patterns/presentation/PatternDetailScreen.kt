@@ -61,7 +61,7 @@ fun PatternDetailScreen(id: String, onBack: () -> Unit) {
             return@Scaffold
         }
         val card = pattern.card
-        val (_, tint) = toneVisuals(card.tone)
+        val (_, tint) = cardVisuals(card)
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)

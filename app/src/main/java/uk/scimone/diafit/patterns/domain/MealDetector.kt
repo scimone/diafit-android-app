@@ -97,10 +97,10 @@ object MealDetector {
 
     // -------------------------------------------------------------------------------------------------------------
 
-    internal fun responses(input: DetectionInput): List<Response> {
+    internal fun responses(input: DetectionInput, windowDays: Int = WINDOW_DAYS): List<Response> {
         val lookup = GlucoseLookup(input.days, input.zone)
         val low = input.thresholds.low
-        val since = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))
+        val since = input.startOfDayUtc(input.today.minusDays((windowDays - 1).toLong()))
         val sittings = input.sittings.sortedBy { it.startTime }
         val out = ArrayList<Response>()
         for ((i, s) in sittings.withIndex()) {

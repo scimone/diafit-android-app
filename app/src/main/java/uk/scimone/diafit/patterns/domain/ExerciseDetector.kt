@@ -81,10 +81,10 @@ object ExerciseDetector {
 
     // -------------------------------------------------------------------------------------------------------------
 
-    internal fun responses(input: DetectionInput): List<Response> {
+    internal fun responses(input: DetectionInput, windowDays: Int = WINDOW_DAYS): List<Response> {
         val lookup = GlucoseLookup(input.days, input.zone)
         val low = input.thresholds.low
-        val since = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))
+        val since = input.startOfDayUtc(input.today.minusDays((windowDays - 1).toLong()))
         val events = input.events.sortedBy { it.startUtc }
         val min = 60_000L
         val step = BIN_MINUTES * min

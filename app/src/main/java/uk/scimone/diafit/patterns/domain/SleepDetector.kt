@@ -15,7 +15,7 @@ import kotlin.math.sqrt
  * restless than their median, a bedtime far from their usual) with the others. Every finding is an association.
  */
 object SleepDetector {
-    const val WINDOW_DAYS = 28
+    const val WINDOW_DAYS = LONG_WINDOW_DAYS
 
     private const val MIN_NIGHTS = 10
     private const val MIN_GROUP = 5
@@ -32,12 +32,21 @@ object SleepDetector {
     private const val RESTLESS_GAP = 0.05
     private const val IRREGULAR_MIN = 60
 
-    private class Night(val n: SleepNight, val day: DayGlucose, val tir: Double)
+    /** One night with the share of the rest of the wake-up day spent in range. */
+    internal class Night(val n: SleepNight, val day: DayGlucose, val tir: Double)
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
-        val since = input.today.minusDays((WINDOW_DAYS - 1).toLong())
+        val nights = nights(input, WINDOW_DAYS)
+        if (nights.size < MIN_NIGHTS) return emptyList()
+        val c = Ctx(input, nights, input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong())))
+        return listOfNotNull(short(c), restless(c), irregular(c))
+    }
+
+    /** Nights ending in the last [windowDays] days with enough sensor data after waking (shared with [ContextDetector]). */
+    internal fun nights(input: DetectionInput, windowDays: Int): List<Night> {
+        val since = input.today.minusDays((windowDays - 1).toLong())
         val byDate = input.days.associateBy { it.date }
-        val nights = input.nights.filter { it.wakeDate >= since && it.wakeDate < input.today }.mapNotNull { n ->
+        return input.nights.filter { it.wakeDate >= since && it.wakeDate < input.today }.mapNotNull { n ->
             val day = byDate[n.wakeDate] ?: return@mapNotNull null
             val wake = Instant.ofEpochMilli(n.endUtc).atZone(input.zone)
             val range = ((wake.hour * 60 + wake.minute) / BIN_MINUTES) until BINS_PER_DAY
@@ -46,9 +55,6 @@ object SleepDetector {
             val t = input.thresholds
             Night(n, day, v.count { it >= t.low && it <= t.high }.toDouble() / v.size * 100)
         }
-        if (nights.size < MIN_NIGHTS) return emptyList()
-        val c = Ctx(input, nights, input.startOfDayUtc(since))
-        return listOfNotNull(short(c), restless(c), irregular(c))
     }
 
     private class Ctx(val input: DetectionInput, val nights: List<Night>, val from: Long)

@@ -44,6 +44,7 @@ object PatternPipeline {
         Overlap("meal.type.", "ctx.mealtime"),        // the size-matched clock-time comparison replaces the label comparison
         Overlap("ctx.night", "ex.nextday"),           // next-day time in range already says it
         Overlap("ctx.exgap", "ex.evening"),           // evening activity and "soon after eating" are mostly the same sessions
+        Overlap("combo.latedinner", "ctx.latedinnerrich"), // composition inside late dinners says more than late vs early
         Overlap("ctx.extype", "ex.intensity")         // harder-activity effect would explain a type difference
     )
 
