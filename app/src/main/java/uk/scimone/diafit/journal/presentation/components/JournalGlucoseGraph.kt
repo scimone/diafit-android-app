@@ -66,8 +66,8 @@ class GraphMarker(
     val colors: List<Color> get() = listOfNotNull(color, extraColor)
 }
 
-/** [courseTimesMs] each take an equal share of [grams], absorbed over [durationMinutes]. */
-class CarbCurve(val grams: Double, val courseTimesMs: List<Long>, val durationMinutes: Int)
+/** One absorption curve per course; they are drawn stacked, so the top edge is the meal's summed carb activity. */
+class CarbCurve(val courses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse>)
 
 /**
  * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
@@ -202,28 +202,36 @@ fun JournalGlucoseGraph(
                 }
             }
 
-            // A meal's carb activity: a very faint area along the bottom, behind the readings.
+            // A meal's carb activity: each course's curve stacked on the previous ones, behind the readings.
             markers.getOrNull(selectedMarker)?.carbs?.let { c ->
-                if (c.courseTimesMs.isEmpty() || c.grams <= 0.0) return@let
-                val share = c.grams / c.courseTimesMs.size
+                val courses = c.courses.sortedBy { it.timeUtc }.filter { it.grams > 0.0 }
+                if (courses.isEmpty()) return@let
                 val stepMs = 3 * MIN_MS
-                fun rate(t: Long) = c.courseTimesMs.sumOf { CarbActivity.calculate(share, it, t, c.durationMinutes) }
-                val from = maxOf(startMs, c.courseTimesMs.first())
-                val to = minOf(endMs, c.courseTimesMs.last() + c.durationMinutes * MIN_MS)
-                if (to <= from) return@let
+                val first = courses.first().timeUtc
+                val last = courses.maxOf { it.timeUtc + it.durationMinutes * MIN_MS }
+                fun rate(k: Int, t: Long) = courses[k].let { CarbActivity.calculate(it.grams, it.timeUtc, t, it.durationMinutes) }
+                fun cumulative(k: Int, t: Long): Double { var sum = 0.0; for (i in 0..k) sum += rate(i, t); return sum }
                 var peakRate = 0.0
-                var t0 = c.courseTimesMs.first()
-                while (t0 <= c.courseTimesMs.last() + c.durationMinutes * MIN_MS) { peakRate = maxOf(peakRate, rate(t0)); t0 += stepMs }
+                var tp = first
+                while (tp <= last) { peakRate = maxOf(peakRate, cumulative(courses.lastIndex, tp)); tp += stepMs }
                 if (peakRate <= 0.0) return@let
+                val from = maxOf(startMs, first)
+                val to = minOf(endMs, last)
+                if (to <= from) return@let
                 val maxH = plotH * 0.4f
-                val path = androidx.compose.ui.graphics.Path()
-                path.moveTo(xOf(from), plotBottom)
-                var t1 = from
-                while (t1 < to) { path.lineTo(xOf(t1), plotBottom - (rate(t1) / peakRate).toFloat() * maxH); t1 += stepMs }
-                path.lineTo(xOf(to), plotBottom - (rate(to) / peakRate).toFloat() * maxH)
-                path.lineTo(xOf(to), plotBottom)
-                path.close()
-                drawPath(path, markers[selectedMarker].color.copy(alpha = 0.08f))
+                val base = markers[selectedMarker].color
+                fun yAt(k: Int, t: Long) = if (k < 0) plotBottom else plotBottom - (cumulative(k, t) / peakRate).toFloat() * maxH
+                for (k in courses.indices) {
+                    val path = androidx.compose.ui.graphics.Path()
+                    path.moveTo(xOf(from), yAt(k - 1, from))
+                    var t1 = from
+                    while (t1 < to) { path.lineTo(xOf(t1), yAt(k, t1)); t1 += stepMs }
+                    path.lineTo(xOf(to), yAt(k, to))
+                    var t2 = to
+                    while (t2 > from) { path.lineTo(xOf(t2), yAt(k - 1, t2)); t2 -= stepMs }
+                    path.close()
+                    drawPath(path, base.copy(alpha = if (k % 2 == 0) 0.16f else 0.09f))
+                }
             }
 
             val radius = 2.5.dp.toPx()

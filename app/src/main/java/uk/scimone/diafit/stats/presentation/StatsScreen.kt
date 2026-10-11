@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -453,10 +454,10 @@ private fun ActivityDayCard(day: StatsDay) {
             }
             if (hasHeart) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Resting HR", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("Average HR", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, Modifier.weight(1f))
-                    LabeledValue("HRV", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    LabeledValue("Resting HR", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
+                    LabeledValue("Average HR", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
+                    LabeledValue("HRV", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, centered = true)
                 }
             }
         }
@@ -489,10 +490,10 @@ private fun SleepStages(night: SleepNight) {
         Column {
             rows.forEach { (label, stage, ms) ->
                 val spans = night.spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage == SleepStage.SLEEPING) }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium, color = ms.second)
+                Row(Modifier.height(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium.copy(lineHeight = 14.sp), color = ms.second)
                     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(12.dp)) {
+                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(14.dp)) {
                         drawRect(track)
                         spans.forEach {
                             val x0 = (it.startUtc - from) / total * size.width
@@ -502,7 +503,7 @@ private fun SleepStages(night: SleepNight) {
                     }
                     Text(
                         formatDurationHM(ms.first / 3_600_000.0), Modifier.width(60.dp),
-                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, color = ms.second
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, color = ms.second
                     )
                 }
             }

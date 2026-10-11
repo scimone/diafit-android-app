@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import uk.scimone.diafit.journal.presentation.components.DayHeader
 import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
 import uk.scimone.diafit.journal.presentation.components.formatUnits
+import uk.scimone.diafit.journal.presentation.model.CarbCourse
 import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
 import uk.scimone.diafit.journal.presentation.components.formatDuration
 import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
@@ -317,10 +318,7 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
         peakMs = peakTimeUtc?.takeIf { peakMgdl != null && (startMgdl == null || peakMgdl > startMgdl) },
         peakMgdl = peakMgdl,
         carbs = carbohydrates.takeIf { it > 0 }?.let { g ->
-            val n = courseCount.coerceAtLeast(1)
-            val times = if (n == 1 || endTimeUtc <= mealTimeUtc) List(n) { mealTimeUtc }
-            else List(n) { mealTimeUtc + (endTimeUtc - mealTimeUtc) * it / (n - 1) }
-            CarbCurve(g.toDouble(), times, impactType.durationMinutes)
+            CarbCurve(carbCourses.ifEmpty { listOf(CarbCourse(g.toDouble(), mealTimeUtc, impactType.durationMinutes)) })
         }
     )
     else -> GraphMarker(timeUtc, null, kind.accent)

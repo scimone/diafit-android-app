@@ -54,7 +54,9 @@ data class MealEntityUi(
     /** An imported carb entry that might be the same food, waiting for the user to merge or dismiss it. */
     val possibleDuplicate: PossibleDuplicateUi? = null,
     /** The AI-identified foods (all courses' for a multi-course meal). */
-    val components: List<MealComponent> = emptyList()
+    val components: List<MealComponent> = emptyList(),
+    /** Each course's own carbs, time and absorption, so a multi-course meal's carb curve is the sum of its real courses. */
+    val carbCourses: List<CarbCourse> = emptyList()
 ) : JournalEntryUi {
     override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
     override val timeUtc: Long get() = mealTimeUtc
@@ -64,6 +66,8 @@ data class MealEntityUi(
 
     val courseCount: Int get() = courseIds.size
 }
+
+class CarbCourse(val grams: Double, val timeUtc: Long, val durationMinutes: Int)
 
 /** An unmerged imported carb entry that looks like part of a logged meal but wasn't certain enough to merge. */
 data class PossibleDuplicateUi(val importedId: Int, val timeUtc: Long, val carbohydrates: Int)
@@ -120,7 +124,8 @@ fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         photoUris = photos,
         components = courses.flatMap { it.components },
         courseIds = courses.map { it.id },
-        endTimeUtc = endTime
+        endTimeUtc = endTime,
+        carbCourses = courses.filter { it.carbohydrates > 0 }.map { CarbCourse(it.carbohydrates.toDouble(), it.mealTimeUtc, it.impactType.durationMinutes) }
     )
 }
 
