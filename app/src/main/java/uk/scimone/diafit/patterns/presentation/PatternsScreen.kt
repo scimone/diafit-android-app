@@ -117,7 +117,7 @@ private fun SectionTitle(text: String) {
 /** Icon and colour of a pattern: low / high glucose patterns use the colour of that zone, the rest follow the tone. */
 @Composable
 internal fun cardVisuals(card: PatternCard): Pair<ImageVector, Color> {
-    val (icon, tint) = cardVisuals(card)
+    val (icon, tint) = toneVisuals(card.tone)
     return icon to (card.glucoseSide()?.color ?: tint)
 }
 
