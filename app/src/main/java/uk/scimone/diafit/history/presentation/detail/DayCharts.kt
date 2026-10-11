@@ -119,6 +119,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
         }
 
         Box(Modifier.weight(1f)) {
+            if (state.activityConnected) uk.scimone.diafit.home.presentation.components.ActivityBackdrop(state.activity, window, geometry, Modifier.matchParentSize())
             Column(
                 Modifier.fillMaxSize().inspectGestures(
                     onTap = { pos ->

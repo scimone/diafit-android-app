@@ -61,14 +61,17 @@ class StatsTest {
     }
 
     @Test fun glucoseMetricsAreSeparateCards() {
-        val g = GlucoseDay.from(n = 100, sum = 12000, sumSq = 12000L * 120 + 100 * 400, below = 10, above = 20)!!
+        val g = GlucoseDay.from(n = 100, sum = 12000, sumSq = 12000L * 120 + 100 * 400, below = 10, above = 20, veryLow = 4, veryHigh = 5)!!
         assertEquals(0.1, g.belowShare, 1e-9)
         assertEquals(120.0, g.meanMgdl, 1e-9)
         assertEquals(20.0, g.sdMgdl, 1e-6)
         val day = StatsDay(today, glucose = g)
-        assertEquals(listOf(10.0), StatsMetric.GLUCOSE_BELOW.segments(day))
+        // Very low / very high are stacked on the low / high part; the figure is their sum.
+        assertEquals(listOf(4.0, 6.0), StatsMetric.GLUCOSE_BELOW.segments(day)!!.map { Math.round(it * 1e6) / 1e6 })
+        assertEquals(10.0, StatsMetric.GLUCOSE_BELOW.primary(day)!!, 1e-9)
         assertEquals(listOf(70.0), StatsMetric.GLUCOSE_IN_RANGE.segments(day))
-        assertEquals(listOf(20.0), StatsMetric.GLUCOSE_ABOVE.segments(day))
+        assertEquals(listOf(5.0, 15.0), StatsMetric.GLUCOSE_ABOVE.segments(day)!!.map { Math.round(it * 1e6) / 1e6 })
+        assertEquals(20.0, StatsMetric.GLUCOSE_ABOVE.primary(day)!!, 1e-9)
         assertEquals(listOf(g.cvPercent), StatsMetric.GLUCOSE_CV.segments(day))
         assertEquals(3.31 + 0.02392 * 120, StatsMetric.GLUCOSE_A1C.primary(day)!!, 1e-9)
         assertNull(StatsMetric.GLUCOSE_CV.segments(StatsDay(today)))

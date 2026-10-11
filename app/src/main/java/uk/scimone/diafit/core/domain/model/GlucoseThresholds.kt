@@ -28,7 +28,7 @@ data class GlucoseThresholds(
         const val FLOOR = 40
         const val CEILING = 350
 
-        fun from(target: GlucoseTargetRange) = GlucoseThresholds(target.lowerBound, target.upperBound)
+        fun from(target: GlucoseTargetRange) = GlucoseThresholds(target.lowerBound, target.upperBound, target.veryLowBound, target.veryHighBound)
     }
 }
 

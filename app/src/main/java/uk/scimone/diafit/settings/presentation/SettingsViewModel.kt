@@ -232,9 +232,9 @@ class SettingsViewModel(
         }
     }
 
-    fun onGlucoseTargetRangeChanged(lower: Int, upper: Int) {
+    fun onGlucoseTargetRangeChanged(lower: Int, upper: Int, veryLow: Int, veryHigh: Int) {
         viewModelScope.launch {
-            val newRange = SettingsGlucoseTargetRange(lower, upper)
+            val newRange = SettingsGlucoseTargetRange(lower, upper, veryLow, veryHigh)
             setGlucoseTargetRange(newRange)
             _state.value = _state.value.copy(glucoseTargetRange = newRange)
             SettingsChangeBus.notifyChange()

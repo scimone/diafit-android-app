@@ -42,7 +42,10 @@ data class GlucoseDay(
     val inRangeShare: Double,
     val aboveShare: Double,
     /** Share 0..1 of the readings the sensor should have delivered (so far, for today). */
-    val coverage: Double = 1.0
+    val coverage: Double = 1.0,
+    /** Shares 0..1 below the very-low / above the very-high limit (they are part of [belowShare] / [aboveShare]). */
+    val veryLowShare: Double = 0.0,
+    val veryHighShare: Double = 0.0
 ) {
     val cvPercent: Double get() = if (meanMgdl > 0) sdMgdl / meanMgdl * 100 else 0.0
     /** Glucose Management Indicator, the A1c a CGM mean predicts (%). */
@@ -51,11 +54,12 @@ data class GlucoseDay(
     companion object {
         fun gmiOf(meanMgdl: Double) = 3.31 + 0.02392 * meanMgdl
 
-        fun from(n: Int, sum: Long, sumSq: Long, below: Int, above: Int): GlucoseDay? {
+        fun from(n: Int, sum: Long, sumSq: Long, below: Int, above: Int, veryLow: Int = 0, veryHigh: Int = 0): GlucoseDay? {
             if (n <= 0) return null
             val mean = sum.toDouble() / n
             val sd = sqrt((sumSq.toDouble() / n - mean * mean).coerceAtLeast(0.0))
-            return GlucoseDay(n, mean, sd, below.toDouble() / n, (n - below - above).toDouble() / n, above.toDouble() / n)
+            return GlucoseDay(n, mean, sd, below.toDouble() / n, (n - below - above).toDouble() / n, above.toDouble() / n,
+                veryLowShare = veryLow.toDouble() / n, veryHighShare = veryHigh.toDouble() / n)
         }
     }
 }

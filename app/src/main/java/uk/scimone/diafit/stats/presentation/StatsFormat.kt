@@ -57,7 +57,12 @@ fun StatsMetric.accent(): Color = when (this) {
     StatsMetric.LIGHT_SLEEP -> SleepLight
 }
 
-fun StatsMetric.colors(): List<Color> = listOf(accent())
+fun StatsMetric.colors(): List<Color> = when (this) {
+    // Stacks: the very low / very high part in the full colour, the milder part lighter.
+    StatsMetric.GLUCOSE_BELOW -> listOf(BelowRange, BelowRange.copy(alpha = 0.6f))
+    StatsMetric.GLUCOSE_ABOVE -> listOf(AboveRange, AboveRange.copy(alpha = 0.6f))
+    else -> listOf(accent())
+}
 
 /** A formatted value and its unit, kept apart so the number can be drawn large and the unit small. */
 data class Formatted(val value: String, val unit: String)
@@ -96,7 +101,7 @@ fun StatsMetric.formatInline(value: Double): String = format(value).let { "${it.
 fun StatsMetric.formatBar(segments: List<Double>): String =
     if (this == StatsMetric.SLEEP_SCHEDULE) {
         "${formatClock(SleepNight.axisToClock(segments[0].roundToInt()))} – ${formatClock(SleepNight.axisToClock(segments[1].roundToInt()))}"
-    } else formatInline(segments[0])
+    } else formatInline(if (stacked) segments.sum() else segments[0])
 
 /** "−4%" / "+12%": the change from [previous] to [current], null when it can't be told. */
 fun changePercent(current: Double?, previous: Double?): Int? =
@@ -123,8 +128,8 @@ fun StatsMetric.icon(): ImageVector = when (this) {
 /** Line under the title of a W/M/Y card. */
 fun StatsMetric.subtitle(): String = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE -> "Time in range, daily average"
-    StatsMetric.GLUCOSE_BELOW -> "Time below range, daily average"
-    StatsMetric.GLUCOSE_ABOVE -> "Time above range, daily average"
+    StatsMetric.GLUCOSE_BELOW -> "Time below range, daily average (very low darker)"
+    StatsMetric.GLUCOSE_ABOVE -> "Time above range, daily average (very high darker)"
     StatsMetric.GLUCOSE_COVERAGE -> "Share of sensor readings received, daily average"
     StatsMetric.SLEEP_SCHEDULE -> "Average bedtime and wake-up"
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> "Per night, average"

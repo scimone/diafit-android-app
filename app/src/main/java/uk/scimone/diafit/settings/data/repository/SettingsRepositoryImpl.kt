@@ -101,13 +101,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun getTargetRange(): SettingsGlucoseTargetRange {
         val lower = prefs.getInt("glucose_lower_bound", 70)
         val upper = prefs.getInt("glucose_upper_bound", 180)
-        return SettingsGlucoseTargetRange(lower, upper)
+        return SettingsGlucoseTargetRange(lower, upper, prefs.getInt("glucose_very_low_bound", 54), prefs.getInt("glucose_very_high_bound", 250))
     }
 
     override suspend fun setTargetRange(range: SettingsGlucoseTargetRange) {
         prefs.edit()
             .putInt("glucose_lower_bound", range.lowerBound)
             .putInt("glucose_upper_bound", range.upperBound)
+            .putInt("glucose_very_low_bound", range.veryLowBound)
+            .putInt("glucose_very_high_bound", range.veryHighBound)
             .apply()
     }
 

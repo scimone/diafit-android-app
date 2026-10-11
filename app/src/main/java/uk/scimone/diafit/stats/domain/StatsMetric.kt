@@ -40,8 +40,9 @@ enum class StatsMetric(
     fun segments(day: StatsDay): List<Double>? {
         val v: Double? = when (this) {
             GLUCOSE_IN_RANGE -> day.glucose?.let { it.inRangeShare * 100 }
-            GLUCOSE_BELOW -> day.glucose?.let { it.belowShare * 100 }
-            GLUCOSE_ABOVE -> day.glucose?.let { it.aboveShare * 100 }
+            // Very low / very high stacked on the low / high part.
+            GLUCOSE_BELOW -> return day.glucose?.let { listOf(it.veryLowShare * 100, (it.belowShare - it.veryLowShare) * 100) }
+            GLUCOSE_ABOVE -> return day.glucose?.let { listOf(it.veryHighShare * 100, (it.aboveShare - it.veryHighShare) * 100) }
             GLUCOSE_CV -> day.glucose?.cvPercent
             GLUCOSE_A1C -> day.glucose?.gmi
             GLUCOSE_COVERAGE -> day.glucose?.let { it.coverage * 100 }
@@ -68,7 +69,10 @@ enum class StatsMetric(
     }
 
     /** The one number that stands for the day (for the schedule: bedtime). */
-    fun primary(day: StatsDay): Double? = segments(day)?.first()
+    fun primary(day: StatsDay): Double? = segments(day)?.let { if (stacked) it.sum() else it.first() }
+
+    /** Metrics whose bar stacks several values that add up to the figure shown. */
+    val stacked: Boolean get() = this == GLUCOSE_BELOW || this == GLUCOSE_ABOVE
 
     /** Mean of every value over the days of [days] that have data; null when none do. Used for a bar that spans several days. */
     fun barSegments(days: List<StatsDay>): List<Double>? {

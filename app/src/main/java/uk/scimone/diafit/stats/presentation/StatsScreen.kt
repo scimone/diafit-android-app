@@ -362,9 +362,11 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
         }
         StatsCards.DayCard.INSULIN -> InsulinDayCard(day)
         StatsCards.DayCard.MEALS -> StatsSurface {
+            // Without protein and fat (both 0) the meals are only carbs: nothing else to show.
+            val carbsOnly = (day.protein ?: 0.0) <= 0.0 && (day.fat ?: 0.0) <= 0.0
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.CARBS, "Meals", "Carbohydrates") { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CardHeader(StatsMetric.CARBS, if (carbsOnly) "Carbohydrates" else "Meals", if (carbsOnly) null else "Carbohydrates") { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
+                if (!carbsOnly) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), Modifier.weight(1f))
                     LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), Modifier.weight(1f))
                     LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, Modifier.weight(1f))
@@ -421,15 +423,20 @@ private fun ActivityDayCard(day: StatsDay) {
     val hasHeart = day.restingBpm != null || day.avgBpm != null || day.hrvMs != null
     StatsSurface {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CardHeader(StatsMetric.ACTIVITY, "Activity", day.activeKcal?.let { "Active ${it.roundToInt()} kcal · Resting ${((day.totalKcal ?: it) - it).roundToInt()} kcal" }) {
-                day.steps?.let { FigureBlock(StatsMetric.STEPS.format(it.toDouble()).value, "steps", accent) }
-            }
-            if (day.activeMinutes != null || day.totalKcal != null) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    day.activeMinutes?.let { val f = StatsMetric.ACTIVITY.format(it); LabeledValue("Active time", f.value, f.unit, accent, Modifier.weight(1f)) }
-                    day.totalKcal?.let { val f = StatsMetric.CALORIES.format(it); LabeledValue("Calories burned", f.value, f.unit, accent, Modifier.weight(1f)) }
+            CardHeader(StatsMetric.ACTIVITY, "Activity", null) {
+                Column(horizontalAlignment = Alignment.End) {
+                    day.steps?.let { FigureBlock(StatsMetric.STEPS.format(it.toDouble()).value, "steps", accent) }
+                    day.totalKcal?.let {
+                        val f = StatsMetric.CALORIES.format(it)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("Calories burned ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(f.value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(" ${f.unit}", style = MaterialTheme.typography.labelMedium, color = accent)
+                        }
+                    }
                 }
             }
+            day.activeMinutes?.let { val f = StatsMetric.ACTIVITY.format(it); LabeledValue("Active time", f.value, f.unit, accent) }
             if (day.activeKcal != null && day.totalKcal != null && day.totalKcal > 0) {
                 val active = day.activeKcal.coerceIn(0.0, day.totalKcal)
                 val resting = day.totalKcal - active
@@ -477,8 +484,8 @@ private fun SleepStages(night: SleepNight) {
         // One lane per stage on the night's own time line, so the shape of the night (deep early, REM late) stays visible.
         val from = night.spans.minOf { it.startUtc }
         val total = (night.spans.maxOf { it.endUtc } - from).coerceAtLeast(1L).toFloat()
-        val rows = listOf(
-            Triple("Awake", SleepStage.AWAKE, night.awakeMs to SleepAwake),
+        val rows = listOfNotNull(
+            Triple("Awake", SleepStage.AWAKE, night.awakeMs to SleepAwake).takeIf { night.awakeMs > 0 },
             Triple("REM", SleepStage.REM, night.remMs to SleepRem),
             Triple("Light", SleepStage.LIGHT, night.lightMs to SleepLight),
             Triple("Deep", SleepStage.DEEP, night.deepMs to SleepDeep)
@@ -489,7 +496,7 @@ private fun SleepStages(night: SleepNight) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium, color = ms.second)
                     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(18.dp)) {
+                    androidx.compose.foundation.Canvas(Modifier.weight(1f).height(12.dp)) {
                         drawRect(track)
                         spans.forEach {
                             val x0 = (it.startUtc - from) / total * size.width
@@ -519,18 +526,30 @@ internal fun sleepStageColor(stage: SleepStage): Color = when (stage) {
 
 @Composable
 private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
+    val lowOnly = (g.belowShare - g.veryLowShare).coerceAtLeast(0.0)
+    val highOnly = (g.aboveShare - g.veryHighShare).coerceAtLeast(0.0)
+    val lowColor = BelowRange.copy(alpha = 0.6f)
+    val highColor = AboveRange.copy(alpha = 0.6f)
     SegmentedBar(
         listOf(
-            g.belowShare.toFloat() to BelowRange,
+            g.veryLowShare.toFloat() to BelowRange,
+            lowOnly.toFloat() to lowColor,
             g.inRangeShare.toFloat() to InRange,
-            g.aboveShare.toFloat() to AboveRange
+            highOnly.toFloat() to highColor,
+            g.veryHighShare.toFloat() to AboveRange
         ),
         height = 14.dp
     )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        ZoneLegend("Below", g.belowShare, BelowRange)
-        ZoneLegend("In range", g.inRangeShare, InRange)
-        ZoneLegend("Above", g.aboveShare, AboveRange)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            ZoneLegend("Very low", g.veryLowShare, BelowRange)
+            ZoneLegend("Low", lowOnly, lowColor)
+            ZoneLegend("In range", g.inRangeShare, InRange)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            ZoneLegend("High", highOnly, highColor)
+            ZoneLegend("Very high", g.veryHighShare, AboveRange)
+        }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LabeledValue("Mean", g.meanMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -549,7 +568,7 @@ private fun ZoneLegend(label: String, share: Double, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).background(color, CircleShape))
         Spacer(Modifier.width(4.dp))
-        Text("$label ${(share * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("$label ${formatShare(share)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -615,4 +634,10 @@ internal fun Headline(metric: StatsMetric, days: List<StatsDay>, period: StatsPe
         Text("Daily average", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         metric.format(avg).let { BigValue(it.value, it.unit, accent) }
     }
+}
+
+/** A share of the day in percent; small non-zero shares read "<1%" instead of "0%". */
+private fun formatShare(share: Double): String {
+    val pct = share * 100
+    return if (pct > 0 && pct < 1) "<1%" else "${pct.roundToInt()}%"
 }

@@ -174,11 +174,13 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(title = "Glucose target range (mg/dL)", icon = Icons.Filled.GpsFixed) {
+        SettingsSection(title = "Glucose ranges (mg/dL)", icon = Icons.Filled.GpsFixed) {
             GlucoseTargetRangeInput(
                 lower = state.glucoseTargetRange.lowerBound,
                 upper = state.glucoseTargetRange.upperBound,
-                onRangeChanged = { lower, upper -> viewModel.onGlucoseTargetRangeChanged(lower, upper) }
+                veryLow = state.glucoseTargetRange.veryLowBound,
+                veryHigh = state.glucoseTargetRange.veryHighBound,
+                onRangeChanged = { lower, upper, veryLow, veryHigh -> viewModel.onGlucoseTargetRangeChanged(lower, upper, veryLow, veryHigh) }
             )
         }
 
@@ -664,40 +666,41 @@ fun ServerConfigInput(
 fun GlucoseTargetRangeInput(
     lower: Int,
     upper: Int,
-    onRangeChanged: (Int, Int) -> Unit
+    veryLow: Int,
+    veryHigh: Int,
+    onRangeChanged: (Int, Int, Int, Int) -> Unit
 ) {
     var lowerText by remember { mutableStateOf(lower.toString()) }
     var upperText by remember { mutableStateOf(upper.toString()) }
+    var veryLowText by remember { mutableStateOf(veryLow.toString()) }
+    var veryHighText by remember { mutableStateOf(veryHigh.toString()) }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    fun report() {
+        val l = lowerText.toIntOrNull(); val u = upperText.toIntOrNull()
+        val vl = veryLowText.toIntOrNull(); val vh = veryHighText.toIntOrNull()
+        if (l != null && u != null && vl != null && vh != null) onRangeChanged(l, u, vl, vh)
+    }
+
+    @Composable
+    fun RowScope.Field(value: String, label: String, onChange: (String) -> Unit) {
         OutlinedTextField(
-            value = lowerText,
-            onValueChange = {
-                lowerText = it
-                val lowerInt = it.toIntOrNull()
-                val upperInt = upperText.toIntOrNull()
-                if (lowerInt != null && upperInt != null) onRangeChanged(lowerInt, upperInt)
-            },
-            label = { Text("Lower") },
+            value = value,
+            onValueChange = { onChange(it); report() },
+            label = { Text(label) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f)
         )
-        OutlinedTextField(
-            value = upperText,
-            onValueChange = {
-                upperText = it
-                val lowerInt = lowerText.toIntOrNull()
-                val upperInt = it.toIntOrNull()
-                if (lowerInt != null && upperInt != null) onRangeChanged(lowerInt, upperInt)
-            },
-            label = { Text("Upper") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f)
-        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Field(lowerText, "Low (below)") { lowerText = it }
+            Field(upperText, "High (above)") { upperText = it }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Field(veryLowText, "Very low (below)") { veryLowText = it }
+            Field(veryHighText, "Very high (above)") { veryHighText = it }
+        }
     }
 }

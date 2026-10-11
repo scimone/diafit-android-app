@@ -252,6 +252,7 @@ fun HomeScreen(
 
                     // The stacked panels share one time axis; the pin lane and cursor overlay follow it.
                     Box(Modifier.weight(1f).onGloballyPositioned { chartsBottomInRoot = it.positionInRoot().y + it.size.height }) {
+                        if (state.activityConnected) uk.scimone.diafit.home.presentation.components.ActivityBackdrop(state.activity, window, geometry, Modifier.matchParentSize())
                         Column(Modifier.fillMaxSize()) {
                             Column(
                                 Modifier.fillMaxSize().inspectGestures(

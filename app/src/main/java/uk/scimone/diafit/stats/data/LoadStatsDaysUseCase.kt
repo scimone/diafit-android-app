@@ -54,7 +54,7 @@ class LoadStatsDaysUseCase(
         val glucose = segments.flatMap { (s, e, off) ->
             cgmDao.getDailyGlucose(s, e, off, thresholds.veryLow, thresholds.low, thresholds.high, thresholds.veryHigh, userId)
         }.groupBy { it.day }.mapValues { (_, rows) ->
-            GlucoseDay.from(rows.sumOf { it.n }, rows.sumOf { it.sum }, rows.sumOf { it.sumSq }, rows.sumOf { it.low }, rows.sumOf { it.high })
+            GlucoseDay.from(rows.sumOf { it.n }, rows.sumOf { it.sum }, rows.sumOf { it.sumSq }, rows.sumOf { it.low }, rows.sumOf { it.high }, rows.sumOf { it.veryLow }, rows.sumOf { it.veryHigh })
         }
         // Sensors send a reading every 5 min, or every minute when there are far more than 288 in a day.
         fun GlucoseDay.withCoverage(date: LocalDate): GlucoseDay {

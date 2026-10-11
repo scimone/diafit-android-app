@@ -108,13 +108,13 @@ fun ComponentActivityChart(
         fun yOf(bpm: Float) = plotBottom - ((bpm - HR_MIN) / (hrMax - HR_MIN)).coerceIn(0f, 1f) * plotHeight
 
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
-            // Sleep and workouts: a wash behind everything, full panel height, with a small label at the top.
+            // Sleep and workouts: the fill itself is drawn behind all panels ([ActivityBackdrop]); the label sits here, under the panel title.
             sessions.forEach { s ->
-                drawWash(g.xOf(s.startUtc), g.xOf(s.endUtc), g, size.height, Sleep, "Sleep ${formatDuration(s.asleepMs)}", textMeasurer)
+                drawWashLabel(g.xOf(s.startUtc), g.xOf(s.endUtc), g, Sleep, "Sleep ${formatDuration(s.asleepMs)}", textMeasurer)
             }
             data.exercise.forEach { e ->
                 val title = e.title ?: "Exercise"
-                drawWash(g.xOf(e.startUtc), g.xOf(e.endUtc), g, size.height, Activity, "$title ${formatDuration(e.durationMs)}", textMeasurer, fallback = title)
+                drawWashLabel(g.xOf(e.startUtc), g.xOf(e.endUtc), g, Activity, "$title ${formatDuration(e.durationMs)}", textMeasurer, fallback = title)
             }
 
             // Steps.
@@ -153,19 +153,37 @@ fun ComponentActivityChart(
     }
 }
 
-/** A faint full-height fill over [x0]..[x1]; the label is written at its top when it fits (the short [fallback] if only that does). */
-private fun DrawScope.drawWash(
-    x0: Float, x1: Float, g: ChartGeometry, height: Float, color: Color,
+/** Sleep and workouts as a faint fill spanning the whole chart stack: put it behind the panels, same size as the stack. */
+@Composable
+fun ActivityBackdrop(data: ActivityData, window: ChartTimeWindow, geometry: State<ChartGeometry?>, modifier: Modifier = Modifier) {
+    val sessions = remember(data.sleep) { data.sleepSessions }
+    Canvas(modifier) {
+        val g = geometry.value ?: return@Canvas
+        val clipRight = min(g.right, g.xOf(window.now))
+        if (clipRight <= g.left) return@Canvas
+        clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
+            sessions.forEach { s -> drawRect(Sleep.copy(alpha = WASH_ALPHA), Offset(g.xOf(s.startUtc), 0f), Size(max(3f, g.xOf(s.endUtc) - g.xOf(s.startUtc)), size.height)) }
+            data.exercise.forEach { e -> drawRect(Activity.copy(alpha = WASH_ALPHA), Offset(g.xOf(e.startUtc), 0f), Size(max(3f, g.xOf(e.endUtc) - g.xOf(e.startUtc)), size.height)) }
+        }
+    }
+}
+
+private const val WASH_ALPHA = 0.09f
+/** Where the wash label sits: below the panel title. */
+private val WashLabelTop = 22.dp
+
+/** The label of a wash over [x0]..[x1], when it fits (the short [fallback] if only that does). */
+private fun DrawScope.drawWashLabel(
+    x0: Float, x1: Float, g: ChartGeometry, color: Color,
     label: String, textMeasurer: TextMeasurer, fallback: String? = null
 ) {
     if (x1 < g.left || x0 > g.right) return
-    drawRect(color.copy(alpha = 0.16f), Offset(x0, 0f), Size(max(3f, x1 - x0), height))
     val style = TextStyle(color = color, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
     val textX = max(x0, g.left) + 5.dp.toPx()
     for (candidate in listOfNotNull(label, fallback)) {
         val layout = textMeasurer.measure(candidate, style, maxLines = 1)
         if (x1 - textX >= layout.size.width + 4.dp.toPx()) {
-            drawText(layout, topLeft = Offset(textX, 2.dp.toPx()))
+            drawText(layout, topLeft = Offset(textX, WashLabelTop.toPx()))
             return
         }
     }
