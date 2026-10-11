@@ -25,8 +25,8 @@ object ExerciseDetector {
     private const val MIN_LOW_EVENTS = 3
     private const val MIN_LOW_SHARE = 0.20
 
-    private const val FIRST_K = -6
-    private const val LAST_K = 96 // start + 8 h
+    internal const val FIRST_K = -6
+    internal const val LAST_K = 96 // start + 8 h
     private const val GRAPH_STEP = 3
 
     private const val DROP = 30.0
@@ -81,7 +81,7 @@ object ExerciseDetector {
 
     // -------------------------------------------------------------------------------------------------------------
 
-    private fun responses(input: DetectionInput): List<Response> {
+    internal fun responses(input: DetectionInput): List<Response> {
         val lookup = GlucoseLookup(input.days, input.zone)
         val low = input.thresholds.low
         val since = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))

@@ -487,6 +487,118 @@ object PatternTips {
                 "Keep the evening habits that help you get a full night."
             )
         ),
+        TipTopic.CTX_EX_PRE to Set(
+            understand = listOf(
+                "Glucose that is already moving tends to keep going once activity starts, which may explain this.",
+                "Food and medication from earlier hours may still be acting when you start, which can add to the effect."
+            ),
+            act = listOf(
+                "Glance at your trend arrow before you start and plan fast-acting carbs if it points down.",
+                "Starting a little later, once glucose has levelled off, may give a steadier session."
+            ),
+            maintain = listOf(
+                "Keep noting your trend before you start, since it seems to matter for you.",
+                "Repeat the starts that went smoothly, as they seem to help."
+            )
+        ),
+        TipTopic.CTX_EX_GAP to Set(
+            understand = listOf(
+                "How recently you ate can change how much glucose the body draws on during activity, which may be linked to this.",
+                "Digestion is still under way soon after eating, which can make activity at that time behave differently."
+            ),
+            act = listOf(
+                "Plan your sessions for the time after eating that suits your glucose best.",
+                "Keep fast-acting carbs with you for sessions at the time that tends to bring glucose down."
+            ),
+            maintain = listOf(
+                "Stick with the timing that keeps your glucose steadier.",
+                "Reuse the gap after eating that has worked well for you."
+            )
+        ),
+        TipTopic.CTX_EX_TYPE to Set(
+            understand = listOf(
+                "Different activities use energy in different ways, which can change how much they pull glucose down.",
+                "Intensity and length often differ between activity types, which may be linked to this."
+            ),
+            act = listOf(
+                "Have fast-acting carbs ready for the activity type that changes glucose most.",
+                "Plan a little extra care around the activity type with the biggest change."
+            ),
+            maintain = listOf(
+                "Keep choosing the activities that suit your glucose.",
+                "Mix in the activity types that keep glucose steadier."
+            )
+        ),
+        TipTopic.CTX_MEAL_DELAY to Set(
+            understand = listOf(
+                "Fat and protein slow digestion, so carbohydrate can reach the blood hours later, which may explain a second rise.",
+                "Rich meals often keep releasing glucose long after the first rise has settled, which may be linked to this."
+            ),
+            act = listOf(
+                "Keep an eye on your glucose a few hours after richer meals.",
+                "A short walk a couple of hours after a rich meal may help flatten the later rise."
+            ),
+            maintain = listOf(
+                "Lighter versions of your favourite meals may give a calmer evening.",
+                "Spreading a rich meal into smaller portions may keep the later rise smaller."
+            )
+        ),
+        TipTopic.CTX_MEAL_WORSE to Set(
+            understand = listOf(
+                "Meal size, timing, activity and sleep all shape how the body handles food, and the context here may play a part.",
+                "Routine usually differs between these situations, and that may be linked to the bigger rise."
+            ),
+            act = listOf(
+                "Try a smaller portion or a gentler meal in the situations where rises are biggest.",
+                "A short walk after eating in those situations often helps flatten the rise."
+            ),
+            maintain = listOf(
+                "Borrow the habits from the situations where your rises are smaller.",
+                "Build on the meals that give you the calmest response."
+            )
+        ),
+        TipTopic.CTX_MEAL_BETTER to Set(
+            understand = listOf(
+                "Something about this situation, such as timing, movement or routine, may be helping glucose stay smoother after eating.",
+                "The mix of routine and activity in this situation often supports a gentler response."
+            ),
+            act = listOf(
+                "Reuse what you do in this situation for meals in other situations.",
+                "Try bringing the timing or movement of this situation to other meals."
+            ),
+            maintain = listOf(
+                "Keep this routine going, as it seems to work well for you.",
+                "Stick with the habits around these meals."
+            )
+        ),
+        TipTopic.CTX_NIGHT_BETTER to Set(
+            understand = listOf(
+                "Regular movement during the day can support steadier glucose overnight, which may be linked to this.",
+                "Active days often go with better sleep, which may play a part."
+            ),
+            act = listOf(
+                "Keep some movement in most of your days.",
+                "Short walks add up, so fit them in where you can."
+            ),
+            maintain = listOf(
+                "Keep the activity habits that go with your calmer nights.",
+                "Build on this one active day at a time."
+            )
+        ),
+        TipTopic.CTX_NIGHT_WORSE to Set(
+            understand = listOf(
+                "Active days often change meals, snacks and bedtime, which may play a part in less steady nights.",
+                "Glucose can keep shifting for hours after activity, which may reach into the night."
+            ),
+            act = listOf(
+                "Glance at your glucose trend before bed on active days.",
+                "Keep fast-acting carbs within reach on nights after active days."
+            ),
+            maintain = listOf(
+                "Small steady habits tend to keep nights calmer.",
+                "Pick one evening habit and keep it up on active days."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

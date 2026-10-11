@@ -27,8 +27,8 @@ object MealDetector {
     private const val MIN_GROUP = 5
 
     /** The response grid: 5-minute steps from [FIRST_K] (-30 min) to [LAST_K] (+240 min). */
-    private const val FIRST_K = -6
-    private const val LAST_K = 48
+    internal const val FIRST_K = -6
+    internal const val LAST_K = 48
     private const val GRAPH_STEP = 3
 
     private const val MIN_LOW_SHARE = 0.20
@@ -97,7 +97,7 @@ object MealDetector {
 
     // -------------------------------------------------------------------------------------------------------------
 
-    private fun responses(input: DetectionInput): List<Response> {
+    internal fun responses(input: DetectionInput): List<Response> {
         val lookup = GlucoseLookup(input.days, input.zone)
         val low = input.thresholds.low
         val since = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))

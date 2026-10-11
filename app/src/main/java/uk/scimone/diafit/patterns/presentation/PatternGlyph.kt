@@ -63,6 +63,14 @@ private val SKETCHES: Map<String, Sketch> = mapOf(
     "combo-latedinner" to Sketch(listOf(0f to .7f, .2f to .6f, .45f to .3f, .7f to .22f, 1f to .3f), second = listOf(0f to .7f, .2f to .6f, .45f to .5f, .7f to .62f, 1f to .66f), guides = listOf(.45f), meal = .2f),
     "combo-eveninglow" to Sketch(listOf(0f to .35f, .2f to .4f, .55f to .7f, .8f to .93f, 1f to .8f), guides = listOf(.72f), span = .05f to .3f),
     "combo-shortbreakfast" to Sketch(listOf(0f to .7f, .15f to .7f, .35f to .08f, .6f to .4f, 1f to .65f), second = listOf(0f to .7f, .15f to .7f, .38f to .35f, .65f to .6f, 1f to .68f), meal = .15f),
+    "ctx-expre" to Sketch(listOf(0f to .3f, .15f to .5f, .3f to .62f, .6f to .88f, 1f to .9f), second = listOf(0f to .5f, .3f to .5f, .6f to .62f, 1f to .66f), guides = listOf(.72f), span = .3f to .6f),
+    "ctx-exgap" to Sketch(listOf(0f to .35f, .3f to .35f, .55f to .75f, 1f to .85f), second = listOf(0f to .35f, .3f to .35f, .55f to .5f, 1f to .55f), span = .3f to .55f, meal = .08f),
+    "ctx-extype" to Sketch(emptyList(), bars = listOf(.8f, .45f, .5f)),
+    "ctx-mealdelay" to Sketch(listOf(0f to .75f, .12f to .75f, .3f to .3f, .5f to .55f, .75f to .25f, 1f to .4f), second = listOf(0f to .75f, .12f to .75f, .3f to .35f, .6f to .6f, 1f to .72f), meal = .12f),
+    "ctx-mealtime" to Sketch(emptyList(), bars = listOf(.4f, .55f, .9f)),
+    "ctx-mealweekend" to Sketch(emptyList(), bars = listOf(.5f, .5f, .5f, .5f, .5f, .85f, .8f)),
+    "ctx-mealactivity" to Sketch(listOf(0f to .7f, .25f to .7f, .45f to .45f, .7f to .6f, 1f to .7f), second = listOf(0f to .7f, .25f to .7f, .45f to .15f, .7f to .5f, 1f to .7f), span = .02f to .2f, meal = .25f),
+    "ctx-night" to Sketch(listOf(0f to .5f, .3f to .48f, .6f to .52f, 1f to .5f), second = listOf(0f to .5f, .2f to .25f, .45f to .75f, .7f to .3f, 1f to .6f), guides = listOf(.28f, .72f)),
     "meal-bolus" to Sketch(listOf(0f to .75f, .15f to .75f, .38f to .5f, .6f to .68f, 1f to .75f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .4f to .15f, .65f to .5f, 1f to .72f))
 )
 

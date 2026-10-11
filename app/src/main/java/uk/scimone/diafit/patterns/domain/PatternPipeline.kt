@@ -18,7 +18,7 @@ object PatternPipeline {
         tipsInUse: Set<String> = emptySet()
     ): List<PatternCard> {
         val used = tipsInUse.toMutableSet()
-        return candidates
+        return withoutOverlaps(candidates)
             .distinctBy { it.card.id }
             .sortedByDescending { it.card.priority }
             .take(MAX_PATTERNS)
@@ -32,4 +32,26 @@ object PatternPipeline {
     }
 
     const val TIP_COUNT = 3
+
+    /**
+     * Candidates that answer the same question as another one: [dropped] (an id prefix) goes when a candidate whose
+     * id starts with [kept] is present with the same tone, so the more informative card stands alone.
+     */
+    private class Overlap(val dropped: String, val kept: String)
+
+    private val OVERLAPS = listOf(
+        Overlap("ctx.mealdelay", "meal.rich"),        // the broader "richer meals keep glucose up" card wins
+        Overlap("meal.type.", "ctx.mealtime"),        // the size-matched clock-time comparison replaces the label comparison
+        Overlap("ctx.night", "ex.nextday"),           // next-day time in range already says it
+        Overlap("ctx.exgap", "ex.evening"),           // evening activity and "soon after eating" are mostly the same sessions
+        Overlap("ctx.extype", "ex.intensity")         // harder-activity effect would explain a type difference
+    )
+
+    internal fun withoutOverlaps(candidates: List<PatternCandidate>): List<PatternCandidate> =
+        candidates.filterNot { c ->
+            OVERLAPS.any { o ->
+                c.card.id.startsWith(o.dropped) &&
+                    candidates.any { k -> k !== c && k.card.id.startsWith(o.kept) && k.card.tone == c.card.tone }
+            }
+        }
 }
