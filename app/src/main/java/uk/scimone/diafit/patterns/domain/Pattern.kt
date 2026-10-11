@@ -103,7 +103,8 @@ enum class TipTopic(val isLow: Boolean = false) {
     LOW_NIGHT(true), LOW_DAY(true), HIGH_NIGHT, HIGH_DAY, VARIABILITY, DAWN,
     STEADY_NIGHT, STEADY_DAY, WEEKEND_BETTER, WEEKEND_WORSE,
     MEAL_LOW(true), MEAL_SPIKE, MEAL_SLOW, MEAL_GOOD, MEAL_RICH, MEAL_TYPE, MEAL_BOLUS,
-    EX_DROP, EX_LOW_NOW(true), EX_LOW_LATER(true), EX_RISE, EX_GOOD, EX_LONG, EX_EVENING, EX_NEXTDAY, EX_INTENSITY
+    EX_DROP, EX_LOW_NOW(true), EX_LOW_LATER(true), EX_RISE, EX_GOOD, EX_LONG, EX_EVENING, EX_NEXTDAY, EX_INTENSITY,
+    SLEEP_SHORT, SLEEP_RESTLESS, SLEEP_IRREGULAR
 }
 
 /** A detector's raw finding: the card minus its tips, plus what is needed to choose them. */

@@ -361,6 +361,48 @@ object PatternTips {
                 "Reuse the kind of session that keeps your glucose calm."
             )
         ),
+        TipTopic.SLEEP_SHORT to Set(
+            understand = listOf(
+                "Short nights can make the body respond less well to insulin the next day, which may show up in glucose.",
+                "Tired days often bring more snacking and less movement, which may be linked to this."
+            ),
+            act = listOf(
+                "Try moving your bedtime a little earlier on the nights you can.",
+                "Winding down at a regular time gives you the best chance of a full night."
+            ),
+            maintain = listOf(
+                "Protect the nights you sleep well, as they seem to go with steadier days.",
+                "Keep the evening habits that help you get a full night."
+            )
+        ),
+        TipTopic.SLEEP_RESTLESS to Set(
+            understand = listOf(
+                "Restless nights may be linked to stress, late meals, caffeine or glucose swings, and they can carry into the next day.",
+                "Broken sleep can leave you tired and less active the next day, which may be linked to this."
+            ),
+            act = listOf(
+                "A dark, cool and quiet bedroom may help you sleep more soundly.",
+                "Try keeping caffeine and large meals away from bedtime."
+            ),
+            maintain = listOf(
+                "Keep whatever helps you settle on your calmer nights.",
+                "Repeat the evening routine of your quieter nights."
+            )
+        ),
+        TipTopic.SLEEP_IRREGULAR to Set(
+            understand = listOf(
+                "Going to bed at very different times can unsettle the body clock, which may be linked to less steady days.",
+                "A shifting bedtime often shifts meals and activity too, which may play a part."
+            ),
+            act = listOf(
+                "Aim for a bedtime within about an hour of your usual one.",
+                "Pick a regular wind-down time and keep to it where you can."
+            ),
+            maintain = listOf(
+                "Keep the regular evenings that go with your steadier days.",
+                "A steady routine is a good habit to hold on to."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

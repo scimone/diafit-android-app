@@ -60,7 +60,9 @@ class DetectionInput(
     val sittings: List<MealSitting> = emptyList(),
     val boluses: List<BolusEntity> = emptyList(),
     /** Workouts and stretches of raised activity, for the exercise detectors. */
-    val events: List<ActivityEvent> = emptyList()
+    val events: List<ActivityEvent> = emptyList(),
+    /** One main sleep per night, for the sleep detectors. */
+    val nights: List<SleepNight> = emptyList()
 ) {
     val today: LocalDate get() = Instant.ofEpochMilli(nowUtc).atZone(zone).toLocalDate()
 

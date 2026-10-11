@@ -30,6 +30,8 @@ import uk.scimone.diafit.patterns.domain.DetectionInput
 import uk.scimone.diafit.patterns.domain.PatternLifecycle
 import uk.scimone.diafit.patterns.domain.PatternPipeline
 import uk.scimone.diafit.patterns.domain.PatternState
+import uk.scimone.diafit.patterns.domain.SleepDetector
+import uk.scimone.diafit.patterns.domain.SleepNights
 import uk.scimone.diafit.patterns.domain.TimeOfDayDetector
 import uk.scimone.diafit.notifications.data.AppNotifier
 import uk.scimone.diafit.notifications.data.NotificationChannelSpec
@@ -74,11 +76,14 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         if (days.size < MIN_DAYS_TO_SCAN) return
         val sittings = withContext(Dispatchers.IO) { mealRepository.getUnmergedSince(USER_ID, from) }.toSittings()
         val boluses = withContext(Dispatchers.IO) { bolusRepository.getBolusBetween(from, now, USER_ID) }
-        val events = ActivityEvents.build(withContext(Dispatchers.IO) { activityRepository.getBetween(from, now, USER_ID) })
-        val input = DetectionInput(days, getTargetRange().toCore().toThresholds(), now, zone, sittings, boluses, events)
+        val activity = withContext(Dispatchers.IO) { activityRepository.getBetween(from, now, USER_ID) }
+        val input = DetectionInput(
+            days, getTargetRange().toCore().toThresholds(), now, zone, sittings, boluses,
+            ActivityEvents.build(activity), SleepNights.build(activity.sleepSessions, zone)
+        )
 
         val stored = store.getAll()
-        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input)
+        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input) + SleepDetector.detect(input)
         val cards = PatternPipeline.finalize(
             candidates,
             existingTips = stored.associate { it.card.id to it.card.tips },
