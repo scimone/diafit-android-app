@@ -106,6 +106,34 @@ class ExerciseDetectorTest {
         assertTrue(detect(s, meals).isEmpty())
     }
 
+    private fun mealAt(day: Int, minutesFromStart: Int, carbs: Int): MealEntity {
+        val t = startMs(day, 10) + minutesFromStart * 60_000L
+        return MealEntity(userId = 1, description = null, createdAtUtc = t, mealTimeUtc = t, carbohydrates = carbs, mealType = MealType.SNACK, imageId = "", recommendation = null, reasoning = null, sittingId = "m$day-$minutesFromStart")
+    }
+
+    @Test fun mealsFurtherAwayOrSmallDoNotExcludeActivity() {
+        val s = scenario { _, m, dur -> if (m in 0..dur) 110f - 50f * m / dur else if (m > dur) 60f + 50f * (m - dur).coerceAtMost(60) / 60f else 110f }
+        val farMeals = (0..26).map { mealAt(it, -120, 60) }      // 2 h before the start
+        val smallMeals = (0..26).map { mealAt(it, 0, 15) }        // a small snack at the start
+        val laterMeals = (0..26).map { mealAt(it, 40 + 90, 60) }  // 90 min after the end
+        assertTrue(detect(s, farMeals).any { it.card.detector == "ex-drop" })
+        assertTrue(detect(s, smallMeals).any { it.card.detector == "ex-drop" })
+        assertTrue(detect(s, laterMeals).any { it.card.detector == "ex-drop" })
+        assertTrue(detect(s, (0..26).map { mealAt(it, 20, 60) }).isEmpty()) // a real meal in the middle of it still does
+    }
+
+    @Test fun longIsRelativeToTheUsersOwnSessions() {
+        // Every session is 30 minutes: nothing is "long", so there is no long-vs-short finding even with a low point after some of them.
+        val some = (0..26).filter { it % 2 == 0 }.toSet()
+        val s = scenario(duration = { 30 }) { d, m, dur -> if (d in some && m in (dur + 40)..(dur + 300)) 72f else 110f }
+        assertTrue(detect(s).none { it.card.detector == "ex-long" })
+        // Sessions of 90 and 45 minutes (neither is "long" by a fixed 45): the longer half is, relative to this person.
+        val long = (0..26).filter { it % 2 == 0 }.toSet()
+        val t = scenario(duration = { if (it in long) 90 else 45 }) { d, m, dur -> if (d in long && m in (dur + 40)..(dur + 300)) 72f else 110f }
+        val found = detect(t).single { it.card.detector == "ex-long" }
+        assertTrue(found.card.summary.contains("90 minutes or more"))
+    }
+
     @Test fun backToBackActivitiesAreLeftOut() {
         val s = scenario { _, m, dur -> if (m in 0..dur) 110f - 50f * m / dur else 110f }
         val doubled = s.events.flatMap { listOf(it, it.copy(startUtc = it.endUtc + 60 * 60_000L, endUtc = it.endUtc + 100 * 60_000L)) }

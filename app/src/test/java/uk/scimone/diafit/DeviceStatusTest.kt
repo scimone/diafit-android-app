@@ -82,4 +82,23 @@ class DeviceStatusTest {
         assertEquals(listOf("SENSOR-0-24"), alerts(DeviceKind.SENSOR, 20.0))
         assertEquals(listOf("SENSOR-0-1"), alerts(DeviceKind.SENSOR, 0.9))
     }
+
+    @Test fun expiryAlertsUseTheShortNamingAndOldOnesAreTidied() {
+        val a = uk.scimone.diafit.core.domain.model.expiryAlerts(
+            listOf(uk.scimone.diafit.core.domain.model.DeviceAge(DeviceKind.PATCH, 0L, (DeviceKind.PATCH.defaultHours - 9.0).let { (it * 3_600_000L).toLong() }, DeviceKind.PATCH.defaultHours))
+        ) { "Sat 10 Oct 15:25" }.single()
+        assertEquals("Patch pump expires in 9 h", a.title)
+        assertEquals("Devices · due Sat 10 Oct 15:25", a.text)
+        val old = uk.scimone.diafit.core.domain.model.tidyNotificationText(
+            "Patch pump (site & insulin) expires in about 9 hours", "Due Sat 10 Oct 15:25. Change it and log the change so the countdown restarts."
+        )
+        assertEquals(a.title to a.text, old)
+        assertEquals(
+            "Sensor expires in under 1 h" to "Devices · due Mon 12 Oct 08:00",
+            uk.scimone.diafit.core.domain.model.tidyNotificationText("Sensor expires in less than 1 hour", "Due Mon 12 Oct 08:00. Change it and log the change so the countdown restarts.")
+        )
+        // Already in the new form, or not an expiry alert: untouched.
+        assertEquals(a.title to a.text, uk.scimone.diafit.core.domain.model.tidyNotificationText(a.title, a.text))
+        assertEquals("Glucose pattern" to "x", uk.scimone.diafit.core.domain.model.tidyNotificationText("Glucose pattern", "x"))
+    }
 }

@@ -41,10 +41,26 @@ fun expiryAlerts(ages: List<DeviceAge>, formatTime: (Long) -> String): List<Expi
     val remaining = age.remainingMs ?: return@mapNotNull null
     if (remaining <= 0) return@mapNotNull null
     val threshold = alertHours(age.kind).sorted().firstOrNull { remaining <= it * HOUR_MS } ?: return@mapNotNull null
-    val left = if (threshold == 1) "less than 1 hour" else "about ${(remaining + HOUR_MS / 2) / HOUR_MS} hours"
+    val left = if (threshold == 1) "under 1 h" else "${(remaining + HOUR_MS / 2) / HOUR_MS} h"
     ExpiryAlert(
         key = "${age.kind.name}-$changed-$threshold",
-        title = "${age.kind.label} expires in $left",
-        text = "Due ${formatTime(age.expiresAtUtc!!)}."
+        // Same convention as the pattern cards: a short name, then "category · detail".
+        title = "${age.kind.label.substringBefore(" (")} expires in $left",
+        text = "Devices · due ${formatTime(age.expiresAtUtc!!)}"
     )
+}
+
+private val LEGACY_TITLE = Regex("^(.*?)(?: \\(.*?\\))? expires in (?:less than 1 hour|about (\\d+) hours)$")
+private val LEGACY_TEXT = Regex("^Due (.*?)\\.(?: .*)?$")
+
+/**
+ * Notifications stored before the short naming (\"Patch pump (site & insulin) expires in about 9 hours\" / \"Due Sat 10 Oct
+ * 15:25. Change it and log the change so the countdown restarts.\") shown in the current convention. Anything else,
+ * including notifications already in the new form, is returned unchanged.
+ */
+fun tidyNotificationText(title: String, text: String): Pair<String, String> {
+    val t = LEGACY_TITLE.matchEntire(title) ?: return title to text
+    val d = LEGACY_TEXT.matchEntire(text) ?: return title to text
+    val hours = t.groupValues[2]
+    return "${t.groupValues[1]} expires in ${if (hours.isEmpty()) "under 1 h" else "$hours h"}" to "Devices · due ${d.groupValues[1]}"
 }

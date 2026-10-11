@@ -40,7 +40,9 @@ object MealDetector {
     private const val GOOD_MIN_RISE = 15.0
     private const val GOOD_MAX_RISE = 50.0
     private const val GOOD_MIN_SHARE = 0.7
-    private const val RICH_THRESHOLD_G = 35
+    /** "Richer" = at least the median fat + protein of the user's own meals (and clearly richer than the rest). */
+    private const val RICH_MIN_CUT_G = 10
+    private const val RICH_RATIO = 1.3
     private const val RICH_MIN_DIFF = 20.0
     private const val TYPE_MIN_DIFF = 30.0
     private const val BOLUS_MIN_DIFF = 25.0
@@ -85,6 +87,12 @@ object MealDetector {
         val t = input.thresholds
         val from = input.startOfDayUtc(input.today.minusDays((WINDOW_DAYS - 1).toLong()))
         val to = input.nowUtc
+        // Effect-size thresholds follow this person's glucose variability.
+        val spikeMedian = input.scaled(SPIKE_MEDIAN_RISE)
+        val spikeRise = input.scaled(SPIKE_RISE)
+        val richDiff = input.scaled(RICH_MIN_DIFF)
+        val typeDiff = input.scaled(TYPE_MIN_DIFF)
+        val bolusDiff = input.scaled(BOLUS_MIN_DIFF)
     }
 
     // -------------------------------------------------------------------------------------------------------------
@@ -199,21 +207,21 @@ object MealDetector {
     private fun spikes(c: Ctx, g: List<Response>, type: MealType?): PatternCandidate? {
         val rises = g.map { it.peakRise.toDouble() }
         val med = median(rises)
-        val big = g.count { it.peakRise >= SPIKE_RISE }
-        if (med < SPIKE_MEDIAN_RISE || share(big, g.size) < SPIKE_MIN_SHARE) return null
+        val big = g.count { it.peakRise >= c.spikeRise }
+        if (med < c.spikeMedian || share(big, g.size) < SPIKE_MIN_SHARE) return null
         val (a, b) = halves(g)
-        if (median(a.map { it.peakRise.toDouble() }) < SPIKE_MEDIAN_RISE * 0.75 || median(b.map { it.peakRise.toDouble() }) < SPIKE_MEDIAN_RISE * 0.75) return null
+        if (median(a.map { it.peakRise.toDouble() }) < c.spikeMedian * 0.75 || median(b.map { it.peakRise.toDouble() }) < c.spikeMedian * 0.75) return null
         val examples = g.sortedByDescending { it.peakRise }.take(3).map {
             "${mealDay(it, c.input.zone)} · up ${it.peakRise.roundToInt()} mg/dL to ${it.peak.roundToInt()}, after ${after(it.peakK)}"
         }
         return PatternCandidate(
             card(
                 c, "meal.spike.${scopeLabel(type)}", "meal-spike", "Big rise after ${scopeLabel(type)}",
-                "Glucose typically rose ${med.roundToInt()} mg/dL after ${scopeLabel(type)}, and by 50 or more after $big of ${g.size} ${scopeLabel(type)}.",
+                "Glucose typically rose ${med.roundToInt()} mg/dL after ${scopeLabel(type)}, and by ${c.spikeRise.roundToInt()} or more after $big of ${g.size} ${scopeLabel(type)}.",
                 responseGraph(g, null, scopeLabel(type), null), g.size, big, med, "median rise ${med.roundToInt()} mg/dL",
                 "The typical rise was large in both halves of the period.",
                 limitations("Carb amounts come from what was logged, and insulin timing and amount aren't part of this finding."),
-                examples, PatternTone.UNFAVORABLE, rank(65.0, (med - SPIKE_MEDIAN_RISE) / 40.0, g.size)
+                examples, PatternTone.UNFAVORABLE, rank(65.0, (med - c.spikeMedian) / 40.0, g.size)
             ),
             TipTopic.MEAL_SPIKE
         )
@@ -271,8 +279,12 @@ object MealDetector {
 
     private fun rich(c: Ctx): List<PatternCandidate> {
         val withComp = c.all.filter { it.hasComposition }
-        val byComposition = withComp.partition { it.fat + it.protein >= RICH_THRESHOLD_G }
-        val usable = byComposition.first.size >= MIN_GROUP && byComposition.second.size >= MIN_GROUP
+        // Rich = at least the median fat + protein of this person's recorded meals, if that splits them clearly.
+        val compCut = median(withComp.map { (it.fat + it.protein).toDouble() }).roundToInt()
+        val byComposition = withComp.partition { it.fat + it.protein >= compCut }
+        val usable = withComp.size >= 2 * MIN_GROUP && compCut >= RICH_MIN_CUT_G &&
+            byComposition.first.size >= MIN_GROUP && byComposition.second.size >= MIN_GROUP &&
+            median(byComposition.first.map { (it.fat + it.protein).toDouble() }) >= RICH_RATIO * median(byComposition.second.map { (it.fat + it.protein).toDouble() })
         val (rich, light, basis) = if (usable) Triple(byComposition.first, byComposition.second, "recorded fat and protein")
         else {
             val slowLogged = c.all.partition { it.impact == ImpactType.LONG }
@@ -283,11 +295,11 @@ object MealDetector {
         val lateLight = light.filter { !it.lateMean.isNaN() }.map { it.lateRise.toDouble() }
         if (lateRich.size < MIN_GROUP || lateLight.size < MIN_GROUP) return emptyList()
         val (diff, se) = welch(lateRich, lateLight)
-        if (diff < RICH_MIN_DIFF || diff < SE_FACTOR * se) return emptyList()
+        if (diff < c.richDiff || diff < SE_FACTOR * se) return emptyList()
         val composition = usable
         val groupName = if (composition) "Richer meals" else "Slow-absorbing meals"
         val limits = limitations(
-            if (composition) "Richer means 35 g or more of fat and protein combined; meals without recorded fat or protein aren't compared."
+            if (composition) "Richer means $compCut g or more of fat and protein combined, the middle of what you record; meals without recorded fat or protein aren't compared."
             else "Fat and protein weren't recorded often enough, so this uses the absorption you logged for each meal, which is less reliable than recorded composition."
         ) + "Richer meals are often bigger meals as well, so size and composition can't be told apart here."
         return listOf(
@@ -310,7 +322,7 @@ object MealDetector {
         val rest = c.all.filter { it.type != type }
         if (g.size < MIN_MEALS_PER_TYPE || rest.size < MIN_MEALS_PER_TYPE) return@mapNotNull null
         val (diff, se) = welch(g.map { it.peakRise.toDouble() }, rest.map { it.peakRise.toDouble() })
-        if (diff < TYPE_MIN_DIFF || diff < SE_FACTOR * se) return@mapNotNull null
+        if (diff < c.typeDiff || diff < SE_FACTOR * se) return@mapNotNull null
         PatternCandidate(
             card(
                 c, "meal.type.${scopeLabel(type)}", "meal-type", "Bigger rises after ${scopeLabel(type)}",
@@ -331,7 +343,7 @@ object MealDetector {
         val ca = median(early.map { it.carbs.toDouble() }); val cb = median(other.map { it.carbs.toDouble() })
         if (abs(ca - cb) / maxOf(ca, cb) > SIMILAR_CARBS) return emptyList() // not comparable meals
         val (diff, se) = welch(other.map { it.peakRise.toDouble() }, early.map { it.peakRise.toDouble() })
-        if (diff < BOLUS_MIN_DIFF || diff < SE_FACTOR * se) return emptyList()
+        if (diff < c.bolusDiff || diff < SE_FACTOR * se) return emptyList()
         return listOf(
             PatternCandidate(
                 card(

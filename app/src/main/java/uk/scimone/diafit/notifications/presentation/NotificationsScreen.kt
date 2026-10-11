@@ -64,7 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.DeviceKind
 import uk.scimone.diafit.patterns.presentation.GlyphTile
-import uk.scimone.diafit.ui.theme.Warning
+import uk.scimone.diafit.core.domain.model.tidyNotificationText
+import uk.scimone.diafit.ui.theme.Device
 import java.util.Date
 import java.util.Locale
 
@@ -151,6 +152,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
 @Composable
 private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRemove: () -> Unit) {
     val (icon, tint) = notificationVisual(n)
+    val (title, text) = remember(n.title, n.text) { tidyNotificationText(n.title, n.text) }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -160,9 +162,9 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
         Row(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlyphTile(tint) { icon() }
             Column(Modifier.weight(1f)) {
-                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
-                    n.text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis
                 )
                 Text(
@@ -181,7 +183,8 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
 @Composable
 private fun notificationVisual(n: AppNotificationEntity): Pair<@Composable () -> Unit, Color> {
     val kind = n.dedupeKey.substringBefore('-')
-    val tint = if (DeviceKind.entries.any { it.name == kind }) Warning else MaterialTheme.colorScheme.primary
+    // Device alerts keep the neutral device colour, like the device events in the Journal.
+    val tint = if (DeviceKind.entries.any { it.name == kind }) Device else MaterialTheme.colorScheme.primary
     val icon: @Composable () -> Unit = {
         when (kind) {
             DeviceKind.SENSOR.name -> Icon(painterResource(R.drawable.ic_sensor), null, tint = tint, modifier = Modifier.size(26.dp))

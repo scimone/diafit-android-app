@@ -67,8 +67,27 @@ class DetectionInput(
     /** The days of the most recent [n] calendar days including today. */
     fun lastDays(n: Int): List<DayGlucose> = days.filter { it.date > today.minusDays(n.toLong()) && it.date <= today }
 
+    /** Standard deviation of all glucose in the last 28 days (mg/dL); [REFERENCE_SD] when there is too little data. */
+    val glucoseSd: Double by lazy {
+        val v = lastDays(28).flatMap { d -> d.bins.filter { !it.isNaN() } }
+        if (v.size < 500) REFERENCE_SD else {
+            val mean = v.average()
+            kotlin.math.sqrt(v.sumOf { (it - mean) * (it - mean) } / (v.size - 1))
+        }
+    }
+
+    /**
+     * Scales a mg/dL effect-size threshold, written for a typical variability ([REFERENCE_SD]), to this person: someone
+     * whose glucose is steadier needs a smaller difference to count as a real change, someone more variable a bigger
+     * one (0.7x to 1.4x, so no threshold becomes meaningless either way).
+     */
+    fun scaled(base: Double): Double = base * (glucoseSd / REFERENCE_SD).coerceIn(0.7, 1.4)
+
     fun startOfDayUtc(date: LocalDate): Long = date.atStartOfDay(zone).toInstant().toEpochMilli()
 }
+
+/** The usual standard deviation of CGM glucose (mg/dL) that the fixed effect-size thresholds were written for. */
+const val REFERENCE_SD = 45.0
 
 /** Glucose at an arbitrary instant, from the same five-minute bins. NaN where nothing was recorded. */
 class GlucoseLookup(days: List<DayGlucose>, private val zone: ZoneId) {

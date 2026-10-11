@@ -153,4 +153,23 @@ class MealDetectorTest {
         val d = days { day, m -> if (m <= 120) 110f + (if (day in early) 25f else 75f) * sin(PI * m / 120).toFloat() else 110f }
         assertTrue(detect(d, dinners, boluses).none { it.card.detector == "meal-bolus" })
     }
+
+    @Test fun richIsRelativeToTheUsersOwnMeals() {
+        // Fat + protein of 10..30 g (below any fixed 35 g cut): the richer half is still compared, using this person's median.
+        val rich = (0..22).filter { it % 2 == 0 }.toSet()
+        val meals = (0..22).map { if (it in rich) meal(it, protein = 15, fat = 15) else meal(it, protein = 4, fat = 4) }
+        val d = days { day, m -> if (m <= 120) gentle(m) else if (day in rich && m in 180..300) 170f else 115f }
+        val r = detect(d, meals).single { it.card.detector == "meal-rich" }
+        assertTrue(r.card.limitations.any { "30 g or more" in it })
+    }
+
+    @Test fun effectSizeThresholdsFollowTheUsersVariability() {
+        fun whole(f: (Int, Int) -> Float) = (0 until 28).map { d -> DayGlucose(today.minusDays((27 - d).toLong()), FloatArray(BINS_PER_DAY) { f(d, it) }) }
+        val steady = DetectionInput(whole { _, _ -> 110f }, thresholds, now, zone)
+        assertEquals(0.7 * 20.0, steady.scaled(20.0), 0.001) // no variability at all: the smallest scale
+        val wobbly = DetectionInput(whole { d, bin -> if ((d + bin) % 2 == 0) 60f else 260f }, thresholds, now, zone)
+        assertEquals(1.4 * 20.0, wobbly.scaled(20.0), 0.001) // very variable: capped at 1.4x
+        val few = DetectionInput(emptyList(), thresholds, now, zone)
+        assertEquals(20.0, few.scaled(20.0), 0.001)          // too little data: the base value
+    }
 }

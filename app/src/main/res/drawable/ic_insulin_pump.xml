@@ -3,7 +3,7 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-  <!-- pump with window and buttons, looping tube, round patch with its needle -->
+  <!-- pump with window and buttons, a short tube, round patch -->
   <path
       android:pathData="M4 9.5H9A1.5 1.5 0 0 1 10.5 11V19A1.5 1.5 0 0 1 9 20.5H4A1.5 1.5 0 0 1 2.5 19V11A1.5 1.5 0 0 1 4 9.5Z"
       android:fillColor="#00000000"
@@ -26,14 +26,14 @@
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M6.5 9.5V7A3.35 3.35 0 0 1 13.2 7V16A2.4 2.4 0 0 0 18 16V6.5"
+      android:pathData="M6.5 9.5V8.5A1.5 1.5 0 0 1 8 7H13.2"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
       android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"/>
   <path
-      android:pathData="M18 2.7A3.8 3.8 0 0 1 18 10.3A3.8 3.8 0 0 1 18 2.7Z"
+      android:pathData="M16.5 3.7A3.3 3.3 0 0 1 16.5 10.3A3.3 3.3 0 0 1 16.5 3.7Z"
       android:fillColor="#00000000"
       android:strokeColor="#FF000000"
       android:strokeWidth="1.7"
