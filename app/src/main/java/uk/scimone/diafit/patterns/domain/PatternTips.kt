@@ -445,6 +445,48 @@ object PatternTips {
                 "Having fast-acting carbs at hand keeps a low short."
             )
         ),
+        TipTopic.COMBO_LATE_DINNER to Set(
+            understand = listOf(
+                "Food eaten late can still be digesting while you sleep, which may keep glucose higher through the night.",
+                "Late dinners often overlap with the hours when the body is less sensitive to insulin, which may play a part."
+            ),
+            act = listOf(
+                "Try finishing dinner a little earlier on the evenings you can.",
+                "A lighter late meal may sit more gently overnight."
+            ),
+            maintain = listOf(
+                "Keep the earlier dinners going, as they seem to go with calmer nights.",
+                "Stick with the dinner times that give you steadier nights."
+            )
+        ),
+        TipTopic.COMBO_EVENING_LOW to Set(
+            understand = listOf(
+                "Activity in the evening can keep using up glucose for many hours afterwards, which may be linked to these lows.",
+                "Muscles refill their energy stores overnight after exercise, which can pull glucose down."
+            ),
+            act = listOf(
+                "Have fast-acting carbs within reach by your bed on evenings you've been active.",
+                "A small snack before bed on active evenings may help keep the night steadier."
+            ),
+            maintain = listOf(
+                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
+                "Keeping fast-acting carbs close by means a low stays short."
+            )
+        ),
+        TipTopic.COMBO_SLEEP_BREAKFAST to Set(
+            understand = listOf(
+                "After a short night the body can respond less well to insulin, which may make breakfast raise glucose more.",
+                "Tiredness and stress hormones after poor sleep may be linked to a bigger rise."
+            ),
+            act = listOf(
+                "After a short night, a gentler breakfast may be worth a try.",
+                "A short walk after breakfast often helps flatten the rise."
+            ),
+            maintain = listOf(
+                "Protect your sleep where you can, as longer nights seem to go with calmer mornings.",
+                "Keep the evening habits that help you get a full night."
+            )
+        ),
         TipTopic.WEEKEND_WORSE to Set(
             understand = listOf(
                 "Later meals, different sleep times or less structure may play a part on weekends.",

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 /** The five MVP pattern families (multivariable "combined" patterns are a later phase). */
 @Serializable
 enum class PatternCategory(val label: String) {
-    TIME_OF_DAY("Time of day"), MEAL("Meals"), EXERCISE("Activity"), SLEEP("Sleep"), TREND("Trends")
+    TIME_OF_DAY("Time of day"), MEAL("Meals"), EXERCISE("Activity"), SLEEP("Sleep"), TREND("Trends"), COMBINED("Combined")
 }
 
 /** Whether the pattern is something to improve, to keep, or neither. */
@@ -105,7 +105,8 @@ enum class TipTopic(val isLow: Boolean = false) {
     MEAL_LOW(true), MEAL_SPIKE, MEAL_SLOW, MEAL_GOOD, MEAL_RICH, MEAL_TYPE, MEAL_BOLUS,
     EX_DROP, EX_LOW_NOW(true), EX_LOW_LATER(true), EX_RISE, EX_GOOD, EX_LONG, EX_EVENING, EX_NEXTDAY, EX_INTENSITY,
     SLEEP_SHORT, SLEEP_RESTLESS, SLEEP_IRREGULAR,
-    TREND_BETTER, TREND_WORSE, TREND_LOWS_UP(true)
+    TREND_BETTER, TREND_WORSE, TREND_LOWS_UP(true),
+    COMBO_LATE_DINNER, COMBO_EVENING_LOW(true), COMBO_SLEEP_BREAKFAST
 }
 
 /** A detector's raw finding: the card minus its tips, plus what is needed to choose them. */

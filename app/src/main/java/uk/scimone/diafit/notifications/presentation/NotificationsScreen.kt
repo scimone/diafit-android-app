@@ -114,7 +114,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 if (patterns.isNotEmpty()) {
                     item(key = "patterns-header") {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("New patterns", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("Patterns", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             TextButton(onClick = onOpenAllPatterns) { Text("See all") }
                         }
                     }

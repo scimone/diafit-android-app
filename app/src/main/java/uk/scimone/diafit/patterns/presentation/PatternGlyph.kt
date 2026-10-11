@@ -60,6 +60,9 @@ private val SKETCHES: Map<String, Sketch> = mapOf(
     "trend-mean" to Sketch(listOf(0f to .75f, .35f to .6f, .65f to .4f, 1f to .2f), guides = listOf(.5f)),
     "trend-variability" to Sketch(listOf(0f to .5f, .15f to .35f, .3f to .6f, .5f to .2f, .7f to .8f, .85f to .1f, 1f to .9f)),
     "trend-lows" to Sketch(listOf(0f to .4f, .2f to .45f, .35f to .9f, .5f to .4f, .7f to .85f, .85f to .4f, 1f to .88f), guides = listOf(.7f)),
+    "combo-latedinner" to Sketch(listOf(0f to .7f, .2f to .6f, .45f to .3f, .7f to .22f, 1f to .3f), second = listOf(0f to .7f, .2f to .6f, .45f to .5f, .7f to .62f, 1f to .66f), guides = listOf(.45f), meal = .2f),
+    "combo-eveninglow" to Sketch(listOf(0f to .35f, .2f to .4f, .55f to .7f, .8f to .93f, 1f to .8f), guides = listOf(.72f), span = .05f to .3f),
+    "combo-shortbreakfast" to Sketch(listOf(0f to .7f, .15f to .7f, .35f to .08f, .6f to .4f, 1f to .65f), second = listOf(0f to .7f, .15f to .7f, .38f to .35f, .65f to .6f, 1f to .68f), meal = .15f),
     "meal-bolus" to Sketch(listOf(0f to .75f, .15f to .75f, .38f to .5f, .6f to .68f, 1f to .75f), meal = .15f, second = listOf(0f to .75f, .15f to .75f, .4f to .15f, .65f to .5f, 1f to .72f))
 )
 

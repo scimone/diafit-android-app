@@ -33,6 +33,7 @@ import uk.scimone.diafit.patterns.domain.PatternState
 import uk.scimone.diafit.patterns.domain.SleepDetector
 import uk.scimone.diafit.patterns.domain.SleepNights
 import uk.scimone.diafit.patterns.domain.TrendDetector
+import uk.scimone.diafit.patterns.domain.CombinedDetector
 import uk.scimone.diafit.patterns.domain.TimeOfDayDetector
 import uk.scimone.diafit.notifications.data.AppNotifier
 import uk.scimone.diafit.notifications.data.NotificationChannelSpec
@@ -92,7 +93,7 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         )
 
         val stored = store.getAll()
-        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input) + SleepDetector.detect(input) + TrendDetector.detect(input)
+        val candidates = TimeOfDayDetector.detect(input) + MealDetector.detect(input) + ExerciseDetector.detect(input) + SleepDetector.detect(input) + TrendDetector.detect(input) + CombinedDetector.detect(input)
         val cards = PatternPipeline.finalize(
             candidates,
             existingTips = stored.associate { it.card.id to it.card.tips },

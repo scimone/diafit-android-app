@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
+import uk.scimone.diafit.patterns.domain.PatternCategory
 import uk.scimone.diafit.patterns.domain.PatternState
 import uk.scimone.diafit.patterns.domain.PatternTone
 import uk.scimone.diafit.patterns.domain.StoredPattern
@@ -86,7 +87,13 @@ fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                     if (active.isEmpty()) item {
                         Text("Nothing to report right now.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    items(active, key = { it.card.id }) { PatternCardView(it, onClick = { onOpen(it.card.id) }) }
+                    PatternCategory.entries.forEach { category ->
+                        val group = active.filter { it.card.category == category }
+                        if (group.isNotEmpty()) {
+                            item(key = "c-" + category.name) { SectionTitle(category.label) }
+                            items(group, key = { it.card.id }) { PatternCardView(it, onClick = { onOpen(it.card.id) }) }
+                        }
+                    }
                     if (resolved.isNotEmpty()) {
                         item { SectionTitle("No longer observed") }
                         items(resolved, key = { "r-" + it.card.id }) { CompactRow(it) { onOpen(it.card.id) } }

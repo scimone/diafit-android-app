@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import uk.scimone.diafit.patterns.data.PatternStore
+import uk.scimone.diafit.patterns.domain.PatternState
 import uk.scimone.diafit.patterns.domain.StoredPattern
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,9 +20,10 @@ class NotificationsViewModel(
     private val notifier: AppNotifier,
     patternStore: PatternStore
 ) : ViewModel() {
-    /** New or updated patterns the user hasn't opened yet; they show in the bell next to the notifications. */
+    /** Every current pattern (not resolved or dismissed) stays in the bell, opened or not; only unopened ones count toward the badge. */
     val patterns: StateFlow<List<StoredPattern>> =
-        patternStore.observeAll().map { all -> all.filter { it.isUnreviewed }.sortedByDescending { it.card.priority } }
+        patternStore.observeAll().map { all -> all.filter { it.state != PatternState.RESOLVED && it.state != PatternState.DISMISSED }
+                .sortedWith(compareByDescending<StoredPattern> { it.isUnreviewed }.thenByDescending { it.card.priority }) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val recent: StateFlow<List<AppNotificationEntity>> =
