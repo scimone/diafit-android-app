@@ -4,16 +4,26 @@ package uk.scimone.diafit.notifications.domain
 
 const val DEVICES_LINK = "devices"
 
-/** Opens the Insights list. Older pattern notifications (`patterns:...`) open it too. */
-const val INSIGHTS_LINK = "insights"
-private const val INSIGHT_LINK_PREFIX = "insight:"
-private const val LEGACY_PATTERNS_PREFIX = "patterns:"
+/** Opens the Patterns list. */
+const val PATTERNS_LINK = "patterns"
+private const val PATTERN_LINK_PREFIX = "pattern:"
 
-/** Opens one insight's detail page. */
-fun insightLink(id: String): String = INSIGHT_LINK_PREFIX + id
+/* Links of earlier versions (pushes may still sit in the shade): "insights", "insight:<id>", and "patterns:<texts>" of the old AGP alerts. */
+private const val LEGACY_LIST_LINK = "insights"
+private const val LEGACY_DETAIL_PREFIX = "insight:"
+private const val LEGACY_ALERT_PREFIX = "patterns:"
 
-/** The insight id of an [insightLink], or null when [link] isn't one. */
-fun parseInsightLink(link: String?): String? = link?.takeIf { it.startsWith(INSIGHT_LINK_PREFIX) }?.removePrefix(INSIGHT_LINK_PREFIX)
+/** Opens one pattern's detail page. */
+fun patternLink(id: String): String = PATTERN_LINK_PREFIX + id
 
-/** True for the links that open the Insights list ([INSIGHTS_LINK], or a legacy pattern link). */
-fun isInsightsListLink(link: String?): Boolean = link == INSIGHTS_LINK || link?.startsWith(LEGACY_PATTERNS_PREFIX) == true
+/** The pattern id of a [patternLink], or null when [link] isn't one. */
+fun parsePatternLink(link: String?): String? = when {
+    link == null -> null
+    link.startsWith(PATTERN_LINK_PREFIX) -> link.removePrefix(PATTERN_LINK_PREFIX)
+    link.startsWith(LEGACY_DETAIL_PREFIX) -> link.removePrefix(LEGACY_DETAIL_PREFIX)
+    else -> null
+}
+
+/** True for the links that open the Patterns list. */
+fun isPatternsListLink(link: String?): Boolean =
+    link == PATTERNS_LINK || link == LEGACY_LIST_LINK || link?.startsWith(LEGACY_ALERT_PREFIX) == true

@@ -14,7 +14,7 @@ import uk.scimone.diafit.home.di.homeModule
 import uk.scimone.diafit.journal.di.journalModule
 import uk.scimone.diafit.settings.di.settingsModule
 import uk.scimone.diafit.profile.di.profileModule
-import uk.scimone.diafit.insights.di.insightsModule
+import uk.scimone.diafit.patterns.di.patternsModule
 import uk.scimone.diafit.core.di.syncModule
 import uk.scimone.diafit.backendsync.BackendSyncFeature
 import uk.scimone.diafit.backendsync.data.BackendSyncScheduler
@@ -38,7 +38,7 @@ class DiafitApp : Application() {
                     syncModule,
                     settingsModule,
                     profileModule,
-                    insightsModule,
+                    patternsModule,
                     uk.scimone.diafit.stats.di.statsModule
                 ) + if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()
             )
@@ -53,8 +53,8 @@ class DiafitApp : Application() {
         )
         // Sensor / pump-part expiry alerts: survives process death like the watchdog.
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler>(uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler::class.java).schedulePeriodic()
-        // Glucose insights (recurring patterns), twice a day.
-        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.insights.data.InsightScheduler>(uk.scimone.diafit.insights.data.InsightScheduler::class.java).schedulePeriodic()
+        // Glucose patterns (recurring patterns), twice a day.
+        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.patterns.data.PatternScheduler>(uk.scimone.diafit.patterns.data.PatternScheduler::class.java).schedulePeriodic()
         // Optional upload to the user's Diafit backend; the worker is a no-op until one is configured.
         if (BackendSyncFeature.ENABLED) {
             org.koin.java.KoinJavaComponent.get<BackendSyncScheduler>(BackendSyncScheduler::class.java).schedulePeriodic()

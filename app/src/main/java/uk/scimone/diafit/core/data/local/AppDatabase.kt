@@ -21,9 +21,9 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
         uk.scimone.diafit.core.domain.model.AppNotificationEntity::class,
         uk.scimone.diafit.core.domain.model.HealthMetricEntity::class,
-        uk.scimone.diafit.insights.data.InsightEntity::class
+        uk.scimone.diafit.patterns.data.PatternEntity::class
     ],
-    version = 22,
+    version = 23,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -39,7 +39,7 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mealDao(): MealDao
-    abstract fun insightDao(): uk.scimone.diafit.insights.data.InsightDao
+    abstract fun patternDao(): uk.scimone.diafit.patterns.data.PatternDao
     abstract fun cgmDao(): CgmDao
     abstract fun bolusDao(): BolusDao
     abstract fun pumpEventDao(): PumpEventDao
@@ -57,6 +57,15 @@ abstract class AppDatabase : RoomDatabase() {
                         "`userId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `timeUtc` INTEGER NOT NULL, `value` REAL NOT NULL)"
                 )
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_HealthMetricEntity_type_timeUtc` ON `HealthMetricEntity` (`type`, `timeUtc`)")
+            }
+        }
+
+        /** The insights table is called patterns now. */
+        val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `InsightEntity` RENAME TO `PatternEntity`")
+                db.execSQL("DROP INDEX IF EXISTS `index_InsightEntity_state`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_PatternEntity_state` ON `PatternEntity` (`state`)")
             }
         }
 

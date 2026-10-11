@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.presentation
+package uk.scimone.diafit.patterns.presentation
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -11,14 +11,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.model.toThresholds
-import uk.scimone.diafit.insights.data.InsightStore
-import uk.scimone.diafit.insights.domain.StoredInsight
+import uk.scimone.diafit.patterns.data.PatternStore
+import uk.scimone.diafit.patterns.domain.StoredPattern
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 
-/** The insight list and the unread badge (one instance for the whole activity, so the menu badge and the page agree). */
-class InsightsViewModel(private val store: InsightStore) : ViewModel() {
-    val insights: StateFlow<List<StoredInsight>?> =
+/** The pattern list and the unread badge (one instance for the whole activity, so the menu badge and the page agree). */
+class PatternsViewModel(private val store: PatternStore) : ViewModel() {
+    val patterns: StateFlow<List<StoredPattern>?> =
         store.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val unreadCount: StateFlow<Int> =
@@ -27,13 +27,13 @@ class InsightsViewModel(private val store: InsightStore) : ViewModel() {
     fun markAllRead() { viewModelScope.launch(NonCancellable) { store.markAllRead() } }
 }
 
-/** One insight's page: opening it counts as reviewing it. */
-class InsightDetailViewModel(
-    private val store: InsightStore,
+/** One pattern's page: opening it counts as reviewing it. */
+class PatternDetailViewModel(
+    private val store: PatternStore,
     private val getTargetRange: GetTargetRangeUseCase,
     private val id: String
 ) : ViewModel() {
-    val insight: StateFlow<StoredInsight?> = store.observe(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val pattern: StateFlow<StoredPattern?> = store.observe(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _thresholds = MutableStateFlow<GlucoseThresholds?>(null)
     val thresholds: StateFlow<GlucoseThresholds?> = _thresholds
@@ -41,7 +41,7 @@ class InsightDetailViewModel(
     init {
         viewModelScope.launch {
             store.markRead(id)
-            try { _thresholds.value = getTargetRange().toCore().toThresholds() } catch (e: Exception) { Log.e("Insights", "No target range", e) }
+            try { _thresholds.value = getTargetRange().toCore().toThresholds() } catch (e: Exception) { Log.e("Patterns", "No target range", e) }
         }
     }
 

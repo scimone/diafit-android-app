@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.presentation
+package uk.scimone.diafit.patterns.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -41,18 +41,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
-import uk.scimone.diafit.insights.domain.InsightState
-import uk.scimone.diafit.insights.domain.InsightTone
-import uk.scimone.diafit.insights.domain.StoredInsight
+import uk.scimone.diafit.patterns.domain.PatternState
+import uk.scimone.diafit.patterns.domain.PatternTone
+import uk.scimone.diafit.patterns.domain.StoredPattern
 import uk.scimone.diafit.ui.theme.InRange
 import uk.scimone.diafit.ui.theme.Warning
 
-/** The insight cards: graph, explanation and three tips each, new ones first. Tap a card for the detail page. */
+/** The pattern cards: graph, explanation and three tips each, new ones first. Tap a card for the detail page. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
-    val viewModel: InsightsViewModel = koinViewModel()
-    val insights by viewModel.insights.collectAsState()
+fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
+    val viewModel: PatternsViewModel = koinViewModel()
+    val patterns by viewModel.patterns.collectAsState()
     val unread by viewModel.unreadCount.collectAsState()
     Scaffold(
         topBar = {
@@ -63,14 +63,14 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
             )
         }
     ) { padding ->
-        val list = insights
+        val list = patterns
         when {
             list == null -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             else -> {
-                val active = list.filter { it.state != InsightState.RESOLVED && it.state != InsightState.DISMISSED }
-                    .sortedWith(compareByDescending<StoredInsight> { it.isUnreviewed }.thenByDescending { it.card.priority })
-                val resolved = list.filter { it.state == InsightState.RESOLVED }
-                val dismissed = list.filter { it.state == InsightState.DISMISSED }
+                val active = list.filter { it.state != PatternState.RESOLVED && it.state != PatternState.DISMISSED }
+                    .sortedWith(compareByDescending<StoredPattern> { it.isUnreviewed }.thenByDescending { it.card.priority })
+                val resolved = list.filter { it.state == PatternState.RESOLVED }
+                val dismissed = list.filter { it.state == PatternState.DISMISSED }
                 if (active.isEmpty() && resolved.isEmpty() && dismissed.isEmpty()) {
                     Box(Modifier.fillMaxSize().padding(padding).padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
@@ -86,7 +86,7 @@ fun InsightsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                     if (active.isEmpty()) item {
                         Text("Nothing to report right now.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    items(active, key = { it.card.id }) { InsightCardView(it, onClick = { onOpen(it.card.id) }) }
+                    items(active, key = { it.card.id }) { PatternCardView(it, onClick = { onOpen(it.card.id) }) }
                     if (resolved.isNotEmpty()) {
                         item { SectionTitle("No longer observed") }
                         items(resolved, key = { "r-" + it.card.id }) { CompactRow(it) { onOpen(it.card.id) } }
@@ -107,15 +107,15 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-internal fun toneVisuals(tone: InsightTone): Pair<ImageVector, Color> = when (tone) {
-    InsightTone.FAVORABLE -> Icons.Filled.CheckCircle to InRange
-    InsightTone.UNFAVORABLE -> Icons.Filled.Warning to Warning
-    InsightTone.MIXED -> Icons.Filled.Insights to MaterialTheme.colorScheme.primary
+internal fun toneVisuals(tone: PatternTone): Pair<ImageVector, Color> = when (tone) {
+    PatternTone.FAVORABLE -> Icons.Filled.CheckCircle to InRange
+    PatternTone.UNFAVORABLE -> Icons.Filled.Warning to Warning
+    PatternTone.MIXED -> Icons.Filled.Insights to MaterialTheme.colorScheme.primary
 }
 
 /** The compact card: a sketch of the pattern, its short name and one line of numbers. Everything else is on the detail page. */
 @Composable
-internal fun InsightCardView(item: StoredInsight, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val card = item.card
     val (icon, tint) = toneVisuals(card.tone)
     Surface(
@@ -147,7 +147,7 @@ internal fun StateChip(text: String, color: Color) {
 }
 
 @Composable
-private fun CompactRow(item: StoredInsight, onClick: () -> Unit) {
+private fun CompactRow(item: StoredPattern, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),

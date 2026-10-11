@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.domain
+package uk.scimone.diafit.patterns.domain
 
 import uk.scimone.diafit.core.domain.model.ActivityData
 import uk.scimone.diafit.core.domain.model.ElevatedActivity

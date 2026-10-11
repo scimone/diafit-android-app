@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.domain
+package uk.scimone.diafit.patterns.domain
 
 import kotlin.math.roundToInt
 

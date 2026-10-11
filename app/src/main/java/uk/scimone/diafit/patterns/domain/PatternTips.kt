@@ -1,13 +1,13 @@
-package uk.scimone.diafit.insights.domain
+package uk.scimone.diafit.patterns.domain
 
 /**
- * The three tips every insight shows, in the roles of the concept: understand (a cautious likely reason), act (one
- * practical step) and maintain/improve. Each role has ordered variants so unrelated insights don't repeat the same
- * sentence. Wording rules (checked by InsightTipsTest): plain language, one sentence, association not cause, no
+ * The three tips every pattern shows, in the roles of the concept: understand (a cautious likely reason), act (one
+ * practical step) and maintain/improve. Each role has ordered variants so unrelated patterns don't repeat the same
+ * sentence. Wording rules (checked by PatternTipsTest): plain language, one sentence, association not cause, no
  * insulin dose or treatment changes, no asking the user to analyse data. The diabetes team is mentioned only for
  * recurring lows.
  */
-object InsightTips {
+object PatternTips {
     private class Set(val understand: List<String>, val act: List<String>, val maintain: List<String>)
 
     private val sets: Map<TipTopic, Set> = mapOf(

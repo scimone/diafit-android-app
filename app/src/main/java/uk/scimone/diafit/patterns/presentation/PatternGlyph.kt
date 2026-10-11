@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.presentation
+package uk.scimone.diafit.patterns.presentation
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box

@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.domain
+package uk.scimone.diafit.patterns.domain
 
 import java.time.Instant
 import java.time.format.TextStyle
@@ -47,9 +47,9 @@ object ExerciseDetector {
         val minChange: Float? get() = lowestAfter?.let { it - baseline }
     }
 
-    fun detect(input: DetectionInput): List<InsightCandidate> {
+    fun detect(input: DetectionInput): List<PatternCandidate> {
         val responses = responses(input)
-        val out = ArrayList<InsightCandidate>()
+        val out = ArrayList<PatternCandidate>()
         val c = Ctx(input, responses)
         if (responses.size >= MIN_EVENTS) {
             out += scoped(c, ::drops)
@@ -121,7 +121,7 @@ object ExerciseDetector {
     private fun scopeLabel(label: String?) = label?.lowercase() ?: "activity"
 
     /** The whole set first; only when that finds nothing, each kind of workout with enough events on its own. */
-    private fun scoped(c: Ctx, eval: (Ctx, List<Response>, String?) -> InsightCandidate?): List<InsightCandidate> {
+    private fun scoped(c: Ctx, eval: (Ctx, List<Response>, String?) -> PatternCandidate?): List<PatternCandidate> {
         eval(c, c.all, null)?.let { return listOf(it) }
         return c.all.groupBy { it.event.label }.mapNotNull { (label, g) -> if (g.size < MIN_EVENTS) null else eval(c, g, label) }
     }
@@ -156,9 +156,9 @@ object ExerciseDetector {
 
     private fun card(
         c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, n: Int, positive: Int?, effect: Double,
-        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<String>, tone: InsightTone, priority: Double, baseline: String? = null
-    ) = InsightCard(
-        id = id, category = InsightCategory.EXERCISE, detector = detector, title = title, summary = summary, miniGraph = graph,
+        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<String>, tone: PatternTone, priority: Double, baseline: String? = null
+    ) = PatternCard(
+        id = id, category = PatternCategory.EXERCISE, detector = detector, title = title, summary = summary, miniGraph = graph,
         observationFromUtc = c.from, observationToUtc = c.to, baselineFromUtc = baseline?.let { c.from }, baselineToUtc = baseline?.let { c.to },
         baselineLabel = baseline, sampleSize = n, sampleUnit = "workouts and activity", positiveCount = positive, effectSize = effect,
         effectLabel = effectLabel, uncertainty = uncertainty, limitations = limits, examples = examples, tone = tone, priority = priority
@@ -166,45 +166,45 @@ object ExerciseDetector {
 
     // ---- single-group findings -----------------------------------------------------------------------------------
 
-    private fun drops(c: Ctx, g: List<Response>, label: String?): InsightCandidate? {
+    private fun drops(c: Ctx, g: List<Response>, label: String?): PatternCandidate? {
         val med = median(g.map { it.change.toDouble() })
         val dropped = g.count { it.change <= -DROP }
         if (med > -DROP || share(dropped, g.size) < 0.5) return null
         val (a, b) = halves(g)
         if (median(a.map { it.change.toDouble() }) > -DROP * 0.66 || median(b.map { it.change.toDouble() }) > -DROP * 0.66) return null
         val s = scopeLabel(label)
-        return InsightCandidate(
+        return PatternCandidate(
             card(
                 c, "ex.drop.$s", "ex-drop", "Glucose drops during $s",
                 "By the end of $s glucose was typically ${(-med).roundToInt()} mg/dL lower than at the start, and at least ${DROP.toInt()} lower in $dropped of ${g.size}.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, dropped, -med, "typical drop ${(-med).roundToInt()} mg/dL",
                 "The drop was clear in both halves of the period.", limitations("Longer or more intense sessions may drop glucose more; this looks at all of them together."),
                 g.sortedBy { it.change }.take(3).map { "${whenLabel(it, c.input.zone)} · ${it.change.roundToInt()} mg/dL" },
-                InsightTone.UNFAVORABLE, rank(55.0, (-med - DROP) / 40.0, g.size)
+                PatternTone.UNFAVORABLE, rank(55.0, (-med - DROP) / 40.0, g.size)
             ),
             TipTopic.EX_DROP
         )
     }
 
-    private fun immediateLows(c: Ctx, g: List<Response>, label: String?): InsightCandidate? {
+    private fun immediateLows(c: Ctx, g: List<Response>, label: String?): PatternCandidate? {
         val lows = g.filter { it.immediateLow }
         if (lows.size < MIN_LOW_EVENTS || share(lows.size, g.size) < MIN_LOW_SHARE) return null
         val (a, b) = halves(g)
         if (a.none { it.immediateLow } || b.none { it.immediateLow }) return null
         val s = scopeLabel(label); val sh = share(lows.size, g.size)
-        return InsightCandidate(
+        return PatternCandidate(
             card(
                 c, "ex.low.$s", "ex-low", "Low glucose after $s",
                 "Within 2 hours of finishing, glucose went below ${c.t.low} mg/dL after ${lows.size} of ${g.size} $s sessions.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, lows.size, sh, "${lows.size} of ${g.size} sessions (${pct(sh)})",
                 "Seen in both the earlier and the later half of the period.", limitations("A low counts after at least 15 minutes below ${c.t.low} mg/dL."),
-                lows.take(3).map { whenLabel(it, c.input.zone) }, InsightTone.UNFAVORABLE, rank(90.0, sh / 0.5, g.size)
+                lows.take(3).map { whenLabel(it, c.input.zone) }, PatternTone.UNFAVORABLE, rank(90.0, sh / 0.5, g.size)
             ),
             TipTopic.EX_LOW_NOW, escalate = sh >= 0.4
         )
     }
 
-    private fun delayedLows(c: Ctx, g0: List<Response>, label: String?): InsightCandidate? {
+    private fun delayedLows(c: Ctx, g0: List<Response>, label: String?): PatternCandidate? {
         val g = g0.filter { it.delayedLow != null }
         if (g.size < MIN_EVENTS) return null
         val lows = g.filter { it.delayedLow == true }
@@ -212,51 +212,51 @@ object ExerciseDetector {
         val (a, b) = halves(g)
         if (a.none { it.delayedLow == true } || b.none { it.delayedLow == true }) return null
         val s = scopeLabel(label); val sh = share(lows.size, g.size)
-        return InsightCandidate(
+        return PatternCandidate(
             card(
                 c, "ex.delayed.$s", "ex-delayed", "Low glucose hours after $s",
                 "Between 2 and 8 hours after finishing, glucose went below ${c.t.low} mg/dL after ${lows.size} of ${g.size} $s sessions.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, lows.size, sh, "${lows.size} of ${g.size} sessions (${pct(sh)})",
                 "Seen in both the earlier and the later half of the period.",
                 limitations("Meals and insulin in the hours after activity can cause lows too; only sessions with no meal within 2 hours are used."),
-                lows.take(3).map { whenLabel(it, c.input.zone) }, InsightTone.UNFAVORABLE, rank(85.0, sh / 0.5, g.size)
+                lows.take(3).map { whenLabel(it, c.input.zone) }, PatternTone.UNFAVORABLE, rank(85.0, sh / 0.5, g.size)
             ),
             TipTopic.EX_LOW_LATER, escalate = sh >= 0.4
         )
     }
 
-    private fun rises(c: Ctx, g: List<Response>, label: String?): InsightCandidate? {
+    private fun rises(c: Ctx, g: List<Response>, label: String?): PatternCandidate? {
         val med = median(g.map { it.change.toDouble() })
         val up = g.count { it.change >= DROP }
         if (med < DROP || share(up, g.size) < 0.5) return null
         val s = scopeLabel(label)
-        return InsightCandidate(
+        return PatternCandidate(
             card(
                 c, "ex.rise.$s", "ex-rise", "Glucose rises during $s",
                 "By the end of $s glucose was typically ${med.roundToInt()} mg/dL higher than at the start, and rose by ${DROP.toInt()} or more in $up of ${g.size}.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, up, med, "typical rise ${med.roundToInt()} mg/dL",
                 "The rise was clear across the period.", limitations("Short or intense efforts often raise glucose for a while; it usually settles afterwards."),
                 g.sortedByDescending { it.change }.take(3).map { "${whenLabel(it, c.input.zone)} · +${it.change.roundToInt()} mg/dL" },
-                InsightTone.MIXED, rank(40.0, (med - DROP) / 40.0, g.size)
+                PatternTone.MIXED, rank(40.0, (med - DROP) / 40.0, g.size)
             ),
             TipTopic.EX_RISE
         )
     }
 
-    private fun steady(c: Ctx, g: List<Response>, label: String?): InsightCandidate? {
+    private fun steady(c: Ctx, g: List<Response>, label: String?): PatternCandidate? {
         if (g.size < 8) return null
         val ok = g.count { abs(it.change) < DROP && !it.immediateLow && it.delayedLow != true }
         val med = median(g.map { abs(it.change.toDouble()) })
         val sh = share(ok, g.size)
         if (sh < 0.7 || med >= 20) return null
         val s = scopeLabel(label)
-        return InsightCandidate(
+        return PatternCandidate(
             card(
                 c, "ex.good.$s", "ex-good", "Steady glucose during $s",
                 "During and after $ok of ${g.size} $s sessions glucose stayed within ${DROP.toInt()} mg/dL of its starting level with no lows.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, ok, sh, "${pct(sh)} of sessions steady",
                 "Consistent across the period.", limitations("Steady means a change under ${DROP.toInt()} mg/dL by the end and no low in the 8 hours after."),
-                emptyList(), InsightTone.FAVORABLE, rank(30.0, (sh - 0.7) / 0.3, g.size)
+                emptyList(), PatternTone.FAVORABLE, rank(30.0, (sh - 0.7) / 0.3, g.size)
             ),
             TipTopic.EX_GOOD
         )
@@ -264,27 +264,27 @@ object ExerciseDetector {
 
     // ---- comparisons -----------------------------------------------------------------------------------------------
 
-    private fun longVsShort(c: Ctx): List<InsightCandidate> {
+    private fun longVsShort(c: Ctx): List<PatternCandidate> {
         val withMin = c.all.filter { it.minChange != null }
         val (long, short) = withMin.partition { it.event.durationMin >= LONG_MIN }
         if (long.size < MIN_GROUP || short.size < MIN_GROUP) return emptyList()
         val (diff, se) = welch(short.map { it.minChange!!.toDouble() }, long.map { it.minChange!!.toDouble() })
         if (diff < COMPARE_DIFF || diff < SE_FACTOR * se) return emptyList()
         return listOf(
-            InsightCandidate(
+            PatternCandidate(
                 card(
                     c, "ex.long", "ex-long", "Lower glucose after long sessions",
                     "In the 8 hours after sessions of $LONG_MIN minutes or more (${long.size}) glucose reached a low point ${diff.roundToInt()} mg/dL lower than after shorter ones (${short.size}).",
                     graph(long, short, "$LONG_MIN min or more", "Shorter"), long.size + short.size, long.size, diff, "${diff.roundToInt()} mg/dL lower low point",
                     margin(diff, se), limitations("Longer sessions are often also harder or later in the day, so duration alone can't explain this."),
-                    emptyList(), InsightTone.UNFAVORABLE, rank(50.0, diff / 50.0, long.size + short.size), baseline = "Shorter sessions in the same period"
+                    emptyList(), PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, long.size + short.size), baseline = "Shorter sessions in the same period"
                 ),
                 TipTopic.EX_LONG
             )
         )
     }
 
-    private fun evening(c: Ctx): List<InsightCandidate> {
+    private fun evening(c: Ctx): List<PatternCandidate> {
         val withMin = c.all.filter { it.minChange != null }
         fun hour(r: Response) = Instant.ofEpochMilli(r.event.startUtc).atZone(c.input.zone).hour
         val (late, early) = withMin.partition { hour(it) >= EVENING_HOUR }
@@ -292,20 +292,20 @@ object ExerciseDetector {
         val (diff, se) = welch(early.map { it.minChange!!.toDouble() }, late.map { it.minChange!!.toDouble() })
         if (diff < COMPARE_DIFF || diff < SE_FACTOR * se) return emptyList()
         return listOf(
-            InsightCandidate(
+            PatternCandidate(
                 card(
                     c, "ex.evening", "ex-evening", "Lower glucose after evening activity",
                     "In the 8 hours after activity that started after $EVENING_HOUR:00 (${late.size}) glucose reached a low point ${diff.roundToInt()} mg/dL lower than after earlier activity (${early.size}).",
                     graph(late, early, "Evening", "Earlier in the day"), late.size + early.size, late.size, diff, "${diff.roundToInt()} mg/dL lower low point",
                     margin(diff, se), limitations("Evening activity runs into the night, when insulin and the body's overnight rhythm also act on glucose."),
-                    emptyList(), InsightTone.UNFAVORABLE, rank(50.0, diff / 50.0, late.size + early.size), baseline = "Activity earlier in the day"
+                    emptyList(), PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, late.size + early.size), baseline = "Activity earlier in the day"
                 ),
                 TipTopic.EX_EVENING
             )
         )
     }
 
-    private fun intensity(c: Ctx): List<InsightCandidate> {
+    private fun intensity(c: Ctx): List<PatternCandidate> {
         val withHr = c.all.filter { it.event.meanBpm != null }
         if (withHr.size < 2 * MIN_GROUP) return emptyList()
         val cut = median(withHr.map { it.event.meanBpm!! })
@@ -315,13 +315,13 @@ object ExerciseDetector {
         if (abs(diff) < INTENSITY_DIFF || abs(diff) < SE_FACTOR * se) return emptyList()
         val down = diff < 0
         return listOf(
-            InsightCandidate(
+            PatternCandidate(
                 card(
                     c, "ex.intensity", "ex-intensity", if (down) "Bigger glucose drop in harder activity" else "Bigger glucose rise in harder activity",
                     "In activity with a higher heart rate (above ${cut.roundToInt()} bpm on average, ${hard.size} sessions) glucose changed ${abs(diff).roundToInt()} mg/dL ${if (down) "more downwards" else "more upwards"} by the end than in easier activity (${easy.size}).",
                     graph(hard, easy, "Higher heart rate", "Lower heart rate"), hard.size + easy.size, hard.size, abs(diff), "${abs(diff).roundToInt()} mg/dL difference",
                     margin(diff, se), limitations("Heart rate also reflects heat, caffeine and fitness, so it's only a rough guide to effort."),
-                    emptyList(), InsightTone.MIXED, rank(40.0, abs(diff) / 50.0, hard.size + easy.size), baseline = "Activity with a lower heart rate"
+                    emptyList(), PatternTone.MIXED, rank(40.0, abs(diff) / 50.0, hard.size + easy.size), baseline = "Activity with a lower heart rate"
                 ),
                 TipTopic.EX_INTENSITY
             )
@@ -329,7 +329,7 @@ object ExerciseDetector {
     }
 
     /** Active days (30 min or more of activity) vs quieter days, by how much of the next day was spent in range. */
-    private fun nextDay(input: DetectionInput): List<InsightCandidate> {
+    private fun nextDay(input: DetectionInput): List<PatternCandidate> {
         val t = input.thresholds
         val whole = 0 until BINS_PER_DAY
         val byDate = input.days.associateBy { it.date }
@@ -350,9 +350,9 @@ object ExerciseDetector {
         val agpQuiet = agpOfDays(quiet.map { it.second }) ?: return emptyList()
         val from = input.startOfDayUtc(first)
         return listOf(
-            InsightCandidate(
-                InsightCard(
-                    id = "ex.nextday", category = InsightCategory.EXERCISE, detector = "ex-nextday", title = "Steadier day after active days",
+            PatternCandidate(
+                PatternCard(
+                    id = "ex.nextday", category = PatternCategory.EXERCISE, detector = "ex-nextday", title = "Steadier day after active days",
                     summary = "Time in range was ${active.map { it.third }.average().roundToInt()} % the day after $ACTIVE_DAY_MIN+ active minutes (${active.size} days) and ${quiet.map { it.third }.average().roundToInt()} % after quieter days (${quiet.size}).",
                     miniGraph = MiniGraph.ProfileComparison("After active days", agpActive.medianGraph(), "After quieter days", agpQuiet.medianGraph()),
                     observationFromUtc = from, observationToUtc = input.nowUtc, baselineFromUtc = from, baselineToUtc = input.nowUtc,
@@ -363,7 +363,7 @@ object ExerciseDetector {
                         "Days without activity data (for example a watch left at home) count as quiet days.",
                         "Active days differ in other ways too, such as meals, sleep and routine, so this can't show that activity is the reason."
                     ),
-                    tone = InsightTone.FAVORABLE, priority = rank(30.0, diff / 20.0, active.size + quiet.size)
+                    tone = PatternTone.FAVORABLE, priority = rank(30.0, diff / 20.0, active.size + quiet.size)
                 ),
                 TipTopic.EX_NEXTDAY
             )

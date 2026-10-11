@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.presentation
+package uk.scimone.diafit.patterns.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -33,18 +33,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import uk.scimone.diafit.insights.domain.InsightCard
-import uk.scimone.diafit.insights.domain.InsightState
+import uk.scimone.diafit.patterns.domain.PatternCard
+import uk.scimone.diafit.patterns.domain.PatternState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** One insight in full: bigger graph, periods, sample, size and uncertainty, examples, caveats and the three tips. */
+/** One pattern in full: bigger graph, periods, sample, size and uncertainty, examples, caveats and the three tips. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsightDetailScreen(id: String, onBack: () -> Unit) {
-    val viewModel: InsightDetailViewModel = koinViewModel(key = "insight-$id") { parametersOf(id) }
-    val item by viewModel.insight.collectAsState()
+fun PatternDetailScreen(id: String, onBack: () -> Unit) {
+    val viewModel: PatternDetailViewModel = koinViewModel(key = "pattern-$id") { parametersOf(id) }
+    val item by viewModel.pattern.collectAsState()
     val thresholds by viewModel.thresholds.collectAsState()
     Scaffold(
         topBar = {
@@ -54,13 +54,13 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        val insight = item
+        val pattern = item
         val t = thresholds
-        if (insight == null || t == null) {
+        if (pattern == null || t == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
         }
-        val card = insight.card
+        val card = pattern.card
         val (_, tint) = toneVisuals(card.tone)
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -69,13 +69,13 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PatternGlyph(card.detector, tint, Modifier.padding(end = 12.dp))
                 Text(card.title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                if (insight.state != InsightState.ONGOING) StateChip(insight.state.label, tint)
+                if (pattern.state != PatternState.ONGOING) StateChip(pattern.state.label, tint)
             }
             Text(card.summary, style = MaterialTheme.typography.bodyLarge)
-            Panel { InsightGraph(card.miniGraph, t, large = true) }
+            Panel { PatternGraph(card.miniGraph, t, large = true) }
 
             Panel("The numbers") {
-                (card.miniGraph as? uk.scimone.diafit.insights.domain.MiniGraph.AgpWindow)?.highlights?.takeIf { it.isNotEmpty() }?.let { spans ->
+                (card.miniGraph as? uk.scimone.diafit.patterns.domain.MiniGraph.AgpWindow)?.highlights?.takeIf { it.isNotEmpty() }?.let { spans ->
                     Fact("Time window", spans.joinToString(", ") { it.label })
                 }
                 Fact("Looked at", period(card.observationFromUtc, card.observationToUtc))
@@ -93,9 +93,9 @@ fun InsightDetailScreen(id: String, onBack: () -> Unit) {
             }
             Panel("Three tips") { card.tips.forEach { Bullet(it, tint) } }
 
-            when (insight.state) {
-                InsightState.DISMISSED -> OutlinedButton(onClick = viewModel::restore, Modifier.fillMaxWidth()) { Text("Show this pattern again") }
-                InsightState.RESOLVED -> Text(
+            when (pattern.state) {
+                PatternState.DISMISSED -> OutlinedButton(onClick = viewModel::restore, Modifier.fillMaxWidth()) { Text("Show this pattern again") }
+                PatternState.RESOLVED -> Text(
                     "This pattern isn't showing in the latest data.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -6,8 +6,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-import uk.scimone.diafit.insights.data.InsightStore
-import uk.scimone.diafit.insights.domain.StoredInsight
+import uk.scimone.diafit.patterns.data.PatternStore
+import uk.scimone.diafit.patterns.domain.StoredPattern
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.local.NotificationDao
@@ -17,11 +17,11 @@ import uk.scimone.diafit.notifications.data.AppNotifier
 class NotificationsViewModel(
     private val dao: NotificationDao,
     private val notifier: AppNotifier,
-    insightStore: InsightStore
+    patternStore: PatternStore
 ) : ViewModel() {
-    /** New or updated insights the user hasn't opened yet; they show in the bell next to the notifications. */
-    val insights: StateFlow<List<StoredInsight>> =
-        insightStore.observeAll().map { all -> all.filter { it.isUnreviewed }.sortedByDescending { it.card.priority } }
+    /** New or updated patterns the user hasn't opened yet; they show in the bell next to the notifications. */
+    val patterns: StateFlow<List<StoredPattern>> =
+        patternStore.observeAll().map { all -> all.filter { it.isUnreviewed }.sortedByDescending { it.card.priority } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val recent: StateFlow<List<AppNotificationEntity>> =

@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights
+package uk.scimone.diafit.patterns
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -9,11 +9,11 @@ import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.model.toSittings
-import uk.scimone.diafit.insights.domain.BINS_PER_DAY
-import uk.scimone.diafit.insights.domain.DayGlucose
-import uk.scimone.diafit.insights.domain.DetectionInput
-import uk.scimone.diafit.insights.domain.InsightTone
-import uk.scimone.diafit.insights.domain.MealDetector
+import uk.scimone.diafit.patterns.domain.BINS_PER_DAY
+import uk.scimone.diafit.patterns.domain.DayGlucose
+import uk.scimone.diafit.patterns.domain.DetectionInput
+import uk.scimone.diafit.patterns.domain.PatternTone
+import uk.scimone.diafit.patterns.domain.MealDetector
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -62,9 +62,9 @@ class MealDetectorTest {
     @Test fun smoothMealsAreFavourable() {
         val found = detect(days { _, m -> if (m <= 120) gentle(m) else 110f }, dinners)
         val good = found.single { it.card.detector == "meal-good" }
-        assertEquals(InsightTone.FAVORABLE, good.card.tone)
+        assertEquals(PatternTone.FAVORABLE, good.card.tone)
         assertEquals("meal.good.meals", good.card.id)
-        assertTrue(found.none { it.card.tone == InsightTone.UNFAVORABLE })
+        assertTrue(found.none { it.card.tone == PatternTone.UNFAVORABLE })
     }
 
     @Test fun recurringPostMealLowsAreFound() {
@@ -74,7 +74,7 @@ class MealDetectorTest {
         assertEquals(8, low.card.positiveCount)
         assertEquals(23, low.card.sampleSize)
         assertEquals("meals", low.card.sampleUnit)
-        assertTrue(low.card.miniGraph is uk.scimone.diafit.insights.domain.MiniGraph.EventResponse)
+        assertTrue(low.card.miniGraph is uk.scimone.diafit.patterns.domain.MiniGraph.EventResponse)
         assertTrue(low.card.examples.isNotEmpty())
     }
 
@@ -87,7 +87,7 @@ class MealDetectorTest {
         val d = days { _, m -> if (m <= 120) 110f + 100f * sin(PI * m / 120).toFloat() else 110f }
         val spike = detect(d, dinners).single { it.card.detector == "meal-spike" }
         assertTrue(spike.card.effectSize >= 90)
-        assertEquals(InsightTone.UNFAVORABLE, spike.card.tone)
+        assertEquals(PatternTone.UNFAVORABLE, spike.card.tone)
     }
 
     @Test fun glucoseStayingHighHoursLaterIsFound() {
@@ -143,7 +143,7 @@ class MealDetectorTest {
         val boluses = (0..22).map { bolus(it, if (it in early) -15 else 0) }
         val d = days { day, m -> if (m <= 120) 110f + (if (day in early) 25f else 75f) * sin(PI * m / 120).toFloat() else 110f }
         val b = detect(d, dinners, boluses).single { it.card.detector == "meal-bolus" }
-        assertEquals(InsightTone.MIXED, b.card.tone)
+        assertEquals(PatternTone.MIXED, b.card.tone)
         assertTrue(b.card.limitations.any { "response to how glucose looks" in it })
     }
 

@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.presentation
+package uk.scimone.diafit.patterns.presentation
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -23,14 +23,14 @@ import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.AgpBands
 import uk.scimone.diafit.history.presentation.AgpPlot
-import uk.scimone.diafit.insights.domain.MiniGraph
+import uk.scimone.diafit.patterns.domain.MiniGraph
 
 /**
- * The visualization of an insight, drawn from the stored observations. [large] adds y labels and hour labels for
+ * The visualization of an pattern, drawn from the stored observations. [large] adds y labels and hour labels for
  * the detail page; the card version stays minimal.
  */
 @Composable
-internal fun InsightGraph(graph: MiniGraph, thresholds: GlucoseThresholds, large: Boolean, modifier: Modifier = Modifier) {
+internal fun PatternGraph(graph: MiniGraph, thresholds: GlucoseThresholds, large: Boolean, modifier: Modifier = Modifier) {
     val height = if (large) 220.dp else 96.dp
     Column(modifier) {
         when (graph) {

@@ -1,16 +1,16 @@
-package uk.scimone.diafit.insights
+package uk.scimone.diafit.patterns
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
-import uk.scimone.diafit.insights.domain.BINS_PER_DAY
-import uk.scimone.diafit.insights.domain.DayGlucose
-import uk.scimone.diafit.insights.domain.DetectionInput
-import uk.scimone.diafit.insights.domain.InsightPipeline
-import uk.scimone.diafit.insights.domain.InsightTone
-import uk.scimone.diafit.insights.domain.TimeOfDayDetector
+import uk.scimone.diafit.patterns.domain.BINS_PER_DAY
+import uk.scimone.diafit.patterns.domain.DayGlucose
+import uk.scimone.diafit.patterns.domain.DetectionInput
+import uk.scimone.diafit.patterns.domain.PatternPipeline
+import uk.scimone.diafit.patterns.domain.PatternTone
+import uk.scimone.diafit.patterns.domain.TimeOfDayDetector
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -35,7 +35,7 @@ class TimeOfDayDetectorTest {
     @Test fun flatInRangeDataGivesOnlyFavourablePatterns() {
         val found = detect(days(14, flat()))
         assertTrue(found.isNotEmpty())
-        assertTrue(found.all { it.card.tone == InsightTone.FAVORABLE })
+        assertTrue(found.all { it.card.tone == PatternTone.FAVORABLE })
         assertTrue(found.all { it.card.detector == "steady" })
     }
 
@@ -46,7 +46,7 @@ class TimeOfDayDetectorTest {
         assertEquals("tod.low.00-04", low.card.id)
         assertEquals(6, low.card.positiveCount)
         assertEquals(14, low.card.sampleSize)
-        assertEquals(InsightTone.UNFAVORABLE, low.card.tone)
+        assertEquals(PatternTone.UNFAVORABLE, low.card.tone)
         assertTrue(low.card.examples.isNotEmpty())
         assertNotNull(low.card.miniGraph)
     }
@@ -90,7 +90,7 @@ class TimeOfDayDetectorTest {
         val d = days { _, bin -> if (bin in 144..191) 230f else 120f } // 12:00–16:00
         val high = detect(d).single { it.card.detector == "high" }
         assertEquals("tod.high.12-16", high.card.id)
-        assertEquals(InsightTone.UNFAVORABLE, high.card.tone)
+        assertEquals(PatternTone.UNFAVORABLE, high.card.tone)
         assertEquals(14, high.card.positiveCount)
     }
 
@@ -112,7 +112,7 @@ class TimeOfDayDetectorTest {
             if (date.dayOfWeek.value >= 6) 220f else 120f
         }
         val w = detect(d).single { it.card.detector == "weekend" }
-        assertEquals(InsightTone.UNFAVORABLE, w.card.tone)
+        assertEquals(PatternTone.UNFAVORABLE, w.card.tone)
         assertNotNull(w.card.baselineLabel)
     }
 
@@ -123,18 +123,18 @@ class TimeOfDayDetectorTest {
     @Test fun pipelineGivesExactlyThreeTipsAndCapsTheList() {
         val lowDays = setOf(1, 3, 5, 8, 10, 12)
         val d = days { day, bin -> if (day in lowDays && bin in 24..36) 60f else 120f }
-        val cards = InsightPipeline.finalize(detect(d))
+        val cards = PatternPipeline.finalize(detect(d))
         assertTrue(cards.isNotEmpty())
         assertTrue(cards.all { it.tips.size == 3 })
-        assertTrue(cards.size <= InsightPipeline.MAX_INSIGHTS)
+        assertTrue(cards.size <= PatternPipeline.MAX_PATTERNS)
         assertEquals(cards.sortedByDescending { it.priority }, cards)
     }
 
     @Test fun existingTipsAreKeptBetweenScans() {
         val lowDays = setOf(1, 3, 5, 8, 10, 12)
         val d = days { day, bin -> if (day in lowDays && bin in 24..36) 60f else 120f }
-        val first = InsightPipeline.finalize(detect(d))
-        val second = InsightPipeline.finalize(detect(d), existingTips = first.associate { it.id to it.tips }, tipsInUse = first.flatMap { it.tips }.toSet())
+        val first = PatternPipeline.finalize(detect(d))
+        val second = PatternPipeline.finalize(detect(d), existingTips = first.associate { it.id to it.tips }, tipsInUse = first.flatMap { it.tips }.toSet())
         assertEquals(first.map { it.tips }, second.map { it.tips })
     }
 }

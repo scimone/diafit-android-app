@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights
+package uk.scimone.diafit.patterns
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -10,14 +10,14 @@ import uk.scimone.diafit.core.domain.model.HeartRateEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.model.toSittings
-import uk.scimone.diafit.insights.domain.ActivityEvent
-import uk.scimone.diafit.insights.domain.ActivityEvents
-import uk.scimone.diafit.insights.domain.BINS_PER_DAY
-import uk.scimone.diafit.insights.domain.DayGlucose
-import uk.scimone.diafit.insights.domain.DetectionInput
-import uk.scimone.diafit.insights.domain.ExerciseDetector
-import uk.scimone.diafit.insights.domain.InsightTone
-import uk.scimone.diafit.insights.domain.MiniGraph
+import uk.scimone.diafit.patterns.domain.ActivityEvent
+import uk.scimone.diafit.patterns.domain.ActivityEvents
+import uk.scimone.diafit.patterns.domain.BINS_PER_DAY
+import uk.scimone.diafit.patterns.domain.DayGlucose
+import uk.scimone.diafit.patterns.domain.DetectionInput
+import uk.scimone.diafit.patterns.domain.ExerciseDetector
+import uk.scimone.diafit.patterns.domain.PatternTone
+import uk.scimone.diafit.patterns.domain.MiniGraph
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -59,7 +59,7 @@ class ExerciseDetectorTest {
     @Test fun glucoseDroppingDuringActivityIsFound() {
         val s = scenario { _, m, dur -> if (m in 0..dur) 110f - 50f * m / dur else if (m > dur) 60f + 50f * (m - dur).coerceAtMost(60) / 60f else 110f }
         val drop = detect(s).single { it.card.detector == "ex-drop" }
-        assertEquals(InsightTone.UNFAVORABLE, drop.card.tone)
+        assertEquals(PatternTone.UNFAVORABLE, drop.card.tone)
         assertTrue(drop.card.miniGraph is MiniGraph.EventResponse)
         assertEquals("start", (drop.card.miniGraph as MiniGraph.EventResponse).eventLabel)
         assertTrue((drop.card.miniGraph as MiniGraph.EventResponse).spanMinutes!! > 0)
@@ -84,13 +84,13 @@ class ExerciseDetectorTest {
     @Test fun risesAreMixedNotUnfavourable() {
         val s = scenario { _, m, dur -> if (m in 0..dur + 60) 110f + 60f * (m.coerceAtMost(dur)) / dur else 110f }
         val rise = detect(s).single { it.card.detector == "ex-rise" }
-        assertEquals(InsightTone.MIXED, rise.card.tone)
+        assertEquals(PatternTone.MIXED, rise.card.tone)
     }
 
     @Test fun steadyGlucoseIsFavourable() {
         val found = detect(scenario(profile = ::flat))
-        assertEquals(InsightTone.FAVORABLE, found.single { it.card.detector == "ex-good" }.card.tone)
-        assertTrue(found.none { it.card.tone == InsightTone.UNFAVORABLE })
+        assertEquals(PatternTone.FAVORABLE, found.single { it.card.detector == "ex-good" }.card.tone)
+        assertTrue(found.none { it.card.tone == PatternTone.UNFAVORABLE })
     }
 
     @Test fun tooFewActivitiesGiveNothing() {
@@ -142,7 +142,7 @@ class ExerciseDetectorTest {
         val s = scenario(bpm = { if (it in hard) 150.0 else 100.0 }) { d, m, dur -> if (d in hard && m in 0..dur) 110f - 45f * m / dur else if (d in hard && m > dur) 65f else 110f }
         val i = detect(s).single { it.card.detector == "ex-intensity" }
         assertTrue(i.card.title.contains("drop"))
-        assertEquals(InsightTone.MIXED, i.card.tone)
+        assertEquals(PatternTone.MIXED, i.card.tone)
     }
 
     @Test fun steadierDaysAfterActiveDaysAreFound() {
@@ -153,7 +153,7 @@ class ExerciseDetectorTest {
         }
         val events = active.map { ActivityEvent(startMs(it, 10), startMs(it, 10) + 40 * 60_000L, "Running", true) }
         val n = ExerciseDetector.detect(DetectionInput(days, thresholds, now, zone, emptyList(), emptyList(), events)).single { it.card.detector == "ex-nextday" }
-        assertEquals(InsightTone.FAVORABLE, n.card.tone)
+        assertEquals(PatternTone.FAVORABLE, n.card.tone)
         assertTrue(n.card.limitations.any { "watch" in it })
     }
 

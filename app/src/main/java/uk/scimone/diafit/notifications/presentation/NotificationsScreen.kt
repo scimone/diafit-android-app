@@ -52,7 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
-import uk.scimone.diafit.insights.presentation.InsightCardView
+import uk.scimone.diafit.patterns.presentation.PatternCardView
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.BorderStroke
@@ -63,7 +63,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.DeviceKind
-import uk.scimone.diafit.insights.presentation.GlyphTile
+import uk.scimone.diafit.patterns.presentation.GlyphTile
 import uk.scimone.diafit.ui.theme.Warning
 import java.util.Date
 import java.util.Locale
@@ -71,10 +71,10 @@ import java.util.Locale
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onOpenInsight: (id: String) -> Unit, onOpenAllInsights: () -> Unit) {
+fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onOpenPattern: (id: String) -> Unit, onOpenAllPatterns: () -> Unit) {
     val viewModel: NotificationsViewModel = koinViewModel()
     val items by viewModel.recent.collectAsState()
-    val insights by viewModel.insights.collectAsState()
+    val patterns by viewModel.patterns.collectAsState()
     val markRead = rememberUpdatedState(viewModel::markAllRead)
     DisposableEffect(Unit) { onDispose { markRead.value() } }
     val snackbar = remember { SnackbarHostState() }
@@ -97,11 +97,11 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
             )
         }
     ) { padding ->
-        if (items.isEmpty() && insights.isEmpty()) {
+        if (items.isEmpty() && patterns.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onOpenAllInsights) { Text("See all patterns") }
+                    TextButton(onClick = onOpenAllPatterns) { Text("See all patterns") }
                 }
             }
         } else {
@@ -110,16 +110,16 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (insights.isNotEmpty()) {
-                    item(key = "insights-header") {
+                if (patterns.isNotEmpty()) {
+                    item(key = "patterns-header") {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text("New patterns", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            TextButton(onClick = onOpenAllInsights) { Text("See all") }
+                            TextButton(onClick = onOpenAllPatterns) { Text("See all") }
                         }
                     }
-                    items(insights, key = { "insight-" + it.card.id }) { InsightCardView(it, onClick = { onOpenInsight(it.card.id) }) }
-                } else item(key = "insights-link") {
-                    TextButton(onClick = onOpenAllInsights) { Text("See all patterns") }
+                    items(patterns, key = { "pattern-" + it.card.id }) { PatternCardView(it, onClick = { onOpenPattern(it.card.id) }) }
+                } else item(key = "patterns-link") {
+                    TextButton(onClick = onOpenAllPatterns) { Text("See all patterns") }
                 }
                 items(items, key = { it.id }) { n ->
                     // Swipe either way, or tap the ✕, to remove.

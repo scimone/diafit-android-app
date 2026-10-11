@@ -1,4 +1,4 @@
-package uk.scimone.diafit.insights.domain
+package uk.scimone.diafit.patterns.domain
 
 import uk.scimone.diafit.patterns.domain.PatternAgp
 import java.time.DayOfWeek
@@ -54,9 +54,9 @@ object TimeOfDayDetector {
     private const val WEEKEND_MIN_WEEKEND_DAYS = 6
     private const val WEEKEND_MIN_WEEKDAYS = 12
 
-    fun detect(input: DetectionInput): List<InsightCandidate> {
+    fun detect(input: DetectionInput): List<PatternCandidate> {
         val days = input.lastDays(WINDOW_DAYS)
-        val out = ArrayList<InsightCandidate>()
+        val out = ArrayList<PatternCandidate>()
         val ctx = Ctx(input, days)
         if (days.size >= MIN_VALID_DAYS && ctx.agp != null) {
             out += lows(ctx)
@@ -157,7 +157,7 @@ object TimeOfDayDetector {
 
     private class LowFinding(val valid: List<DayGlucose>, val lowDays: List<DayGlucose>, val severeDays: Int)
 
-    private fun lows(c: Ctx): List<InsightCandidate> {
+    private fun lows(c: Ctx): List<PatternCandidate> {
         fun eval(r: IntRange): LowFinding? {
             val valid = c.valid(r)
             if (valid.size < MIN_VALID_DAYS) return null
@@ -176,9 +176,9 @@ object TimeOfDayDetector {
                 val bin = r.filter { !d.bins[it].isNaN() }.minBy { d.bins[it] }
                 "${dayLabel(d)} · lowest ${d.bins[bin].roundToInt()} mg/dL at ${timeLabel(bin)}"
             }
-            InsightCandidate(
-                card = InsightCard(
-                    id = id("low", r), category = InsightCategory.TIME_OF_DAY, detector = "low",
+            PatternCandidate(
+                card = PatternCard(
+                    id = id("low", r), category = PatternCategory.TIME_OF_DAY, detector = "low",
                     title = title("Low glucose", r),
                     summary = "Glucose dropped below ${c.t.low} mg/dL for at least 15 minutes on ${f.lowDays.size} of ${f.valid.size} days" +
                         " in this window" + if (severe) ", and below ${c.t.veryLow} mg/dL on ${f.severeDays}." else ".",
@@ -190,7 +190,7 @@ object TimeOfDayDetector {
                         "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
                         "Meals, insulin and activity from earlier in the day aren't part of this check, so the reason isn't known."
                     ),
-                    examples = examples, tone = InsightTone.UNFAVORABLE,
+                    examples = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (severe) 100.0 else 85.0, (s / 0.5).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = if (isNight(r)) TipTopic.LOW_NIGHT else TipTopic.LOW_DAY,
@@ -201,7 +201,7 @@ object TimeOfDayDetector {
 
     private class HighFinding(val valid: List<DayGlucose>, val highDays: List<DayGlucose>, val tar: Double, val veryHighShare: Double)
 
-    private fun highs(c: Ctx): List<InsightCandidate> {
+    private fun highs(c: Ctx): List<PatternCandidate> {
         fun eval(r: IntRange): HighFinding? {
             val valid = c.valid(r)
             if (valid.size < MIN_VALID_DAYS) return null
@@ -221,9 +221,9 @@ object TimeOfDayDetector {
                 val bin = r.filter { !d.bins[it].isNaN() }.maxBy { d.bins[it] }
                 "${dayLabel(d)} · peak ${d.bins[bin].roundToInt()} mg/dL at ${timeLabel(bin)}"
             }
-            InsightCandidate(
-                card = InsightCard(
-                    id = id("high", r), category = InsightCategory.TIME_OF_DAY, detector = "high",
+            PatternCandidate(
+                card = PatternCard(
+                    id = id("high", r), category = PatternCategory.TIME_OF_DAY, detector = "high",
                     title = title("High glucose", r),
                     summary = "Glucose was above ${c.t.high} mg/dL ${pct(f.tar)} of the time in this window, and for a quarter of it or more on ${f.highDays.size} of ${f.valid.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
@@ -234,7 +234,7 @@ object TimeOfDayDetector {
                         "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
                         "Meals, insulin and activity aren't part of this check, so the reason isn't known."
                     ),
-                    examples = examples, tone = InsightTone.UNFAVORABLE,
+                    examples = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (veryHigh) 75.0 else 60.0, (f.tar / 0.6).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = if (isNight(r)) TipTopic.HIGH_NIGHT else TipTopic.HIGH_DAY
@@ -244,7 +244,7 @@ object TimeOfDayDetector {
 
     private class VarFinding(val valid: List<DayGlucose>, val cv: Double)
 
-    private fun variability(c: Ctx): List<InsightCandidate> {
+    private fun variability(c: Ctx): List<PatternCandidate> {
         fun values(ds: List<DayGlucose>, r: IntRange) = ds.flatMap { d -> r.map { d.bins[it] }.filter { !it.isNaN() } }
         fun eval(r: IntRange): VarFinding? {
             val valid = c.valid(r)
@@ -258,9 +258,9 @@ object TimeOfDayDetector {
         }
         return scanBlocks(::eval).mapNotNull { (r, f) ->
             val graph = c.graph(r) ?: return@mapNotNull null
-            InsightCandidate(
-                card = InsightCard(
-                    id = id("var", r), category = InsightCategory.TIME_OF_DAY, detector = "variability",
+            PatternCandidate(
+                card = PatternCard(
+                    id = id("var", r), category = PatternCategory.TIME_OF_DAY, detector = "variability",
                     title = title("Variable glucose", r),
                     summary = "In this window glucose swings more than at other times of the day (variability ${f.cv.roundToInt()} % compared with ${c.overallCv.roundToInt()} % overall).",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
@@ -271,7 +271,7 @@ object TimeOfDayDetector {
                         "Variability here includes day-to-day differences, not only swings within a day.",
                         "Meals, insulin and activity aren't part of this check, so the reason isn't known."
                     ),
-                    tone = InsightTone.UNFAVORABLE,
+                    tone = PatternTone.UNFAVORABLE,
                     priority = rank(40.0, ((f.cv - MIN_CV) / 20.0).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = TipTopic.VARIABILITY
@@ -279,7 +279,7 @@ object TimeOfDayDetector {
         }
     }
 
-    private fun dawn(c: Ctx): List<InsightCandidate> {
+    private fun dawn(c: Ctx): List<PatternCandidate> {
         val before = (3 * BINS_PER_HOUR) until (3 * BINS_PER_HOUR + 6)      // 03:00–03:30
         val after = (6 * BINS_PER_HOUR + 6) until (7 * BINS_PER_HOUR)       // 06:30–07:00
         val rises = c.days.mapNotNull { d ->
@@ -296,9 +296,9 @@ object TimeOfDayDetector {
             "${dayLabel(p.first)} · up ${p.second.roundToInt()} mg/dL between 03:00 and 07:00"
         }
         return listOf(
-            InsightCandidate(
-                card = InsightCard(
-                    id = "tod.dawn", category = InsightCategory.TIME_OF_DAY, detector = "dawn",
+            PatternCandidate(
+                card = PatternCard(
+                    id = "tod.dawn", category = PatternCategory.TIME_OF_DAY, detector = "dawn",
                     title = "Rising glucose at dawn",
                     summary = "Between about 03:00 and 07:00 glucose climbed by a typical ${medianRise.roundToInt()} mg/dL, on ${rising.size} of ${rises.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
@@ -309,7 +309,7 @@ object TimeOfDayDetector {
                         "Compares 03:00–03:30 with 06:30–07:00 only, and ends at a typical ${endLevel.roundToInt()} mg/dL.",
                         "Overnight insulin, late meals and lows earlier in the night can also shape this curve."
                     ),
-                    examples = examples, tone = InsightTone.UNFAVORABLE,
+                    examples = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(45.0, ((medianRise - DAWN_RISE) / 40.0).coerceIn(0.0, 1.0), rises.size)
                 ),
                 topic = TipTopic.DAWN
@@ -319,7 +319,7 @@ object TimeOfDayDetector {
 
     private class SteadyFinding(val valid: List<DayGlucose>, val tir: Double, val cv: Double)
 
-    private fun steady(c: Ctx): List<InsightCandidate> {
+    private fun steady(c: Ctx): List<PatternCandidate> {
         fun eval(r: IntRange): SteadyFinding? {
             val valid = c.valid(r)
             if (valid.size < MIN_VALID_DAYS_STEADY) return null
@@ -331,9 +331,9 @@ object TimeOfDayDetector {
         }
         return scanBlocks(::eval).sortedByDescending { it.second.tir }.take(2).mapNotNull { (r, f) ->
             val graph = c.graph(r) ?: return@mapNotNull null
-            InsightCandidate(
-                card = InsightCard(
-                    id = id("steady", r), category = InsightCategory.TIME_OF_DAY, detector = "steady",
+            PatternCandidate(
+                card = PatternCard(
+                    id = id("steady", r), category = PatternCategory.TIME_OF_DAY, detector = "steady",
                     title = title("Steady glucose", r),
                     summary = "Glucose stayed between ${c.t.low} and ${c.t.high} mg/dL ${pct(f.tir)} of the time in this window over ${f.valid.size} days.",
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
@@ -341,7 +341,7 @@ object TimeOfDayDetector {
                     effectSize = f.tir, effectLabel = "${pct(f.tir)} in range",
                     uncertainty = "Consistent across the period (variability ${f.cv.roundToInt()} %).",
                     limitations = listOf("Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted."),
-                    tone = InsightTone.FAVORABLE,
+                    tone = PatternTone.FAVORABLE,
                     priority = rank(30.0, ((f.tir - STEADY_MIN_TIR) / 0.1).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = if (isNight(r)) TipTopic.STEADY_NIGHT else TipTopic.STEADY_DAY
@@ -351,7 +351,7 @@ object TimeOfDayDetector {
 
     // ---------------------------------------------------------------------------------------------------------
 
-    private fun weekend(input: DetectionInput): List<InsightCandidate> {
+    private fun weekend(input: DetectionInput): List<PatternCandidate> {
         val t = input.thresholds
         val whole = 0 until BINS_PER_DAY
         val days = input.lastDays(WEEKEND_WINDOW_DAYS).filter { it.coverage(whole) >= MIN_COVERAGE }
@@ -373,9 +373,9 @@ object TimeOfDayDetector {
         val better = diff > 0
         val from = input.startOfDayUtc(input.today.minusDays((WEEKEND_WINDOW_DAYS - 1).toLong()))
         return listOf(
-            InsightCandidate(
-                card = InsightCard(
-                    id = "tod.weekend", category = InsightCategory.TIME_OF_DAY, detector = "weekend",
+            PatternCandidate(
+                card = PatternCard(
+                    id = "tod.weekend", category = PatternCategory.TIME_OF_DAY, detector = "weekend",
                     title = if (better) "Steadier glucose on weekends" else "Less time in range on weekends",
                     summary = "Time in range was ${a.average().roundToInt()} % on weekends and ${b.average().roundToInt()} % on weekdays.",
                     miniGraph = MiniGraph.ProfileComparison("Weekends", agpWeekend.medianGraph(), "Weekdays", agpWeekdays.medianGraph()),
@@ -388,7 +388,7 @@ object TimeOfDayDetector {
                         "Weekends have fewer days (${weekend.size}), so one unusual weekend can move the result.",
                         "Sleep times, meals and activity aren't separated here; they may all differ between weekends and weekdays."
                     ),
-                    tone = if (better) InsightTone.FAVORABLE else InsightTone.UNFAVORABLE,
+                    tone = if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE,
                     priority = rank(if (better) 30.0 else 35.0, (abs(diff) / 25.0).coerceIn(0.0, 1.0), days.size)
                 ),
                 topic = if (better) TipTopic.WEEKEND_BETTER else TipTopic.WEEKEND_WORSE
