@@ -41,4 +41,4 @@ fun Modifier.sleepWashShare(share: FloatArray): Modifier {
     }
 }
 
-private const val SLEEP_WASH_ALPHA = 0.06f
+private const val SLEEP_WASH_ALPHA = 0.08f

@@ -308,8 +308,8 @@ internal fun BigValue(value: String, unit: String, color: Color, modifier: Modif
 }
 
 @Composable
-private fun LabeledValue(label: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier, unitColor: Color = Color.Unspecified, end: Boolean = false) {
-    Column(modifier, horizontalAlignment = if (end) Alignment.End else Alignment.Start) {
+private fun LabeledValue(label: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier, unitColor: Color = Color.Unspecified, end: Boolean = false, centered: Boolean = false) {
+    Column(modifier, horizontalAlignment = if (centered) Alignment.CenterHorizontally else if (end) Alignment.End else Alignment.Start) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.Bottom) {
             Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
@@ -366,10 +366,10 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
             val carbsOnly = (day.protein ?: 0.0) <= 0.0 && (day.fat ?: 0.0) <= 0.0
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CardHeader(StatsMetric.CARBS, if (carbsOnly) "Carbohydrates" else "Meals", if (carbsOnly) null else "Carbohydrates") { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
-                if (!carbsOnly) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), Modifier.weight(1f))
-                    LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), Modifier.weight(1f))
-                    LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, Modifier.weight(1f))
+                if (!carbsOnly) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), centered = true)
+                    LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), centered = true)
+                    LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, centered = true)
                 }
             }
         }
@@ -427,8 +427,8 @@ private fun ActivityDayCard(day: StatsDay) {
                 Column(horizontalAlignment = Alignment.End) {
                     day.steps?.let {
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text(StatsMetric.STEPS.format(it.toDouble()).value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = accent, maxLines = 1, softWrap = false)
-                            Text(" steps", Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.labelMedium, color = accent, maxLines = 1, softWrap = false)
+                            Text(StatsMetric.STEPS.format(it.toDouble()).value, Modifier.alignByBaseline(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = accent, maxLines = 1, softWrap = false)
+                            Text(" steps", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = accent, maxLines = 1, softWrap = false)
                         }
                     }
                     day.totalKcal?.let {
@@ -537,20 +537,20 @@ private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
         height = 14.dp
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             ZoneValue("Very low", g.veryLowShare, BelowRange)
             ZoneValue("Low", lowOnly, lowColor)
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             ZoneValue("Very high", g.veryHighShare, AboveRange, end = true)
             ZoneValue("High", highOnly, highColor, end = true)
         }
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LabeledValue("Mean", g.meanMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-        LabeledValue("Std dev", g.sdMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-        LabeledValue("CV", "${g.cvPercent.roundToInt()}", "%", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-        LabeledValue("GMI", String.format("%.1f", g.gmi), "% A1c", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        LabeledValue("Mean", g.meanMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
+        LabeledValue("Std dev", g.sdMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
+        LabeledValue("CV", "${g.cvPercent.roundToInt()}", "%", MaterialTheme.colorScheme.onSurface, centered = true)
+        LabeledValue("GMI", String.format("%.1f", g.gmi), "% A1c", MaterialTheme.colorScheme.onSurface, centered = true)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LabeledValue("Data coverage", "${(g.coverage * 100).roundToInt()}", "%", StatsMetric.GLUCOSE_COVERAGE.accent(), Modifier.weight(1f))

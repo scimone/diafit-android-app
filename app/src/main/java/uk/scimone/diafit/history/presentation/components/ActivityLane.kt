@@ -28,8 +28,8 @@ fun Modifier.activityWash(elevated: List<ActivitySpan>, workouts: List<ActivityS
             val x1 = axis.x(span.endUtc).coerceAtMost(size.width)
             if (x1 > x0) drawRect(Activity.copy(alpha = alpha), Offset(x0, 0f), Size(x1 - x0, size.height))
         }
-        elevated.forEach { wash(it, 0.04f + 0.05f * it.intensity) }
-        workouts.forEach { wash(it, 0.12f) }
+        elevated.forEach { wash(it, 0.06f + 0.07f * it.intensity) }
+        workouts.forEach { wash(it, 0.16f) }
     }
 }
 
