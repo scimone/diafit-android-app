@@ -52,11 +52,17 @@ object TrendDetector {
 
     private fun card(
         c: Ctx, id: String, detector: String, title: String, summary: String, effect: Double, effectLabel: String, margin: String,
-        better: Boolean, topic: TipTopic, escalate: Boolean = false, examples: List<String> = emptyList()
+        better: Boolean, topic: TipTopic, escalate: Boolean = false, examples: List<PatternExample>? = null,
+        metric: ((Stat) -> Double)? = null, describe: ((Stat) -> String)? = null
     ): PatternCandidate? {
         val a = agpOfDays(c.recent.map { it.day }) ?: return null
         val b = agpOfDays(c.before.map { it.day }) ?: return null
         val from = c.input.startOfDayUtc(c.before.first().day.date)
+        // By default a typical recent day against a typical earlier day, on the metric that changed.
+        val cases = examples ?: if (metric != null && describe != null) {
+            Cases.typical(c.recent, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = "Last $PERIOD_DAYS days") } +
+                Cases.typical(c.before, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = "The $PERIOD_DAYS days before") }
+        } else emptyList()
         return PatternCandidate(
             PatternCard(
                 id = id, category = PatternCategory.TREND, detector = detector, title = title, summary = summary,
@@ -70,7 +76,7 @@ object TrendDetector {
                     "Two weeks is a short stretch: illness, travel, a new sensor or a change of routine can move these numbers.",
                     "This compares two periods and can't show what caused the difference."
                 ),
-                examples = examples,
+                cases = cases,
                 tone = if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE,
                 priority = (if (better) 28.0 else 42.0) * (0.6 + 0.4 * effect.coerceIn(0.0, 1.0))
             ),
@@ -90,7 +96,8 @@ object TrendDetector {
             c, "trend.tir", "trend-tir", if (up) "More time in range lately" else "Less time in range lately",
             "Over the last $PERIOD_DAYS days you spent ${pct(r.average())} of the time in range, ${if (up) "up" else "down"} from ${pct(b.average())} in the $PERIOD_DAYS days before.",
             abs(diff) / 20.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} points in range", margin(diff, se, "points"), up,
-            if (up) TipTopic.TREND_BETTER else TipTopic.TREND_WORSE
+            if (up) TipTopic.TREND_BETTER else TipTopic.TREND_WORSE,
+            metric = { it.tir }, describe = { "${pct(it.tir)} in range · average ${it.mean.roundToInt()} mg/dL" }
         )
     }
 
@@ -104,7 +111,8 @@ object TrendDetector {
             c, "trend.mean", "trend-mean", if (up) "Higher average glucose lately" else "Lower average glucose lately",
             "Average glucose over the last $PERIOD_DAYS days was ${r.average().roundToInt()} mg/dL, ${if (up) "up" else "down"} from ${b.average().roundToInt()} in the $PERIOD_DAYS days before.",
             abs(diff) / 30.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} mg/dL average", margin(diff, se, "mg/dL"), !up,
-            if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER
+            if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER,
+            metric = { it.mean }, describe = { "Average ${it.mean.roundToInt()} mg/dL · ${pct(it.tir)} in range" }
         )
     }
 
@@ -117,7 +125,8 @@ object TrendDetector {
             c, "trend.variability", "trend-variability", if (up) "Glucose more variable lately" else "Glucose steadier lately",
             "Day-to-day swings (coefficient of variation) averaged ${pct(r.average())} over the last $PERIOD_DAYS days, ${if (up) "up" else "down"} from ${pct(b.average())} in the $PERIOD_DAYS days before.",
             abs(diff) / 10.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} points variability", margin(diff, se, "points"), !up,
-            if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER
+            if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER,
+            metric = { it.cv }, describe = { "Variability ${pct(it.cv)} · ${pct(it.tir)} in range" }
         )
     }
 
@@ -134,7 +143,14 @@ object TrendDetector {
             abs(diff) / 0.4, "$rn vs $bn days with a low",
             "Counts of days, not a measured margin: ${c.recent.size} and ${c.before.size} days were compared.", !up,
             if (up) TipTopic.TREND_LOWS_UP else TipTopic.TREND_BETTER, escalate = up && r >= 0.4,
-            examples = c.recent.filter { it.low }.takeLast(3).map { it.day.date.toString() }
+            examples = (if (up) c.recent.filter { it.low } else c.before.filter { it.low }).takeLast(Cases.SINGLE).reversed().mapNotNull { st ->
+                val (bin, v) = Cases.extreme(st.day, 0 until BINS_PER_DAY, lowest = true) ?: return@mapNotNull null
+                val below = st.day.count(0 until BINS_PER_DAY) { it < c.input.thresholds.low } * BIN_MINUTES
+                Cases.day(
+                    c.input, st.day.date, "Lowest ${v.roundToInt()} mg/dL at ${Cases.clock(bin)} · ${Cases.duration(below)} below ${c.input.thresholds.low}", bin,
+                    if (up) "Last $PERIOD_DAYS days" else "The $PERIOD_DAYS days before"
+                )
+            }
         )
     }
 }

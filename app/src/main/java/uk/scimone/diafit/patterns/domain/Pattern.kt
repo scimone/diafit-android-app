@@ -63,6 +63,28 @@ sealed interface MiniGraph {
 }
 
 /**
+ * One real occurrence behind a pattern, drawn on the detail page with the person's own glucose, meals, insulin,
+ * activity and sleep (loaded when the page opens). [fromUtc]..[toUtc] is the stretch drawn; [focusFromUtc]..[focusToUtc]
+ * is the part the pattern is about (shaded). [eventUtc] anchors the event the pattern is aligned on (a meal, the start of
+ * an activity, a night), lasting until [eventEndUtc] for activity and sleep, named [eventLabel]. [markUtc] is the key
+ * moment (the lowest point, the peak). [note] states the one number that makes this an example ("Lowest 58 mg/dL at
+ * 03:10"). For comparisons, [group] is the graph's group label (aLabel or bLabel) this example belongs to.
+ */
+@Serializable
+data class PatternExample(
+    val fromUtc: Long,
+    val toUtc: Long,
+    val focusFromUtc: Long,
+    val focusToUtc: Long,
+    val note: String,
+    val eventUtc: Long? = null,
+    val eventEndUtc: Long? = null,
+    val eventLabel: String? = null,
+    val markUtc: Long? = null,
+    val group: String? = null
+)
+
+/**
  * The pattern card contract: everything the list card and the detail view show. [tips] are exactly three once the
  * card has been through [PatternPipeline] (detectors emit it empty).
  */
@@ -91,7 +113,10 @@ data class PatternCard(
     val effectLabel: String,
     val uncertainty: String,
     val limitations: List<String>,
+    /** Older cards only: example lines as text. New cards carry [cases] instead. */
     val examples: List<String> = emptyList(),
+    /** The days (or meals, workouts, nights) the detail page draws to show the pattern on the person's own data. */
+    val cases: List<PatternExample> = emptyList(),
     val tips: List<String> = emptyList(),
     val tone: PatternTone,
     val priority: Double,

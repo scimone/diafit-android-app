@@ -1,8 +1,6 @@
 package uk.scimone.diafit.patterns.domain
 
 import java.time.Instant
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -49,6 +47,35 @@ object ExerciseDetector {
         val immediateLow: Boolean, val delayedLow: Boolean?, val lowestAfter: Float?, val lowestAt: Int?
     ) {
         val minChange: Float? get() = lowestAfter?.let { it - baseline }
+
+        /** Lowest recorded glucose [fromMin]..[toMin] after the start (within the measured 8 h), with its time. */
+        fun lowestBetween(fromMin: Int, toMin: Int): Pair<Long, Float>? =
+            ((fromMin / BIN_MINUTES)..minOf(toMin / BIN_MINUTES, LAST_K)).filter { it - FIRST_K in values.indices && !values[it - FIRST_K].isNaN() }
+                .minByOrNull { values[it - FIRST_K] }?.let { event.startUtc + it * BIN_MINUTES * 60_000L to values[it - FIRST_K] }
+
+        /**
+         * This activity as an example: from 30 min before the start to [afterMin] after its end, with
+         * [focusFromMin]..[focusToMin] after the start shaded.
+         */
+        fun case(afterMin: Int, focusFromMin: Int, focusToMin: Int, note: String, markUtc: Long? = null, group: String? = null) =
+            Cases.event(
+                event.startUtc, event.endUtc, "${event.label} · ${Cases.duration(event.durationMin)}", 30, afterMin,
+                focusFromMin, focusToMin, note, markUtc, group
+            )
+
+        /** Shaded over the activity itself, noting the change by its end. */
+        fun duringCase(group: String? = null, extra: String = "") =
+            case(120, 0, event.durationMin, "${Cases.signed(change)} mg/dL by the end$extra", group = group)
+
+        /** Shaded over the 8 hours after, marking the lowest point. */
+        fun afterCase(group: String? = null): PatternExample {
+            val low = lowestBetween(event.durationMin, event.durationMin + 480)
+            return case(
+                480, event.durationMin, event.durationMin + 480,
+                low?.let { "Lowest ${it.second.roundToInt()} mg/dL, ${Cases.duration(((it.first - event.endUtc) / 60_000L).toInt().coerceAtLeast(0))} after finishing" } ?: "No low point measured",
+                low?.first, group
+            )
+        }
     }
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
@@ -142,11 +169,6 @@ object ExerciseDetector {
     private fun welch(a: List<Double>, b: List<Double>) = (a.average() - b.average()) to sqrt(variance(a) / a.size + variance(b) / b.size)
     private fun margin(diff: Double, se: Double) = "The difference is about ${"%.1f".format(abs(diff) / se.coerceAtLeast(0.01))}× its likely margin of error (±${se.roundToInt()} mg/dL)."
 
-    private fun whenLabel(r: Response, zone: java.time.ZoneId): String {
-        val d = Instant.ofEpochMilli(r.event.startUtc).atZone(zone)
-        return "${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${r.event.label.lowercase()} (${r.event.durationMin} min)"
-    }
-
     private fun rank(base: Double, effect: Double, n: Int) = base * (0.6 + 0.4 * effect.coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 15.0).coerceAtMost(1.0))
 
     private fun graph(g: List<Response>, compare: List<Response>?, aLabel: String, bLabel: String?): MiniGraph =
@@ -164,12 +186,12 @@ object ExerciseDetector {
 
     private fun card(
         c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, n: Int, positive: Int?, effect: Double,
-        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<String>, tone: PatternTone, priority: Double, baseline: String? = null
+        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<PatternExample>, tone: PatternTone, priority: Double, baseline: String? = null
     ) = PatternCard(
         id = id, category = PatternCategory.EXERCISE, detector = detector, title = title, summary = summary, miniGraph = graph,
         observationFromUtc = c.from, observationToUtc = c.to, baselineFromUtc = baseline?.let { c.from }, baselineToUtc = baseline?.let { c.to },
         baselineLabel = baseline, sampleSize = n, sampleUnit = "workouts and activity", positiveCount = positive, effectSize = effect,
-        effectLabel = effectLabel, uncertainty = uncertainty, limitations = limits, examples = examples, tone = tone, priority = priority
+        effectLabel = effectLabel, uncertainty = uncertainty, limitations = limits, cases = examples, tone = tone, priority = priority
     )
 
     // ---- single-group findings -----------------------------------------------------------------------------------
@@ -187,7 +209,7 @@ object ExerciseDetector {
                 "By the end of $s glucose was typically ${(-med).roundToInt()} mg/dL lower than at the start, and at least ${c.drop.roundToInt()} lower in $dropped of ${g.size}.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, dropped, -med, "typical drop ${(-med).roundToInt()} mg/dL",
                 "The drop was clear in both halves of the period.", limitations("Longer or more intense sessions may drop glucose more; this looks at all of them together."),
-                g.sortedBy { it.change }.take(3).map { "${whenLabel(it, c.input.zone)} · ${it.change.roundToInt()} mg/dL" },
+                g.sortedBy { it.change }.take(Cases.SINGLE).map { it.duringCase() },
                 PatternTone.UNFAVORABLE, rank(55.0, (-med - c.drop) / 40.0, g.size)
             ),
             TipTopic.EX_DROP
@@ -206,7 +228,14 @@ object ExerciseDetector {
                 "Within 2 hours of finishing, glucose went below ${c.t.low} mg/dL after ${lows.size} of ${g.size} $s sessions.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, lows.size, sh, "${lows.size} of ${g.size} sessions (${pct(sh)})",
                 "Seen in both the earlier and the later half of the period.", limitations("A low counts after at least 15 minutes below ${c.t.low} mg/dL."),
-                lows.take(3).map { whenLabel(it, c.input.zone) }, PatternTone.UNFAVORABLE, rank(90.0, sh / 0.5, g.size)
+                lows.mapNotNull { r -> r.lowestBetween(r.event.durationMin, r.event.durationMin + 120)?.let { r to it } }.sortedBy { it.second.second }
+                    .take(Cases.SINGLE).map { (r, low) ->
+                        r.case(
+                            120, r.event.durationMin, r.event.durationMin + 120,
+                            "Down to ${low.second.roundToInt()} mg/dL, ${Cases.duration(((low.first - r.event.endUtc) / 60_000L).toInt().coerceAtLeast(0))} after finishing", low.first
+                        )
+                    },
+                PatternTone.UNFAVORABLE, rank(90.0, sh / 0.5, g.size)
             ),
             TipTopic.EX_LOW_NOW, escalate = sh >= 0.4
         )
@@ -227,7 +256,14 @@ object ExerciseDetector {
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, lows.size, sh, "${lows.size} of ${g.size} sessions (${pct(sh)})",
                 "Seen in both the earlier and the later half of the period.",
                 limitations("Meals and insulin in the hours after activity can cause lows too; sessions with a sizeable meal right around them are left out, but a later meal can still play a part."),
-                lows.take(3).map { whenLabel(it, c.input.zone) }, PatternTone.UNFAVORABLE, rank(85.0, sh / 0.5, g.size)
+                lows.mapNotNull { r -> r.lowestBetween(r.event.durationMin + 120, r.event.durationMin + 480)?.let { r to it } }.sortedBy { it.second.second }
+                    .take(Cases.SINGLE).map { (r, low) ->
+                        r.case(
+                            480, r.event.durationMin + 120, r.event.durationMin + 480,
+                            "Down to ${low.second.roundToInt()} mg/dL, ${Cases.duration(((low.first - r.event.endUtc) / 60_000L).toInt())} after finishing", low.first
+                        )
+                    },
+                PatternTone.UNFAVORABLE, rank(85.0, sh / 0.5, g.size)
             ),
             TipTopic.EX_LOW_LATER, escalate = sh >= 0.4
         )
@@ -244,7 +280,7 @@ object ExerciseDetector {
                 "By the end of $s glucose was typically ${med.roundToInt()} mg/dL higher than at the start, and rose by ${c.drop.roundToInt()} or more in $up of ${g.size}.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, up, med, "typical rise ${med.roundToInt()} mg/dL",
                 "The rise was clear across the period.", limitations("Short or intense efforts often raise glucose for a while; it usually settles afterwards."),
-                g.sortedByDescending { it.change }.take(3).map { "${whenLabel(it, c.input.zone)} · +${it.change.roundToInt()} mg/dL" },
+                g.sortedByDescending { it.change }.take(Cases.SINGLE).map { it.duringCase() },
                 PatternTone.MIXED, rank(40.0, (med - c.drop) / 40.0, g.size)
             ),
             TipTopic.EX_RISE
@@ -264,7 +300,9 @@ object ExerciseDetector {
                 "During and after $ok of ${g.size} $s sessions glucose stayed within ${c.drop.roundToInt()} mg/dL of its starting level with no lows.",
                 graph(g, null, s.replaceFirstChar { it.uppercase() }, null), g.size, ok, sh, "${pct(sh)} of sessions steady",
                 "Consistent across the period.", limitations("Steady means a change under ${c.drop.roundToInt()} mg/dL by the end and no low in the 8 hours after."),
-                emptyList(), PatternTone.FAVORABLE, rank(30.0, (sh - 0.7) / 0.3, g.size)
+                Cases.typical(g.filter { abs(it.change) < c.drop && !it.immediateLow && it.delayedLow != true }, Cases.SINGLE) { it.change.toDouble() }
+                    .sortedByDescending { it.event.startUtc }.map { it.duringCase() },
+                PatternTone.FAVORABLE, rank(30.0, (sh - 0.7) / 0.3, g.size)
             ),
             TipTopic.EX_GOOD
         )
@@ -289,7 +327,9 @@ object ExerciseDetector {
                     "In the 8 hours after sessions of $cut minutes or more, your median length (${long.size}) glucose reached a low point ${diff.roundToInt()} mg/dL lower than after shorter ones (${short.size}).",
                     graph(long, short, "$cut min or more", "Shorter"), long.size + short.size, long.size, diff, "${diff.roundToInt()} mg/dL lower low point",
                     margin(diff, se), limitations("Long means at least your median session length ($cut min). Longer sessions are often also harder or later in the day, so duration alone can't explain this."),
-                    emptyList(), PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, long.size + short.size), baseline = "Shorter sessions in the same period"
+                    Cases.typical(long) { it.minChange!!.toDouble() }.map { it.afterCase("$cut min or more") } +
+                        Cases.typical(short) { it.minChange!!.toDouble() }.map { it.afterCase("Shorter") },
+                    PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, long.size + short.size), baseline = "Shorter sessions in the same period"
                 ),
                 TipTopic.EX_LONG
             )
@@ -310,7 +350,9 @@ object ExerciseDetector {
                     "In the 8 hours after activity that started after $EVENING_HOUR:00 (${late.size}) glucose reached a low point ${diff.roundToInt()} mg/dL lower than after earlier activity (${early.size}).",
                     graph(late, early, "Evening", "Earlier in the day"), late.size + early.size, late.size, diff, "${diff.roundToInt()} mg/dL lower low point",
                     margin(diff, se), limitations("Evening activity runs into the night, when insulin and the body's overnight rhythm also act on glucose."),
-                    emptyList(), PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, late.size + early.size), baseline = "Activity earlier in the day"
+                    Cases.typical(late) { it.minChange!!.toDouble() }.map { it.afterCase("Evening") } +
+                        Cases.typical(early) { it.minChange!!.toDouble() }.map { it.afterCase("Earlier in the day") },
+                    PatternTone.UNFAVORABLE, rank(50.0, diff / 50.0, late.size + early.size), baseline = "Activity earlier in the day"
                 ),
                 TipTopic.EX_EVENING
             )
@@ -333,7 +375,9 @@ object ExerciseDetector {
                     "In activity with a higher heart rate (above ${cut.roundToInt()} bpm on average, ${hard.size} sessions) glucose changed ${abs(diff).roundToInt()} mg/dL ${if (down) "more downwards" else "more upwards"} by the end than in easier activity (${easy.size}).",
                     graph(hard, easy, "Higher heart rate", "Lower heart rate"), hard.size + easy.size, hard.size, abs(diff), "${abs(diff).roundToInt()} mg/dL difference",
                     margin(diff, se), limitations("Heart rate also reflects heat, caffeine and fitness, so it's only a rough guide to effort."),
-                    emptyList(), PatternTone.MIXED, rank(40.0, abs(diff) / 50.0, hard.size + easy.size), baseline = "Activity with a lower heart rate"
+                    Cases.typical(hard) { it.change.toDouble() }.map { it.duringCase("Higher heart rate", " · ${it.event.meanBpm!!.roundToInt()} bpm") } +
+                        Cases.typical(easy) { it.change.toDouble() }.map { it.duringCase("Lower heart rate", " · ${it.event.meanBpm!!.roundToInt()} bpm") },
+                    PatternTone.MIXED, rank(40.0, abs(diff) / 50.0, hard.size + easy.size), baseline = "Activity with a lower heart rate"
                 ),
                 TipTopic.EX_INTENSITY
             )
@@ -365,6 +409,12 @@ object ExerciseDetector {
         val agpActive = agpOfDays(active.map { it.second }) ?: return emptyList()
         val agpQuiet = agpOfDays(quiet.map { it.second }) ?: return emptyList()
         val from = input.startOfDayUtc(first)
+        // A typical day after an active day and after a quieter day, each drawn with the evening before.
+        fun ex(p: Triple<java.time.LocalDate, DayGlucose, Double>, group: String) = Cases.window(
+            input, p.second.date, 0 until BINS_PER_DAY, 8 * 60, 0,
+            "${p.third.roundToInt()} % in range · ${minutesByDay[p.first] ?: 0} min active the day before", group = group
+        )
+        val examples = Cases.typical(active) { it.third }.map { ex(it, "After active days") } + Cases.typical(quiet) { it.third }.map { ex(it, "After quieter days") }
         return listOf(
             PatternCandidate(
                 PatternCard(
@@ -379,6 +429,7 @@ object ExerciseDetector {
                         "Days without activity data (for example a watch left at home) count as quiet days.",
                         "Active days differ in other ways too, such as meals, sleep and routine, so this can't show that activity is the reason."
                     ),
+                    cases = examples,
                     tone = PatternTone.FAVORABLE, priority = rank(30.0, diff / 20.0, active.size + quiet.size)
                 ),
                 TipTopic.EX_NEXTDAY

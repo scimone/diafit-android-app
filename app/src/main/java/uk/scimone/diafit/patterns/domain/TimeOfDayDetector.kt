@@ -2,8 +2,6 @@ package uk.scimone.diafit.patterns.domain
 
 import uk.scimone.diafit.patterns.domain.PatternAgp
 import java.time.DayOfWeek
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -134,9 +132,6 @@ object TimeOfDayDetector {
 
     private fun timeLabel(bin: Int) = "%02d:%02d".format(bin * BIN_MINUTES / 60, bin * BIN_MINUTES % 60)
 
-    private fun dayLabel(d: DayGlucose) =
-        "${d.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${d.date.dayOfMonth} ${d.date.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}"
-
     private fun share(n: Int, d: Int) = if (d == 0) 0.0 else n.toDouble() / d
 
     private fun pct(x: Double) = "${(x * 100).roundToInt()} %"
@@ -172,10 +167,12 @@ object TimeOfDayDetector {
             val graph = c.graph(r) ?: return@mapNotNull null
             val severe = f.severeDays >= 2
             val s = share(f.lowDays.size, f.valid.size)
-            val examples = f.lowDays.sortedBy { d -> r.filter { !d.bins[it].isNaN() }.minOf { d.bins[it] } }.take(3).map { d ->
-                val bin = r.filter { !d.bins[it].isNaN() }.minBy { d.bins[it] }
-                "${dayLabel(d)} · lowest ${d.bins[bin].roundToInt()} mg/dL at ${timeLabel(bin)}"
-            }
+            // The lowest days, each with the 3 hours before the window: that is where a likely reason shows up.
+            val examples = f.lowDays.mapNotNull { d -> Cases.extreme(d, r, lowest = true)?.let { d to it } }.sortedBy { it.second.second }
+                .take(Cases.SINGLE).map { (d, e) ->
+                    val below = d.count(r) { it < c.t.low } * BIN_MINUTES
+                    Cases.window(c.input, d.date, r, 180, 60, "Lowest ${e.second.roundToInt()} mg/dL at ${timeLabel(e.first)} · $below min below ${c.t.low}", e.first)
+                }
             PatternCandidate(
                 card = PatternCard(
                     id = id("low", r), category = PatternCategory.TIME_OF_DAY, detector = "low",
@@ -190,7 +187,7 @@ object TimeOfDayDetector {
                         "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
                         "Meals, insulin and activity from earlier in the day aren't part of this check, so the reason isn't known."
                     ),
-                    examples = examples, tone = PatternTone.UNFAVORABLE,
+                    cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (severe) 100.0 else 85.0, (s / 0.5).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = if (isNight(r)) TipTopic.LOW_NIGHT else TipTopic.LOW_DAY,
@@ -217,10 +214,11 @@ object TimeOfDayDetector {
         return scanBlocks(::eval).mapNotNull { (r, f) ->
             val graph = c.graph(r) ?: return@mapNotNull null
             val veryHigh = f.veryHighShare >= 0.05
-            val examples = f.highDays.sortedByDescending { d -> r.filter { !d.bins[it].isNaN() }.maxOf { d.bins[it] } }.take(3).map { d ->
-                val bin = r.filter { !d.bins[it].isNaN() }.maxBy { d.bins[it] }
-                "${dayLabel(d)} · peak ${d.bins[bin].roundToInt()} mg/dL at ${timeLabel(bin)}"
-            }
+            val examples = f.highDays.mapNotNull { d -> Cases.extreme(d, r, lowest = false)?.let { d to it } }.sortedByDescending { it.second.second }
+                .take(Cases.SINGLE).map { (d, e) ->
+                    val above = d.count(r) { it > c.t.high } * BIN_MINUTES
+                    Cases.window(c.input, d.date, r, 180, 60, "Peak ${e.second.roundToInt()} mg/dL at ${timeLabel(e.first)} · ${Cases.duration(above)} above ${c.t.high}", e.first)
+                }
             PatternCandidate(
                 card = PatternCard(
                     id = id("high", r), category = PatternCategory.TIME_OF_DAY, detector = "high",
@@ -234,7 +232,7 @@ object TimeOfDayDetector {
                         "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
                         "Meals, insulin and activity aren't part of this check, so the reason isn't known."
                     ),
-                    examples = examples, tone = PatternTone.UNFAVORABLE,
+                    cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (veryHigh) 75.0 else 60.0, (f.tar / 0.6).coerceIn(0.0, 1.0), f.valid.size)
                 ),
                 topic = if (isNight(r)) TipTopic.HIGH_NIGHT else TipTopic.HIGH_DAY
@@ -258,6 +256,14 @@ object TimeOfDayDetector {
         }
         return scanBlocks(::eval).mapNotNull { (r, f) ->
             val graph = c.graph(r) ?: return@mapNotNull null
+            // The days with the widest swing in the window.
+            val examples = f.valid.mapNotNull { d ->
+                val lo = Cases.extreme(d, r, lowest = true) ?: return@mapNotNull null
+                val hi = Cases.extreme(d, r, lowest = false) ?: return@mapNotNull null
+                Triple(d, lo, hi)
+            }.sortedByDescending { it.third.second - it.second.second }.take(Cases.SINGLE).map { (d, lo, hi) ->
+                Cases.window(c.input, d.date, r, 120, 60, "From ${lo.second.roundToInt()} to ${hi.second.roundToInt()} mg/dL within the window", hi.first)
+            }
             PatternCandidate(
                 card = PatternCard(
                     id = id("var", r), category = PatternCategory.TIME_OF_DAY, detector = "variability",
@@ -271,6 +277,7 @@ object TimeOfDayDetector {
                         "Variability here includes day-to-day differences, not only swings within a day.",
                         "Meals, insulin and activity aren't part of this check, so the reason isn't known."
                     ),
+                    cases = examples,
                     tone = PatternTone.UNFAVORABLE,
                     priority = rank(40.0, ((f.cv - MIN_CV) / 20.0).coerceIn(0.0, 1.0), f.valid.size)
                 ),
@@ -292,8 +299,11 @@ object TimeOfDayDetector {
         val endLevel = rises.map { it.second }.sorted()[rises.size / 2].toDouble()
         if (share(rising.size, rises.size) < DAWN_MIN_DAY_SHARE || medianRise < DAWN_RISE || endLevel < DAWN_MIN_END_LEVEL) return emptyList()
         val graph = c.agp?.toGraph(listOf(HourSpan(3, 7))) ?: return emptyList()
-        val examples = rising.sortedByDescending { it.first.second }.take(3).map { (p, _) ->
-            "${dayLabel(p.first)} · up ${p.second.roundToInt()} mg/dL between 03:00 and 07:00"
+        val examples = rising.sortedByDescending { it.first.second }.take(Cases.SINGLE).map { (p, end) ->
+            Cases.window(
+                c.input, p.first.date, (3 * BINS_PER_HOUR) until (7 * BINS_PER_HOUR), 180, 120,
+                "Up ${p.second.roundToInt()} mg/dL between 03:00 and 07:00, to ${end.roundToInt()}"
+            )
         }
         return listOf(
             PatternCandidate(
@@ -309,7 +319,7 @@ object TimeOfDayDetector {
                         "Compares 03:00–03:30 with 06:30–07:00 only, and ends at a typical ${endLevel.roundToInt()} mg/dL.",
                         "Overnight insulin, late meals and lows earlier in the night can also shape this curve."
                     ),
-                    examples = examples, tone = PatternTone.UNFAVORABLE,
+                    cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(45.0, ((medianRise - DAWN_RISE) / 40.0).coerceIn(0.0, 1.0), rises.size)
                 ),
                 topic = TipTopic.DAWN
@@ -331,6 +341,13 @@ object TimeOfDayDetector {
         }
         return scanBlocks(::eval).sortedByDescending { it.second.tir }.take(2).mapNotNull { (r, f) ->
             val graph = c.graph(r) ?: return@mapNotNull null
+            // Typical days (in-range share closest to the median), the most recent first.
+            fun inRange(d: DayGlucose) = share(d.count(r) { it >= c.t.low && it <= c.t.high }, d.count(r) { true })
+            val examples = Cases.typical(f.valid, Cases.SINGLE) { inRange(it) }.sortedByDescending { it.date }.mapNotNull { d ->
+                val lo = Cases.extreme(d, r, lowest = true) ?: return@mapNotNull null
+                val hi = Cases.extreme(d, r, lowest = false) ?: return@mapNotNull null
+                Cases.window(c.input, d.date, r, 120, 60, "${pct(inRange(d))} in range, ${lo.second.roundToInt()}–${hi.second.roundToInt()} mg/dL")
+            }
             PatternCandidate(
                 card = PatternCard(
                     id = id("steady", r), category = PatternCategory.TIME_OF_DAY, detector = "steady",
@@ -341,6 +358,7 @@ object TimeOfDayDetector {
                     effectSize = f.tir, effectLabel = "${pct(f.tir)} in range",
                     uncertainty = "Consistent across the period (variability ${f.cv.roundToInt()} %).",
                     limitations = listOf("Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted."),
+                    cases = examples,
                     tone = PatternTone.FAVORABLE,
                     priority = rank(30.0, ((f.tir - STEADY_MIN_TIR) / 0.1).coerceIn(0.0, 1.0), f.valid.size)
                 ),
@@ -372,6 +390,10 @@ object TimeOfDayDetector {
         val agpWeekdays = agpOfDays(weekdays) ?: return emptyList()
         val better = diff > 0
         val from = input.startOfDayUtc(input.today.minusDays((WEEKEND_WINDOW_DAYS - 1).toLong()))
+        // A typical weekend day and weekday (in-range share closest to each group's median).
+        val examples = listOf(weekend to "Weekends", weekdays to "Weekdays").flatMap { (g, label) ->
+            Cases.typical(g) { tir(it) }.map { d -> Cases.day(input, d.date, "${tir(d).roundToInt()} % in range", group = label) }
+        }
         return listOf(
             PatternCandidate(
                 card = PatternCard(
@@ -388,6 +410,7 @@ object TimeOfDayDetector {
                         "Weekends have fewer days (${weekend.size}), so one unusual weekend can move the result.",
                         "Sleep times, meals and activity aren't separated here; they may all differ between weekends and weekdays."
                     ),
+                    cases = examples,
                     tone = if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE,
                     priority = rank(if (better) 30.0 else 35.0, (abs(diff) / 25.0).coerceIn(0.0, 1.0), days.size)
                 ),

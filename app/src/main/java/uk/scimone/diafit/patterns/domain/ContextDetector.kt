@@ -4,8 +4,6 @@ import uk.scimone.diafit.core.domain.model.MealSitting
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
@@ -120,22 +118,18 @@ object ContextDetector {
     private fun margin(c: Cmp<*>, unit: String) =
         "The difference is about ${"%.1f".format(c.z)}× its likely margin of error (±${c.se.roundToInt()} $unit), and it points the same way in the earlier and the later half of the period."
 
-    private fun dateLabel(ms: Long, zone: java.time.ZoneId): String = Instant.ofEpochMilli(ms).atZone(zone).let {
-        "${it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${it.dayOfMonth} ${it.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}"
-    }
-
     private fun rank(base: Double, z: Double, n: Int) = base * (0.6 + 0.4 * (z / 6.0).coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 24.0).coerceAtMost(1.0))
 
     private fun card(
         c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, unit: String, cmp: Cmp<*>, effectLabel: String,
-        uncertainty: String, limits: List<String>, examples: List<String>, tone: PatternTone, priority: Double, baseline: String,
+        uncertainty: String, limits: List<String>, examples: List<PatternExample>, tone: PatternTone, priority: Double, baseline: String,
         topic: TipTopic, escalate: Boolean = false
     ) = PatternCandidate(
         PatternCard(
             id = id, category = PatternCategory.COMBINED, detector = detector, title = title, summary = summary, miniGraph = graph,
             observationFromUtc = c.from, observationToUtc = c.input.nowUtc, baselineFromUtc = c.from, baselineToUtc = c.input.nowUtc, baselineLabel = baseline,
             sampleSize = cmp.hit.size + cmp.rest.size, sampleUnit = unit, positiveCount = cmp.hit.size, effectSize = abs(cmp.diff), effectLabel = effectLabel,
-            uncertainty = uncertainty, limitations = limits, examples = examples, tone = tone, priority = priority
+            uncertainty = uncertainty, limitations = limits, cases = examples, tone = tone, priority = priority
         ),
         topic, escalate
     )
@@ -154,10 +148,15 @@ object ContextDetector {
         "Insulin can't be separated from the effect of the activity here, and it is not used to explain the result."
     )
 
-    private fun exExamples(g: List<ExerciseDetector.Response>, zone: java.time.ZoneId, lowest: Boolean) =
-        (if (lowest) g.sortedBy { it.change } else g.sortedByDescending { it.change }).take(3).map {
-            "${dateLabel(it.event.startUtc, zone)} · ${it.event.label.lowercase()} (${it.event.durationMin} min) · ${if (it.change > 0) "+" else ""}${it.change.roundToInt()} mg/dL"
+    /** Typical activities of both groups, shaded over the activity (and the [preMin] before it), noting the change by the end. */
+    private fun <T> exCases(
+        hit: List<T>, rest: List<T>, a: String, b: String, r: (T) -> ExerciseDetector.Response, preMin: Int = 0, extra: (T) -> String = { "" }
+    ): List<PatternExample> {
+        fun ex(item: T, group: String) = r(item).let { x ->
+            x.case(120, -preMin, x.event.durationMin, extra(item) + "${Cases.signed(x.change)} mg/dL by the end", group = group)
         }
+        return Cases.typical(hit) { r(it).change.toDouble() }.map { ex(it, a) } + Cases.typical(rest) { r(it).change.toDouble() }.map { ex(it, b) }
+    }
 
     private fun exPre(c: Ctx, all: List<ExerciseDetector.Response>): PatternCandidate? {
         val t = c.input.scaled(PRE_TREND)
@@ -179,7 +178,8 @@ object ContextDetector {
             exGraph(cm.hit, cm.rest, "Glucose $name at the start", "Glucose steady at the start"), "activities", cm,
             "${abs(cm.diff).roundToInt()} mg/dL ${if (falling) "lower" else "higher"} at the end", margin(cm, "mg/dL"),
             exLimits + "Falling or rising means a change of at least ${t.roundToInt()} mg/dL over the 30 minutes before the start; steady is anything smaller.",
-            exExamples(cm.hit, c.zone, falling), if (falling) PatternTone.UNFAVORABLE else PatternTone.MIXED,
+            exCases(cm.hit, cm.rest, "Glucose $name at the start", "Glucose steady at the start", { it }, 30) { "${Cases.signed(trend(it))} mg/dL in the 30 min before · " },
+            if (falling) PatternTone.UNFAVORABLE else PatternTone.MIXED,
             rank(55.0, cm.z, cm.hit.size + cm.rest.size), "Activities starting with steady glucose", TipTopic.CTX_EX_PRE
         )
     }
@@ -210,7 +210,10 @@ object ContextDetector {
             exGraph(low.map { it.r }, other.map { it.r }, if (lowerSoon) "Soon after eating" else "Long after eating", if (lowerSoon) "Longer after eating" else "Sooner after eating"),
             "activities", Cmp(low, other, -abs(cm.diff), cm.se), "${abs(cm.diff).roundToInt()} mg/dL lower at the end", margin(cm, "mg/dL"),
             exLimits + "Time since eating is the time since the last meal of at least 15 g carbs; your median is ${h(cut)}. Only meals in the 8 hours before count.",
-            exExamples(low.map { it.r }, c.zone, true), PatternTone.MIXED, rank(45.0, cm.z, items.size), "Activities at a different time after eating", TipTopic.CTX_EX_GAP
+            exCases(
+                low, other, if (lowerSoon) "Soon after eating" else "Long after eating", if (lowerSoon) "Longer after eating" else "Sooner after eating", { it.r }
+            ) { "${h(it.gapMin)} after eating · " },
+            PatternTone.MIXED, rank(45.0, cm.z, items.size), "Activities at a different time after eating", TipTopic.CTX_EX_GAP
         )
     }
 
@@ -232,7 +235,7 @@ object ContextDetector {
             exGraph(cm.hit, cm.rest, label, "Other workouts"), "workouts", cm, "${abs(cm.diff).roundToInt()} mg/dL ${if (lower) "lower" else "higher"}",
             margin(cm, "mg/dL"),
             exLimits + "Only logged workouts with a name are compared; detected stretches of activity and unnamed workouts are not. Types differ in length and intensity too.",
-            exExamples(cm.hit, c.zone, lower), if (lower) PatternTone.UNFAVORABLE else PatternTone.MIXED,
+            exCases(cm.hit, cm.rest, label, "Other workouts", { it }), if (lower) PatternTone.UNFAVORABLE else PatternTone.MIXED,
             rank(40.0, cm.z, cm.hit.size + cm.rest.size), "Your other logged workouts", TipTopic.CTX_EX_TYPE
         )
     }
@@ -269,10 +272,11 @@ object ContextDetector {
         return true
     }
 
-    private fun mealExamples(g: List<MealDetector.Response>, zone: java.time.ZoneId, worst: Boolean) =
-        (if (worst) g.sortedByDescending { it.peakRise } else g.sortedBy { it.peakRise }).take(3).map {
-            "${dateLabel(it.startUtc, zone)} · ${it.type.type.lowercase()} · ${it.carbs} g · +${it.peakRise.roundToInt()} mg/dL"
-        }
+    /** Typical meals of both groups, shaded over the first 3 hours, with the peak marked. */
+    private fun mealCases(hit: List<MealDetector.Response>, rest: List<MealDetector.Response>, a: String, b: String): List<PatternExample> {
+        fun ex(r: MealDetector.Response, group: String) = r.case(0, 180, "Rose ${r.peakRise.roundToInt()} mg/dL to ${r.peak.roundToInt()}", r.peakK, group)
+        return Cases.typical(hit) { it.peakRise.toDouble() }.map { ex(it, a) } + Cases.typical(rest) { it.peakRise.toDouble() }.map { ex(it, b) }
+    }
 
     private fun secondRise(r: MealDetector.Response): Double? {
         fun v(k: Int) = r.values[k - MealDetector.FIRST_K]
@@ -300,7 +304,13 @@ object ContextDetector {
                 "Only meals with recorded fat or protein, within about ${(SIMILAR_CARBS * 100).roundToInt()} % of your median carbs, are compared; the logged absorption is not used.",
                 "A second rise is the highest value 2.5–4 hours after eating minus the lowest value between 1 and 2.5 hours."
             ),
-            mealExamples(rich.sortedByDescending { secondRise(it) }, c.zone, true), PatternTone.UNFAVORABLE,
+            listOf(rich to "Richer meals", light to "Lighter meals").flatMap { (g, label) ->
+                Cases.typical(g) { secondRise(it)!! }.map { r ->
+                    val peakK = (30..48).filter { !r.values[it - MealDetector.FIRST_K].isNaN() }.maxByOrNull { r.values[it - MealDetector.FIRST_K] }
+                    r.case(150, 240, "Second rise ${Cases.signed(secondRise(r)!!)} mg/dL · ${r.fat + r.protein} g fat + protein", peakK, label)
+                }
+            },
+            PatternTone.UNFAVORABLE,
             rank(50.0, cm.z, band.size), "Lighter meals of similar size", TipTopic.CTX_MEAL_DELAY
         )
     }
@@ -326,7 +336,7 @@ object ContextDetector {
                 "Meals are matched on size (within ${(SIMILAR_CARBS * 100).roundToInt()} % of your median carbs) and, where recorded, on fat and protein; what exactly you ate can still differ.",
                 "Morning is 05:00–11:00, midday 11:00–16:00 and evening 16:00–24:00 by the start of the meal."
             ),
-            mealExamples(cm.hit, c.zone, worse), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            mealCases(cm.hit, cm.rest, "${p.replaceFirstChar { it.uppercase() }} meals", "Meals at other times"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
             rank(if (worse) 50.0 else 28.0, cm.z, cm.hit.size + cm.rest.size), "Similar-sized meals at other times of day",
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
@@ -347,7 +357,7 @@ object ContextDetector {
             mealGraph(weekend, weekday, "Weekend meals", "Weekday meals"), "meals", cm, "${if (worse) "+" else "−"}${abs(cm.diff).roundToInt()} mg/dL peak rise",
             margin(cm, "mg/dL"),
             mealLimits + "Weekends differ from weekdays in many ways (meal timing, activity, sleep); the cause can't be told from this, and no work schedule or holiday is assumed.",
-            mealExamples(weekend, c.zone, worse), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            mealCases(weekend, weekday, "Weekend meals", "Weekday meals"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
             rank(if (worse) 45.0 else 26.0, cm.z, weekend.size + weekday.size), "Similar-sized weekday meals",
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
@@ -368,7 +378,7 @@ object ContextDetector {
             mealGraph(after, other, "After activity", "No activity before"), "meals", cm, "${if (worse) "+" else "−"}${abs(cm.diff).roundToInt()} mg/dL peak rise",
             margin(cm, "mg/dL"),
             mealLimits + "Activity means a logged workout or a stretch of raised heart rate or steps of at least $MIN_ACTIVITY_MIN minutes that ended less than $ACTIVITY_BEFORE_MEAL_H hours before the meal, or was still going.",
-            mealExamples(after, c.zone, worse), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            mealCases(after, other, "After activity", "No activity before"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
             rank(if (worse) 45.0 else 27.0, cm.z, after.size + other.size), "Similar-sized meals without activity beforehand",
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
@@ -414,7 +424,16 @@ object ContextDetector {
                 "Days without activity data (for example a watch left at home) count as quieter days.",
                 "Meals, sleep and routine differ between days too, so this can't show that activity is the reason."
             ),
-            active.sortedBy { it.tir }.let { if (better) it.takeLast(3).reversed() else it.take(3) }.map { "${dateLabel(input.startOfDayUtc(it.date), zone)} · ${it.minutes} min active · ${it.tir.roundToInt()} % in range overnight" },
+            listOf(active to "Night after active days", quiet to "Night after quieter days").flatMap { (g, label) ->
+                Cases.typical(g) { it.tir }.map { n ->
+                    val day0 = input.startOfDayUtc(n.date)
+                    val h = 3_600_000L
+                    PatternExample(
+                        fromUtc = day0 + 12 * h, toUtc = day0 + 31 * h, focusFromUtc = day0 + 24 * h, focusToUtc = day0 + 30 * h,
+                        note = "${n.minutes} min active that day · ${n.tir.roundToInt()} % in range 00:00–06:00", group = label
+                    )
+                }
+            },
             if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE, rank(if (better) 28.0 else 40.0, cm.z, active.size + quiet.size),
             "Nights after quieter days", if (better) TipTopic.CTX_NIGHT_BETTER else TipTopic.CTX_NIGHT_WORSE
         )
@@ -474,7 +493,8 @@ object ContextDetector {
                 "An active previous day means at least $cutMin minutes of activity (your typical active day); days without activity data count as quieter.",
                 "Meals and routine differ between days too, so this can't show that sleep or activity is the reason."
             ),
-            hit.sortedBy { it.tir }.take(3).map { "${dateLabel(it.n.endUtc, c.zone)} · ${it.n.asleepMin / 60} h ${"%02d".format(it.n.asleepMin % 60)} min asleep · ${it.tir.roundToInt()} % in range" },
+            Cases.typical(hit) { it.tir }.map { it.case(c.input, "${minutes[it.n.wakeDate.minusDays(1)] ?: 0} min active the day before", "Short night after $which day") } +
+                Cases.typical(big.hit) { it.tir }.map { it.case(c.input, "${minutes[it.n.wakeDate.minusDays(1)] ?: 0} min active the day before", "Longer night after $which day") },
             PatternTone.UNFAVORABLE, rank(42.0, abs(inter) / seI, nights.size), "Longer nights after $which days", TipTopic.CTX_SLEEP_ACTIVITY
         )
     }
@@ -509,7 +529,8 @@ object ContextDetector {
                 "Active means at least $cutMin minutes of activity the day before; sleep length and bedtime are compared with your own median.",
                 "Meals and routine differ between days too, so this can't show what exactly is helping."
             ),
-            good.sortedByDescending { it.tir }.take(3).map { "${dateLabel(it.n.endUtc, c.zone)} · ${it.n.asleepMin / 60} h ${"%02d".format(it.n.asleepMin % 60)} min asleep · ${it.tir.roundToInt()} % in range" },
+            Cases.typical(good) { it.tir }.map { it.case(c.input, "Bed ${Cases.clock(it.n.startUtc, c.zone)}", "After a full, regular night") } +
+                Cases.typical(rest) { it.tir }.map { it.case(c.input, "Bed ${Cases.clock(it.n.startUtc, c.zone)}", "Other nights") },
             PatternTone.FAVORABLE, rank(30.0, cm.z, nights.size), "All other nights", TipTopic.CTX_SLEEP_GOOD
         )
     }
@@ -551,7 +572,8 @@ object ContextDetector {
                 "Multi-factor finding: the evidence bar is 3x the margin of error, over up to $WINDOW_DAYS days.",
                 "Insulin, activity and what else happened that evening can't be separated out, so this can't show that the fat and protein are the reason."
             ),
-            rich.sortedByDescending { it.night }.take(3).map { "${dateLabel(it.startUtc, c.zone)} · dinner ${hhmm(it.minute)} · ${it.fatProtein} g fat+protein · ${it.night.roundToInt()} mg/dL overnight" },
+            Cases.typical(rich) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Late rich dinners") } +
+                Cases.typical(light) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Late lighter dinners") },
             PatternTone.UNFAVORABLE, rank(52.0, cm.z, rich.size + light.size), "Lighter late dinners of similar size", TipTopic.CTX_LATE_RICH
         )
     }

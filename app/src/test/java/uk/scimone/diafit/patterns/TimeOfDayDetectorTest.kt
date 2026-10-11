@@ -47,8 +47,14 @@ class TimeOfDayDetectorTest {
         assertEquals(6, low.card.positiveCount)
         assertEquals(14, low.card.sampleSize)
         assertEquals(PatternTone.UNFAVORABLE, low.card.tone)
-        assertTrue(low.card.examples.isNotEmpty())
+        assertTrue(low.card.cases.isNotEmpty())
         assertNotNull(low.card.miniGraph)
+        // Each example shows the window with lead-in, and its key moment (the lowest point) lies inside the window.
+        for (c in low.card.cases) {
+            assertTrue(c.fromUtc < c.focusFromUtc && c.focusFromUtc < c.focusToUtc && c.focusToUtc <= c.toUtc)
+            assertTrue(c.markUtc!! in c.focusFromUtc..c.focusToUtc)
+            assertTrue(c.note.startsWith("Lowest 60 mg/dL"))
+        }
     }
 
     @Test fun neighbouringBlocksMergeIntoOneWindow() {

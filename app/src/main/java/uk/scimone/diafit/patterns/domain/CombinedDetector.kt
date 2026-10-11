@@ -2,8 +2,6 @@ package uk.scimone.diafit.patterns.domain
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -62,7 +60,6 @@ object CombinedDetector {
     private fun se(a: List<Double>, b: List<Double>) = sqrt(variance(a) / a.size + variance(b) / b.size)
     private fun pct(x: Double) = "${(x * 100).roundToInt()} %"
     private fun hhmm(min: Double) = "%02d:%02d".format(min.roundToInt() / 60, min.roundToInt() % 60)
-    private fun dateLabel(d: LocalDate) = "${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}"
     private fun margin(diff: Double, se: Double, unit: String) =
         "The difference is about ${"%.1f".format(kotlin.math.abs(diff) / se.coerceAtLeast(0.01))}× its likely margin of error (±${se.roundToInt()} $unit), and it points the same way in the earlier and the later half of the period."
 
@@ -77,12 +74,12 @@ object CombinedDetector {
 
     private fun card(
         c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, n: Int, positive: Int, effect: Double,
-        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<String>, baseline: String, priority: Double
+        effectLabel: String, uncertainty: String, limits: List<String>, examples: List<PatternExample>, baseline: String, priority: Double
     ) = PatternCard(
         id = id, category = PatternCategory.COMBINED, detector = detector, title = title, summary = summary, miniGraph = graph,
         observationFromUtc = c.from, observationToUtc = c.input.nowUtc, baselineFromUtc = c.from, baselineToUtc = c.input.nowUtc, baselineLabel = baseline,
         sampleSize = n, sampleUnit = "days", positiveCount = positive, effectSize = effect, effectLabel = effectLabel,
-        uncertainty = uncertainty, limitations = limits, examples = examples, tone = PatternTone.UNFAVORABLE, priority = priority
+        uncertainty = uncertainty, limitations = limits, cases = examples, tone = PatternTone.UNFAVORABLE, priority = priority
     )
 
     private fun rank(base: Double, effect: Double, n: Int) = base * (0.6 + 0.4 * effect.coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 15.0).coerceAtMost(1.0))
@@ -90,7 +87,17 @@ object CombinedDetector {
     // ---- late dinner -> glucose overnight -------------------------------------------------------------------------
 
     /** One evening's last big meal and the glucose that night; [fatProtein] is null when neither was recorded. */
-    internal class Dinner(val date: LocalDate, val minute: Double, val startUtc: Long, val night: Double, val values: FloatArray, val baseline: Float, val fatProtein: Int?, val carbs: Int)
+    internal class Dinner(val date: LocalDate, val minute: Double, val startUtc: Long, val night: Double, val values: FloatArray, val baseline: Float, val fatProtein: Int?, val carbs: Int) {
+        /** The dinner and the night after it (to 07:00), with midnight to 06:00 shaded. */
+        fun case(input: DetectionInput, note: String, group: String): PatternExample {
+            val midnight = input.startOfDayUtc(date.plusDays(1))
+            return PatternExample(
+                fromUtc = startUtc - 3_600_000L, toUtc = midnight + 7 * 3_600_000L, focusFromUtc = midnight, focusToUtc = midnight + 6 * 3_600_000L,
+                note = "$note · average ${night.roundToInt()} mg/dL 00:00–06:00", eventUtc = startUtc,
+                eventLabel = "Dinner · $carbs g" + (fatProtein?.let { " · $it g fat + protein" } ?: ""), group = group
+            )
+        }
+    }
 
     internal fun dinnersOf(input: DetectionInput, windowDays: Int): List<Dinner> = dinners(Ctx(input, windowDays))
 
@@ -137,7 +144,8 @@ object CombinedDetector {
                     "Late means later than your median dinner time (${hhmm(cut)}) and clearly later than your earlier dinners.",
                     "Dinner size, insulin timing and activity differ between days too, so this can't show that the time of eating is the reason."
                 ),
-                late.sortedByDescending { it.night }.take(3).map { "${dateLabel(it.date)} · dinner ${hhmm(it.minute)} · ${it.night.roundToInt()} mg/dL overnight" },
+                Cases.typical(late) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Late dinners") } +
+                    Cases.typical(early) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Earlier dinners") },
                 "Earlier dinners", rank(50.0, diff / 50.0, dinners.size)
             ),
             TipTopic.COMBO_LATE_DINNER
@@ -171,6 +179,23 @@ object CombinedDetector {
         if (!consistent(nights, { it.date }, active, rest, v)) return null
         val agpA = agpOfDays(active.map { it.next }) ?: return null
         val agpB = agpOfDays(rest.map { it.next }) ?: return null
+        val events = c.input.events.filter { it.durationMin >= MIN_ACTIVITY_MIN && Instant.ofEpochMilli(it.endUtc).atZone(zone).hour in EVENING_FROM_HOUR until EVENING_TO_HOUR }
+        // An evening and its night (16:00 to 07:00), 22:00 to 06:00 shaded, the evening activity anchored, the lowest point marked.
+        fun ex(n: EveningNight, group: String): PatternExample {
+            val day0 = c.input.startOfDayUtc(n.date)
+            val h = 3_600_000L
+            val lowest = (c.lookup.let { l -> generateSequence(day0 + 22 * h) { it + BIN_MINUTES * 60_000L }.takeWhile { it < day0 + 30 * h }.map { it to l.at(it) } })
+                .filter { !it.second.isNaN() }.minByOrNull { it.second }
+            val e = events.lastOrNull { Instant.ofEpochMilli(it.endUtc).atZone(zone).toLocalDate() == n.date }
+            return PatternExample(
+                fromUtc = day0 + 16 * h, toUtc = day0 + 31 * h, focusFromUtc = day0 + 22 * h, focusToUtc = day0 + 30 * h,
+                note = lowest?.let { "Lowest ${it.second.roundToInt()} mg/dL overnight" + if (n.low) "" else ", no low" } ?: "Overnight",
+                eventUtc = e?.startUtc, eventEndUtc = e?.endUtc, eventLabel = e?.let { "${it.label} · ${Cases.duration(it.durationMin)}" },
+                markUtc = lowest?.first, group = group
+            )
+        }
+        val examples = active.filter { it.low }.takeLast(Cases.PER_GROUP).reversed().map { ex(it, "Night after evening activity") } +
+            rest.filter { !it.low }.takeLast(Cases.PER_GROUP).reversed().map { ex(it, "Other nights") }
         return PatternCandidate(
             card(
                 c, "combo.eveninglow", "combo-eveninglow", "Overnight lows after evening activity",
@@ -182,7 +207,7 @@ object CombinedDetector {
                     "Evening meals and insulin differ between days too, so this can't show that activity is the reason.",
                     "Nights with less than 70 % sensor data are left out."
                 ),
-                active.filter { it.low }.takeLast(3).map { "${dateLabel(it.date)} · low overnight" }, "Nights without evening activity",
+                examples, "Nights without evening activity",
                 rank(80.0, (a - b) / 0.5, nights.size)
             ),
             TipTopic.COMBO_EVENING_LOW, escalate = a >= 0.4
@@ -191,7 +216,18 @@ object CombinedDetector {
 
     // ---- short night -> breakfast rise --------------------------------------------------------------------------
 
-    private class Breakfast(val night: SleepNight, val rise: Double, val values: FloatArray, val baseline: Float)
+    private class Breakfast(val night: SleepNight, val rise: Double, val values: FloatArray, val baseline: Float, val startUtc: Long, val carbs: Int) {
+        /** The night and the breakfast after it (to 4 h after eating), the first 3 h after eating shaded and the peak marked. */
+        fun case(group: String): PatternExample {
+            val peakK = (0..36).filter { !values[it - FIRST_K].isNaN() }.maxByOrNull { values[it - FIRST_K] }
+            return PatternExample(
+                fromUtc = minOf(night.startUtc, startUtc - 3_600_000L), toUtc = startUtc + 4 * 3_600_000L,
+                focusFromUtc = startUtc, focusToUtc = startUtc + 3 * 3_600_000L,
+                note = "Asleep ${Cases.duration(night.asleepMin)} · breakfast rise ${Cases.signed(rise)} mg/dL",
+                eventUtc = startUtc, eventLabel = "Breakfast · $carbs g", markUtc = peakK?.let { startUtc + it * BIN_MINUTES * 60_000L }, group = group
+            )
+        }
+    }
 
     private fun shortSleepBreakfast(c: Ctx): PatternCandidate? {
         val zone = c.input.zone
@@ -208,7 +244,7 @@ object CombinedDetector {
             val after = (0..36).map { values[it - FIRST_K] }
             if (before.isEmpty() || after.count { !it.isNaN() }.toDouble() / after.size < MIN_COVERAGE) return@mapNotNull null
             val baseline = before.average().toFloat()
-            Breakfast(n, after.filter { !it.isNaN() }.max() - baseline.toDouble(), values, baseline)
+            Breakfast(n, after.filter { !it.isNaN() }.max() - baseline.toDouble(), values, baseline, s.startTime, s.totalCarbs)
         }
         if (items.size < 2 * MIN_GROUP) return null
         val cut = median(items.map { it.night.asleepMin.toDouble() })
@@ -232,7 +268,7 @@ object CombinedDetector {
                     "Short means under your median of ${dur(cut)}, and clearly shorter than your other nights.",
                     "What you ate and the insulin you had differ between days too, so this can't show that sleep is the reason."
                 ),
-                short.sortedByDescending { it.rise }.take(3).map { "${dateLabel(it.night.wakeDate)} · ${dur(it.night.asleepMin.toDouble())} asleep · +${it.rise.roundToInt()} mg/dL" },
+                Cases.typical(short) { it.rise }.map { it.case("After short nights") } + Cases.typical(rest) { it.rise }.map { it.case("After longer nights") },
                 "After longer nights", rank(45.0, diff / 60.0, items.size)
             ),
             TipTopic.COMBO_SLEEP_BREAKFAST

@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.history.presentation.AgpBands
@@ -30,7 +31,10 @@ import uk.scimone.diafit.patterns.domain.MiniGraph
  * the detail page; the card version stays minimal.
  */
 @Composable
-internal fun PatternGraph(graph: MiniGraph, thresholds: GlucoseThresholds, large: Boolean, modifier: Modifier = Modifier) {
+internal fun PatternGraph(
+    graph: MiniGraph, thresholds: GlucoseThresholds, large: Boolean, modifier: Modifier = Modifier,
+    highlightColor: Color = MaterialTheme.colorScheme.primary
+) {
     val height = if (large) 220.dp else 96.dp
     Column(modifier) {
         when (graph) {
@@ -41,7 +45,7 @@ internal fun PatternGraph(graph: MiniGraph, thresholds: GlucoseThresholds, large
                 }
                 AgpPlot(
                     bands, thresholds, Modifier.fillMaxWidth().height(height),
-                    highlights = graph.highlights.map { it.startHour to it.endHour },
+                    highlights = graph.highlights.map { it.startHour to it.endHour }, highlightColor = highlightColor,
                     yLabels = large, smooth = false
                 )
             }
@@ -121,6 +125,8 @@ private fun MealPlot(graph: MiniGraph.EventResponse, large: Boolean, modifier: M
     val a = MaterialTheme.colorScheme.primary
     val b = MaterialTheme.colorScheme.onSurfaceVariant
     val guide = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val labelStyle = androidx.compose.ui.text.TextStyle(fontSize = androidx.compose.ui.unit.TextUnit(9f, androidx.compose.ui.unit.TextUnitType.Sp), color = b)
     Canvas(modifier) {
         val n = graph.median.size
         val all = graph.p25 + graph.p75 + graph.median + (graph.compare ?: emptyList())
@@ -153,6 +159,14 @@ private fun MealPlot(graph: MiniGraph.EventResponse, large: Boolean, modifier: M
         val w = if (large) 3.dp.toPx() else 2.dp.toPx()
         graph.compare?.let { line(it, b, w, dashed = true) }
         line(graph.median, a, w, dashed = false)
+        if (large) {
+            // Change in mg/dL from the starting level: the top, zero and the bottom of the scale.
+            for (v in listOf(yMax.toInt(), 0, yMin.toInt())) {
+                val text = measurer.measure(if (v > 0) "+$v" else if (v < 0) "−${-v}" else "start", labelStyle)
+                val ty = (y(v) - text.size.height / 2).coerceIn(0f, size.height - text.size.height)
+                drawText(text, topLeft = Offset(size.width - text.size.width, ty))
+            }
+        }
     }
 }
 

@@ -40,7 +40,7 @@ class SleepDetectorTest {
         val c = SleepDetector.detect(input(asleep = { if (it % 2 == 0) 330 else 480 }) { it % 2 == 0 }).single { it.card.id == "sleep.short" }
         assertEquals(PatternCategory.SLEEP, c.card.category)
         assertTrue(c.card.effectSize > 50)
-        assertNotNull(c.card.examples.firstOrNull())
+        assertNotNull(c.card.cases.firstOrNull())
     }
 
     @Test fun noFindingWhenShortNightsAreNotWorse() {

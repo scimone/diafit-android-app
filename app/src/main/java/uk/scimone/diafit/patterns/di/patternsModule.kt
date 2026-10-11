@@ -14,5 +14,5 @@ val patternsModule = module {
     single { PatternStore(get<uk.scimone.diafit.core.data.local.AppDatabase>().patternDao()) }
     single { PatternScheduler(androidContext()) }
     viewModel { PatternsViewModel(get()) }
-    viewModel { (id: String) -> PatternDetailViewModel(get(), get(), id) }
+    viewModel { (id: String) -> PatternDetailViewModel(get(), get(), get(), get(), get(), get(), id) }
 }

@@ -1,6 +1,7 @@
 package uk.scimone.diafit.patterns
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.scimone.diafit.core.domain.model.BolusEntity
@@ -75,7 +76,13 @@ class MealDetectorTest {
         assertEquals(23, low.card.sampleSize)
         assertEquals("meals", low.card.sampleUnit)
         assertTrue(low.card.miniGraph is uk.scimone.diafit.patterns.domain.MiniGraph.EventResponse)
-        assertTrue(low.card.examples.isNotEmpty())
+        assertTrue(low.card.cases.isNotEmpty())
+        // Examples are anchored on their meal and mark the low point inside the shaded 1-4 h after it.
+        for (c in low.card.cases) {
+            assertNotNull(c.eventUtc)
+            assertTrue(c.markUtc!! in c.focusFromUtc..c.focusToUtc)
+            assertEquals(c.eventUtc!! + 60 * 60_000L, c.focusFromUtc)
+        }
     }
 
     @Test fun oneBadMealIsNotAPattern() {

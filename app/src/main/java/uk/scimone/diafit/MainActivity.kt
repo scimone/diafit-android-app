@@ -391,7 +391,8 @@ class MainActivity : ComponentActivity() {
                                 )
                                 is Overlay.PatternDetail -> uk.scimone.diafit.patterns.presentation.PatternDetailScreen(
                                     id = overlay.id,
-                                    onBack = { overlays.remove(overlay) }
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpenDay = { overlays.add(Overlay.DayDetail(it)) }
                                 )
                                 is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })

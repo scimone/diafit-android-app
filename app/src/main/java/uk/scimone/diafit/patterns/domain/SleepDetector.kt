@@ -2,8 +2,6 @@ package uk.scimone.diafit.patterns.domain
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -33,7 +31,17 @@ object SleepDetector {
     private const val IRREGULAR_MIN = 60
 
     /** One night with the share of the rest of the wake-up day spent in range. */
-    internal class Night(val n: SleepNight, val day: DayGlucose, val tir: Double)
+    internal class Night(val n: SleepNight, val day: DayGlucose, val tir: Double) {
+        /** The night and the day after it, from an hour before bed to midnight; the hours after waking are shaded. */
+        fun case(input: DetectionInput, note: String, group: String? = null): PatternExample {
+            val midnight = input.startOfDayUtc(n.wakeDate.plusDays(1))
+            return PatternExample(
+                fromUtc = n.startUtc - 3_600_000L, toUtc = midnight, focusFromUtc = n.endUtc, focusToUtc = midnight,
+                note = "$note · ${tir.roundToInt()} % in range after waking",
+                eventUtc = n.startUtc, eventEndUtc = n.endUtc, eventLabel = "Asleep ${Cases.duration(n.asleepMin)}", group = group
+            )
+        }
+    }
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
         val nights = nights(input, WINDOW_DAYS)
@@ -77,11 +85,6 @@ object SleepDetector {
         }
     }
 
-    private fun label(n: Night, zone: java.time.ZoneId, extra: String): String {
-        val d = n.n.wakeDate
-        return "${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} ${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $extra · ${n.tir.roundToInt()} % in range"
-    }
-
     private fun compare(
         c: Ctx, id: String, detector: String, title: String, summary: String, topic: TipTopic, hit: List<Night>, rest: List<Night>,
         hitLabel: String, restLabel: String, extra: (Night) -> String, limitation: String
@@ -105,7 +108,8 @@ object SleepDetector {
                     limitation,
                     "Meals, activity and stress differ between days too, so this can't show that sleep is the reason."
                 ),
-                examples = hit.sortedBy { it.tir }.take(3).map { label(it, c.input.zone, extra(it)) },
+                cases = Cases.typical(hit) { it.tir }.map { it.case(c.input, extra(it), hitLabel) } +
+                    Cases.typical(rest) { it.tir }.map { it.case(c.input, extra(it), restLabel) },
                 tone = PatternTone.UNFAVORABLE,
                 priority = 45.0 * (0.6 + 0.4 * (diff / 25.0).coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 20.0).coerceAtMost(1.0))
             ),
