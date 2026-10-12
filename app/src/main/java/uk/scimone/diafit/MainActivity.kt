@@ -1,5 +1,7 @@
 package uk.scimone.diafit
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
@@ -169,13 +171,13 @@ class MainActivity : ComponentActivity() {
                     scope.launch {
                         val result = snackbarHostState.showSnackbar(
                             message = message,
-                            actionLabel = "Undo",
+                            actionLabel = getString(R.string.action_undo),
                             duration = SnackbarDuration.Long
                         )
                         if (result == SnackbarResult.ActionPerformed) setMealValid(mealIds, true)
                     }
                 }
-                val onMealDeleted: (Int) -> Unit = { mealId -> onMealsDeleted(listOf(mealId), "Deleted") }
+                val onMealDeleted: (Int) -> Unit = { mealId -> onMealsDeleted(listOf(mealId), getString(R.string.meal_deleted)) }
                 val addCourse: (Int) -> Unit = { mealId -> overlays.add(Overlay.MealEditor(mealId = null, addToMealId = mealId)) }
                 // What a notification opens: an pattern, the Patterns list, else the Devices page.
                 val openLink: (String?) -> Unit = { link ->
@@ -205,9 +207,9 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     Text(
                                         when (selectedTab) {
-                                            1 -> "Stats"
-                                            2 -> "Logs"
-                                            3 -> "History"
+                                            1 -> stringResource(R.string.nav_stats)
+                                            2 -> stringResource(R.string.nav_logs)
+                                            3 -> stringResource(R.string.nav_history)
                                             else -> "Diafit"
                                         }
                                     )
@@ -222,11 +224,11 @@ class MainActivity : ComponentActivity() {
                                     BadgedBox(badge = {
                                         if (unread + unreadPatterns > 0) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFE53935))
                                     }) {
-                                        Icon(imageVector = Icons.Filled.Notifications, contentDescription = "Notifications")
+                                        Icon(imageVector = Icons.Filled.Notifications, contentDescription = stringResource(R.string.notifications_title))
                                     }
                                 }
                                 IconButton(onClick = { if (overlays.none { it is Overlay.Menu }) overlays.add(Overlay.Menu) }) {
-                                    Icon(imageVector = Icons.Filled.AccountCircle, contentDescription = "Menu")
+                                    Icon(imageVector = Icons.Filled.AccountCircle, contentDescription = stringResource(R.string.menu_title))
                                 }
                             }
                         )
@@ -329,7 +331,7 @@ class MainActivity : ComponentActivity() {
                                     onBack = { overlays.remove(overlay) },
                                     onEdit = { overlays.add(Overlay.MealEditor(it)) },
                                     onAddCourse = addCourse,
-                                    onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) "Meal deleted" else "Deleted") }
+                                    onDeleted = { ids -> onMealsDeleted(ids, if (ids.size > 1) getString(R.string.meal_deleted_whole) else getString(R.string.meal_deleted)) }
                                 )
                                 is Overlay.Notifications -> uk.scimone.diafit.notifications.presentation.NotificationsScreen(
                                     onBack = { overlays.remove(overlay) },
@@ -387,10 +389,10 @@ class MainActivity : ComponentActivity() {
                                         overlays.remove(overlay)
                                         when {
                                             // Stay where the user is: they'll likely add more plates.
-                                            result.addedCourse -> scope.launch { snackbarHostState.showSnackbar("Course added to the meal") }
+                                            result.addedCourse -> scope.launch { snackbarHostState.showSnackbar(getString(R.string.meal_course_added)) }
                                             result.wasNew -> {
                                                 selectedTab = 2
-                                                scope.launch { snackbarHostState.showSnackbar("Meal added") }
+                                                scope.launch { snackbarHostState.showSnackbar(getString(R.string.meal_added)) }
                                             }
                                         }
                                     },

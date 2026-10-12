@@ -1,5 +1,8 @@
 package uk.scimone.diafit.core.presentation
 
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,16 +29,16 @@ import androidx.compose.ui.unit.dp
 
 private data class NavTab(
     val index: Int,
-    val label: String,
+    @StringRes val labelRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 )
 
 private val navTabs = listOf(
-    NavTab(0, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-    NavTab(1, "Stats", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    NavTab(2, "Logs", Icons.AutoMirrored.Filled.ListAlt, Icons.AutoMirrored.Outlined.ListAlt),
-    NavTab(3, "History", Icons.Filled.History, Icons.Outlined.History),
+    NavTab(0, R.string.nav_home, Icons.Filled.Home, Icons.Outlined.Home),
+    NavTab(1, R.string.nav_stats, Icons.Filled.BarChart, Icons.Outlined.BarChart),
+    NavTab(2, R.string.nav_logs, Icons.AutoMirrored.Filled.ListAlt, Icons.AutoMirrored.Outlined.ListAlt),
+    NavTab(3, R.string.nav_history, Icons.Filled.History, Icons.Outlined.History),
 )
 
 /** Settings moved behind the top-bar overflow menu (see MainActivity) and is no longer a bottom tab. */
@@ -58,10 +61,10 @@ fun BottomNavigationBar(
                 icon = {
                     Icon(
                         imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                        contentDescription = tab.label
+                        contentDescription = stringResource(tab.labelRes)
                     )
                 },
-                label = { Text(tab.label) }
+                label = { Text(stringResource(tab.labelRes)) }
             )
         }
 
@@ -92,7 +95,7 @@ fun BottomNavigationBar(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Add entry",
+                    contentDescription = stringResource(R.string.nav_add_entry),
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }

@@ -1,5 +1,7 @@
 package uk.scimone.diafit.home.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -151,7 +153,7 @@ fun MealTimeline(
     onBackgroundTap: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Shown when there are no meals at all (Home's default invites logging one). */
-    noMealsMessage: String = "No meals in the last 24 h. Tap + to log one with a photo."
+    noMealsMessage: String = stringResource(R.string.home_no_meals)
 ) {
     // Dragging the strip pans the charts (and the cards follow, being tied to the data points).
         val scope = rememberCoroutineScope()
@@ -184,7 +186,7 @@ Modifier.draggable(
         if (inView.isEmpty()) {
             EmptyMealTimeline(
                 if (allGroups.isEmpty()) noMealsMessage
-                else "No meals in this part of the chart."
+                else stringResource(R.string.home_no_meals_here)
             )
             return@Box
         }
@@ -437,7 +439,7 @@ fun MealDetailSheet(
                     TextButton(onClick = { onAddCourse(course.id) }) {
                         Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Add course")
+                        Text(stringResource(R.string.meal_add_course))
                     }
                 }
             }
@@ -458,7 +460,7 @@ fun MealDetailSheet(
                             FilledTonalButton(onClick = { cameraLauncher.launch(createCameraUri(meal.id)) }) {
                                 Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Take photo")
+                                Text(stringResource(R.string.meal_take_photo))
                             }
                             FilledTonalButton(onClick = {
                                 galleryMealId = meal.id
@@ -466,7 +468,7 @@ fun MealDetailSheet(
                             }) {
                                 Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Gallery")
+                                Text(stringResource(R.string.meal_gallery))
                             }
                         }
                     }
@@ -511,10 +513,10 @@ private fun MealDetails(meal: MealEntityUi) {
         )
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MacroTile("Carbs", "${meal.carbohydrates}", "g", accent = Carbs, modifier = Modifier.weight(1f))
-            MacroTile("Protein", meal.proteins?.toString(), "g", modifier = Modifier.weight(1f))
-            MacroTile("Fat", meal.fats?.toString(), "g", modifier = Modifier.weight(1f))
-            MacroTile("Energy", meal.calories?.toString(), "kcal", modifier = Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_carbs), "${meal.carbohydrates}", "g", accent = Carbs, modifier = Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_protein), meal.proteins?.toString(), "g", modifier = Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_fat), meal.fats?.toString(), "g", modifier = Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_energy), meal.calories?.toString(), "kcal", modifier = Modifier.weight(1f))
         }
     }
 }

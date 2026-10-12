@@ -9,4 +9,40 @@
     <string name="settings_language_hint">La lingua dell\'app. \"Predefinita del sistema\" segue il telefono; se il telefono usa una lingua che l\'app non ha ancora, viene usato l\'inglese.</string>
     <string name="settings_language_system">Predefinita del sistema</string>
     <string name="settings_language_system_now">Attuale: %1$s</string>
+
+    <!-- Home, navigation, meals -->
+    <string name="nav_home">Home</string>
+    <string name="nav_stats">Statistiche</string>
+    <string name="nav_logs">Registro</string>
+    <string name="nav_history">Storico</string>
+    <string name="nav_add_entry">Aggiungi voce</string>
+    <string name="notifications_title">Notifiche</string>
+    <string name="menu_title">Menu</string>
+    <string name="action_undo">Annulla</string>
+    <string name="meal_deleted">Eliminato</string>
+    <string name="meal_deleted_whole">Pasto eliminato</string>
+    <string name="meal_course_added">Portata aggiunta al pasto</string>
+    <string name="meal_added">Pasto aggiunto</string>
+    <string name="home_agp_needs_data">L\'AGP richiede dati di 5 giorni</string>
+    <string name="home_meal_selected">Pasto selezionato</string>
+    <string name="home_hold_to_inspect">Tieni premuto per ispezionare</string>
+    <string name="home_close_inspection">Chiudi ispezione</string>
+    <string name="home_agp_hide">Nascondi giorno tipico (AGP)</string>
+    <string name="home_agp_show">Mostra giorno tipico (AGP)</string>
+    <string name="home_no_activity">Nessun dato di attività in questo periodo</string>
+    <string name="home_no_activity_connect">Nessun dato di attività · collega Health Connect nelle Impostazioni</string>
+    <string name="panel_activity">Attività</string>
+    <string name="panel_basal">Basale</string>
+    <string name="panel_glucose">Glicemia</string>
+    <string name="panel_bolus">Bolo</string>
+    <string name="panel_carbs">Carboidrati</string>
+    <string name="home_no_meals">Nessun pasto nelle ultime 24 ore. Tocca + per registrarne uno con una foto.</string>
+    <string name="home_no_meals_here">Nessun pasto in questa parte del grafico.</string>
+    <string name="meal_add_course">Aggiungi portata</string>
+    <string name="meal_take_photo">Scatta foto</string>
+    <string name="meal_gallery">Galleria</string>
+    <string name="macro_carbs">Carboidrati</string>
+    <string name="macro_protein">Proteine</string>
+    <string name="macro_fat">Grassi</string>
+    <string name="macro_energy">Energia</string>
 </resources>

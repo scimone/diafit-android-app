@@ -1,5 +1,6 @@
 package uk.scimone.diafit.home.presentation
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import uk.scimone.diafit.R
 import androidx.compose.ui.text.SpanStyle
@@ -261,9 +262,9 @@ fun HomeScreen(
                             Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     when {
-                                        state.showAgp && state.agpUnavailable -> "AGP needs 5 days of data"
-                                        selectedMealKeys.isNotEmpty() -> "Meal selected"
-                                        else -> "Hold to inspect"
+                                        state.showAgp && state.agpUnavailable -> stringResource(R.string.home_agp_needs_data)
+                                        selectedMealKeys.isNotEmpty() -> stringResource(R.string.home_meal_selected)
+                                        else -> stringResource(R.string.home_hold_to_inspect)
                                     },
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -652,7 +653,7 @@ internal fun InspectReadout(
                         ReadoutEvent(R.drawable.ic_readout_activity, if (asleep) Sleep else Activity, doing.joinToString(" · "))
                     }
                     Icon(
-                        Icons.Default.Close, contentDescription = "Close inspection",
+                        Icons.Default.Close, contentDescription = stringResource(R.string.home_close_inspection),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
                     )
                 }
@@ -712,13 +713,15 @@ fun HomeTitle(state: HomeState) {
 /** Small quick button that shows or hides the two-week AGP behind the glucose curve. */
 @Composable
 private fun AgpToggle(active: Boolean, onClick: () -> Unit) {
+    val agpHide = stringResource(R.string.home_agp_hide)
+    val agpShow = stringResource(R.string.home_agp_show)
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
         Surface(
             onClick = onClick,
             shape = RoundedCornerShape(8.dp),
             color = if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             border = BorderStroke(1.dp, if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-            modifier = Modifier.semantics { contentDescription = if (active) "Hide typical day (AGP)" else "Show typical day (AGP)" }
+            modifier = Modifier.semantics { contentDescription = if (active) agpHide else agpShow }
         ) {
             Text("AGP", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
         }
@@ -770,10 +773,10 @@ internal fun ActivityDisplay(
 ) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentActivityChart(data = data, window = window, geometry = geometry, modifier = Modifier.fillMaxSize())
-        PanelTitle("Activity", headline)
+        PanelTitle(stringResource(R.string.panel_activity), headline)
         if (data.isEmpty) {
             Text(
-                if (connected) "No activity data in this period" else "No activity data · connect Health Connect in Settings",
+                stringResource(if (connected) R.string.home_no_activity else R.string.home_no_activity_connect),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.Center)
@@ -801,7 +804,7 @@ internal fun BasalDisplay(
 ) {
     Box(modifier = modifier.fillMaxWidth().trimBottom(PanelGapTrim).fillMaxHeight().chartPanZoom(scrollState, zoomState, geometry)) {
         ComponentBasalChart(segments = segments, window = window, geometry = geometry, modifier = Modifier.fillMaxSize(), activityUnitsPerDp = activityUnitsPerDp, style = style, smbs = smbs)
-        PanelTitle("Basal", headline, insulinHeadline)
+        PanelTitle(stringResource(R.string.panel_basal), headline, insulinHeadline)
     }
 }
 
@@ -837,7 +840,7 @@ fun CgmChartDisplay(
             window = window,
             onGeometry = onGeometry
         )
-        PanelTitle("Glucose", headline)
+        PanelTitle(stringResource(R.string.panel_glucose), headline)
     }
 }
 
@@ -875,7 +878,7 @@ fun InsulinActivityDisplay(
             highlightTime = highlightTime,
             onScale = onScale
         )
-        PanelTitle("Bolus", headline)
+        PanelTitle(stringResource(R.string.panel_bolus), headline)
     }
 }
 
@@ -909,7 +912,7 @@ fun CarbActivityDisplay(
             highlightEventTimes = highlightEventTimes,
             onBubbles = onBubbles
         )
-        PanelTitle("Carbohydrates", headline)
+        PanelTitle(stringResource(R.string.panel_carbs), headline)
     }
 }
 

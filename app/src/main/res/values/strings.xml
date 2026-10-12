@@ -14,4 +14,40 @@
     <string name="language_english" translatable="false">English</string>
     <string name="language_german" translatable="false">Deutsch</string>
     <string name="language_italian" translatable="false">Italiano</string>
+
+    <!-- Home, navigation, meals -->
+    <string name="nav_home">Home</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_logs">Logs</string>
+    <string name="nav_history">History</string>
+    <string name="nav_add_entry">Add entry</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="menu_title">Menu</string>
+    <string name="action_undo">Undo</string>
+    <string name="meal_deleted">Deleted</string>
+    <string name="meal_deleted_whole">Meal deleted</string>
+    <string name="meal_course_added">Course added to the meal</string>
+    <string name="meal_added">Meal added</string>
+    <string name="home_agp_needs_data">AGP needs 5 days of data</string>
+    <string name="home_meal_selected">Meal selected</string>
+    <string name="home_hold_to_inspect">Hold to inspect</string>
+    <string name="home_close_inspection">Close inspection</string>
+    <string name="home_agp_hide">Hide typical day (AGP)</string>
+    <string name="home_agp_show">Show typical day (AGP)</string>
+    <string name="home_no_activity">No activity data in this period</string>
+    <string name="home_no_activity_connect">No activity data · connect Health Connect in Settings</string>
+    <string name="panel_activity">Activity</string>
+    <string name="panel_basal">Basal</string>
+    <string name="panel_glucose">Glucose</string>
+    <string name="panel_bolus">Bolus</string>
+    <string name="panel_carbs">Carbohydrates</string>
+    <string name="home_no_meals">No meals in the last 24 h. Tap + to log one with a photo.</string>
+    <string name="home_no_meals_here">No meals in this part of the chart.</string>
+    <string name="meal_add_course">Add course</string>
+    <string name="meal_take_photo">Take photo</string>
+    <string name="meal_gallery">Gallery</string>
+    <string name="macro_carbs">Carbs</string>
+    <string name="macro_protein">Protein</string>
+    <string name="macro_fat">Fat</string>
+    <string name="macro_energy">Energy</string>
 </resources>

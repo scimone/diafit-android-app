@@ -9,4 +9,40 @@
     <string name="settings_language_hint">Die Sprache der App. „Systemstandard“ folgt deinem Telefon; verwendet dein Telefon eine Sprache, die die App noch nicht hat, wird Englisch genutzt.</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_system_now">Aktuell: %1$s</string>
+
+    <!-- Home, navigation, meals -->
+    <string name="nav_home">Start</string>
+    <string name="nav_stats">Statistik</string>
+    <string name="nav_logs">Protokoll</string>
+    <string name="nav_history">Verlauf</string>
+    <string name="nav_add_entry">Eintrag hinzufügen</string>
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="menu_title">Menü</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="meal_deleted">Gelöscht</string>
+    <string name="meal_deleted_whole">Mahlzeit gelöscht</string>
+    <string name="meal_course_added">Gang zur Mahlzeit hinzugefügt</string>
+    <string name="meal_added">Mahlzeit hinzugefügt</string>
+    <string name="home_agp_needs_data">AGP braucht Daten von 5 Tagen</string>
+    <string name="home_meal_selected">Mahlzeit ausgewählt</string>
+    <string name="home_hold_to_inspect">Gedrückt halten zum Untersuchen</string>
+    <string name="home_close_inspection">Ansicht schließen</string>
+    <string name="home_agp_hide">Typischen Tag (AGP) ausblenden</string>
+    <string name="home_agp_show">Typischen Tag (AGP) anzeigen</string>
+    <string name="home_no_activity">Keine Aktivitätsdaten in diesem Zeitraum</string>
+    <string name="home_no_activity_connect">Keine Aktivitätsdaten · Health Connect in den Einstellungen verbinden</string>
+    <string name="panel_activity">Aktivität</string>
+    <string name="panel_basal">Basal</string>
+    <string name="panel_glucose">Glukose</string>
+    <string name="panel_bolus">Bolus</string>
+    <string name="panel_carbs">Kohlenhydrate</string>
+    <string name="home_no_meals">Keine Mahlzeiten in den letzten 24 Std. Tippe auf +, um eine mit Foto zu erfassen.</string>
+    <string name="home_no_meals_here">Keine Mahlzeiten in diesem Teil des Diagramms.</string>
+    <string name="meal_add_course">Gang hinzufügen</string>
+    <string name="meal_take_photo">Foto aufnehmen</string>
+    <string name="meal_gallery">Galerie</string>
+    <string name="macro_carbs">Kohlenhydrate</string>
+    <string name="macro_protein">Eiweiß</string>
+    <string name="macro_fat">Fett</string>
+    <string name="macro_energy">Energie</string>
 </resources>
