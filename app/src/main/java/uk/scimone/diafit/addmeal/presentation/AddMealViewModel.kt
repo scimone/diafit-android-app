@@ -39,6 +39,9 @@ import java.util.*
 
 private const val TAG = "AddMealViewModel"
 
+/** Only a sanity bound on the stored search history. */
+private const val MAX_RECENT_SEARCHES = 200
+
 /** A course added this long after the meal's last one defaults to "now"; older meals get last + this. */
 private const val COURSE_DEFAULT_GAP_MS = 10 * 60_000L
 private const val RECENT_MEAL_MS = 3 * 60 * 60_000L
@@ -311,7 +314,7 @@ class AddMealViewModel(
     val recentSearches = _recentSearches.asStateFlow()
 
     private fun rememberSearch(q: String) {
-        val list = (listOf(q) + _recentSearches.value.filterNot { it.equals(q, true) }).take(8)
+        val list = (listOf(q) + _recentSearches.value.filterNot { it.equals(q, true) }).take(MAX_RECENT_SEARCHES)
         _recentSearches.value = list
         searchPrefs.edit().putString("recent", list.joinToString("\n")).apply()
     }
@@ -359,8 +362,14 @@ class AddMealViewModel(
     fun useSearchResult(product: FoodProduct) {
         cancelSearch()
         _uiState.update { it.copy(capture = null) }
+        // Counts as used right away (even if the meal is discarded); saving the meal doesn't count it a second time.
+        rememberedOnPick += product.barcode
+        viewModelScope.launch { runCatching { savedProducts.remember(product) } }
         applyProduct(product)
     }
+
+    /** Products already recorded as used when they were picked from a search. */
+    private val rememberedOnPick = mutableSetOf<String>()
 
     /** Back to looking for a barcode (wrong product, or not found). */
     fun rescan() = setPhase(CapturePhase.Scanning)
@@ -606,7 +615,7 @@ class AddMealViewModel(
                     scannedProducts[code] ?: c.toSavedProductOrNull(System.currentTimeMillis())?.toProduct()
                 }.forEach { product ->
                     runCatching {
-                        savedProducts.remember(product)
+                        if (product.barcode !in rememberedOnPick) savedProducts.remember(product)
                         savedProducts.setFavorite(product.barcode, product.barcode in state.favoriteBarcodes)
                     }
                 }

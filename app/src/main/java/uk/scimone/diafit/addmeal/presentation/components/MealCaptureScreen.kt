@@ -868,7 +868,7 @@ private fun FoodSearchScreen(
         ) {
             Icon(Icons.Outlined.Search, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(if (q.isEmpty()) "Search the food databases" else "Search the food databases for \"$q\"")
+            Text("Search")
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
@@ -899,7 +899,7 @@ private fun FoodSearchScreen(
                         }
                     }
                     val bookmarks = savedMatches.filter { it.isFavorite }
-                    val used = savedMatches.filter { !it.isFavorite }.take(if (q.isEmpty()) 6 else 20)
+                    val used = savedMatches.filter { !it.isFavorite }
                     if (bookmarks.isNotEmpty()) {
                         SectionLabel("Bookmarks", tint = BookmarkGold)
                         bookmarks.forEach { p -> SearchResultRow(p.toProduct(), p, { onPick(p.toProduct()) }, { onToggleFavorite(p) }) }
