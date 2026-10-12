@@ -28,6 +28,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.OpenInFull
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -137,9 +140,16 @@ fun MealTimeline(
     allGroups: List<MealGroup>,
     inView: List<MealGroup>,
     highlighted: List<MealGroup>,
+    /** Sittings the user picked by tapping their photo or their bubble (the card shows a Details button). */
+    selectedKeys: Set<Int> = emptySet(),
     geometry: State<ChartGeometry?>,
     scrollState: VicoScrollState,
+    /** Tap on a card: select it (highlights its data point). */
     onGroupClick: (MealGroup) -> Unit,
+    /** The Details button on a selected card, or a long press on any card. */
+    onGroupOpen: (MealGroup) -> Unit = {},
+    /** Tap on the strip outside any card. */
+    onBackgroundTap: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Shown when there are no meals at all (Home's default invites logging one). */
     noMealsMessage: String = "No meals in the last 24 h. Tap + to log one with a photo."
@@ -150,7 +160,9 @@ fun MealTimeline(
         val flingJob = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
         val decay = remember(density) { splineBasedDecay<Float>(density) }
     Box(
-        modifier = modifier.fillMaxWidth().height(CardSize + 8.dp).then(
+        modifier = modifier.fillMaxWidth().height(CardSize + 8.dp)
+            .pointerInput(Unit) { detectTapGestures(onTap = { onBackgroundTap() }) }
+            .then(
 Modifier.draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { dx ->
@@ -190,8 +202,10 @@ Modifier.draggable(
                         MealCard(
                             group = group,
                             highlighted = group.key in highlightKeys,
+                            selected = group.key in selectedKeys,
                             dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
-                            onClick = { onGroupClick(group) }
+                            onClick = { onGroupClick(group) },
+                            onOpen = { onGroupOpen(group) }
                         )
                     }
                 }
@@ -228,7 +242,11 @@ private val CardSize = 104.dp
 private val CardShape = RoundedCornerShape(18.dp)
 
 @Composable
-private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun MealCard(
+    group: MealGroup, highlighted: Boolean, selected: Boolean, dimmed: Boolean,
+    onClick: () -> Unit, onOpen: () -> Unit
+) {
     val scale by animateFloatAsState(if (highlighted) 1.04f else 1f, label = "cardScale")
     val alpha by animateFloatAsState(if (dimmed) 0.45f else 1f, label = "cardAlpha")
     val time = formatTime(group.startTime)
@@ -240,7 +258,7 @@ private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, on
             .graphicsLayer { this.alpha = alpha }
             .clip(CardShape)
             .then(if (highlighted) Modifier.border(3.dp, Carbs, CardShape) else Modifier)
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onOpen)
             .semantics { contentDescription = "${group.title()}, ${group.totalCarbs} grams of carbs at $time" }
     ) {
         PhotoMosaic(group)
@@ -270,6 +288,23 @@ private fun MealCard(group: MealGroup, highlighted: Boolean, dimmed: Boolean, on
                 .background(Color.Black.copy(alpha = 0.55f), CircleShape)
                 .padding(horizontal = 6.dp, vertical = 2.dp)
         )
+        // A selected card offers the way into the details; the tap itself only selects.
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+                    .size(28.dp)
+                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+                    .clickable(onClick = onOpen)
+                    .semantics { contentDescription = "Open meal details" },
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    Icons.Outlined.OpenInFull, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
 

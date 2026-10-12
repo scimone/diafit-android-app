@@ -25,6 +25,11 @@ data class HomeState(
     val activityConnected: Boolean = false,
     val targetRangeLower: Int = 70,
     val targetRangeUpper: Int = 180,
+    /** The 24 h profile of the last two weeks behind the glucose curve (toggled by the quick button). */
+    val showAgp: Boolean = false,
+    val agp: uk.scimone.diafit.patterns.domain.PatternAgp? = null,
+    /** AGP was asked for but there is not enough glucose data to build one. */
+    val agpUnavailable: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null
 )

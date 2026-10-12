@@ -9,6 +9,8 @@ import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.domain.model.CgmEntity
@@ -90,7 +92,8 @@ class HomeViewModel(
                     }
                 }
                 .collect { cgm ->
-                    if (latestCgmEntity != null && cgm != null && cgm.timestamp != latestCgmEntity?.timestamp) {
+                    // Any different row counts as a new arrival (a re-sent reading can keep its timestamp).
+                    if (latestCgmEntity != null && cgm != null && cgm != latestCgmEntity) {
                         latestCgmReceivedAt = System.currentTimeMillis()
                     }
                     latestCgmEntity = cgm
@@ -264,6 +267,29 @@ class HomeViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /** Shows/hides the two-week AGP behind the glucose curve; it is built from the stored readings the first time. */
+    fun toggleAgp() {
+        val show = !_state.value.showAgp
+        _state.update { it.copy(showAgp = show) }
+        if (show && _state.value.agp == null) viewModelScope.launch {
+            val agp = withContext(Dispatchers.Default) {
+                val rows = getAllCgmSinceUseCase(nowMinusXMinutes(14 * 24 * 60), userId).first()
+                val zone = java.time.ZoneId.systemDefault()
+                val minutes = IntArray(rows.size)
+                val values = IntArray(rows.size)
+                val days = HashSet<java.time.LocalDate>()
+                rows.forEachIndexed { i, r ->
+                    val t = java.time.Instant.ofEpochMilli(r.timestamp).atZone(zone)
+                    minutes[i] = t.hour * 60 + t.minute
+                    values[i] = r.valueMgdl
+                    days += t.toLocalDate()
+                }
+                uk.scimone.diafit.patterns.domain.PatternAgp.build(minutes, values, days.size)
+            }
+            _state.update { it.copy(agp = agp, agpUnavailable = agp == null) }
         }
     }
 

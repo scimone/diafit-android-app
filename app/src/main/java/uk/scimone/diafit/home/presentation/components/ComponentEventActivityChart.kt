@@ -65,16 +65,25 @@ private val TickDotSize = 5.dp
 /** Bubbles closer than this many dp on screen overlap, so they merge however wide the zoom. */
 private const val BUBBLE_MIN_GAP_DP = 30f
 
-private fun mergeNearbyEvents(events: List<ChartEvent>, windowMs: Long): List<ChartEvent> {
-    val merged = mutableListOf<ChartEvent>()
+/** One drawn bubble: the [members] it stands for, at their amount-weighted mean time. */
+data class EventBubble(val time: Long, val value: Double, val members: List<ChartEvent>, val diameterDp: Float) {
+    val memberTimes: List<Long> get() = members.map { it.time }
+}
+
+private fun mergeNearbyEvents(events: List<ChartEvent>, windowMs: Long, refValue: Double): List<EventBubble> {
+    val groups = mutableListOf<MutableList<ChartEvent>>()
     var lastTime = Long.MIN_VALUE
     for (e in events.sortedBy { it.time }) {
-        val prev = merged.lastOrNull()
-        if (prev != null && e.time - lastTime <= windowMs) merged[merged.lastIndex] = prev.copy(value = prev.value + e.value)
-        else merged += e
+        if (groups.isNotEmpty() && e.time - lastTime <= windowMs) groups.last() += e else groups += mutableListOf(e)
         lastTime = e.time
     }
-    return merged
+    return groups.map { g ->
+        val total = g.sumOf { it.value }
+        // Weighted by amount, so a 60 g plate and a 5 g sip put the bubble near the plate.
+        val time = if (total > 0.0) (g.sumOf { it.time.toDouble() * it.value } / total).toLong()
+        else g.map { it.time }.average().toLong()
+        EventBubble(time, total, g.toList(), bubbleDiameter(total, refValue).value)
+    }
 }
 
 /**
@@ -142,6 +151,10 @@ fun ComponentEventActivityChart(
     zoomState: VicoZoomState,
     /** Inspection cursor time: bubbles standing for events near it get a ring. */
     highlightTime: Long? = null,
+    /** Times of individual events whose bubble should be ringed (a selection made elsewhere, e.g. a tapped meal photo). */
+    highlightEventTimes: Set<Long> = emptySet(),
+    /** Receives the bubbles currently drawn, so a screen can hit-test taps against them. */
+    onBubbles: ((List<EventBubble>) -> Unit)? = null,
     /** Receives the chart's y scale (activity per dp) so another panel can draw its curve at the same scale. */
     onScale: ((unitsPerDp: Double) -> Unit)? = null
 ) {
@@ -166,7 +179,7 @@ fun ComponentEventActivityChart(
     // At wide zoom 15 min is a few dp, so the merge distance grows to keep bubbles apart on screen.
     val dpPerHour = ChartXSpacing.value * zoomState.value.coerceAtLeast(0.01f)
     val mergeWindowMs = maxOf(BUBBLE_MERGE_WINDOW_MS, (BUBBLE_MIN_GAP_DP / dpPerHour * 3_600_000f).toLong())
-    val recentEvents = mergeNearbyEvents(rawRecentEvents, mergeWindowMs)
+    val recentEvents = mergeNearbyEvents(rawRecentEvents, mergeWindowMs, bubbleRefValue)
     // Every individual event gets a dot on the curve, merged or not.
     val tickEvents = rawRecentEvents
 
@@ -180,6 +193,11 @@ fun ComponentEventActivityChart(
     val nowPoint = realTime to activityAt(realTime)
     val pastPoints = activityPoints.filter { it.first < realTime } + nowPoint
     val futurePoints = listOf(nowPoint) + activityPoints.filter { it.first > realTime }
+
+    if (onBubbles != null) {
+        val report = androidx.compose.runtime.rememberUpdatedState(onBubbles)
+        LaunchedEffect(recentEvents) { report.value(recentEvents) }
+    }
 
     LaunchedEffect(activityPoints, recentEvents, tickEvents) {
         modelProducer.runTransaction {
@@ -305,13 +323,15 @@ fun ComponentEventActivityChart(
         bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels, showLine = showTimeLabels),
         layerPadding = { LineChartLayerPadding },
         decorations = listOfNotNull(
-            highlightTime?.let { cursor ->
+            run {
                 val rings = recentEvents.mapIndexedNotNull { i, bubble ->
-                    val end = recentEvents.getOrNull(i + 1)?.time ?: Long.MAX_VALUE
-                    val caught = rawRecentEvents.any { it.time >= bubble.time && it.time < end && abs(it.time - cursor) <= HIGHLIGHT_NEAR_MS }
-                    if (caught) Triple(bubble.time, bubbleYs[i], bubbleDiameter(bubble.value, bubbleRefValue).value) else null
+                    val caught = bubble.members.any { m ->
+                        m.time in highlightEventTimes || (highlightTime != null && abs(m.time - highlightTime) <= HIGHLIGHT_NEAR_MS)
+                    }
+                    if (caught) Triple(bubble.time, bubbleYs[i], bubble.diameterDp) else null
                 }
-                BubbleHighlightDecoration(rings, minY, maxY, color, MaterialTheme.colorScheme.background, density)
+                if (rings.isEmpty()) null
+                else BubbleHighlightDecoration(rings, minY, maxY, color, MaterialTheme.colorScheme.background, density)
             },
             NowDecoration(
                 nowX = realTime.toDouble(),

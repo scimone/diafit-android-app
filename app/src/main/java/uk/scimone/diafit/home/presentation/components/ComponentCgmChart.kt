@@ -66,7 +66,9 @@ fun ComponentCgmChart(
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
     onGeometry: (ChartGeometry) -> Unit,
-    showTimeLabels: Boolean = false
+    showTimeLabels: Boolean = false,
+    /** Typical day (AGP) drawn behind the curve; null = hidden. */
+    agp: uk.scimone.diafit.patterns.domain.PatternAgp? = null
 ) {
     val minY = CGM_MIN_Y
     val maxY = cgmMaxY(values, window)
@@ -161,6 +163,11 @@ fun ComponentCgmChart(
                     maxY = maxY.toDouble(),
                     color = targetBand
                 ),
+                agp?.let {
+                    uk.scimone.diafit.home.presentation.utils.AgpDecoration(
+                        agp = it, minY = minY.toDouble(), maxY = maxY.toDouble(), color = androidx.compose.ui.graphics.Color(0xFFB39DDB)
+                    )
+                },
                 remember(onGeometry) { GeometryProbe(onGeometry) }
             ),
             getXStep = { _ -> getTimeAxisXStep() },

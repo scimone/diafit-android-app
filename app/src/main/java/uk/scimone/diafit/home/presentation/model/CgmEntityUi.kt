@@ -14,6 +14,8 @@ data class CgmEntityUi(
     val isStale: Boolean = false
 )
 
+private const val FRESH_READING_MS = 2 * 60_000L
+
 // Extension to convert domain model to UI model
 /**
  * [receivedAt] = when this app first saw the reading; the age counts from the later of that and the
@@ -21,7 +23,9 @@ data class CgmEntityUi(
  * is typically several seconds older than its delivery).
  */
 fun CgmEntity.toCgmEntityUi(receivedAt: Long? = null): CgmEntityUi {
-    val ageStart = maxOf(timestamp, receivedAt ?: 0L)
+    // Counts from arrival when the reading is fresh (the sensor stamp is usually seconds older, and a
+    // device clock running ahead must not make the age negative); an old reading keeps its own stamp.
+    val ageStart = if (receivedAt != null && receivedAt - timestamp < FRESH_READING_MS) receivedAt else timestamp
     val now = Instant.now()
     val last = Instant.ofEpochMilli(ageStart)
     val durationMinutes = ChronoUnit.MINUTES.between(last, now)
@@ -46,7 +50,7 @@ fun Float.toNormalizedRate(): Float {
 fun Long.toTimeSince(): String {
     val now = Instant.now()
     val last = Instant.ofEpochMilli(this)
-    val duration = ChronoUnit.SECONDS.between(last, now)
+    val duration = ChronoUnit.SECONDS.between(last, now).coerceAtLeast(0)
 
     val hours = duration / 3600
     val minutes = (duration % 3600) / 60

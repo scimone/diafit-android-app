@@ -31,6 +31,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import uk.scimone.diafit.home.presentation.components.EventBubble
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -136,8 +140,18 @@ fun HomeScreen(
     var openMealIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val openMeal = state.mealHistory.filter { it.id in openMealIds }.sortedBy { it.mealTimeUtc }
         .takeIf { it.isNotEmpty() }?.let { MealGroup(it) }
+    // Meals picked by tapping a carb bubble or a photo: both are ringed/outlined until the user taps elsewhere.
+    var selectedMealKeys by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    val selectedEventTimes = remember(selectedMealKeys, mealGroups) {
+        mealGroups.filter { it.key in selectedMealKeys }.flatMap { g -> g.meals.map { it.mealTimeUtc } }.toSet()
+    }
+    // The carb bubbles as drawn (merged for the zoom) and where their panel sits inside the chart column, for tap hit-testing.
+    val carbBubbles = remember { arrayOf<List<EventBubble>>(emptyList()) }
+    var carbPanelTop by remember { mutableFloatStateOf(0f) }
+    var carbPanelBottom by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
+    val densityPx = LocalDensity.current.density
     val window = remember(nowMinute) { homeTimeWindow(nowMinute) }
     val headlines = remember(state.cgmUi, state.basal, state.smbs, state.activity, state.insulinActivityHistory, state.carbHistory, nowMinute, state.targetRangeLower, state.targetRangeUpper) {
         homeHeadlines(state, nowMinute)
@@ -196,6 +210,20 @@ fun HomeScreen(
     }
     ScrubAutoScroll(scrubbing, { scrubX }, geometry, chartScrollState) { x -> viewModel.onSelectedTimeChange(timeAtX(x)) }
 
+    // A tap on a carb bubble selects the meal(s) it stands for; a tap anywhere else clears the selection.
+    fun onChartTap(pos: Offset) {
+        val g = geometry.value
+        val hit = if (g != null && pos.y in carbPanelTop..carbPanelBottom) {
+            carbBubbles[0].minByOrNull { abs(g.xOf(it.time) - pos.x) }
+                ?.takeIf { abs(g.xOf(it.time) - pos.x) <= maxOf(it.diameterDp / 2f + 8f, 24f) * densityPx }
+        } else null
+        selectedMealKeys = if (hit == null) emptySet() else {
+            val times = hit.members.map { it.time }.toSet()
+            mealGroups.filter { grp -> grp.meals.any { it.mealTimeUtc in times } }.map { it.key }.toSet()
+        }
+        if (hit != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
+
     fun revealOnCharts(time: Long) {
         scope.launch { chartScrollState.animateScroll(Scroll.Absolute.x(time.toDouble(), 0.5f)) }
     }
@@ -225,11 +253,19 @@ fun HomeScreen(
                         if (selectedTime == null) {
                             Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "Hold a chart to inspect",
+                                    when {
+                                        state.showAgp && state.agpUnavailable -> "AGP needs 5 days of data"
+                                        selectedMealKeys.isNotEmpty() -> "Meal selected"
+                                        else -> "Hold to inspect"
+                                    },
                                     fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 Spacer(Modifier.weight(1f))
+                                AgpToggle(active = state.showAgp, onClick = viewModel::toggleAgp)
+                                Spacer(Modifier.width(8.dp))
                                 ChartZoomControls(zoomState = chartZoomState, scrollState = chartScrollState)
                             }
                         } else if (cursorTime != null) {
@@ -264,7 +300,8 @@ fun HomeScreen(
                                         viewModel.onSelectedTimeChange(timeAtX(pos.x))
                                     },
                                     onScrub = { pos -> scrubX = pos.x; viewModel.onSelectedTimeChange(timeAtX(pos.x)) },
-                                    onScrubEnd = { scrubbing = false; viewModel.onSelectedTimeChange(null) }
+                                    onScrubEnd = { scrubbing = false; viewModel.onSelectedTimeChange(null) },
+                                    onTap = ::onChartTap
                                 )
                             ) {
                                 if (state.cgmUi != null) {
@@ -277,7 +314,8 @@ fun HomeScreen(
                                         zoomState = chartZoomState,
                                         window = window,
                                         onGeometry = onGeometry,
-                                        headline = headlines.glucose.takeIf { nowVisible }
+                                        headline = headlines.glucose.takeIf { nowVisible },
+                                        agp = state.agp.takeIf { state.showAgp }
                                     )
                                 }
                                 ActivityDisplay(
@@ -314,13 +352,18 @@ fun HomeScreen(
                                     onScale = { bolusScale.value = it }
                                 )
                                 CarbActivityDisplay(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).onGloballyPositioned {
+                                        carbPanelTop = it.positionInParent().y
+                                        carbPanelBottom = carbPanelTop + it.size.height
+                                    },
                                     history = state.carbHistory,
                                     scrollState = chartScrollState,
                                     zoomState = chartZoomState,
                                     window = window,
                                     highlightTime = cursorTime,
-                                    headline = headlines.carbs.takeIf { nowVisible }
+                                    headline = headlines.carbs.takeIf { nowVisible },
+                                    highlightEventTimes = selectedEventTimes,
+                                    onBubbles = { carbBubbles[0] = it }
                                 )
                             }
                         }
@@ -338,14 +381,20 @@ fun HomeScreen(
                     MealTimeline(
                         allGroups = mealGroups,
                         inView = mealsInView,
-                        highlighted = mealGroups.caughtBy(selectedTime),
+                        highlighted = (mealGroups.caughtBy(selectedTime) + mealGroups.filter { it.key in selectedMealKeys }).distinctBy { it.key },
+                        selectedKeys = selectedMealKeys,
                         geometry = geometry,
                         scrollState = chartScrollState,
                         onGroupClick = { group ->
+                            // Tapping a photo highlights its data point; details open from the card's button or a long press.
+                            selectedMealKeys = if (group.key in selectedMealKeys) emptySet() else setOf(group.key)
+                        },
+                        onGroupOpen = { group ->
                             openMealIds = group.meals.map { it.id }.toSet()
                             // Bring the meal into view on the charts behind the sheet.
                             revealOnCharts(group.startTime)
                         },
+                        onBackgroundTap = { selectedMealKeys = emptySet() },
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
@@ -395,7 +444,7 @@ internal const val TapToggleRadiusPx = 48f
  * Splits chart touches into three unambiguous gestures, so looking at past values never fights with
  * panning:
  *  - **drag** (moves past touch slop before the long-press timeout): left alone, Vico pans/zooms;
- *  - **tap**: ignored;
+ *  - **tap**: reported through `onTap` without consuming anything;
  *  - **long press, then drag**: scrub mode; every following event is consumed (Vico can't pan and the
  *    page can't scroll) and the cursor follows the finger until it lifts, when the inspection ends.
  * Runs in the Initial pass so it sees events before the charts do; until scrub mode it consumes nothing.
@@ -404,7 +453,9 @@ internal const val TapToggleRadiusPx = 48f
 internal fun Modifier.inspectGestures(
     onScrubStart: (Offset) -> Unit,
     onScrub: (Offset) -> Unit,
-    onScrubEnd: () -> Unit
+    onScrubEnd: () -> Unit,
+    /** A plain tap (lifted before the long-press timeout without moving); nothing is consumed. */
+    onTap: (Offset) -> Unit = {}
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -415,7 +466,11 @@ internal fun Modifier.inspectGestures(
                 if (event.changes.count { it.pressed } > 1) { aborted = true; break }
                 val change = event.changes.firstOrNull { it.id == down.id }
                 if (change == null) { aborted = true; break }
-                if (change.changedToUpIgnoreConsumed()) { aborted = true; break }
+                if (change.changedToUpIgnoreConsumed()) {
+                    aborted = true
+                    if ((change.position - down.position).getDistance() <= viewConfiguration.touchSlop) onTap(change.position)
+                    break
+                }
                 if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) { aborted = true; break }
             }
         } == null
@@ -647,6 +702,22 @@ fun HomeTitle(state: HomeState) {
     }
 }
 
+/** Small quick button that shows or hides the two-week AGP behind the glucose curve. */
+@Composable
+private fun AgpToggle(active: Boolean, onClick: () -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(8.dp),
+            color = if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            border = BorderStroke(1.dp, if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.semantics { contentDescription = if (active) "Hide typical day (AGP)" else "Show typical day (AGP)" }
+        ) {
+            Text("AGP", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+        }
+    }
+}
+
 /** The latest value of a panel, shown next to its heading in the colour of its category: "113" + "mg/dL". */
 data class PanelValue(val text: String, val unit: String, val color: Color)
 
@@ -740,7 +811,8 @@ fun CgmChartDisplay(
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
     onGeometry: (ChartGeometry) -> Unit,
-    headline: PanelValue? = null
+    headline: PanelValue? = null,
+    agp: uk.scimone.diafit.patterns.domain.PatternAgp? = null
 ) {
     Box(
         modifier = modifier
@@ -749,6 +821,7 @@ fun CgmChartDisplay(
             .fillMaxHeight()
     ) {
         ComponentCgmChart(
+            agp = agp,
             values = history,
             lowerBound = lower,
             upperBound = upper,
@@ -807,7 +880,9 @@ fun CarbActivityDisplay(
     zoomState: VicoZoomState,
     window: ChartTimeWindow,
     highlightTime: Long? = null,
-    headline: PanelValue? = null
+    headline: PanelValue? = null,
+    highlightEventTimes: Set<Long> = emptySet(),
+    onBubbles: ((List<EventBubble>) -> Unit)? = null
 ) {
     val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), curve = it.curve) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
@@ -823,7 +898,9 @@ fun CarbActivityDisplay(
             scrollState = scrollState,
             zoomState = zoomState,
             window = window,
-            highlightTime = highlightTime
+            highlightTime = highlightTime,
+            highlightEventTimes = highlightEventTimes,
+            onBubbles = onBubbles
         )
         PanelTitle("Carbohydrates", headline)
     }
