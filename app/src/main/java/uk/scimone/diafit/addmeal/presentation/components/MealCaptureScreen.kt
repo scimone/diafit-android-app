@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.NoPhotography
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Button
@@ -166,6 +167,10 @@ fun MealCaptureScreen(
     onOpenSearch: () -> Unit,
     onCloseSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
+    onSubmitSearch: () -> Unit,
+    recentSearches: List<String>,
+    onUseRecentSearch: (String) -> Unit,
+    onClearRecentSearches: () -> Unit,
     onUseSearchResult: (FoodProduct) -> Unit
 ) {
     val context = LocalContext.current
@@ -207,7 +212,7 @@ fun MealCaptureScreen(
                 onClose = onClose
             )
         }
-        if (phase is CapturePhase.Search) FoodSearchScreen(phase, onSearchQuery, onUseSearchResult, onCloseSearch)
+        if (phase is CapturePhase.Search) FoodSearchScreen(phase, savedProducts, recentSearches, onSearchQuery, onSubmitSearch, onUseRecentSearch, onClearRecentSearches, onToggleFavorite, onUseSearchResult, onCloseSearch)
     }
 }
 
@@ -802,15 +807,39 @@ private fun NoCameraPanel(askedBefore: Boolean, onAllow: () -> Unit, onGallery: 
 }
 
 /** Search the food databases by name; picking a result fills the form with its default portion. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FoodSearchScreen(
     phase: CapturePhase.Search,
+    saved: List<SavedProductEntity>,
+    recents: List<String>,
     onQuery: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onRecent: (String) -> Unit,
+    onClearRecents: () -> Unit,
+    onToggleFavorite: (SavedProductEntity) -> Unit,
     onPick: (FoodProduct) -> Unit,
     onBack: () -> Unit
 ) {
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val q = phase.query.trim()
+    val canSearch = q.length >= 2 && !phase.loading
+    val submit = { if (canSearch) { keyboard?.hide(); onSubmit() } }
+    val savedByCode = remember(saved) { saved.associateBy { it.barcode } }
+    // Saved products that fit the text: free, shown as you type. Bookmarks first.
+    val savedMatches = remember(saved, q) {
+        saved.filter { q.isEmpty() || it.name.contains(q, true) || it.brand?.contains(q, true) == true }
+            .sortedWith(compareByDescending<SavedProductEntity> { it.isFavorite }.thenByDescending { it.lastUsedUtc })
+    }
+    // After a search: what you saved before comes first, then the rest of the results.
+    val results = remember(phase.results, savedMatches) {
+        val fromDb = phase.results.sortedByDescending { r -> savedByCode[r.barcode]?.let { if (it.isFavorite) 2 else 1 } ?: 0 }
+        val codes = fromDb.map { it.barcode }.toSet()
+        val extra = savedMatches.filter { it.barcode !in codes }.map { it.toProduct() }
+        (extra + fromDb).sortedByDescending { r -> savedByCode[r.barcode]?.let { if (it.isFavorite) 2 else 1 } ?: 0 }
+    }
     Column(Modifier.fillMaxSize().background(Ink).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RoundIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
@@ -819,8 +848,12 @@ private fun FoodSearchScreen(
                 onValueChange = onQuery,
                 placeholder = { Text("Search a food or product", color = OnInkMuted) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
+                trailingIcon = {
+                    if (phase.query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "Clear", tint = OnInkMuted, modifier = Modifier.size(18.dp)) }
+                },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submit() }),
                 modifier = Modifier.weight(1f).focusRequester(focus),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -829,31 +862,84 @@ private fun FoodSearchScreen(
                 )
             )
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = submit, enabled = canSearch,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(48.dp)
+        ) {
+            Icon(Icons.Outlined.Search, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (q.isEmpty()) "Search the food databases" else "Search the food databases for \"$q\"")
+        }
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
                 phase.loading -> Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) {
                     CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = Good)
                 }
-                phase.error != null -> Text(phase.error, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFF8A80))
-                phase.query.trim().length < 2 -> Text(
-                    "Type at least two letters. Values are per 100 g; you set the portion on the next page.",
-                    style = MaterialTheme.typography.bodyMedium, color = OnInkMuted
-                )
-                phase.results.isEmpty() -> Text("Nothing found. Try another word.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
-                else -> phase.results.forEach { SearchResultRow(it) { onPick(it) } }
+                phase.searched -> {
+                    if (phase.error != null) Text(phase.error, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFF8A80))
+                    if (results.isEmpty() && phase.error == null) Text("Nothing found. Try fewer or other words.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
+                    results.forEach { r -> SearchResultRow(r, savedByCode[r.barcode], { onPick(r) }, { savedByCode[r.barcode]?.let(onToggleFavorite) }) }
+                }
+                else -> {
+                    val recentShown = recents.filter { q.isEmpty() || it.contains(q, true) }
+                    if (recentShown.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            SectionLabel("Recent searches", Modifier.weight(1f))
+                            if (q.isEmpty()) TextButton(onClick = onClearRecents) { Text("Clear", color = OnInkMuted) }
+                        }
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            recentShown.forEach { r ->
+                                Surface(shape = CircleShape, color = Color(0xFF1E242B), modifier = Modifier.clip(CircleShape).clickable { onRecent(r) }) {
+                                    Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Icon(Icons.Outlined.History, null, tint = OnInkMuted, modifier = Modifier.size(16.dp))
+                                        Text(r, style = MaterialTheme.typography.bodyMedium, color = OnInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val bookmarks = savedMatches.filter { it.isFavorite }
+                    val used = savedMatches.filter { !it.isFavorite }.take(if (q.isEmpty()) 6 else 20)
+                    if (bookmarks.isNotEmpty()) {
+                        SectionLabel("Bookmarks", tint = BookmarkGold)
+                        bookmarks.forEach { p -> SearchResultRow(p.toProduct(), p, { onPick(p.toProduct()) }, { onToggleFavorite(p) }) }
+                    }
+                    if (used.isNotEmpty()) {
+                        SectionLabel("Used before")
+                        used.forEach { p -> SearchResultRow(p.toProduct(), p, { onPick(p.toProduct()) }, { onToggleFavorite(p) }) }
+                    }
+                    if (recentShown.isEmpty() && savedMatches.isEmpty()) Text(
+                        if (q.isEmpty()) "Type what you're looking for, then press Search. Products you use are kept here, star one to bookmark it."
+                        else "Nothing saved matches. Press Search to look in the food databases.",
+                        style = MaterialTheme.typography.bodyMedium, color = OnInkMuted
+                    )
+                }
             }
             if (!phase.loading) Text(
-                "Results come from Open Food Facts and, with a key set in Settings, USDA FoodData Central.",
+                "Values are per 100 g; you set the portion on the next page. Results come from Open Food Facts and, with a key set in Settings, USDA FoodData Central.",
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
 }
 
+private val BookmarkGold = Color(0xFFFFC107)
+
 @Composable
-private fun SearchResultRow(product: FoodProduct, onClick: () -> Unit) {
+private fun SectionLabel(text: String, modifier: Modifier = Modifier, tint: Color = OnInkMuted) {
+    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = tint, fontWeight = FontWeight.SemiBold, modifier = modifier.padding(top = 6.dp))
+}
+
+/** [saved] non-null = used before (subtle highlight); a bookmark gets a gold outline and star. */
+@Composable
+private fun SearchResultRow(product: FoodProduct, saved: SavedProductEntity?, onClick: () -> Unit, onToggleFavorite: () -> Unit) {
+    val fav = saved?.isFavorite == true
+    val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1E242B)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clip(shape)
+            .background(if (fav) Color(0x26FFC107) else if (saved != null) Color(0xFF26303A) else Color(0xFF1E242B))
+            .then(if (fav) Modifier.border(1.5.dp, BookmarkGold, shape) else if (saved != null) Modifier.border(1.dp, Good.copy(alpha = 0.6f), shape) else Modifier)
+            .clickable(onClick = onClick).padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = if (saved != null) 2.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
@@ -861,6 +947,14 @@ private fun SearchResultRow(product: FoodProduct, onClick: () -> Unit) {
             Text(
                 listOfNotNull(product.brand, "${product.per100.carbsG.roundToInt()} g carbs per 100 g", product.source).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+            if (saved != null && !fav) Text("Used before", style = MaterialTheme.typography.labelSmall, color = Good, fontWeight = FontWeight.SemiBold)
+        }
+        if (saved != null) IconButton(onClick = onToggleFavorite) {
+            Icon(
+                if (fav) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                if (fav) "Remove ${product.name} from bookmarks" else "Bookmark ${product.name}",
+                tint = if (fav) BookmarkGold else OnInkMuted, modifier = Modifier.size(22.dp)
             )
         }
     }

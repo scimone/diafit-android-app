@@ -99,7 +99,9 @@ sealed interface CapturePhase {
         val loading: Boolean = false,
         val results: List<FoodProduct> = emptyList(),
         val error: String? = null,
-        val fromPhoto: Boolean = false
+        val fromPhoto: Boolean = false,
+        /** [results] belong to the current [query] (editing the text clears this; nothing is sent until the user presses Search). */
+        val searched: Boolean = false
     ) : CapturePhase
     data class NotFound(val barcode: String) : CapturePhase
     data class Failed(val barcode: String, val reason: String) : CapturePhase

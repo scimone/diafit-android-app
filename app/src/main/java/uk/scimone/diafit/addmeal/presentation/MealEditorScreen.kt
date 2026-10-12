@@ -81,6 +81,7 @@ fun MealEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val savedProducts by viewModel.savedProductList.collectAsState()
+    val recentSearches by viewModel.recentSearches.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmDiscard by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -255,6 +256,10 @@ fun MealEditorScreen(
             onOpenSearch = viewModel::openSearch,
             onCloseSearch = viewModel::closeSearch,
             onSearchQuery = viewModel::onSearchQuery,
+            onSubmitSearch = viewModel::submitSearch,
+            recentSearches = recentSearches,
+            onUseRecentSearch = viewModel::useRecentSearch,
+            onClearRecentSearches = viewModel::clearRecentSearches,
             onUseSearchResult = viewModel::useSearchResult
         )
     }

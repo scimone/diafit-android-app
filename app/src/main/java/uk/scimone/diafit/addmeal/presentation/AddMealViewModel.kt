@@ -305,28 +305,54 @@ class AddMealViewModel(
         setPhase(if (search.fromPhoto) CapturePhase.PhotoTaken else CapturePhase.Scanning)
     }
 
-    /** Typing: searches shortly after the last keystroke. */
+    private val searchPrefs = application.getSharedPreferences("food_search", android.content.Context.MODE_PRIVATE)
+    private val _recentSearches = MutableStateFlow(searchPrefs.getString("recent", "").orEmpty().split('\n').filter { it.isNotBlank() })
+    /** Earlier searches, latest first. */
+    val recentSearches = _recentSearches.asStateFlow()
+
+    private fun rememberSearch(q: String) {
+        val list = (listOf(q) + _recentSearches.value.filterNot { it.equals(q, true) }).take(8)
+        _recentSearches.value = list
+        searchPrefs.edit().putString("recent", list.joinToString("\n")).apply()
+    }
+
+    fun clearRecentSearches() {
+        _recentSearches.value = emptyList()
+        searchPrefs.edit().remove("recent").apply()
+    }
+
+    /** Typing only edits the text: nothing goes to the network until [submitSearch]. */
     fun onSearchQuery(query: String) {
         val current = capturePhase as? CapturePhase.Search ?: return
         cancelSearch()
-        val q = query.trim()
-        if (q.length < 3) {
-            setPhase(current.copy(query = query, loading = false, results = emptyList(), error = null))
-            return
-        }
-        setPhase(current.copy(query = query, loading = true, error = null))
+        setPhase(current.copy(query = query, loading = false, results = emptyList(), error = null, searched = false))
+    }
+
+    /** Search button / keyboard action: one request for the finished query. */
+    fun submitSearch() {
+        val current = capturePhase as? CapturePhase.Search ?: return
+        val q = current.query.trim()
+        if (q.length < 2 || current.loading) return
+        cancelSearch()
+        rememberSearch(q)
+        setPhase(current.copy(loading = true, error = null, searched = false))
         searchJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(800)
             val result = searchFoodByName(q)
             val now = capturePhase as? CapturePhase.Search ?: return@launch
-            if (now.query != query) return@launch
+            if (now.query.trim() != q) return@launch
             setPhase(
                 result.fold(
-                    onSuccess = { now.copy(loading = false, results = it, error = null) },
-                    onFailure = { now.copy(loading = false, results = emptyList(), error = "Couldn't reach the food databases") }
+                    onSuccess = { now.copy(loading = false, results = it, error = null, searched = true) },
+                    onFailure = { now.copy(loading = false, results = emptyList(), error = "Couldn't reach the food databases", searched = true) }
                 )
             )
         }
+    }
+
+    fun useRecentSearch(query: String) {
+        val current = capturePhase as? CapturePhase.Search ?: return
+        setPhase(current.copy(query = query, results = emptyList(), error = null, searched = false))
+        submitSearch()
     }
 
     /** A search result was chosen: its default portion goes into the form (with the photo, if one was taken). */
