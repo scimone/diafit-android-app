@@ -282,10 +282,14 @@ fun LogsGlucoseGraph(
 
             // Point entries: a dot on top, the highlighted one bigger with a line down through the graph.
             // Dots that sit on top of each other share one circle, split vertically into their colours.
-            val points = markers.withIndex().filter { (_, m) ->
+            // A group of doses gets a dot at every dose (the first one included), all belonging to the group's entry.
+            val points = markers.withIndex().flatMap { (i, m) ->
+                if (m.insulin && m.doses.size > 1) m.doses.map { d -> IndexedValue(i, GraphMarker(d.timeUtc, null, m.color, insulin = true)) }
+                else listOf(IndexedValue(i, m))
+            }.filter { (_, m) ->
                 m.endMs == null && m.startMs >= startMs && m.startMs <= endMs
             }
-            val used = HashSet<Int>()
+            val used = HashSet<IndexedValue<GraphMarker>>()
             fun drawGroup(group: List<IndexedValue<GraphMarker>>) {
                 val x = xOf(group.first().value.startMs)
                 val picked = group.any { it.index == selectedMarker }
@@ -302,9 +306,9 @@ fun LogsGlucoseGraph(
             }
             val groups = ArrayList<List<IndexedValue<GraphMarker>>>()
             for (pt in points) {
-                if (!used.add(pt.index)) continue
+                if (!used.add(pt)) continue
                 val x = xOf(pt.value.startMs)
-                val group = listOf(pt) + points.filter { o -> o.index !in used && kotlin.math.abs(xOf(o.value.startMs) - x) < 6.dp.toPx() }.onEach { used.add(it.index) }
+                val group = listOf(pt) + points.filter { o -> o !in used && kotlin.math.abs(xOf(o.value.startMs) - x) < 6.dp.toPx() }.onEach { used.add(it) }
                 groups.add(group)
             }
             groups.filter { g -> g.none { it.index == selectedMarker } }.forEach(::drawGroup)
