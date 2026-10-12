@@ -180,9 +180,12 @@ class JournalViewModel(
                     val entries = withContext(Dispatchers.IO) {
                         mealEntries(meals.filter { it.mealTimeUtc in from..to }, target) + episodeEntries(target, from, to) + bolusEntries(meals, from, to) + pumpEventEntries(from, to) + activityEntries(from, to)
                     }
+                    val (courses, doses) = withContext(Dispatchers.IO) { activityInputs(meals, from, to) }
                     _uiState.update {
                         it.copy(
                             entries = entries,
+                            carbCourses = courses,
+                            doses = doses,
                             target = target,
                             isLoading = false,
                             errorMessage = null
@@ -222,6 +225,26 @@ class JournalViewModel(
             emptyList()
         }
         return episodes.map(::GlucoseEpisodeUi)
+    }
+
+    /** All meal courses and doses that can still be acting inside the range (a day of margin before it). */
+    private suspend fun activityInputs(
+        meals: List<MealEntity>, from: Long, to: Long
+    ): Pair<List<uk.scimone.diafit.journal.presentation.model.CarbCourse>, List<uk.scimone.diafit.journal.presentation.model.BolusPartUi>> {
+        val courses = meals.filter { it.carbohydrates > 0 && it.mealTimeUtc in (from - DAY_MS)..to }.map {
+            uk.scimone.diafit.journal.presentation.model.CarbCourse(
+                it.carbohydrates.toDouble(), it.mealTimeUtc, uk.scimone.diafit.mealactivity.domain.MealActivity.curve(it)
+            )
+        }
+        val doses = try {
+            bolusRepository.getBolusBetween(from - DAY_MS, to, userId).map {
+                uk.scimone.diafit.journal.presentation.model.BolusPartUi(it.timestampUtc, it.value.toDouble(), it.isSmb)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading doses", e)
+            emptyList()
+        }
+        return courses to doses
     }
 
     /** Boluses in the range that belong to no meal (see [standalone]). */
@@ -314,6 +337,10 @@ class JournalViewModel(
 data class JournalUiState(
     /** Every journal entry, of any kind, in no particular order. */
     val entries: List<JournalEntryUi> = emptyList(),
+    /** Every logged meal course around the range, for the graph's summed carb absorption curve. */
+    val carbCourses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse> = emptyList(),
+    /** Every dose (SMBs too) around the range, for the graph's summed insulin activity curve. */
+    val doses: List<uk.scimone.diafit.journal.presentation.model.BolusPartUi> = emptyList(),
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
     val range: JournalRange = JournalRange(),
     val isLoading: Boolean = false,

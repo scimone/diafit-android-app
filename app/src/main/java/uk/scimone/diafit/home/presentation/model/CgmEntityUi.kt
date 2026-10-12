@@ -15,9 +15,15 @@ data class CgmEntityUi(
 )
 
 // Extension to convert domain model to UI model
-fun CgmEntity.toCgmEntityUi(): CgmEntityUi {
+/**
+ * [receivedAt] = when this app first saw the reading; the age counts from the later of that and the
+ * sensor timestamp, so the counter restarts at 0 the moment a new value arrives (the sensor timestamp
+ * is typically several seconds older than its delivery).
+ */
+fun CgmEntity.toCgmEntityUi(receivedAt: Long? = null): CgmEntityUi {
+    val ageStart = maxOf(timestamp, receivedAt ?: 0L)
     val now = Instant.now()
-    val last = Instant.ofEpochMilli(timestamp)
+    val last = Instant.ofEpochMilli(ageStart)
     val durationMinutes = ChronoUnit.MINUTES.between(last, now)
 
     return CgmEntityUi(
@@ -26,7 +32,7 @@ fun CgmEntity.toCgmEntityUi(): CgmEntityUi {
         direction = direction,
         device = device,
         source = source,
-        timeSince = timestamp.toTimeSince(),
+        timeSince = ageStart.toTimeSince(),
         isStale = durationMinutes > 10
     )
 }

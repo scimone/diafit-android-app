@@ -50,7 +50,7 @@ private const val EVENT_NEAR_MS = 15 * 60_000L
 
 /**
  * The day on Home's chart stack: glucose, bolus and carb panels on one shared 0–24 h axis (opening
- * on the whole day, pinch or the chips to zoom), the same tap / hold-to-scrub inspection, and the
+ * on the whole day, pinch or the chips to zoom), the same hold-to-scrub inspection, and the
  * meal photo strip underneath, which follows the visible part of the day. Tapping a meal opens it.
  */
 @Composable
@@ -66,6 +66,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
 
     var selectedTime by remember { mutableStateOf<Long?>(null) }
     var scrubbing by remember { mutableStateOf(false) }
+    var scrubX by remember { mutableFloatStateOf(0f) }
     val haptics = LocalHapticFeedback.current
     val geometry = remember { mutableStateOf<ChartGeometry?>(null) }
     val bolusScale = remember { mutableStateOf<Double?>(null) }
@@ -89,15 +90,15 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
     val lower = state.target.lowerBound
     val upper = state.target.upperBound
 
-    DismissInspectionWhenOffscreen(cursorTime, geometry) { selectedTime = null }
 
     fun timeAtX(x: Float): Long? = geometry.value?.let { g -> g.timeAt(x).coerceIn(window.minX, window.now) }
+    uk.scimone.diafit.home.presentation.ScrubAutoScroll(scrubbing, { scrubX }, geometry, scrollState) { x -> selectedTime = timeAtX(x) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 8.dp)) {
         Box(Modifier.fillMaxWidth().height(InspectBarHeight)) {
             if (selectedTime == null) {
                 Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Tap or hold a chart to inspect", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Hold a chart to inspect", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     ChartZoomControls(zoomState = zoomState, scrollState = scrollState, futureHours = 0, scrollToEnd = false)
                 }
@@ -122,17 +123,14 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
             if (state.activityConnected) uk.scimone.diafit.home.presentation.components.ActivityBackdrop(state.activity, window, geometry, Modifier.matchParentSize())
             Column(
                 Modifier.fillMaxSize().inspectGestures(
-                    onTap = { pos ->
-                        val currentX = cursorTime?.let { geometry.value?.xOf(it) }
-                        selectedTime = if (currentX != null && abs(currentX - pos.x) < TapToggleRadiusPx) null else timeAtX(pos.x)
-                    },
                     onScrubStart = { pos ->
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scrubX = pos.x
                         scrubbing = true
                         selectedTime = timeAtX(pos.x)
                     },
-                    onScrub = { pos -> selectedTime = timeAtX(pos.x) },
-                    onScrubEnd = { scrubbing = false }
+                    onScrub = { pos -> scrubX = pos.x; selectedTime = timeAtX(pos.x) },
+                    onScrubEnd = { scrubbing = false; selectedTime = null }
                 )
             ) {
                 CgmChartDisplay(

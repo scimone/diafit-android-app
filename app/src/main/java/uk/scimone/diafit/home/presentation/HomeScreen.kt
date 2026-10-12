@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -126,6 +127,7 @@ fun HomeScreen(
     // Pinned inspection time (tap or hold on the charts); null = nothing inspected.
     val selectedTime by viewModel.selectedTime.collectAsStateWithLifecycle()
     var scrubbing by remember { mutableStateOf(false) }
+    var scrubX by remember { mutableFloatStateOf(0f) }
     // Meals grouped into sittings, shared by the pin lane, the meal strip and the detail sheet.
     val mealGroups = remember(state.mealHistory) { groupMeals(state.mealHistory) }
     val focusedMeal = mealGroups.nearest(selectedTime)
@@ -183,7 +185,6 @@ fun HomeScreen(
     }
     val cursorTime = inspectedReading?.timeLong ?: selectedTime
 
-    DismissInspectionWhenOffscreen(cursorTime, geometry) { viewModel.onSelectedTimeChange(null) }
 
     // A light tick whenever the scrub cursor reaches another meal.
     LaunchedEffect(focusedMeal?.key) {
@@ -193,6 +194,7 @@ fun HomeScreen(
     fun timeAtX(x: Float): Long? = geometry.value?.let { g ->
         g.timeAt(x).coerceIn(g.minX.toLong(), window.now)
     }
+    ScrubAutoScroll(scrubbing, { scrubX }, geometry, chartScrollState) { x -> viewModel.onSelectedTimeChange(timeAtX(x)) }
 
     fun revealOnCharts(time: Long) {
         scope.launch { chartScrollState.animateScroll(Scroll.Absolute.x(time.toDouble(), 0.5f)) }
@@ -223,7 +225,7 @@ fun HomeScreen(
                         if (selectedTime == null) {
                             Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "Tap or hold a chart to inspect",
+                                    "Hold a chart to inspect",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -255,19 +257,14 @@ fun HomeScreen(
                         Column(Modifier.fillMaxSize()) {
                             Column(
                                 Modifier.fillMaxSize().inspectGestures(
-                                    onTap = { pos ->
-                                        val currentX = cursorTime?.let { geometry.value?.xOf(it) }
-                                        // Tapping the cursor again closes it; anywhere else moves it there.
-                                        if (currentX != null && abs(currentX - pos.x) < TapToggleRadiusPx) viewModel.onSelectedTimeChange(null)
-                                        else viewModel.onSelectedTimeChange(timeAtX(pos.x))
-                                    },
                                     onScrubStart = { pos ->
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        scrubX = pos.x
                                         scrubbing = true
                                         viewModel.onSelectedTimeChange(timeAtX(pos.x))
                                     },
-                                    onScrub = { pos -> viewModel.onSelectedTimeChange(timeAtX(pos.x)) },
-                                    onScrubEnd = { scrubbing = false }
+                                    onScrub = { pos -> scrubX = pos.x; viewModel.onSelectedTimeChange(timeAtX(pos.x)) },
+                                    onScrubEnd = { scrubbing = false; viewModel.onSelectedTimeChange(null) }
                                 )
                             ) {
                                 if (state.cgmUi != null) {
@@ -398,21 +395,19 @@ internal const val TapToggleRadiusPx = 48f
  * Splits chart touches into three unambiguous gestures, so looking at past values never fights with
  * panning:
  *  - **drag** (moves past touch slop before the long-press timeout): left alone, Vico pans/zooms;
- *  - **tap**: [onTap], pins the inspection cursor there;
+ *  - **tap**: ignored;
  *  - **long press, then drag**: scrub mode; every following event is consumed (Vico can't pan and the
- *    page can't scroll) and the cursor follows the finger until it lifts. The cursor stays pinned.
+ *    page can't scroll) and the cursor follows the finger until it lifts, when the inspection ends.
  * Runs in the Initial pass so it sees events before the charts do; until scrub mode it consumes nothing.
  * Two fingers (pinch) cancel it immediately.
  */
 internal fun Modifier.inspectGestures(
-    onTap: (Offset) -> Unit,
     onScrubStart: (Offset) -> Unit,
     onScrub: (Offset) -> Unit,
     onScrubEnd: () -> Unit
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        var tapAt: Offset? = null
         var aborted = false
         val heldStill = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
             while (true) {
@@ -420,11 +415,10 @@ internal fun Modifier.inspectGestures(
                 if (event.changes.count { it.pressed } > 1) { aborted = true; break }
                 val change = event.changes.firstOrNull { it.id == down.id }
                 if (change == null) { aborted = true; break }
-                if (change.changedToUpIgnoreConsumed()) { tapAt = change.position; break }
+                if (change.changedToUpIgnoreConsumed()) { aborted = true; break }
                 if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) { aborted = true; break }
             }
         } == null
-        tapAt?.let { onTap(it); return@awaitEachGesture }
         if (aborted || !heldStill) return@awaitEachGesture
 
         onScrubStart(down.position)
@@ -443,6 +437,41 @@ private fun glucoseColor(value: Int, lower: Int, upper: Int): Color = when {
     value < lower -> BelowRange
     value > upper -> AboveRange
     else -> InRange
+}
+
+/**
+ * While scrubbing, a finger held near the left or right edge of the charts scrolls them (faster the
+ * closer to the edge), and the cursor keeps following the finger over the content moving beneath it.
+ */
+@Composable
+internal fun ScrubAutoScroll(
+    scrubbing: Boolean,
+    fingerX: () -> Float,
+    geometry: State<ChartGeometry?>,
+    scrollState: VicoScrollState,
+    onTime: (Float) -> Unit
+) {
+    val density = LocalDensity.current
+    val currentOnTime by rememberUpdatedState(onTime)
+    LaunchedEffect(scrubbing) {
+        if (!scrubbing) return@LaunchedEffect
+        val zone = with(density) { 56.dp.toPx() }
+        val maxStep = with(density) { 10.dp.toPx() }
+        while (true) {
+            withFrameNanos { }
+            val g = geometry.value ?: continue
+            val x = fingerX()
+            val step = when {
+                x < g.left + zone -> -maxStep * ((g.left + zone - x) / zone).coerceIn(0f, 1f)
+                x > g.right - zone -> maxStep * ((x - (g.right - zone)) / zone).coerceIn(0f, 1f)
+                else -> 0f
+            }
+            if (step != 0f) {
+                scrollState.scroll(com.patrykandpatrick.vico.compose.cartesian.Scroll.Relative.pixels(step))
+                currentOnTime(x)
+            }
+        }
+    }
 }
 
 /** Clears the inspection (cursor line and readout) once the user pans the inspected time out of the visible chart. */

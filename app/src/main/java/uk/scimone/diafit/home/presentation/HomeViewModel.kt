@@ -52,6 +52,8 @@ class HomeViewModel(
 
     // Store latest CgmEntity separately to update timeSince
     private var latestCgmEntity: CgmEntity? = null
+    // Local clock time the newest reading reached the app (null for the one already stored at start-up).
+    private var latestCgmReceivedAt: Long? = null
 
     init {
         loadAllData()
@@ -88,10 +90,13 @@ class HomeViewModel(
                     }
                 }
                 .collect { cgm ->
+                    if (latestCgmEntity != null && cgm != null && cgm.timestamp != latestCgmEntity?.timestamp) {
+                        latestCgmReceivedAt = System.currentTimeMillis()
+                    }
                     latestCgmEntity = cgm
                     _state.update {
                         it.copy(
-                            cgmUi = cgm?.toCgmEntityUi(),
+                            cgmUi = cgm?.toCgmEntityUi(latestCgmReceivedAt),
                             isLoading = false
                         )
                     }
@@ -268,7 +273,7 @@ class HomeViewModel(
                 latestCgmEntity?.let { cgm ->
                     _state.update {
                         it.copy(
-                            cgmUi = cgm.toCgmEntityUi(), // this recalculates "timeSince"
+                            cgmUi = cgm.toCgmEntityUi(latestCgmReceivedAt), // this recalculates "timeSince"
                             isLoading = false
                         )
                     }

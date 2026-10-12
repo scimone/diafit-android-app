@@ -218,6 +218,8 @@ fun JournalScreen(
                     upper = uiState.target.upperBound,
                     markers = markers,
                     selectedMarker = selectedIndex,
+                    allCarbCourses = uiState.carbCourses,
+                    allDoses = uiState.doses,
                     onDragStart = {
                         graphDriving = true
                         scope.launch { center.stop() }
@@ -321,6 +323,7 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
             CarbCurve(carbCourses)
         }
     )
+    is uk.scimone.diafit.journal.presentation.model.BolusEntryUi -> GraphMarker(timeUtc, null, kind.accent, insulin = true)
     else -> GraphMarker(timeUtc, null, kind.accent)
 }
 

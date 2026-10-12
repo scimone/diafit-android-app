@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,10 @@ const val JOURNAL_GRAPH_WINDOW_MIN = 480f
 const val JOURNAL_ANCHOR_POINT = 0.25f
 const val JOURNAL_ANCHOR_STRETCH = 0.5f
 
+/** Carb absorption (g/h) and insulin activity (U/min) the curves are scaled against at least, so small amounts stay small. */
+private const val MIN_CARB_SCALE_GPH = 20.0
+private const val MIN_INSULIN_SCALE = 0.02
+private const val INSULIN_REACH_H = 4.5
 private const val MIN_MS = 60_000L
 private const val DAY_MS = 24 * 60 * MIN_MS
 
@@ -60,7 +65,9 @@ class GraphMarker(
     val peakMs: Long? = null,
     val peakMgdl: Int? = null,
     /** A meal's carb absorption curve, drawn faintly at the bottom: grams, per-course times and duration. */
-    val carbs: CarbCurve? = null
+    val carbs: CarbCurve? = null,
+    /** An insulin entry: the graph shows the summed insulin activity of all doses. */
+    val insulin: Boolean = false
 ) {
     val colors: List<Color> get() = listOfNotNull(color, extraColor)
 }
@@ -84,6 +91,8 @@ fun JournalGlucoseGraph(
     upper: Int,
     markers: List<GraphMarker>,
     selectedMarker: Int,
+    allCarbCourses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse>,
+    allDoses: List<uk.scimone.diafit.journal.presentation.model.BolusPartUi>,
     onDragStart: () -> Unit,
     onDrag: (deltaMinutes: Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -101,6 +110,11 @@ fun JournalGlucoseGraph(
     val dragEnd by rememberUpdatedState(onDragEnd)
     val tap by rememberUpdatedState(onTap)
     val anchor by rememberUpdatedState(anchorFraction)
+    // Each course's end is looked up once, not on every frame of a drag.
+    val carbSpans = remember(allCarbCourses) {
+        allCarbCourses.filter { it.grams > 0.0 }.map { it to it.curve.carbsEndTimeUtc() }
+    }
+    val doseList = remember(allDoses) { allDoses.sortedBy { it.timeUtc } }
 
     Box(modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))) {
         Canvas(
@@ -201,35 +215,44 @@ fun JournalGlucoseGraph(
                 }
             }
 
-            // A meal's carb activity: the summed curve of its courses, behind the readings.
-            markers.getOrNull(selectedMarker)?.carbs?.let { c ->
-                val courses = c.courses.sortedBy { it.timeUtc }.filter { it.grams > 0.0 }
-                if (courses.isEmpty()) return@let
+            // The total carb absorption of every meal in view (not only the highlighted one), behind the readings.
+            val selected = markers.getOrNull(selectedMarker)
+            if (selected?.carbs != null) {
                 val stepMs = 3 * MIN_MS
-                val first = courses.first().timeUtc
-                val last = courses.maxOf { it.curve.carbsEndTimeUtc() }
-                // Each course's carbohydrate absorption rate (g/h) from the meal activity model.
-                fun rate(k: Int, t: Long) = courses[k].curve.carbsRateGphAt(t)
-                fun cumulative(k: Int, t: Long): Double { var sum = 0.0; for (i in 0..k) sum += rate(i, t); return sum }
-                var peakRate = 0.0
-                var tp = first
-                while (tp <= last) { peakRate = maxOf(peakRate, cumulative(courses.lastIndex, tp)); tp += stepMs }
-                if (peakRate <= 0.0) return@let
-                val from = maxOf(startMs, first)
-                val to = minOf(endMs, last)
-                if (to <= from) return@let
-                val maxH = plotH * 0.4f
-                val base = markers[selectedMarker].color
-                // One area: at every moment the sum of all courses' absorption rates, like Home's carb panel.
-                fun yAt(t: Long) = plotBottom - (cumulative(courses.lastIndex, t) / peakRate).toFloat() * maxH
-                val path = androidx.compose.ui.graphics.Path()
-                path.moveTo(xOf(from), plotBottom)
-                var t1 = from
-                while (t1 < to) { path.lineTo(xOf(t1), yAt(t1)); t1 += stepMs }
-                path.lineTo(xOf(to), yAt(to))
-                path.lineTo(xOf(to), plotBottom)
-                path.close()
-                drawPath(path, base.copy(alpha = 0.16f))
+                val acting = carbSpans.filter { (c, end) -> c.timeUtc <= endMs && end >= startMs }
+                if (acting.isNotEmpty()) {
+                    fun total(t: Long): Double { var sum = 0.0; for ((c, end) in acting) if (t in c.timeUtc..end) sum += c.curve.carbsRateGphAt(t); return sum }
+                    var peakRate = MIN_CARB_SCALE_GPH
+                    var tp = startMs
+                    while (tp <= endMs) { peakRate = maxOf(peakRate, total(tp)); tp += stepMs }
+                    val path = androidx.compose.ui.graphics.Path()
+                    path.moveTo(0f, plotBottom)
+                    var t1 = startMs
+                    while (t1 < endMs) { path.lineTo(xOf(t1), plotBottom - (total(t1) / peakRate).toFloat() * plotH * 0.4f); t1 += stepMs }
+                    path.lineTo(size.width, plotBottom)
+                    path.close()
+                    drawPath(path, selected.color.copy(alpha = 0.16f))
+                }
+            }
+
+            // The total insulin activity of every dose in view when an insulin entry is highlighted.
+            if (selected?.insulin == true) {
+                val stepMs = 3 * MIN_MS
+                val reach = (INSULIN_REACH_H * 60 * MIN_MS).toLong()
+                val acting = doseList.filter { it.timeUtc <= endMs && it.timeUtc + reach >= startMs }
+                if (acting.isNotEmpty()) {
+                    fun total(t: Long): Double { var sum = 0.0; for (d in acting) if (t >= d.timeUtc) sum += uk.scimone.diafit.core.domain.model.InsulinActivity.calculate(d.units, d.timeUtc, t).activity; return sum }
+                    var peakAct = MIN_INSULIN_SCALE
+                    var tp = startMs
+                    while (tp <= endMs) { peakAct = maxOf(peakAct, total(tp)); tp += stepMs }
+                    val path = androidx.compose.ui.graphics.Path()
+                    path.moveTo(0f, plotBottom)
+                    var t1 = startMs
+                    while (t1 < endMs) { path.lineTo(xOf(t1), plotBottom - (total(t1) / peakAct).toFloat() * plotH * 0.4f); t1 += stepMs }
+                    path.lineTo(size.width, plotBottom)
+                    path.close()
+                    drawPath(path, selected.color.copy(alpha = 0.22f))
+                }
             }
 
             val radius = 2.5.dp.toPx()
