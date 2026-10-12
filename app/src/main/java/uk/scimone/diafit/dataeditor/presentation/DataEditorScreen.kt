@@ -1,6 +1,18 @@
 package uk.scimone.diafit.dataeditor.presentation
 
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,11 +90,21 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
     val state by vm.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     var editing by remember { mutableStateOf<EditableRecord?>(null) }
+    /** A blank record being added; shares the edit sheet. */
+    var adding by remember { mutableStateOf<EditableRecord?>(null) }
+    var selected by remember { mutableStateOf(setOf<String>()) }
+    var confirmBulkDelete by remember { mutableStateOf(false) }
+    val selecting = selected.isNotEmpty()
+    BackHandler(enabled = selecting) { selected = emptySet() }
+    // A different list means a different selection.
+    LaunchedEffect(state.kind, state.day) { selected = emptySet() }
     var pickDay by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.undo) {
-        val undo = state.undo ?: return@LaunchedEffect
-        val result = snackbar.showSnackbar("${undo.kind.label} record deleted", actionLabel = "Undo", duration = SnackbarDuration.Long)
+        val undo = state.undo
+        if (undo.isEmpty()) return@LaunchedEffect
+        val text = if (undo.size == 1) "${undo.first().kind.label} record deleted" else "${undo.size} records deleted"
+        val result = snackbar.showSnackbar(text, actionLabel = "Undo", duration = SnackbarDuration.Long)
         if (result == SnackbarResult.ActionPerformed) vm.undoDelete() else vm.undoShown()
     }
     LaunchedEffect(state.message) {
@@ -93,10 +115,30 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Data editor") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
-            )
+            if (selecting) {
+                TopAppBar(
+                    title = { Text("${selected.size} selected") },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Cancel selection") } },
+                    actions = {
+                        IconButton(onClick = { selected = state.records.map { it.key }.toSet() }) { Icon(Icons.Filled.SelectAll, "Select all") }
+                        IconButton(onClick = { confirmBulkDelete = true }) { Icon(Icons.Filled.Delete, "Delete selected", tint = MaterialTheme.colorScheme.error) }
+                    }
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("Data editor") },
+                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                )
+            }
+        },
+        floatingActionButton = {
+            if (!selecting) {
+                ExtendedFloatingActionButton(
+                    onClick = { adding = blankRecord(state.kind, state.day, userId) },
+                    icon = { Icon(Icons.Filled.Add, null) },
+                    text = { Text("Add ${state.kind.single}") }
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
@@ -124,15 +166,25 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     item {
                         Text(
-                            "${state.records.size} ${state.kind.plural} · tap one to correct or delete it",
+                            "${state.records.size} ${state.kind.plural} · tap to edit, hold to select several",
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
                     }
                     items(state.records, key = { it.key }) { record ->
-                        RecordRow(record) { editing = record }
+                        val isSelected = record.key in selected
+                        RecordRow(
+                            record, selecting = selecting, selected = isSelected,
+                            onLongClick = { selected = selected + record.key },
+                            onClick = {
+                                if (selecting) selected = if (isSelected) selected - record.key else selected + record.key
+                                else editing = record
+                            }
+                        )
                         HorizontalDivider(Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     }
+                    // Room for the add button.
+                    item { androidx.compose.foundation.layout.Spacer(Modifier.height(88.dp)) }
                 }
             }
         }
@@ -140,10 +192,34 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
 
     editing?.let { record ->
         RecordEditSheet(
-            record = record,
+            record = record, isNew = false,
             onDismiss = { editing = null },
             onSave = { updated -> vm.save(updated) { ok -> if (ok) editing = null } },
-            onDelete = { vm.delete(record); editing = null }
+            onDelete = { vm.delete(listOf(record)); editing = null }
+        )
+    }
+    adding?.let { blank ->
+        RecordEditSheet(
+            record = blank, isNew = true,
+            onDismiss = { adding = null },
+            onSave = { created -> vm.create(created) { ok -> if (ok) adding = null } },
+            onDelete = {}
+        )
+    }
+    if (confirmBulkDelete) {
+        val n = selected.size
+        AlertDialog(
+            onDismissRequest = { confirmBulkDelete = false },
+            title = { Text("Delete $n ${if (n == 1) "record" else "records"}?") },
+            text = { Text("They disappear from charts, statistics and patterns. You can undo right after.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmBulkDelete = false
+                    val doomed = state.records.filter { it.key in selected }
+                    vm.delete(doomed) { selected = emptySet() }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmBulkDelete = false }) { Text("Cancel") } }
         )
     }
 
@@ -182,13 +258,21 @@ private fun DayNavigator(day: LocalDate, onPrev: () -> Unit, onNext: () -> Unit,
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RecordRow(record: EditableRecord, onClick: () -> Unit) {
+private fun RecordRow(record: EditableRecord, selecting: Boolean, selected: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
     val (title, subtitle) = summary(record)
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth()
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (selecting) {
+            Checkbox(checked = selected, onCheckedChange = null)
+            androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
+        }
         Text(
             clock(record.timeUtc), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.width(52.dp)
@@ -199,7 +283,7 @@ private fun RecordRow(record: EditableRecord, onClick: () -> Unit) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!selecting) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -3,6 +3,7 @@ package uk.scimone.diafit.dataeditor.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -68,28 +69,28 @@ private fun resolve(originalMs: Long, picked: LocalDateTime): Long =
 /** Bottom sheet that edits one record. [onSave] gets the changed copy; [onDelete] removes the record. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecordEditSheet(record: EditableRecord, onDismiss: () -> Unit, onSave: (EditableRecord) -> Unit, onDelete: () -> Unit) {
+fun RecordEditSheet(record: EditableRecord, isNew: Boolean, onDismiss: () -> Unit, onSave: (EditableRecord) -> Unit, onDelete: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Edit ${record.kind.label.lowercase()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(if (isNew) "Add ${record.kind.single}" else "Edit ${record.kind.label.lowercase()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             when (record) {
-                is Glucose -> GlucoseForm(record, onSave)
-                is Insulin -> InsulinForm(record, onSave)
-                is Meal -> MealForm(record, onSave)
-                is Workout -> WorkoutForm(record, onSave)
-                is Sleep -> SleepForm(record, onSave)
-                is Device -> DeviceForm(record, onSave)
-                is HeartRate -> HeartRateForm(record, onSave)
-                is Steps -> StepsForm(record, onSave)
+                is Glucose -> GlucoseForm(record, isNew, onSave)
+                is Insulin -> InsulinForm(record, isNew, onSave)
+                is Meal -> MealForm(record, isNew, onSave)
+                is Workout -> WorkoutForm(record, isNew, onSave)
+                is Sleep -> SleepForm(record, isNew, onSave)
+                is Device -> DeviceForm(record, isNew, onSave)
+                is HeartRate -> HeartRateForm(record, isNew, onSave)
+                is Steps -> StepsForm(record, isNew, onSave)
             }
-            importNote(record)?.let {
+            if (!isNew) importNote(record)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            OutlinedButton(
+            if (!isNew) OutlinedButton(
                 onClick = { confirmDelete = true },
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth()
@@ -122,28 +123,30 @@ private fun importNote(record: EditableRecord): String? {
     return "Imported from $source. Fetching that period again (a past-data fill-in or re-import) can bring the original back."
 }
 
+private val DEVICE_TYPES = listOf("Site Change", "Insulin Change", "Sensor Start", "Sensor Change", "Pump Battery Change", "Note", "Announcement")
+
 // ---------------------------------------------------------------- forms
 
 @Composable
-private fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text("Save changes") }
+private fun SaveButton(enabled: Boolean, isNew: Boolean, onClick: () -> Unit) {
+    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(if (isNew) "Add record" else "Save changes") }
 }
 
 @Composable
-private fun GlucoseForm(r: Glucose, onSave: (EditableRecord) -> Unit) {
+private fun GlucoseForm(r: Glucose, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var time by remember { mutableStateOf(r.e.timestamp.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
-    var value by remember { mutableStateOf(r.e.valueMgdl.toString()) }
+    var value by remember { mutableStateOf(if (isNew) "" else r.e.valueMgdl.toString()) }
     val v = value.toIntOrNull()
     val valid = v != null && v in 20..700
     DateTimeField("Time", time) { time = it }
     NumberField("Glucose", value, "mg/dL", { value = it }, error = value.isNotEmpty() && !valid, hint = "20–700")
-    SaveButton(valid) { onSave(Glucose(r.e.copy(timestamp = resolve(r.e.timestamp, time), valueMgdl = v!!))) }
+    SaveButton(valid, isNew) { onSave(Glucose(r.e.copy(timestamp = resolve(r.e.timestamp, time), valueMgdl = v!!))) }
 }
 
 @Composable
-private fun InsulinForm(r: Insulin, onSave: (EditableRecord) -> Unit) {
+private fun InsulinForm(r: Insulin, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var time by remember { mutableStateOf(r.e.timestampUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
-    var value by remember { mutableStateOf(trim(r.e.value)) }
+    var value by remember { mutableStateOf(if (isNew) "" else trim(r.e.value)) }
     var smb by remember { mutableStateOf(r.e.isSmb) }
     val v = value.replace(',', '.').toFloatOrNull()
     val valid = v != null && v > 0f && v <= 100f
@@ -156,16 +159,16 @@ private fun InsulinForm(r: Insulin, onSave: (EditableRecord) -> Unit) {
         }
         Switch(checked = smb, onCheckedChange = { smb = it })
     }
-    SaveButton(valid) {
+    SaveButton(valid, isNew) {
         onSave(Insulin(r.e.copy(timestampUtc = resolve(r.e.timestampUtc, time), value = v!!, isSmb = smb, updatedAtUtc = System.currentTimeMillis())))
     }
 }
 
 @Composable
-private fun MealForm(r: Meal, onSave: (EditableRecord) -> Unit) {
+private fun MealForm(r: Meal, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var time by remember { mutableStateOf(r.e.mealTimeUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     var name by remember { mutableStateOf(r.e.description.orEmpty()) }
-    var carbs by remember { mutableStateOf(r.e.carbohydrates.toString()) }
+    var carbs by remember { mutableStateOf(if (isNew) "" else r.e.carbohydrates.toString()) }
     var protein by remember { mutableStateOf((r.e.proteins ?: 0).toString()) }
     var fat by remember { mutableStateOf((r.e.fats ?: 0).toString()) }
     var kcal by remember { mutableStateOf((r.e.calories ?: 0).toString()) }
@@ -187,30 +190,37 @@ private fun MealForm(r: Meal, onSave: (EditableRecord) -> Unit) {
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    SaveButton(valid) {
-        onSave(Meal(r.e.copy(mealTimeUtc = resolve(r.e.mealTimeUtc, time), description = name.trim().ifBlank { null }, carbohydrates = c!!, proteins = p!!, fats = f!!, calories = k!!)))
+    SaveButton(valid, isNew) {
+        val at = resolve(r.e.mealTimeUtc, time)
+        val base = r.e.copy(mealTimeUtc = at, description = name.trim().ifBlank { null }, carbohydrates = c!!, proteins = p!!, fats = f!!, calories = k!!)
+        onSave(Meal(
+            if (isNew) base.copy(
+                mealType = uk.scimone.diafit.core.domain.model.MealEntity.suggestMealType(at.toLocal().hour, c),
+                impactType = uk.scimone.diafit.core.domain.model.MealEntity.inferImpactType(c, p, f)
+            ) else base
+        ))
     }
 }
 
 @Composable
-private fun WorkoutForm(r: Workout, onSave: (EditableRecord) -> Unit) {
+private fun WorkoutForm(r: Workout, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var start by remember { mutableStateOf(r.e.startUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     var title by remember { mutableStateOf(r.e.title.orEmpty()) }
-    var minutes by remember { mutableStateOf(((r.e.endUtc - r.e.startUtc) / 60_000).toString()) }
+    var minutes by remember { mutableStateOf(if (isNew) "" else ((r.e.endUtc - r.e.startUtc) / 60_000).toString()) }
     val m = minutes.toLongOrNull()
     val valid = m != null && m in 1..1440
     DateTimeField("Start", start) { start = it }
     NumberField("Duration", minutes, "min", { minutes = it }, error = minutes.isNotEmpty() && !valid, hint = "1–1440")
     if (valid) Text("Ends at ${clock(resolve(r.e.startUtc, start) + m!! * 60_000)} · ${formatDurationMinutes(m.toInt())}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    SaveButton(valid) {
+    SaveButton(valid, isNew) {
         val s = resolve(r.e.startUtc, start)
         onSave(Workout(r.e.copy(startUtc = s, endUtc = s + m!! * 60_000, title = title.trim().ifBlank { null })))
     }
 }
 
 @Composable
-private fun SleepForm(r: Sleep, onSave: (EditableRecord) -> Unit) {
+private fun SleepForm(r: Sleep, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var start by remember { mutableStateOf(r.startUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     var end by remember { mutableStateOf(r.endUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     val valid = end.isAfter(start) && ChronoUnit.HOURS.between(start, end) <= 24
@@ -221,47 +231,63 @@ private fun SleepForm(r: Sleep, onSave: (EditableRecord) -> Unit) {
     if (r.stages.size > 1) {
         Text("Moving the ends stretches or trims the first and last sleep stage; the stages in between stay as they are.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    SaveButton(valid) {
+    SaveButton(valid, isNew) {
         val s = resolve(r.startUtc, start); val e = resolve(r.endUtc, end)
         onSave(Sleep(DataEditorRepository.resizeSleep(r.stages, s, e).ifEmpty { listOf(r.stages.first().copy(startUtc = s, endUtc = e, sessionStartUtc = s, sessionEndUtc = e)) }))
     }
 }
 
 @Composable
-private fun DeviceForm(r: Device, onSave: (EditableRecord) -> Unit) {
+private fun DeviceForm(r: Device, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var time by remember { mutableStateOf(r.e.timestampUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     var notes by remember { mutableStateOf(r.e.notes.orEmpty()) }
     var duration by remember { mutableStateOf(r.e.durationMinutes?.let { if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString() }.orEmpty()) }
     val d = duration.replace(',', '.').toDoubleOrNull()
     val valid = duration.isBlank() || (d != null && d >= 0)
-    Text(r.e.eventType, style = MaterialTheme.typography.titleMedium)
+    var type by remember { mutableStateOf(r.e.eventType) }
+    if (isNew) {
+        Text("Type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DEVICE_TYPES.forEach { t -> androidx.compose.material3.FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t) }) }
+        }
+    } else Text(r.e.eventType, style = MaterialTheme.typography.titleMedium)
     DateTimeField("Time", time) { time = it }
     OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
     NumberField("Duration (optional)", duration, "min", { duration = it }, decimal = true, error = !valid)
-    SaveButton(valid) {
-        onSave(Device(r.e.copy(timestampUtc = resolve(r.e.timestampUtc, time), notes = notes.trim().ifBlank { null }, durationMinutes = d)))
+    SaveButton(valid, isNew) {
+        onSave(Device(r.e.copy(eventType = type, timestampUtc = resolve(r.e.timestampUtc, time), notes = notes.trim().ifBlank { null }, durationMinutes = d)))
     }
 }
 
 @Composable
-private fun HeartRateForm(r: HeartRate, onSave: (EditableRecord) -> Unit) {
+private fun HeartRateForm(r: HeartRate, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
     var time by remember { mutableStateOf(r.e.timestamp.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
-    var bpm by remember { mutableStateOf(r.e.bpm.toString()) }
+    var bpm by remember { mutableStateOf(if (isNew) "" else r.e.bpm.toString()) }
     val v = bpm.toIntOrNull()
     val valid = v != null && v in 20..260
     DateTimeField("Time", time) { time = it }
     NumberField("Heart rate", bpm, "bpm", { bpm = it }, error = bpm.isNotEmpty() && !valid, hint = "20–260")
-    SaveButton(valid) { onSave(HeartRate(r.e.copy(timestamp = resolve(r.e.timestamp, time), bpm = v!!))) }
+    SaveButton(valid, isNew) { onSave(HeartRate(r.e.copy(timestamp = resolve(r.e.timestamp, time), bpm = v!!))) }
 }
 
 @Composable
-private fun StepsForm(r: Steps, onSave: (EditableRecord) -> Unit) {
-    var count by remember { mutableStateOf(r.e.count.toString()) }
+private fun StepsForm(r: Steps, isNew: Boolean, onSave: (EditableRecord) -> Unit) {
+    var count by remember { mutableStateOf(if (isNew) "" else r.e.count.toString()) }
     val v = count.toIntOrNull()
     val valid = v != null && v in 0..20_000
-    Text("${clock(r.e.startUtc)}–${clock(r.e.startUtc + 15 * 60_000L)} (one 15-minute slot)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    var time by remember { mutableStateOf(r.e.startUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
+    if (isNew) {
+        DateTimeField("Slot starting at", time) { time = it }
+        Text("Steps are stored in 15-minute slots; the time is rounded down to the slot.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        Text("${clock(r.e.startUtc)}–${clock(r.e.startUtc + 15 * 60_000L)} (one 15-minute slot)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     NumberField("Steps", count, "", { count = it }, error = count.isNotEmpty() && !valid, hint = "0–20,000")
-    SaveButton(valid) { onSave(Steps(r.e.copy(count = v!!))) }
+    SaveButton(valid, isNew) {
+        val slot = uk.scimone.diafit.core.domain.model.StepsEntity.STEP_BUCKET_MS
+        val start = if (isNew) time.toMs().let { it - Math.floorMod(it, slot) } else r.e.startUtc
+        onSave(Steps(r.e.copy(startUtc = start, count = v!!)))
+    }
 }
 
 // ---------------------------------------------------------------- fields

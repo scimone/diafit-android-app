@@ -20,7 +20,7 @@ data class DataEditorState(
     val records: List<EditableRecord> = emptyList(),
     val loading: Boolean = true,
     /** A record that was just deleted, offered for undo. */
-    val undo: EditableRecord? = null,
+    val undo: List<EditableRecord> = emptyList(),
     /** One-off text for a snackbar (errors); cleared by [DataEditorViewModel.messageShown]. */
     val message: String? = null
 )
@@ -62,23 +62,36 @@ class DataEditorViewModel(private val userId: Int, private val repository: DataE
         }
     }
 
-    fun delete(record: EditableRecord) {
+    fun delete(records: List<EditableRecord>, onDone: () -> Unit = {}) {
+        if (records.isEmpty()) return
         viewModelScope.launch {
-            repository.delete(record)
-            _state.update { it.copy(undo = record) }
+            repository.delete(records)
+            _state.update { it.copy(undo = records) }
             reload()
+            onDone()
+        }
+    }
+
+    /** Adds [record] as a new row. [onDone] gets true when it was stored. */
+    fun create(record: EditableRecord, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            when (val r = repository.create(record)) {
+                EditResult.Saved -> { reload(); onDone(true) }
+                is EditResult.Failed -> { _state.update { it.copy(message = r.message) }; onDone(false) }
+            }
         }
     }
 
     fun undoDelete() {
-        val record = _state.value.undo ?: return
+        val records = _state.value.undo
+        if (records.isEmpty()) return
         viewModelScope.launch {
-            repository.restore(record)
-            _state.update { it.copy(undo = null) }
+            repository.restore(records)
+            _state.update { it.copy(undo = emptyList()) }
             reload()
         }
     }
 
-    fun undoShown() { _state.update { it.copy(undo = null) } }
+    fun undoShown() { _state.update { it.copy(undo = emptyList()) } }
     fun messageShown() { _state.update { it.copy(message = null) } }
 }

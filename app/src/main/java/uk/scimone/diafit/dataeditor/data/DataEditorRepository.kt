@@ -49,31 +49,53 @@ class DataEditorRepository(private val dao: DataEditorDao) {
         }
     }
 
-    suspend fun delete(record: EditableRecord) = withContext(Dispatchers.IO) {
-        when (record) {
-            is Glucose -> dao.deleteGlucose(record.e.id)
-            is Insulin -> dao.deleteBolus(record.e.id)
-            is Meal -> dao.setMealValid(record.e.id, false)
-            is Workout -> dao.deleteWorkout(record.e.id)
-            is Sleep -> dao.deleteSleep(record.sessionId)
-            is Device -> dao.setEventDeleted(record.e.id, true)
-            is HeartRate -> dao.deleteHeartRate(record.e.id)
-            is Steps -> dao.deleteSteps(record.e.id)
+    /** Adds a brand-new record (its id is ignored and assigned by the database). */
+    suspend fun create(record: EditableRecord): EditResult = withContext(Dispatchers.IO) {
+        try {
+            when (record) {
+                is Glucose -> dao.add(record.e.copy(id = 0))
+                is Insulin -> dao.add(record.e.copy(id = 0))
+                is Meal -> dao.add(record.e.copy(id = 0))
+                is Workout -> dao.add(record.e.copy(id = 0))
+                is Device -> dao.add(record.e.copy(id = 0))
+                is HeartRate -> dao.add(record.e.copy(id = 0))
+                is Steps -> dao.add(record.e.copy(id = 0))
+                is Sleep -> dao.insertSleep(record.stages.map { it.copy(id = 0) })
+            }
+            EditResult.Saved
+        } catch (e: SQLiteConstraintException) {
+            EditResult.Failed("A record already exists at that time. Pick a different time.")
+        } catch (e: Exception) {
+            EditResult.Failed(e.message ?: "Could not add")
         }
     }
 
+    suspend fun delete(records: List<EditableRecord>) = withContext(Dispatchers.IO) {
+        chunked(records.filterIsInstance<Glucose>()) { dao.deleteGlucose(it.map { r -> r.e.id }) }
+        chunked(records.filterIsInstance<Insulin>()) { dao.deleteBolus(it.map { r -> r.e.id }) }
+        chunked(records.filterIsInstance<Meal>()) { dao.setMealsValid(it.map { r -> r.e.id }, false) }
+        chunked(records.filterIsInstance<Workout>()) { dao.deleteWorkout(it.map { r -> r.e.id }) }
+        chunked(records.filterIsInstance<Sleep>()) { dao.deleteSleep(it.map { r -> r.sessionId }) }
+        chunked(records.filterIsInstance<Device>()) { dao.setEventsDeleted(it.map { r -> r.e.id }, true) }
+        chunked(records.filterIsInstance<HeartRate>()) { dao.deleteHeartRate(it.map { r -> r.e.id }) }
+        chunked(records.filterIsInstance<Steps>()) { dao.deleteSteps(it.map { r -> r.e.id }) }
+    }
+
     /** Undo of [delete]. */
-    suspend fun restore(record: EditableRecord) = withContext(Dispatchers.IO) {
-        when (record) {
-            is Glucose -> dao.restore(record.e)
-            is Insulin -> dao.restore(record.e)
-            is Meal -> dao.setMealValid(record.e.id, true)
-            is Workout -> dao.restore(record.e)
-            is Sleep -> dao.insertSleep(record.stages)
-            is Device -> dao.setEventDeleted(record.e.id, false)
-            is HeartRate -> dao.restore(record.e)
-            is Steps -> dao.restore(record.e)
-        }
+    suspend fun restore(records: List<EditableRecord>) = withContext(Dispatchers.IO) {
+        chunked(records.filterIsInstance<Glucose>()) { dao.restoreGlucose(it.map { r -> r.e }) }
+        chunked(records.filterIsInstance<Insulin>()) { dao.restoreBolus(it.map { r -> r.e }) }
+        chunked(records.filterIsInstance<Meal>()) { dao.setMealsValid(it.map { r -> r.e.id }, true) }
+        chunked(records.filterIsInstance<Workout>()) { dao.restoreWorkout(it.map { r -> r.e }) }
+        chunked(records.filterIsInstance<Sleep>()) { dao.insertSleep(it.flatMap { r -> r.stages }) }
+        chunked(records.filterIsInstance<Device>()) { dao.setEventsDeleted(it.map { r -> r.e.id }, false) }
+        chunked(records.filterIsInstance<HeartRate>()) { dao.restoreHeartRate(it.map { r -> r.e }) }
+        chunked(records.filterIsInstance<Steps>()) { dao.restoreSteps(it.map { r -> r.e }) }
+    }
+
+    /** SQLite allows 999 bound variables per statement. */
+    private suspend fun <T> chunked(items: List<T>, block: suspend (List<T>) -> Unit) {
+        items.chunked(400).forEach { block(it) }
     }
 
     companion object {

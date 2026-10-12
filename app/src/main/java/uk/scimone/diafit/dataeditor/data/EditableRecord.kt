@@ -10,15 +10,15 @@ import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
 
 /** What the data editor can list, in the order of the chips. */
-enum class RecordKind(val label: String, val plural: String) {
-    GLUCOSE("Glucose", "glucose readings"),
-    INSULIN("Insulin", "insulin doses"),
-    MEALS("Meals", "meals"),
-    WORKOUTS("Workouts", "workouts"),
-    SLEEP("Sleep", "sleep sessions"),
-    DEVICE("Device events", "device events"),
-    HEART_RATE("Heart rate", "heart-rate values"),
-    STEPS("Steps", "step slots")
+enum class RecordKind(val label: String, val plural: String, val single: String) {
+    GLUCOSE("Glucose", "glucose readings", "glucose reading"),
+    INSULIN("Insulin", "insulin doses", "insulin dose"),
+    MEALS("Meals", "meals", "meal"),
+    WORKOUTS("Workouts", "workouts", "workout"),
+    SLEEP("Sleep", "sleep sessions", "sleep session"),
+    DEVICE("Device events", "device events", "device event"),
+    HEART_RATE("Heart rate", "heart-rate values", "heart-rate value"),
+    STEPS("Steps", "step slots", "step slot")
 }
 
 /** One stored row (or, for sleep, one session) as the editor sees it. */
