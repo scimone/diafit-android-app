@@ -422,14 +422,19 @@ internal fun Modifier.inspectGestures(
         if (aborted || !heldStill) return@awaitEachGesture
 
         onScrubStart(down.position)
-        while (true) {
-            val event = awaitPointerEvent(PointerEventPass.Initial)
-            val change = event.changes.firstOrNull { it.id == down.id }
-            event.changes.forEach { it.consume() }
-            if (change == null || !change.pressed) break
-            onScrub(change.position)
+        // Always ends the inspection, also when the gesture is torn down without a lift (a finger dragged
+        // into the system's edge-swipe zone cancels the touch stream).
+        try {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull { it.id == down.id }
+                event.changes.forEach { it.consume() }
+                if (change == null || !change.pressed) break
+                onScrub(change.position)
+            }
+        } finally {
+            onScrubEnd()
         }
-        onScrubEnd()
     }
 }
 

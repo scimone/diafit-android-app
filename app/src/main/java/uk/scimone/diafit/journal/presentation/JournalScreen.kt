@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.journal.presentation.components.JournalGlucoseGraph
+import uk.scimone.diafit.journal.presentation.components.BOLUS_REACH_MS
 import uk.scimone.diafit.journal.presentation.components.CarbCurve
 import uk.scimone.diafit.journal.presentation.components.GraphMarker
 import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
@@ -315,7 +316,7 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
     is ExerciseEntryUi -> GraphMarker(timeUtc, endUtc, kind.accent)
     is MealEntityUi -> GraphMarker(
         timeUtc, null, kind.accent,
-        afterMs = endTimeUtc + impactType.durationMinutes * 60_000L,
+        afterMs = carbCourses.maxOfOrNull { it.curve.carbsEndTimeUtc() } ?: (endTimeUtc + impactType.durationMinutes * 60_000L),
         extraColor = Bolus.takeIf { (insulinUnits ?: 0.0) > 0.0 },
         peakMs = peakTimeUtc?.takeIf { peakMgdl != null && (startMgdl == null || peakMgdl > startMgdl) },
         peakMgdl = peakMgdl,
@@ -323,7 +324,13 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
             CarbCurve(carbCourses)
         }
     )
-    is uk.scimone.diafit.journal.presentation.model.BolusEntryUi -> GraphMarker(timeUtc, null, kind.accent, insulin = true)
+    is uk.scimone.diafit.journal.presentation.model.BolusEntryUi -> GraphMarker(
+        timeUtc, null, kind.accent,
+        afterMs = (parts.maxOfOrNull { it.timeUtc } ?: timeUtc) + BOLUS_REACH_MS,
+        areaStartMs = parts.minOfOrNull { it.timeUtc } ?: timeUtc,
+        insulin = true,
+        doses = parts.ifEmpty { listOf(uk.scimone.diafit.journal.presentation.model.BolusPartUi(timeUtc, units, isSmb)) }
+    )
     else -> GraphMarker(timeUtc, null, kind.accent)
 }
 
