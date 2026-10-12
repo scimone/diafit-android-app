@@ -21,9 +21,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         HeartRateEntity::class, StepsEntity::class, SleepStageEntity::class, ExerciseEntity::class,
         uk.scimone.diafit.core.domain.model.AppNotificationEntity::class,
         uk.scimone.diafit.core.domain.model.HealthMetricEntity::class,
-        uk.scimone.diafit.patterns.data.PatternEntity::class
+        uk.scimone.diafit.patterns.data.PatternEntity::class,
+        uk.scimone.diafit.core.domain.model.SavedProductEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -45,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pumpEventDao(): PumpEventDao
     abstract fun activityDao(): ActivityDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun savedProductDao(): SavedProductDao
     /** Optional backend upload (see BackendSyncFeature); read-only queries, no tables of its own. */
     abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao
 
@@ -61,6 +63,19 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /** The insights table is called patterns now. */
+        /** Products scanned by barcode and saved in a meal, for picking them again. */
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `SavedProductEntity` (`barcode` TEXT NOT NULL, `name` TEXT NOT NULL, `brand` TEXT, " +
+                        "`kcal100` REAL NOT NULL, `carbs100` REAL NOT NULL, `sugar100` REAL NOT NULL, `fiber100` REAL NOT NULL, " +
+                        "`protein100` REAL NOT NULL, `fat100` REAL NOT NULL, `servingG` REAL, `packageG` REAL, " +
+                        "`lastUsedUtc` INTEGER NOT NULL, `useCount` INTEGER NOT NULL, PRIMARY KEY(`barcode`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_SavedProductEntity_lastUsedUtc` ON `SavedProductEntity` (`lastUsedUtc`)")
+            }
+        }
+
         val MIGRATION_22_23 = object : Migration(22, 23) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `InsightEntity` RENAME TO `PatternEntity`")

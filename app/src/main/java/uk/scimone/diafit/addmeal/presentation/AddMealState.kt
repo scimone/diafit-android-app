@@ -89,6 +89,8 @@ sealed interface CapturePhase {
     data class LookingUp(val barcode: String) : CapturePhase
     /** A product was recognised; the next (optional) step is a photo of the meal. */
     data class ProductFound(val product: FoodProduct) : CapturePhase
+    /** A meal photo was taken without a barcode: choose how to fill in the nutrients (AI, saved product, by hand). */
+    data object PhotoTaken : CapturePhase
     data class NotFound(val barcode: String) : CapturePhase
     data class Failed(val barcode: String, val reason: String) : CapturePhase
 }

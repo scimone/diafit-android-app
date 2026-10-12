@@ -106,6 +106,21 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import uk.scimone.diafit.addmeal.presentation.CapturePhase
 import uk.scimone.diafit.addmeal.presentation.MAX_PHOTOS_PER_COURSE
 import uk.scimone.diafit.core.domain.model.FoodProduct
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import uk.scimone.diafit.core.domain.model.SavedProductEntity
+import uk.scimone.diafit.core.domain.model.formatGrams
 import java.io.File
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
@@ -132,7 +147,16 @@ fun MealCaptureScreen(
     onSkipPhoto: () -> Unit,
     onManual: () -> Unit,
     onRescan: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    /** The meal photo taken so far and what to do with it ([CapturePhase.PhotoTaken]). */
+    photo: Uri?,
+    aiNotes: String,
+    onAiNotes: (String) -> Unit,
+    onEstimateWithAi: () -> Unit,
+    savedProducts: List<SavedProductEntity>,
+    onUseSaved: (SavedProductEntity) -> Unit,
+    onForgetSaved: (String) -> Unit,
+    onRetake: () -> Unit
 ) {
     val context = LocalContext.current
     var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
@@ -157,6 +181,166 @@ fun MealCaptureScreen(
                 onClose = onClose
             )
         }
+        if (phase is CapturePhase.PhotoTaken) {
+            PhotoChoiceScreen(
+                photo = photo,
+                aiNotes = aiNotes,
+                onAiNotes = onAiNotes,
+                onEstimateWithAi = onEstimateWithAi,
+                savedProducts = savedProducts,
+                onUseSaved = onUseSaved,
+                onForgetSaved = onForgetSaved,
+                onTypeIt = onManual,
+                onRetake = onRetake,
+                onClose = onClose
+            )
+        }
+    }
+}
+
+/**
+ * After a meal photo: what should fill in the nutrients? The photo stays visible behind, the three
+ * ways are stacked as cards (AI with its note, a saved product, or by hand).
+ */
+@Composable
+private fun PhotoChoiceScreen(
+    photo: Uri?,
+    aiNotes: String,
+    onAiNotes: (String) -> Unit,
+    onEstimateWithAi: () -> Unit,
+    savedProducts: List<SavedProductEntity>,
+    onUseSaved: (SavedProductEntity) -> Unit,
+    onForgetSaved: (String) -> Unit,
+    onTypeIt: () -> Unit,
+    onRetake: () -> Unit,
+    onClose: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val shown = remember(savedProducts, query) {
+        val q = query.trim()
+        (if (q.isEmpty()) savedProducts else savedProducts.filter { it.name.contains(q, true) || it.brand?.contains(q, true) == true }).take(6)
+    }
+    Box(Modifier.fillMaxSize().background(Ink)) {
+        if (photo != null) {
+            AsyncImage(photo, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent, Color(0xB3000000)))))
+        }
+        Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
+            RoundIconButton(Icons.Filled.Close, "Close", onClose, Modifier.align(Alignment.CenterStart))
+            Surface(shape = CircleShape, color = Scrim, modifier = Modifier.align(Alignment.CenterEnd).clip(CircleShape).clickable(onClick = onRetake)) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Outlined.CameraAlt, null, tint = OnInk, modifier = Modifier.size(18.dp))
+                    Text("Retake", style = MaterialTheme.typography.labelLarge, color = OnInk)
+                }
+            }
+        }
+        Surface(
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = Color(0xFF14181D),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.68f)
+        ) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().imePadding().padding(horizontal = 16.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Column {
+                    Text("How should we fill in the nutrients?", style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
+                    Text("Your photo is kept with the meal either way.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
+                }
+
+                ChoiceCard(Icons.Outlined.AutoAwesome, "Estimate with AI", "Foods, portions and nutrients from your photo.") {
+                    OutlinedTextField(
+                        value = aiNotes,
+                        onValueChange = onAiNotes,
+                        placeholder = { Text("Add a note for the AI (optional), e.g. I only ate half", color = OnInkMuted) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 1,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = OnInk, unfocusedTextColor = OnInk, cursorColor = OnInk,
+                            focusedBorderColor = OnInk, unfocusedBorderColor = Color(0x55FFFFFF)
+                        )
+                    )
+                    Button(onClick = onEstimateWithAi, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                        Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Estimate with AI")
+                    }
+                }
+
+                ChoiceCard(Icons.Outlined.Inventory2, "Choose a saved product", "Packaged foods you scanned before.") {
+                    if (savedProducts.isEmpty()) {
+                        Text(
+                            "Nothing yet. Scan a barcode and save the meal; the product shows up here next time.",
+                            style = MaterialTheme.typography.bodySmall, color = OnInkMuted
+                        )
+                    } else {
+                        if (savedProducts.size > 4) {
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                placeholder = { Text("Search", color = OnInkMuted) },
+                                leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = OnInk, unfocusedTextColor = OnInk, cursorColor = OnInk,
+                                    focusedBorderColor = OnInk, unfocusedBorderColor = Color(0x55FFFFFF)
+                                )
+                            )
+                        }
+                        shown.forEach { p -> SavedProductRow(p, { onUseSaved(p) }, { onForgetSaved(p.barcode) }) }
+                        if (shown.isEmpty()) Text("No match.", style = MaterialTheme.typography.bodySmall, color = OnInkMuted)
+                    }
+                }
+
+                TextButton(onClick = onTypeIt, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Icon(Icons.Outlined.EditNote, null, tint = OnInkMuted, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Keep the photo and type it myself", color = OnInk)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChoiceCard(icon: ImageVector, title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
+    Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF1E242B)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0x22FFFFFF)), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = OnInk, modifier = Modifier.size(22.dp))
+                }
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleMedium, color = OnInk, fontWeight = FontWeight.SemiBold)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnInkMuted)
+                }
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, onForget: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x14FFFFFF)).clickable(onClick = onClick).padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(product.name, style = MaterialTheme.typography.bodyLarge, color = OnInk, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(
+                    product.brand,
+                    product.servingG?.let { "serving ${formatGrams(it)} · ${(product.carbs100 * it / 100).roundToInt()} g carbs" } ?: "${product.carbs100.roundToInt()} g carbs per 100 g"
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = onForget) { Icon(Icons.Outlined.DeleteOutline, "Forget ${product.name}", tint = OnInkMuted, modifier = Modifier.size(20.dp)) }
     }
 }
 

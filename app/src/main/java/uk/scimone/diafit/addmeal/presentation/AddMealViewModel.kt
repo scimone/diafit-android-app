@@ -25,7 +25,9 @@ import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
 import uk.scimone.diafit.core.domain.usecase.LookupBarcodeUseCase
-import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
+import uk.scimone.diafit.core.domain.repository.SavedProductRepository
+import uk.scimone.diafit.core.domain.model.SavedProductEntity
+import uk.scimone.diafit.core.domain.model.toSavedProductOrNull
 import uk.scimone.diafit.core.domain.model.ProductLookup
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase
@@ -49,7 +51,7 @@ class AddMealViewModel(
     private val setMealValidUseCase: SetMealValidUseCase,
     private val analyzeMealUseCase: AnalyzeMealUseCase,
     private val lookupBarcode: LookupBarcodeUseCase,
-    private val getAiConfig: GetAiConfigUseCase,
+    private val savedProducts: SavedProductRepository,
     private val getMealSitting: GetMealSittingUseCase,
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val bolusRepository: BolusRepository,
@@ -60,6 +62,13 @@ class AddMealViewModel(
 
     private val _uiState = MutableStateFlow(AddMealState())
     val uiState = _uiState.asStateFlow()
+
+    /** Products saved in earlier meals, latest first, offered after a meal photo. */
+    val savedProductList = savedProducts.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<SavedProductEntity>())
+
+    /** Products looked up or picked in this session, so saving remembers the database's values, not edited ones. */
+    private val scannedProducts = mutableMapOf<String, FoodProduct>()
 
     /** Photo files created in this session and not saved yet; deleted if the editor is left without saving. */
     private val unsavedPhotoIds = mutableSetOf<String>()
@@ -262,8 +271,9 @@ class AddMealViewModel(
         viewModelScope.launch {
             val phase = when (val result = lookupBarcode(barcode)) {
                 is ProductLookup.Found -> CapturePhase.ProductFound(result.product)
-                is ProductLookup.NotFound -> CapturePhase.NotFound(result.barcode)
-                is ProductLookup.Failed -> CapturePhase.Failed(result.barcode, result.reason)
+                // Offline (or unknown to the database): a product saved before still works.
+                is ProductLookup.NotFound -> savedProducts.get(barcode)?.let { CapturePhase.ProductFound(it) } ?: CapturePhase.NotFound(result.barcode)
+                is ProductLookup.Failed -> savedProducts.get(barcode)?.let { CapturePhase.ProductFound(it) } ?: CapturePhase.Failed(result.barcode, result.reason)
             }
             // The user may have left the camera (typed manually) while the lookup ran.
             if (capturePhase is CapturePhase.LookingUp) setPhase(phase)
@@ -298,18 +308,41 @@ class AddMealViewModel(
                 return@launch
             }
             addPhotos(copied)
-            _uiState.update { it.copy(capture = null) }
             if (product != null) {
+                _uiState.update { it.copy(capture = null) }
                 applyProduct(product)
-            } else if (getAiConfig().apiKey.isNotBlank()) {
-                // Photo without a barcode = "let the AI estimate it", as the camera said.
-                analyzeMeal()
+            } else {
+                // A photo without a barcode: next the user decides how the nutrients are found.
+                setPhase(CapturePhase.PhotoTaken)
             }
         }
     }
 
+    /** From the choice after a photo: let the AI estimate it (with the note typed there). */
+    fun estimateWithAi() {
+        _uiState.update { it.copy(capture = null) }
+        analyzeMeal()
+    }
+
+    /** From the choice after a photo: use a product saved earlier (its serving is the default portion). */
+    fun useSavedProduct(product: SavedProductEntity) {
+        _uiState.update { it.copy(capture = null) }
+        applyProduct(product.toProduct())
+    }
+
+    fun forgetSavedProduct(barcode: String) {
+        viewModelScope.launch { savedProducts.forget(barcode) }
+    }
+
+    /** From the choice after a photo: throw the photo(s) away and look at the camera again. */
+    fun retakePhoto() {
+        _uiState.value.photos.forEach { onRemovePhoto(it.imageId) }
+        setPhase(CapturePhase.Scanning)
+    }
+
     /** Fills the form from a scanned product: one portion (its serving) whose weight the user can change. */
     private fun applyProduct(product: FoodProduct) {
+        scannedProducts[product.barcode] = product
         updateComponents { listOf(product.toComponent()) }
         _uiState.update {
             it.copy(
@@ -472,6 +505,11 @@ class AddMealViewModel(
                     mealRepository.setSittingName(sittingId, name)
                 }
                 unsavedPhotoIds.clear()
+                // Scanned products are remembered so the next meal can pick them without scanning.
+                state.components.mapNotNull { c ->
+                    val code = c.barcode ?: return@mapNotNull null
+                    scannedProducts[code] ?: c.toSavedProductOrNull(System.currentTimeMillis())?.toProduct()
+                }.forEach { runCatching { savedProducts.remember(it) } }
                 _uiState.update {
                     it.copy(isLoading = false, finished = EditorResult.Saved(wasNew = original == null, addedCourse = targetSitting != null))
                 }

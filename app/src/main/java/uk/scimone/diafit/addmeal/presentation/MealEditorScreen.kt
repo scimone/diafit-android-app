@@ -80,6 +80,7 @@ fun MealEditorScreen(
     viewModel: AddMealViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val savedProducts by viewModel.savedProductList.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmDiscard by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -239,7 +240,15 @@ fun MealEditorScreen(
             onSkipPhoto = viewModel::finishCapture,
             onManual = viewModel::finishCapture,
             onRescan = viewModel::rescan,
-            onClose = requestClose
+            onClose = requestClose,
+            photo = uiState.photos.firstOrNull()?.uri,
+            aiNotes = uiState.aiNotes,
+            onAiNotes = viewModel::onAiNotesChanged,
+            onEstimateWithAi = viewModel::estimateWithAi,
+            savedProducts = savedProducts,
+            onUseSaved = viewModel::useSavedProduct,
+            onForgetSaved = viewModel::forgetSavedProduct,
+            onRetake = viewModel::retakePhoto
         )
     }
     }
