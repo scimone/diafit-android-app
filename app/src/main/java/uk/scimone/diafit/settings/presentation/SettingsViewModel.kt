@@ -163,6 +163,8 @@ class SettingsViewModel(
                 nightscoutConfig = nightscoutConfig,
                 aiConfig = aiConfig,
                 usdaKey = settingsRepository.getUsdaApiKey(),
+                aiEnabled = settingsRepository.isAiEnabled(),
+                userName = settingsRepository.getUserName(),
                 isBatteryOptimizationIgnored = batteryIgnored,
                 isLoading = false
             )
@@ -267,6 +269,16 @@ class SettingsViewModel(
         }
         // Always persist the latest state, so out-of-order writes can't bring back an older value.
         viewModelScope.launch { setAiConfig(_state.value.aiConfig) }
+    }
+
+    fun onAiEnabledChanged(enabled: Boolean) {
+        _state.value = _state.value.copy(aiEnabled = enabled)
+        viewModelScope.launch { settingsRepository.setAiEnabled(enabled) }
+    }
+
+    fun onUserNameChanged(name: String) {
+        _state.value = _state.value.copy(userName = name.trim())
+        viewModelScope.launch { settingsRepository.setUserName(name) }
     }
 
     fun onUsdaKeyChanged(key: String) {

@@ -81,6 +81,7 @@ fun MealEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val savedProducts by viewModel.savedProductList.collectAsState()
+    val aiEnabled by viewModel.aiEnabled.collectAsState()
     val recentSearches by viewModel.recentSearches.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmDiscard by remember { mutableStateOf(false) }
@@ -179,6 +180,7 @@ fun MealEditorScreen(
             }
 
             PhotoSection(
+                aiEnabled = aiEnabled,
                 photos = uiState.photos,
                 canAddPhoto = uiState.canAddPhoto,
                 onTakePhoto = takePhoto,
@@ -187,7 +189,7 @@ fun MealEditorScreen(
             )
 
             // Asking the AI; once it answered, its foods appear under the totals instead.
-            if (uiState.photos.isNotEmpty() && (uiState.components.isEmpty() || uiState.isAnalyzing || uiState.aiRequestOpen)) {
+            if (aiEnabled && uiState.photos.isNotEmpty() && (uiState.components.isEmpty() || uiState.isAnalyzing || uiState.aiRequestOpen)) {
                 AiRequestCard(uiState, viewModel::onAiNotesChanged, viewModel::analyzeMeal)
             }
 
@@ -212,6 +214,7 @@ fun MealEditorScreen(
             if (uiState.components.any { it.barcode == null } && !uiState.isAnalyzing && !uiState.aiRequestOpen) {
                 FoodsCard(
                     state = uiState,
+                    canRedo = aiEnabled,
                     onRedo = viewModel::openAiRequest,
                     onWeightChange = viewModel::onComponentWeightChanged,
                     onMacrosChange = viewModel::onComponentMacrosChanged,
@@ -248,6 +251,7 @@ fun MealEditorScreen(
             aiNotes = uiState.aiNotes,
             onAiNotes = viewModel::onAiNotesChanged,
             onEstimateWithAi = viewModel::estimateWithAi,
+            aiEnabled = aiEnabled,
             savedProducts = savedProducts,
             onUseSaved = viewModel::useSavedProduct,
             onToggleFavorite = viewModel::toggleSavedFavorite,
@@ -586,6 +590,7 @@ private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit,
 @Composable
 private fun FoodsCard(
     state: AddMealState,
+    canRedo: Boolean,
     onRedo: () -> Unit,
     onWeightChange: (Int, Double) -> Unit,
     onMacrosChange: (Int, Double?, Double?, Double?) -> Unit,
@@ -595,7 +600,7 @@ private fun FoodsCard(
     EditorCard(
         "Foods · AI estimate",
         trailing = {
-            TextButton(onClick = onRedo, contentPadding = PaddingValues(horizontal = 8.dp)) {
+            if (canRedo) TextButton(onClick = onRedo, contentPadding = PaddingValues(horizontal = 8.dp)) {
                 Icon(Icons.Filled.Refresh, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Redo")
@@ -636,6 +641,7 @@ private fun FoodsCard(
  */
 @Composable
 private fun PhotoSection(
+    aiEnabled: Boolean,
     photos: List<MealPhoto>,
     canAddPhoto: Boolean,
     onTakePhoto: () -> Unit,
@@ -649,7 +655,7 @@ private fun PhotoSection(
                 PhotoSourceTile(Icons.Outlined.PhotoLibrary, "Gallery", onPickPhoto, Modifier.weight(1f))
             }
             Text(
-                "Optional. With photos, AI can estimate the nutrients for you.",
+                if (aiEnabled) "Optional. With photos, AI can estimate the nutrients for you." else "Optional. The photo is kept with the meal.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)

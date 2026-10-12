@@ -16,7 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Hub
@@ -47,6 +51,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import androidx.health.connect.client.PermissionController
 import org.koin.androidx.compose.koinViewModel
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
@@ -59,13 +67,17 @@ import uk.scimone.diafit.settings.domain.model.Connector
 import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.connectorsProviding
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
+fun SettingsPageScreen(
+    page: SettingsPage,
+    onBack: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel(),
     onRequestIgnoreBatteryOptimizations: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    // Bumped whenever the user comes back from a system settings screen, so permission rows re-read their status.
+    var resumeTick by remember { mutableIntStateOf(0) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -74,19 +86,47 @@ fun SettingsScreen(
                 viewModel.checkBatteryOptimization()
                 // Permissions can be changed in Health Connect itself.
                 viewModel.refreshHealthConnect()
+                resumeTick++
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (!state.isBatteryOptimizationIgnored) {
-        BatteryOptimizationWarningDialog(
-            onDismiss = { /* optional: set flag in ViewModel if you want to suppress it */ },
-            onRequestIgnore = onRequestIgnoreBatteryOptimizations
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(page.title) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            when (page) {
+                SettingsPage.CONNECTED_APPS -> ConnectedAppsPage(state, viewModel)
+                SettingsPage.BACKEND -> BackendPage()
+                SettingsPage.AI -> AiPage(state, viewModel)
+                SettingsPage.FOOD_DB -> FoodDatabasePage(state, viewModel)
+                SettingsPage.DISPLAY -> DisplayPage(state, viewModel)
+                SettingsPage.NOTIFICATIONS -> NotificationsPage(resumeTick)
+                SettingsPage.PERMISSIONS -> PermissionsPage(state, resumeTick, onRequestIgnoreBatteryOptimizations) { runCatching { viewModel.healthConnectSettingsIntent() } }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
+}
 
+@Composable
+private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel) {
+    val context = LocalContext.current
     // Health Connect's own dialog; glucose and activity are asked for together.
     val healthConnectPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         viewModel.onHealthConnectPermissionsResult()
@@ -100,156 +140,329 @@ fun SettingsScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-
-        SettingsSection(title = "Connectors", icon = Icons.Filled.Hub) {
-            Text(
-                "Connect the apps and services Diafit should get data from. You can connect as many as you like, then choose below which one feeds each kind of data.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Connector.values().forEach { connector ->
-                Spacer(Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(12.dp))
-                val enabled = connector in state.enabledConnectors
-                val unavailable = connector == Connector.HEALTH_CONNECT &&
-                    state.healthConnect.availability != HealthConnectAvailability.AVAILABLE
-                ConnectorHeader(
-                    connector = connector,
-                    enabled = enabled,
-                    switchEnabled = !unavailable || enabled,
-                    onToggle = { on ->
-                        when {
-                            connector == Connector.HEALTH_CONNECT && on -> connectHealthConnect()
-                            connector == Connector.HEALTH_CONNECT -> viewModel.disconnectHealthConnect()
-                            else -> viewModel.onConnectorToggled(connector, on)
-                        }
+    SettingsSection(title = "Connectors", icon = Icons.Filled.Hub) {
+        Text(
+            "Connect the apps and services Diafit should get data from. You can connect as many as you like, then choose below which one feeds each kind of data.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Connector.values().forEach { connector ->
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+            val enabled = connector in state.enabledConnectors
+            val unavailable = connector == Connector.HEALTH_CONNECT &&
+                state.healthConnect.availability != HealthConnectAvailability.AVAILABLE
+            ConnectorHeader(
+                connector = connector,
+                enabled = enabled,
+                switchEnabled = !unavailable || enabled,
+                onToggle = { on ->
+                    when {
+                        connector == Connector.HEALTH_CONNECT && on -> connectHealthConnect()
+                        connector == Connector.HEALTH_CONNECT -> viewModel.disconnectHealthConnect()
+                        else -> viewModel.onConnectorToggled(connector, on)
                     }
+                }
+            )
+            if (connector == Connector.HEALTH_CONNECT && (enabled || unavailable)) {
+                Spacer(Modifier.height(8.dp))
+                HealthConnectCard(
+                    state = state.healthConnect,
+                    wanted = DataType.ACTIVITY.filter { state.selections[it] == Connector.HEALTH_CONNECT }.toSet(),
+                    onConnect = connectHealthConnect,
+                    onSyncNow = { viewModel.syncHealthConnectNow() },
+                    onBackfill = { viewModel.syncHealthConnectNow(backfill = true) },
+                    onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
+                    onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
                 )
-                if (connector == Connector.HEALTH_CONNECT && (enabled || unavailable)) {
-                    Spacer(Modifier.height(8.dp))
-                    HealthConnectCard(
-                        state = state.healthConnect,
-                        wanted = DataType.ACTIVITY.filter { state.selections[it] == Connector.HEALTH_CONNECT }.toSet(),
-                        onConnect = connectHealthConnect,
-                        onSyncNow = { viewModel.syncHealthConnectNow() },
-                        onBackfill = { viewModel.syncHealthConnectNow(backfill = true) },
-                        onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
-                        onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
-                    )
-                } else if (enabled) {
-                    Spacer(Modifier.height(8.dp))
-                    when (connector) {
-                        Connector.NIGHTSCOUT -> NightscoutConnectorSetup(state, viewModel)
-                        Connector.AAPS -> SetupHint("In AAPS, turn on its data broadcast so Diafit receives treatments (Config Builder → Sync → NSClient, and the Data broadcaster plugin for temp basals). Diafit doesn't need a login.")
-                        Connector.XDRIP -> SetupHint("In xDrip+: Settings → Inter-app settings → Broadcast locally. Diafit then receives every reading; no login needed.")
-                        Connector.JUGGLUCO -> SetupHint("In Juggluco: Settings → Data exchange → Glucodata broadcast, then switch on Diafit in the list of apps. No login needed.")
-                        else -> Unit
-                    }
+            } else if (enabled) {
+                Spacer(Modifier.height(8.dp))
+                when (connector) {
+                    Connector.NIGHTSCOUT -> NightscoutConnectorSetup(state, viewModel)
+                    Connector.AAPS -> SetupHint("In AAPS, turn on its data broadcast so Diafit receives treatments (Config Builder → Sync → NSClient, and the Data broadcaster plugin for temp basals). Diafit doesn't need a login.")
+                    Connector.XDRIP -> SetupHint("In xDrip+: Settings → Inter-app settings → Broadcast locally. Diafit then receives every reading; no login needed.")
+                    Connector.JUGGLUCO -> SetupHint("In Juggluco: Settings → Data exchange → Glucodata broadcast, then switch on Diafit in the list of apps. No login needed.")
+                    else -> Unit
                 }
             }
         }
+    }
 
-        SettingsSection(title = "Data sources", icon = Icons.Filled.Tune) {
-            Text(
-                "Choose which connector feeds each kind of data, or switch it off if you don't want it in Diafit.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
-            DataSourcesList(
-                state = state,
-                onSelect = viewModel::onSelectionChanged,
-                onBackfill = viewModel::startBackfill,
-                onDismissBackfill = viewModel::dismissBackfill,
-                missingRanges = viewModel::missingRanges,
-                onAllowHistory = { historyPermission.launch(setOf(HealthConnectPermissions.HISTORY)) }
-            )
-        }
+    SettingsSection(title = "Data sources", icon = Icons.Filled.Tune) {
+        Text(
+            "Choose which connector feeds each kind of data, or switch it off if you don't want it in Diafit.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        DataSourcesList(
+            state = state,
+            onSelect = viewModel::onSelectionChanged,
+            onBackfill = viewModel::startBackfill,
+            onDismissBackfill = viewModel::dismissBackfill,
+            missingRanges = viewModel::missingRanges,
+            onAllowHistory = { historyPermission.launch(setOf(HealthConnectPermissions.HISTORY)) }
+        )
+    }
+}
 
-        SettingsSection(title = "Glucose ranges (mg/dL)", icon = Icons.Filled.GpsFixed) {
-            GlucoseTargetRangeInput(
-                lower = state.glucoseTargetRange.lowerBound,
-                upper = state.glucoseTargetRange.upperBound,
-                veryLow = state.glucoseTargetRange.veryLowBound,
-                veryHigh = state.glucoseTargetRange.veryHighBound,
-                onRangeChanged = { lower, upper, veryLow, veryHigh -> viewModel.onGlucoseTargetRangeChanged(lower, upper, veryLow, veryHigh) }
-            )
-        }
+@Composable
+private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
+    SettingsSection(title = "Glucose ranges (mg/dL)", icon = Icons.Filled.GpsFixed) {
+        Text(
+            "Colours in every chart, time in range and the alerts in Patterns follow these limits.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+        GlucoseTargetRangeInput(
+            lower = state.glucoseTargetRange.lowerBound,
+            upper = state.glucoseTargetRange.upperBound,
+            veryLow = state.glucoseTargetRange.veryLowBound,
+            veryHigh = state.glucoseTargetRange.veryHighBound,
+            onRangeChanged = { lower, upper, veryLow, veryHigh -> viewModel.onGlucoseTargetRangeChanged(lower, upper, veryLow, veryHigh) }
+        )
+    }
 
-        SettingsSection(title = "Basal chart", icon = Icons.AutoMirrored.Filled.ShowChart) {
-            uk.scimone.diafit.settings.domain.model.BasalStyle.values().forEach { style ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onBasalStyleChanged(style) }
-                ) {
-                    RadioButton(selected = state.basalStyle == style, onClick = { viewModel.onBasalStyleChanged(style) })
-                    Column(Modifier.weight(1f)) {
-                        Text(style.label, style = MaterialTheme.typography.bodyLarge)
-                        Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+    SettingsSection(title = "Basal chart", icon = Icons.AutoMirrored.Filled.ShowChart) {
+        uk.scimone.diafit.settings.domain.model.BasalStyle.values().forEach { style ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.onBasalStyleChanged(style) }
+            ) {
+                RadioButton(selected = state.basalStyle == style, onClick = { viewModel.onBasalStyleChanged(style) })
+                Column(Modifier.weight(1f)) {
+                    Text(style.label, style = MaterialTheme.typography.bodyLarge)
+                    Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+    }
+}
 
-        SettingsSection(title = "Device lifetimes", icon = Icons.Filled.Sensors) {
-            uk.scimone.diafit.devices.presentation.DeviceLifetimeSettings()
+@Composable
+private fun AiPage(state: SettingsState, viewModel: SettingsViewModel) {
+    SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Use AI", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(
+                    if (state.aiEnabled) "A photo of your meal is sent to the endpoint below, which estimates the foods and nutrients."
+                    else "Off. Meals are filled in with the barcode scanner, saved products, food search or by hand. No photo ever leaves your phone.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = state.aiEnabled, onCheckedChange = viewModel::onAiEnabledChanged)
         }
-
-        SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {
+    }
+    if (state.aiEnabled) {
+        SettingsSection(title = "Connection", icon = Icons.Filled.Hub) {
             Text(
-                "OpenAI-compatible endpoint used to analyze meal photos for nutrient estimates.",
+                "Any OpenAI-compatible endpoint that accepts images (OpenAI, a proxy, or your own server).",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
             AiConnectionSetup(state, viewModel)
         }
-
-        SettingsSection(title = "Food database (USDA)", icon = Icons.Filled.Search) {
-            UsdaKeySetup(state, viewModel)
-        }
-
-        if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
-            SettingsSection(title = "Backend sync", icon = Icons.Filled.CloudUpload) {
-                uk.scimone.diafit.backendsync.presentation.BackendSyncSettings()
-            }
-        }
-
-        SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {
-            BackgroundReliabilityStatus(
-                isBatteryOptimizationIgnored = state.isBatteryOptimizationIgnored,
-                onRequestIgnoreBatteryOptimizations = onRequestIgnoreBatteryOptimizations
-            )
-
-            if (Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) {
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    "Xiaomi/MIUI devices can still kill background sync overnight even with battery optimization disabled. Enable Autostart for Diafit too:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = { openXiaomiAutostartSettings(context) }) {
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open Autostart settings")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
     }
+}
+
+@Composable
+private fun FoodDatabasePage(state: SettingsState, viewModel: SettingsViewModel) {
+    SettingsSection(title = "Where products come from", icon = Icons.Filled.Search) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("Open Food Facts", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text("Always on, no account needed. Used for barcodes and for searching by name.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (state.usdaKey.isNotBlank()) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null,
+                tint = if (state.usdaKey.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("USDA FoodData Central", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text("Optional second database, mostly US products. Needs a free key.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    SettingsSection(title = "USDA key", icon = Icons.Filled.Key) {
+        UsdaKeySetup(state, viewModel)
+    }
+}
+
+@Composable
+private fun BackendPage() {
+    if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
+        SettingsSection(title = "Your Diafit server", icon = Icons.Filled.CloudUpload) {
+            uk.scimone.diafit.backendsync.presentation.BackendSyncSettings()
+        }
+    }
+}
+
+@Composable
+private fun NotificationsPage(resumeTick: Int) {
+    val context = LocalContext.current
+    val granted = remember(resumeTick) { notificationsAllowed(context) }
+    SettingsSection(title = "Allowed on this phone", icon = Icons.Filled.Notifications) {
+        PermissionRow(
+            title = "Notifications",
+            description = if (granted) "Diafit can alert you." else "Blocked, so expiry alerts and pattern alerts are silent. The bell inside the app still fills up.",
+            granted = granted,
+            actionLabel = "Allow",
+            onAction = { openAppNotificationSettings(context) }
+        )
+    }
+    SettingsSection(title = "What Diafit sends", icon = Icons.Filled.Tune) {
+        Text(
+            "Android lets you set sound, vibration and importance for each kind separately.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ChannelRow(context, "DEVICE_EXPIRY_CHANNEL", "Device expiry", "Sensor, pod or site and battery: 24 h / 10 h and 1 h before they run out.")
+        HorizontalDivider()
+        ChannelRow(context, "GLUCOSE_PATTERNS_CHANNEL", "Glucose patterns", "A new or changed pattern worth a look.")
+        HorizontalDivider()
+        ChannelRow(context, "GLUCOSE_SYNC_CHANNEL", "Sync status", "The permanent notification that keeps glucose readings coming. Keep it; hiding it can make Android stop the sync.")
+    }
+}
+
+@Composable
+private fun ChannelRow(context: Context, channelId: String, title: String, description: String) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { openChannelSettings(context, channelId) }.padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp).size(18.dp))
+    }
+}
+
+@Composable
+private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgnoreBatteryOptimizations: () -> Unit, healthConnectIntent: () -> Result<Intent>) {
+    val context = LocalContext.current
+    val cameraGranted = remember(resumeTick) {
+        ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    }
+    val notificationsGranted = remember(resumeTick) { notificationsAllowed(context) }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (!ok) openAppDetails(context)
+    }
+
+    SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {
+        BackgroundReliabilityStatus(
+            isBatteryOptimizationIgnored = state.isBatteryOptimizationIgnored,
+            onRequestIgnoreBatteryOptimizations = onRequestIgnoreBatteryOptimizations
+        )
+
+        if (Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) {
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Xiaomi/MIUI devices can still kill background sync overnight even with battery optimization disabled. Enable Autostart for Diafit too:",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = { openXiaomiAutostartSettings(context) }) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Open Autostart settings")
+            }
+        }
+    }
+
+    SettingsSection(title = "Permissions", icon = Icons.Filled.Lock) {
+        PermissionRow(
+            title = "Notifications",
+            description = "Expiry and pattern alerts.",
+            granted = notificationsGranted,
+            actionLabel = "Allow",
+            onAction = { openAppNotificationSettings(context) }
+        )
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        PermissionRow(
+            title = "Camera",
+            description = "Scanning barcodes and photographing meals.",
+            granted = cameraGranted,
+            actionLabel = "Allow",
+            onAction = { cameraLauncher.launch(android.Manifest.permission.CAMERA) }
+        )
+        if (state.healthConnect.availability == HealthConnectAvailability.AVAILABLE) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            PermissionRow(
+                title = "Health Connect",
+                description = when {
+                    !state.healthConnect.enabled -> "Not connected. Connect it under Connected apps."
+                    state.healthConnect.activityGranted && state.healthConnect.backgroundGranted -> "Activity data and background access allowed."
+                    state.healthConnect.activityGranted -> "Activity data allowed; background access is not, so data only imports while Diafit is open."
+                    else -> "Permission was withdrawn."
+                },
+                granted = state.healthConnect.activityGranted && state.healthConnect.backgroundGranted,
+                actionLabel = "Manage",
+                onAction = { healthConnectIntent().onSuccess { runCatching { context.startActivity(it) } } }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = { openAppDetails(context) }) { Text("All Android permissions for Diafit") }
+    }
+}
+
+/** One permission: a status icon, what it is for, and a button while it is missing. */
+@Composable
+private fun PermissionRow(title: String, description: String, granted: Boolean, actionLabel: String, onAction: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (granted) Icons.Filled.CheckCircle else Icons.Filled.Warning, null,
+            tint = if (granted) MaterialTheme.colorScheme.primary else uk.scimone.diafit.ui.theme.Warning,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (!granted || actionLabel == "Manage") {
+            Spacer(Modifier.width(8.dp))
+            OutlinedButton(onClick = onAction) { Text(actionLabel) }
+        }
+    }
+}
+
+private fun notificationsAllowed(context: Context) = NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+private fun openAppDetails(context: Context) {
+    runCatching {
+        context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", context.packageName, null)))
+    }
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    runCatching {
+        context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName))
+    }
+}
+
+private fun openChannelSettings(context: Context, channelId: String) {
+    runCatching {
+        context.startActivity(
+            Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, channelId)
+        )
+    }.onFailure { openAppNotificationSettings(context) }
 }
 
 private fun openXiaomiAutostartSettings(context: Context) {
@@ -619,31 +832,6 @@ private fun BackgroundReliabilityStatus(
             Text("Exclude from battery optimization")
         }
     }
-}
-
-@Composable
-fun BatteryOptimizationWarningDialog(
-    onDismiss: () -> Unit,
-    onRequestIgnore: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Battery Optimization") },
-        text = { Text("Battery optimizations may prevent background CGM syncing. Please exclude the app from battery optimization to ensure proper functionality.") },
-        confirmButton = {
-            TextButton(onClick = {
-                onRequestIgnore()
-                onDismiss()
-            }) {
-                Text("Go to Settings")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Dismiss")
-            }
-        }
-    )
 }
 
 /** Editable model field with a dropdown of the models the endpoint reports (`GET /models`). */

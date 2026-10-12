@@ -13,8 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings as SettingsIcon
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -41,7 +40,6 @@ import androidx.activity.compose.BackHandler
 import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.presentation.ADD_MEAL_TAB_INDEX
 import uk.scimone.diafit.core.presentation.BottomNavigationBar
-import uk.scimone.diafit.core.presentation.SETTINGS_TAB_INDEX
 import org.koin.android.ext.android.inject
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -60,7 +58,7 @@ import uk.scimone.diafit.home.presentation.HomeViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
-import uk.scimone.diafit.settings.presentation.SettingsScreen
+import uk.scimone.diafit.settings.presentation.SettingsPageScreen
 import uk.scimone.diafit.settings.presentation.SettingsViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -154,7 +152,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             DiafitTheme {
                 var selectedTab by remember { mutableStateOf(0) }
-                var overflowMenuExpanded by remember { mutableStateOf(false) }
                 var showNewEntrySheet by remember { mutableStateOf(false) }
                 val overlays = remember { mutableStateListOf<Overlay>() }
                 val snackbarHostState = remember { SnackbarHostState() }
@@ -222,53 +219,8 @@ class MainActivity : ComponentActivity() {
                                         Icon(imageVector = Icons.Filled.Notifications, contentDescription = "Notifications")
                                     }
                                 }
-                                IconButton(onClick = { overflowMenuExpanded = true }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.MoreVert,
-                                        contentDescription = "More options"
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = overflowMenuExpanded,
-                                    onDismissRequest = { overflowMenuExpanded = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Profile") },
-                                        leadingIcon = { Icon(imageVector = Icons.Filled.Person, contentDescription = null) },
-                                        onClick = {
-                                            overflowMenuExpanded = false
-                                            overlays.add(Overlay.Profile)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Patterns") },
-                                        leadingIcon = { Icon(imageVector = Icons.Filled.Insights, contentDescription = null) },
-                                        onClick = {
-                                            overflowMenuExpanded = false
-                                            overlays.add(Overlay.Patterns)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Devices") },
-                                        leadingIcon = { Icon(imageVector = Icons.Filled.Sensors, contentDescription = null) },
-                                        onClick = {
-                                            overflowMenuExpanded = false
-                                            overlays.add(Overlay.Devices)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Settings") },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Filled.SettingsIcon,
-                                                contentDescription = null
-                                            )
-                                        },
-                                        onClick = {
-                                            overflowMenuExpanded = false
-                                            selectedTab = SETTINGS_TAB_INDEX
-                                        }
-                                    )
+                                IconButton(onClick = { if (overlays.none { it is Overlay.Menu }) overlays.add(Overlay.Menu) }) {
+                                    Icon(imageVector = Icons.Filled.AccountCircle, contentDescription = "Menu")
                                 }
                             }
                         )
@@ -315,12 +267,6 @@ class MainActivity : ComponentActivity() {
                                 onAddEntry = { showNewEntrySheet = true }
                             )
                             3 -> HistoryScreen(userId = userId, onOpenDay = { overlays.add(Overlay.DayDetail(it)) })
-                            SETTINGS_TAB_INDEX -> SettingsScreen(
-                                onRequestIgnoreBatteryOptimizations = {
-                                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                    startActivity(intent)
-                                }
-                            )
                         }
                     }
                 }
@@ -358,7 +304,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -393,6 +339,21 @@ class MainActivity : ComponentActivity() {
                                     id = overlay.id,
                                     onBack = { overlays.remove(overlay) },
                                     onOpenDay = { overlays.add(Overlay.DayDetail(it)) }
+                                )
+                                is Overlay.Menu -> uk.scimone.diafit.menu.presentation.MenuScreen(
+                                    userId = userId,
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpenDevices = { overlays.add(Overlay.Devices) },
+                                    onOpenTreatmentPlan = { overlays.add(Overlay.Profile) },
+                                    onOpenPatterns = { overlays.add(Overlay.Patterns) },
+                                    onOpenSettings = { overlays.add(Overlay.Settings(it)) }
+                                )
+                                is Overlay.Settings -> SettingsPageScreen(
+                                    page = overlay.page,
+                                    onBack = { overlays.remove(overlay) },
+                                    onRequestIgnoreBatteryOptimizations = {
+                                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                    }
                                 )
                                 is Overlay.Devices -> uk.scimone.diafit.devices.presentation.DevicesScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Profile -> ProfileScreen(userId = userId, onBack = { overlays.remove(overlay) })
@@ -470,6 +431,9 @@ private sealed interface Overlay {
     data object Profile : Overlay
     data object Devices : Overlay
     data object Notifications : Overlay
+    /** The person icon's page: devices, therapy, data and app settings. */
+    data object Menu : Overlay
+    data class Settings(val page: uk.scimone.diafit.settings.presentation.SettingsPage) : Overlay
     /** The pattern cards (recurring glucose patterns with tips). */
     data object Patterns : Overlay
     data class PatternDetail(val id: String) : Overlay

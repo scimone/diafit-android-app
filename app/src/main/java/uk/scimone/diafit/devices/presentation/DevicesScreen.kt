@@ -13,6 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +66,7 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
         ) {
             items(state.ages, key = { it.kind.name }) { AgeCard(it) }
             item { StatusCard(state.status, state.nowUtc, state.omnipod) }
+            item { LifetimesCard(userId) }
         }
     }
 }
@@ -101,6 +108,27 @@ private fun AgeCard(age: DeviceAge) {
     }
 }
 
+/** Collapsible: how long each consumable lasts, which the expiry estimates and alerts are based on. */
+@Composable
+private fun LifetimesCard(userId: Int) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Lifetimes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                    Text("How long each device lasts before it should be changed", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (open) "Hide" else "Edit")
+            }
+            if (open) {
+                Spacer(Modifier.height(12.dp))
+                DeviceLifetimeSettings(userId)
+            }
+        }
+    }
+}
+
 @Composable
 private fun StatusCard(status: DeviceStatus?, now: Long, omnipod: Boolean) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
@@ -108,7 +136,7 @@ private fun StatusCard(status: DeviceStatus?, now: Long, omnipod: Boolean) {
             Text("Levels", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
             if (status == null) {
                 Text(
-                    "Nothing yet. Connect Nightscout and select it for \"Pump & sensor status\" in Settings.",
+                    "Nothing yet. Connect Nightscout or AAPS under Connected apps and select it for \"Device status\".",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {

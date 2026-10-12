@@ -140,6 +140,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         return AiConfig(baseUrl = baseUrl, apiKey = apiKey, model = model)
     }
 
+    override suspend fun isAiEnabled(): Boolean = prefs.getBoolean("ai_enabled", true)
+
+    override suspend fun setAiEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("ai_enabled", enabled).apply()
+    }
+
+    override suspend fun getUserName(): String = prefs.getString("user_name", "") ?: ""
+
+    override suspend fun setUserName(name: String) {
+        prefs.edit().putString("user_name", name.trim()).apply()
+    }
+
     override suspend fun getUsdaApiKey(): String = prefs.getString("usda_api_key", "") ?: ""
 
     override suspend fun setUsdaApiKey(key: String) {

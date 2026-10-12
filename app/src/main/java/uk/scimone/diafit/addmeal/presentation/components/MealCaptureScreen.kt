@@ -159,6 +159,7 @@ fun MealCaptureScreen(
     aiNotes: String,
     onAiNotes: (String) -> Unit,
     onEstimateWithAi: () -> Unit,
+    aiEnabled: Boolean,
     savedProducts: List<SavedProductEntity>,
     onUseSaved: (SavedProductEntity) -> Unit,
     onToggleFavorite: (SavedProductEntity) -> Unit,
@@ -202,6 +203,7 @@ fun MealCaptureScreen(
                 aiNotes = aiNotes,
                 onAiNotes = onAiNotes,
                 onEstimateWithAi = onEstimateWithAi,
+                aiEnabled = aiEnabled,
                 savedProducts = savedProducts,
                 onUseSaved = onUseSaved,
                 onToggleFavorite = onToggleFavorite,
@@ -226,6 +228,7 @@ private fun PhotoChoiceScreen(
     aiNotes: String,
     onAiNotes: (String) -> Unit,
     onEstimateWithAi: () -> Unit,
+    aiEnabled: Boolean,
     savedProducts: List<SavedProductEntity>,
     onUseSaved: (SavedProductEntity) -> Unit,
     onToggleFavorite: (SavedProductEntity) -> Unit,
@@ -274,24 +277,26 @@ private fun PhotoChoiceScreen(
                     Text("Your photo is kept with the meal either way.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
                 }
 
-                ChoiceCard(Icons.Outlined.AutoAwesome, "Estimate with AI", "Foods, portions and nutrients from your photo.") {
-                    OutlinedTextField(
-                        value = aiNotes,
-                        onValueChange = onAiNotes,
-                        placeholder = { Text("Add a note for the AI (optional), e.g. I only ate half", color = OnInkMuted) },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 1,
-                        maxLines = 3,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = OnInk, unfocusedTextColor = OnInk, cursorColor = OnInk,
-                            focusedBorderColor = OnInk, unfocusedBorderColor = Color(0x55FFFFFF)
+                if (aiEnabled) {
+                    ChoiceCard(Icons.Outlined.AutoAwesome, "Estimate with AI", "Foods, portions and nutrients from your photo.") {
+                        OutlinedTextField(
+                            value = aiNotes,
+                            onValueChange = onAiNotes,
+                            placeholder = { Text("Add a note for the AI (optional), e.g. I only ate half", color = OnInkMuted) },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 1,
+                            maxLines = 3,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = OnInk, unfocusedTextColor = OnInk, cursorColor = OnInk,
+                                focusedBorderColor = OnInk, unfocusedBorderColor = Color(0x55FFFFFF)
+                            )
                         )
-                    )
-                    Button(onClick = onEstimateWithAi, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                        Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Estimate with AI")
+                        Button(onClick = onEstimateWithAi, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                            Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Estimate with AI")
+                        }
                     }
                 }
 

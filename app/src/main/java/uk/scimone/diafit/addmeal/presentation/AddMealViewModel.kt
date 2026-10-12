@@ -61,6 +61,7 @@ class AddMealViewModel(
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val bolusRepository: BolusRepository,
     private val fileStorageRepository: FileStorageRepository,  // TODO: Use usecase instead of repository
+    private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository,
     private val userId: Int,
     application: Application
 ) : AndroidViewModel(application) {
@@ -85,7 +86,12 @@ class AddMealViewModel(
     /** The meal's title when the editor opened, to tell a rename from an untouched default. */
     private var sittingTitleAtStart: String? = null
 
+    private val _aiEnabled = MutableStateFlow(true)
+    /** False when the user switched AI off in the menu: no photo estimates are offered. */
+    val aiEnabled = _aiEnabled.asStateFlow()
+
     private fun reset() {
+        viewModelScope.launch { _aiEnabled.value = settingsRepository.isAiEnabled() }
         editing = null
         targetSitting = null
         sittingTitleAtStart = null
@@ -483,7 +489,7 @@ class AddMealViewModel(
     /** Estimates nutrition for all of this course's photos in one request. */
     fun analyzeMeal() {
         val photos = uiState.value.photos
-        if (photos.isEmpty() || uiState.value.isAnalyzing) return
+        if (photos.isEmpty() || uiState.value.isAnalyzing || !_aiEnabled.value) return
         viewModelScope.launch {
             val notes = uiState.value.aiNotes
             // The note stays, so a failed request can be edited and resent (or a redo can reuse it).

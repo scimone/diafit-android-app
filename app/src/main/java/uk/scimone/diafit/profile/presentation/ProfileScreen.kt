@@ -69,7 +69,7 @@ fun ProfileScreen(userId: Int, onBack: () -> Unit, viewModel: ProfileViewModel =
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") },
+                title = { Text("Treatment plan") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
             )
         }

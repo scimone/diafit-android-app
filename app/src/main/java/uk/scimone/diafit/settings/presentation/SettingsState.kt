@@ -24,6 +24,8 @@ data class SettingsState(
     val isLoadingAiModels: Boolean = false,
     val aiModelsError: String? = null,
     val aiCheck: NightscoutCheckState = NightscoutCheckState.Idle,
+    val aiEnabled: Boolean = true,
+    val userName: String = "",
     val usdaKey: String = "",
     val usdaCheck: NightscoutCheckState = NightscoutCheckState.Idle,
     val isBatteryOptimizationIgnored: Boolean = false,

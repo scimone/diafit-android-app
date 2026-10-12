@@ -39,6 +39,14 @@ interface SettingsRepository {
     suspend fun getAiConfig(): AiConfig
     suspend fun setAiConfig(config: AiConfig)
 
+    /** AI features (meal photo estimates) switched on. Off = only barcode / saved product / manual entry. */
+    suspend fun isAiEnabled(): Boolean
+    suspend fun setAiEnabled(enabled: Boolean)
+
+    /** What the user is called in the menu; empty = not set. */
+    suspend fun getUserName(): String
+    suspend fun setUserName(name: String)
+
     /** USDA FoodData Central API key: the second barcode database, used when Open Food Facts has no entry. */
     suspend fun getUsdaApiKey(): String
     suspend fun setUsdaApiKey(key: String)

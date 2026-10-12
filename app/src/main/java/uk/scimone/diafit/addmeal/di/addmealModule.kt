@@ -18,6 +18,7 @@ val addmealModule = module {
             searchFoodByName = get(),
             savedProducts = get(),
             fileStorageRepository = get(),
+            settingsRepository = get(),
             userId = userId,
             application = get()
         )
