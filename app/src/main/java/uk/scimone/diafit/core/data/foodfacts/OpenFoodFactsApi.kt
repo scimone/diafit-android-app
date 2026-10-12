@@ -29,19 +29,35 @@ class OpenFoodFactsApi(private val client: HttpClient) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Text search; products without carbohydrate data are left out. */
+    /**
+     * Text search; products without carbohydrate data are left out. The classic search requires every word to match
+     * (best for long, specific queries) but is heavily rate limited (503); then Search-a-licious answers instead.
+     */
     suspend fun search(query: String): Result<List<FoodProduct>> = withContext(Dispatchers.IO) {
-        try {
-            // Search-a-licious: Open Food Facts' dedicated search service. The old cgi/search.pl is heavily rate limited (503s).
-            val response = client.get("https://search.openfoodfacts.org/search") {
+        val classic = searchRequest(query, legacy = true)
+        if (classic.isSuccess) classic else searchRequest(query, legacy = false).let { if (it.isSuccess) it else classic }
+    }
+
+    private suspend fun searchRequest(query: String, legacy: Boolean): Result<List<FoodProduct>> {
+        return try {
+            val response = if (legacy) client.get("https://world.openfoodfacts.org/cgi/search.pl") {
+                parameter("search_terms", query)
+                parameter("search_simple", 1)
+                parameter("action", "process")
+                parameter("json", 1)
+                parameter("page_size", 12)
+                parameter("fields", FIELDS)
+                header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
+                timeout { requestTimeoutMillis = 10_000; connectTimeoutMillis = 6_000; socketTimeoutMillis = 10_000 }
+            } else client.get("https://search.openfoodfacts.org/search") {
                 parameter("q", query)
                 parameter("page_size", 12)
                 parameter("fields", FIELDS)
                 header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
-                timeout { requestTimeoutMillis = 15_000; connectTimeoutMillis = 8_000; socketTimeoutMillis = 15_000 }
+                timeout { requestTimeoutMillis = 10_000; connectTimeoutMillis = 6_000; socketTimeoutMillis = 10_000 }
             }
-            if (response.status != HttpStatusCode.OK) return@withContext Result.failure(IllegalStateException("Server answered ${response.status.value}"))
-            val products = json.parseToJsonElement(response.bodyAsText()).jsonObject["hits"] as? kotlinx.serialization.json.JsonArray
+            if (response.status != HttpStatusCode.OK) return Result.failure(IllegalStateException("Server answered ${response.status.value}"))
+            val products = json.parseToJsonElement(response.bodyAsText()).jsonObject[if (legacy) "products" else "hits"] as? kotlinx.serialization.json.JsonArray
             Result.success(products.orEmpty().mapNotNull { el ->
                 val p = el.jsonObject
                 p.text("code")?.let { parseProduct(it, p) }
@@ -49,7 +65,7 @@ class OpenFoodFactsApi(private val client: HttpClient) {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Search for $query failed", e)
+            Log.e(TAG, "Search for $query failed (legacy=$legacy)", e)
             Result.failure(e)
         }
     }
