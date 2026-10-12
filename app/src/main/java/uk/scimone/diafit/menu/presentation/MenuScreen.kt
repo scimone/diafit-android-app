@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Insights
@@ -94,6 +95,7 @@ fun MenuScreen(
     onOpenDevices: () -> Unit,
     onOpenTreatmentPlan: () -> Unit,
     onOpenPatterns: () -> Unit,
+    onOpenDataEditor: () -> Unit,
     onOpenSettings: (SettingsPage) -> Unit
 ) {
     val settings: SettingsViewModel = koinViewModel()
@@ -155,6 +157,11 @@ fun MenuScreen(
                     if (!state.aiEnabled) "Off" else if (state.aiConnections.isEmpty()) "On · no connection yet"
                     else "On · ${state.aiConnections.size} connection${if (state.aiConnections.size > 1) "s" else ""}",
                     { onOpenSettings(SettingsPage.AI) }
+                )
+                MenuRow(
+                    Icons.Filled.EditNote, MaterialTheme.colorScheme.secondary, "Data editor",
+                    "Correct or delete any stored record",
+                    onOpenDataEditor
                 )
                 if (BackendSyncFeature.ENABLED) {
                     MenuRow(

@@ -655,6 +655,30 @@ private fun SetupHint(text: String) {
 @Composable
 private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
     val check = state.usdaCheck
+    // null = follow the saved key (collapsed once one is set); true once the user is editing.
+    var editing by remember { mutableStateOf<Boolean?>(null) }
+    val open = editing ?: state.usdaKey.isBlank()
+    LaunchedEffect(check) { if (check == NightscoutCheckState.Ok) editing = false }
+
+    if (!open) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Key ••••" + state.usdaKey.takeLast(4),
+                style = MaterialTheme.typography.bodyMedium, maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            when (check) {
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Key works", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else -> TextButton(onClick = viewModel::testUsdaKey) { Text("Test") }
+            }
+            TextButton(onClick = { editing = true }) { Text("Edit") }
+        }
+        if (check is NightscoutCheckState.Failed) {
+            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        return
+    }
     Text(
         "Barcodes are looked up in Open Food Facts first. Add a free USDA FoodData Central key to search that database too when a product isn't found (mostly US products). Get a key at fdc.nal.usda.gov/api-key-signup.",
         style = MaterialTheme.typography.bodySmall,
@@ -674,14 +698,11 @@ private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
         OutlinedButton(onClick = viewModel::testUsdaKey, enabled = check != NightscoutCheckState.Checking && state.usdaKey.isNotBlank()) {
             Text("Test connection")
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = { editing = false }, enabled = state.usdaKey.isNotBlank()) { Text("Done") }
+        Spacer(Modifier.width(4.dp))
         when (check) {
             NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            NightscoutCheckState.Ok -> {
-                Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Key works", style = MaterialTheme.typography.bodySmall)
-            }
             is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
             else -> Unit
         }

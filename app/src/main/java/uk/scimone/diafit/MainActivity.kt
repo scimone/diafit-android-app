@@ -304,7 +304,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings || overlay is Overlay.DataEditor)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -346,8 +346,10 @@ class MainActivity : ComponentActivity() {
                                     onOpenDevices = { overlays.add(Overlay.Devices) },
                                     onOpenTreatmentPlan = { overlays.add(Overlay.Profile) },
                                     onOpenPatterns = { overlays.add(Overlay.Patterns) },
+                                    onOpenDataEditor = { overlays.add(Overlay.DataEditor) },
                                     onOpenSettings = { overlays.add(Overlay.Settings(it)) }
                                 )
+                                is Overlay.DataEditor -> uk.scimone.diafit.dataeditor.presentation.DataEditorScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Settings -> SettingsPageScreen(
                                     page = overlay.page,
                                     onBack = { overlays.remove(overlay) },
@@ -434,6 +436,8 @@ private sealed interface Overlay {
     data object Notifications : Overlay
     /** The person icon's page: devices, therapy, data and app settings. */
     data object Menu : Overlay
+    /** Correct or delete any stored record. */
+    data object DataEditor : Overlay
     data class Settings(val page: uk.scimone.diafit.settings.presentation.SettingsPage) : Overlay
     /** The pattern cards (recurring glucose patterns with tips). */
     data object Patterns : Overlay

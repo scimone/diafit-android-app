@@ -52,6 +52,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun savedProductDao(): SavedProductDao
     abstract fun llmLogDao(): LlmLogDao
+    /** Read/update/delete queries of the data editor; no tables of its own. */
+    abstract fun dataEditorDao(): uk.scimone.diafit.dataeditor.data.DataEditorDao
     abstract fun mealActivityDao(): uk.scimone.diafit.mealactivity.data.MealActivityDao
     /** Optional backend upload (see BackendSyncFeature); read-only queries, no tables of its own. */
     abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao

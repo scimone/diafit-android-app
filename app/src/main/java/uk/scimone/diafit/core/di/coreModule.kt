@@ -4,6 +4,7 @@ import androidx.room.Room
 import org.koin.android.ext.koin.androidContext
 import io.ktor.client.engine.android.Android
 import org.koin.core.qualifier.named
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import uk.scimone.diafit.core.data.file.FileStorageRepositoryImpl
 import uk.scimone.diafit.core.data.repository.MealAnalysisRepositoryImpl
@@ -67,6 +68,8 @@ val coreModule = module {
     single<MealDao> { get<AppDatabase>().mealDao() }
     single { get<AppDatabase>().savedProductDao() }
     single { get<AppDatabase>().llmLogDao() }
+    single { uk.scimone.diafit.dataeditor.data.DataEditorRepository(get<AppDatabase>().dataEditorDao()) }
+    viewModel { (userId: Int) -> uk.scimone.diafit.dataeditor.presentation.DataEditorViewModel(userId, get()) }
     single<uk.scimone.diafit.core.domain.repository.SavedProductRepository> { uk.scimone.diafit.core.data.repository.SavedProductRepositoryImpl(get()) }
     single<CgmDao> { get<AppDatabase>().cgmDao() }
     single<BolusDao> { get<AppDatabase>().bolusDao() }
