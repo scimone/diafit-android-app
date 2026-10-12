@@ -26,6 +26,9 @@ import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Carbs
+import uk.scimone.diafit.ui.theme.FatColor
+import uk.scimone.diafit.ui.theme.GlucoseNeutralColor
+import uk.scimone.diafit.ui.theme.ProteinColor
 import uk.scimone.diafit.ui.theme.InRange
 import uk.scimone.diafit.ui.theme.SleepDeep
 import uk.scimone.diafit.ui.theme.SleepLight
@@ -33,22 +36,19 @@ import uk.scimone.diafit.ui.theme.SleepRem
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val Protein = Color(0xFFEF9A9A)
-private val Fat = Color(0xFFFFB74D)
 /** Glucose measures that aren't a zone (mean, spread, A1c): a cool tone apart from the in/below/above colours. */
-private val GlucoseNeutral = Color(0xFF4DD0E1)
 
 /** The colour of a metric's bars and figure. Heart rate, calories, steps and active time all share the activity colour. */
 fun StatsMetric.accent(): Color = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE -> InRange
     StatsMetric.GLUCOSE_BELOW -> BelowRange
     StatsMetric.GLUCOSE_ABOVE -> AboveRange
-    StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C, StatsMetric.GLUCOSE_COVERAGE -> GlucoseNeutral
+    StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_A1C, StatsMetric.GLUCOSE_COVERAGE -> GlucoseNeutralColor
     StatsMetric.BOLUS -> Bolus
     StatsMetric.BASAL -> Basal
     StatsMetric.CARBS -> Carbs
-    StatsMetric.PROTEIN -> Protein
-    StatsMetric.FAT -> Fat
+    StatsMetric.PROTEIN -> ProteinColor
+    StatsMetric.FAT -> FatColor
     StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES, StatsMetric.STEPS, StatsMetric.ACTIVITY,
     StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE, StatsMetric.HEART_RATE_VARIABILITY -> Activity
     StatsMetric.SLEEP, StatsMetric.SLEEP_SCHEDULE -> SleepLight

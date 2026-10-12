@@ -54,9 +54,9 @@ import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 
-internal val IsfColor = Bolus
+internal val IsfColor: androidx.compose.ui.graphics.Color get() = Bolus
 
-internal val TargetColor = InRange
+internal val TargetColor: androidx.compose.ui.graphics.Color get() = InRange
 
 /**
  * The profile AAPS is running (read-only, imported from its latest Profile Switch): who/what percentage

@@ -21,6 +21,7 @@ import uk.scimone.diafit.history.presentation.model.GlucosePoint
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
+import uk.scimone.diafit.ui.theme.isDarkPalette
 
 /** One out-of-range band of the horizon: how deep a reading reaches into it, and how it is tinted. */
 private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Color)
@@ -29,12 +30,17 @@ private class HorizonBandStyle(val level: (BandLevels) -> Float, val color: Colo
  * Opaque, drawn in order so each deeper band overlays the shallower one. They are the CGM line's
  * high/low colours: the mild band slightly muted, the "very" band at full strength.
  */
-private val HORIZON_BANDS = listOf(
-    HorizonBandStyle({ it.high }, lerp(AboveRange, Color.Black, 0.3f)),
-    HorizonBandStyle({ it.veryHigh }, AboveRange),
-    HorizonBandStyle({ it.low }, lerp(BelowRange, Color.Black, 0.3f)),
-    HorizonBandStyle({ it.veryLow }, BelowRange)
-)
+private fun horizonBands(): List<HorizonBandStyle> {
+    // Dark: the mild band is the zone colour darkened. Light: darkening gives heavy navy/maroon blobs on white,
+    // so the mild band is the zone colour softened toward white instead.
+    val mild = { c: Color -> if (isDarkPalette) lerp(c, Color.Black, 0.3f) else lerp(c, Color.White, 0.45f) }
+    return listOf(
+        HorizonBandStyle({ it.high }, mild(AboveRange)),
+        HorizonBandStyle({ it.veryHigh }, AboveRange),
+        HorizonBandStyle({ it.low }, mild(BelowRange)),
+        HorizonBandStyle({ it.veryLow }, BelowRange)
+    )
+}
 
 /** Thickness of the green strip along the bottom that marks "glucose was recorded and in range". */
 private val IN_RANGE_STRIP_HEIGHT = 5.dp
@@ -54,6 +60,7 @@ fun HorizonChart(
     drawBackground: Boolean = true
 ) {
     val runs = day.glucose.splitAtGaps()
+    val bands = horizonBands()
     val guides = hourGuideColor()
     val background = stripBackground()
     Canvas(modifier.fillMaxWidth().height(height).then(if (drawBackground) Modifier.background(background) else Modifier)) {
@@ -63,7 +70,7 @@ fun HorizonChart(
         runs.filter { it.size > 1 }.forEach { run ->
             val left = axis.x(run.first().timeUtc)
             drawRect(InRange, Offset(left, size.height - stripHeight), Size(axis.x(run.last().timeUtc) - left, stripHeight))
-            HORIZON_BANDS.forEach { band ->
+            bands.forEach { band ->
                 drawMountain(run, axis, { band.level(thresholds.levels(it.mgdl)) }, band.color)
             }
         }

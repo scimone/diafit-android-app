@@ -20,17 +20,20 @@ import uk.scimone.diafit.ui.theme.Sleep
 enum class LogsEntryKind(
     val label: String,
     val pluralLabel: String,
-    val accent: Color,
+    private val accentOf: () -> Color,
     val available: Boolean,
     /** Offered in the "new entry" chooser; false for entries derived from data (lows/highs). */
     val creatable: Boolean = true
 ) {
-    MEAL("Meal", "Meals", Carbs, available = true),
-    GLUCOSE("Low or high", "Lows & highs", BelowRange, available = true, creatable = false),
-    BOLUS("Insulin", "Insulin", Bolus, available = true, creatable = false),
-    DEVICE("Device", "Device events", Device, available = true, creatable = false),
-    SLEEP("Sleep", "Sleep", Sleep, available = true, creatable = false),
-    ACTIVITY("Exercise", "Exercise", Activity, available = true, creatable = false);
+    MEAL("Meal", "Meals", { Carbs }, available = true),
+    GLUCOSE("Low or high", "Lows & highs", { BelowRange }, available = true, creatable = false),
+    BOLUS("Insulin", "Insulin", { Bolus }, available = true, creatable = false),
+    DEVICE("Device", "Device events", { Device }, available = true, creatable = false),
+    SLEEP("Sleep", "Sleep", { Sleep }, available = true, creatable = false),
+    ACTIVITY("Exercise", "Exercise", { Activity }, available = true, creatable = false);
+
+    /** Read live so it follows the light/dark palette. */
+    val accent: Color get() = accentOf()
 
     companion object {
         val availableKinds: List<LogsEntryKind> get() = entries.filter { it.available }
@@ -48,10 +51,10 @@ sealed interface LogsEntryUi {
 /** Per-meal-type accent for tonal avatar tiles. */
 val MealType.accent: Color
     get() = when (this) {
-        MealType.BREAKFAST -> Color(0xFFFFB74D)
-        MealType.LUNCH -> Color(0xFF4DB6AC)
-        MealType.DINNER -> Color(0xFF7986CB)
-        MealType.SNACK -> Color(0xFFFF8A65)
+        MealType.BREAKFAST -> uk.scimone.diafit.ui.theme.MealBreakfast
+        MealType.LUNCH -> uk.scimone.diafit.ui.theme.MealLunch
+        MealType.DINNER -> uk.scimone.diafit.ui.theme.MealDinner
+        MealType.SNACK -> uk.scimone.diafit.ui.theme.MealSnack
     }
 
 @get:DrawableRes
