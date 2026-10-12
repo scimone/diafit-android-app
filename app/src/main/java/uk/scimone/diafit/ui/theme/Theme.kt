@@ -70,7 +70,7 @@ private val LightColorScheme = lightColorScheme(
     inverseSurface = Color(0xFF2A303A),
     inverseOnSurface = Color(0xFFF1F3F7),
     inversePrimary = Color(0xFF9DBEF5),
-    surfaceTint = LightPrimary,
+    surfaceTint = Color.Transparent,   // tonal elevation must not wash cards with blue
 
     error = LightError,
     onError = LightOnError,
