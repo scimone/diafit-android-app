@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation
+package uk.scimone.diafit.logs.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,15 +28,15 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.util.friendlyDateString
 import androidx.compose.ui.text.font.FontWeight
-import uk.scimone.diafit.journal.presentation.components.DayHeader
-import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
-import uk.scimone.diafit.journal.presentation.components.formatUnits
-import uk.scimone.diafit.journal.presentation.model.CarbCourse
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.components.formatDuration
-import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
-import uk.scimone.diafit.journal.presentation.model.PumpEventUi
-import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
+import uk.scimone.diafit.logs.presentation.components.DayHeader
+import uk.scimone.diafit.logs.presentation.components.LogsEntryCard
+import uk.scimone.diafit.logs.presentation.components.formatUnits
+import uk.scimone.diafit.logs.presentation.model.CarbCourse
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.components.formatDuration
+import uk.scimone.diafit.logs.presentation.model.LogsEntryKind
+import uk.scimone.diafit.logs.presentation.model.PumpEventUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventIcon
 import uk.scimone.diafit.ui.theme.Warning
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.Animatable
@@ -53,30 +53,30 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import uk.scimone.diafit.journal.presentation.components.JournalGlucoseGraph
-import uk.scimone.diafit.journal.presentation.components.BOLUS_REACH_MS
-import uk.scimone.diafit.journal.presentation.components.CarbCurve
-import uk.scimone.diafit.journal.presentation.components.GraphMarker
-import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
-import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
+import uk.scimone.diafit.logs.presentation.components.LogsGlucoseGraph
+import uk.scimone.diafit.logs.presentation.components.BOLUS_REACH_MS
+import uk.scimone.diafit.logs.presentation.components.CarbCurve
+import uk.scimone.diafit.logs.presentation.components.GraphMarker
+import uk.scimone.diafit.logs.presentation.model.SleepEntryUi
+import uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
-import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_POINT
-import uk.scimone.diafit.journal.presentation.components.JOURNAL_ANCHOR_STRETCH
-import uk.scimone.diafit.journal.presentation.components.JOURNAL_GRAPH_WINDOW_MIN
+import uk.scimone.diafit.logs.presentation.components.LOGS_ANCHOR_POINT
+import uk.scimone.diafit.logs.presentation.components.LOGS_ANCHOR_STRETCH
+import uk.scimone.diafit.logs.presentation.components.LOGS_GRAPH_WINDOW_MIN
 import uk.scimone.diafit.ui.theme.Bolus
-import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
+import uk.scimone.diafit.logs.presentation.model.LogsEntryUi
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.PossibleDuplicateUi
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun JournalScreen(
+fun LogsScreen(
     userId: Int,
-    onOpenEntry: (JournalEntryUi) -> Unit,
+    onOpenEntry: (LogsEntryUi) -> Unit,
     onAddEntry: () -> Unit,
-    viewModel: JournalViewModel = koinViewModel(parameters = { parametersOf(userId) })
+    viewModel: LogsViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -85,9 +85,9 @@ fun JournalScreen(
         uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
     }
 
-    var filter by remember { mutableStateOf<JournalEntryKind?>(null) }
+    var filter by remember { mutableStateOf<LogsEntryKind?>(null) }
     var selectedEvent by remember { mutableStateOf<PumpEventUi?>(null) }
-    val kinds = JournalEntryKind.availableKinds
+    val kinds = LogsEntryKind.availableKinds
     val visible = remember(uiState.entries, filter) {
         uiState.entries.filter { filter == null || it.kind == filter }
     }
@@ -115,7 +115,7 @@ fun JournalScreen(
     /** Entries in list order (newest first) and the LazyColumn item index of each. */
     val flat = remember(days) {
         var index = 0
-        val entries = ArrayList<JournalEntryUi>()
+        val entries = ArrayList<LogsEntryUi>()
         val rows = ArrayList<Int>()
         days.forEach { (_, list) ->
             index++  // the day header
@@ -127,12 +127,12 @@ fun JournalScreen(
     val selectedIndex = selected.coerceIn(0, (flat.entries.size - 1).coerceAtLeast(0))
     val selectedEntry = flat.entries.getOrNull(selectedIndex)
     val anchorFraction by animateFloatAsState(
-        if (markers.getOrNull(selectedIndex)?.endMs != null) JOURNAL_ANCHOR_STRETCH else JOURNAL_ANCHOR_POINT, tween(220), label = "anchor"
+        if (markers.getOrNull(selectedIndex)?.endMs != null) LOGS_ANCHOR_STRETCH else LOGS_ANCHOR_POINT, tween(220), label = "anchor"
     )
 
     suspend fun moveCenterTo(ms: Long, animate: Boolean) {
         val target = minutesOf(ms)
-        if (animate && kotlin.math.abs(target - center.value) < JOURNAL_GRAPH_WINDOW_MIN) center.animateTo(target, tween(220))
+        if (animate && kotlin.math.abs(target - center.value) < LOGS_GRAPH_WINDOW_MIN) center.animateTo(target, tween(220))
         else center.snapTo(target)
     }
 
@@ -210,7 +210,7 @@ fun JournalScreen(
             }
 
             if (flat.entries.isNotEmpty()) {
-                JournalGlucoseGraph(
+                LogsGlucoseGraph(
                     centerMinutes = { center.value },
                     anchorFraction = { anchorFraction },
                     baseMs = baseMs,
@@ -252,11 +252,11 @@ fun JournalScreen(
                     uiState.isLoading && days.isEmpty() ->
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 
-                    days.isEmpty() -> EmptyJournal(
+                    days.isEmpty() -> EmptyLogs(
                         filter = filter,
                         range = uiState.range,
                         onClearFilter = { filter = null },
-                        onResetRange = { viewModel.setRange(JournalRange()) },
+                        onResetRange = { viewModel.setRange(LogsRange()) },
                         onAddEntry = onAddEntry
                     )
 
@@ -271,7 +271,7 @@ fun JournalScreen(
                             stickyHeader(key = "day-$day") { DayHeader(day, daySummary(entries), Modifier.onSizeChanged { headerPx = it.height }) }
                             items(entries, key = { "${it.kind}-${it.id}" }) { entry ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    JournalEntryCard(
+                                    LogsEntryCard(
                                         entry,
                                         uiState.target,
                                         modifier = if (entry === selectedEntry) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier,
@@ -303,14 +303,14 @@ fun JournalScreen(
 
 /** How an entry shows on the graph: its time, or the stretch it covers, in its kind's colour. */
 /** Where the graph centres on an entry: the middle of a stretch (sleep, workout, low/high), else its time. */
-private fun JournalEntryUi.graphTimeUtc(): Long = when (this) {
+private fun LogsEntryUi.graphTimeUtc(): Long = when (this) {
     is GlucoseEpisodeUi -> (episode.startUtc + episode.endUtc) / 2
     is SleepEntryUi -> (startUtc + timeUtc) / 2
     is ExerciseEntryUi -> (timeUtc + endUtc) / 2
     else -> timeUtc
 }
 
-private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
+private fun LogsEntryUi.toGraphMarker(): GraphMarker = when (this) {
     is GlucoseEpisodeUi -> GraphMarker(episode.startUtc, episode.endUtc, if (episode.isLow) BelowRange else AboveRange)
     is SleepEntryUi -> GraphMarker(startUtc, timeUtc, kind.accent)
     is ExerciseEntryUi -> GraphMarker(timeUtc, endUtc, kind.accent)
@@ -324,20 +324,20 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
             CarbCurve(carbCourses)
         }
     )
-    is uk.scimone.diafit.journal.presentation.model.BolusEntryUi -> GraphMarker(
+    is uk.scimone.diafit.logs.presentation.model.BolusEntryUi -> GraphMarker(
         timeUtc, null, kind.accent,
         afterMs = (parts.maxOfOrNull { it.timeUtc } ?: timeUtc) + BOLUS_REACH_MS,
         areaStartMs = parts.minOfOrNull { it.timeUtc } ?: timeUtc,
         insulin = true,
-        doses = parts.ifEmpty { listOf(uk.scimone.diafit.journal.presentation.model.BolusPartUi(timeUtc, units, isSmb)) }
+        doses = parts.ifEmpty { listOf(uk.scimone.diafit.logs.presentation.model.BolusPartUi(timeUtc, units, isSmb)) }
     )
     else -> GraphMarker(timeUtc, null, kind.accent)
 }
 
 /** The visible entries in list order, and the LazyColumn item index of each. */
-private class FlatEntries(val entries: List<JournalEntryUi>, val rowIndex: IntArray)
+private class FlatEntries(val entries: List<LogsEntryUi>, val rowIndex: IntArray)
 
-/** Details of a device event, with the option to remove it from the journal. */
+/** Details of a device event, with the option to remove it from the logs. */
 @Composable
 private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelete: () -> Unit) {
     val time = remember(event.timeUtc) {
@@ -383,7 +383,7 @@ private fun PossibleDuplicateStrip(dup: PossibleDuplicateUi, onMerge: () -> Unit
 
 private val SHORT_DATE = DateTimeFormatter.ofPattern("d MMM")
 
-private fun JournalRange.label(): String = if (isCustom) {
+private fun LogsRange.label(): String = if (isCustom) {
     val (from, to) = days()
     if (from == to) from.format(SHORT_DATE) else "${from.format(SHORT_DATE)} – ${to.format(SHORT_DATE)}"
 } else "Last $DEFAULT_RANGE_DAYS days"
@@ -391,7 +391,7 @@ private fun JournalRange.label(): String = if (isCustom) {
 /** Time filter chip: opens the date range picker; a picked range can be cleared back to the default. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
+private fun RangeChip(range: LogsRange, onRange: (LogsRange) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     AssistChip(
         onClick = { picking = true },
@@ -401,7 +401,7 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
             if (range.isCustom) {
                 Icon(
                     Icons.Filled.Close, "Back to last $DEFAULT_RANGE_DAYS days",
-                    Modifier.size(18.dp).clip(CircleShape).clickable { onRange(JournalRange()) }
+                    Modifier.size(18.dp).clip(CircleShape).clickable { onRange(LogsRange()) }
                 )
             }
         }
@@ -427,7 +427,7 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
                         val start = day(state.selectedStartDateMillis!!)
                         val end = state.selectedEndDateMillis?.let(::day) ?: start
                         picking = false
-                        onRange(JournalRange(start, end))
+                        onRange(LogsRange(start, end))
                     }
                 ) { Text("Apply") }
             },
@@ -439,10 +439,10 @@ private fun RangeChip(range: JournalRange, onRange: (JournalRange) -> Unit) {
 }
 
 /** "3 meals · 142 g carbs · 1 low"; extend per kind as new entry types arrive. */
-private fun daySummary(entries: List<JournalEntryUi>): String {
+private fun daySummary(entries: List<LogsEntryUi>): String {
     val meals = entries.filterIsInstance<MealEntityUi>()
     val episodes = entries.filterIsInstance<GlucoseEpisodeUi>()
-    val bolusEntries = entries.filterIsInstance<uk.scimone.diafit.journal.presentation.model.BolusEntryUi>()
+    val bolusEntries = entries.filterIsInstance<uk.scimone.diafit.logs.presentation.model.BolusEntryUi>()
     val boluses = bolusEntries.count { !it.isSmb }
     val smbUnits = bolusEntries.filter { it.isSmb }.sumOf { it.units }
     val lows = episodes.count { it.episode.isLow }
@@ -456,23 +456,23 @@ private fun daySummary(entries: List<JournalEntryUi>): String {
         if (smbUnits > 0) add("${formatUnits(smbUnits)} U SMB")
         if (lows > 0) add("$lows ${if (lows == 1) "low" else "lows"}")
         if (highs > 0) add("$highs ${if (highs == 1) "high" else "highs"}")
-        entries.filterIsInstance<uk.scimone.diafit.journal.presentation.model.SleepEntryUi>().firstOrNull()
+        entries.filterIsInstance<uk.scimone.diafit.logs.presentation.model.SleepEntryUi>().firstOrNull()
             ?.let { add("${formatDuration(it.asleepMs)} sleep") }
-        val workouts = entries.count { it is uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi }
+        val workouts = entries.count { it is uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi }
         if (workouts > 0) add("$workouts ${if (workouts == 1) "workout" else "workouts"}")
     }
     return parts.joinToString(" · ")
 }
 
 @Composable
-private fun EmptyJournal(
-    filter: JournalEntryKind?,
-    range: JournalRange,
+private fun EmptyLogs(
+    filter: LogsEntryKind?,
+    range: LogsRange,
     onClearFilter: () -> Unit,
     onResetRange: () -> Unit,
     onAddEntry: () -> Unit
 ) {
-    // Entries may exist, just not for this filter or period: say so instead of claiming the journal is empty.
+    // Entries may exist, just not for this filter or period: say so instead of claiming the logs is empty.
     if (filter != null || range.isCustom) {
         val title = if (filter != null) "No ${filter.pluralLabel.lowercase()} in this period" else "Nothing in this period"
         val body = when {
@@ -515,7 +515,7 @@ private fun EmptyJournal(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
-        Text("Your journal is empty", style = MaterialTheme.typography.titleMedium)
+        Text("Your logs is empty", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(6.dp))
         Text(
             "Meals you log appear here with how they moved your glucose, together with boluses, lows and highs, device changes, sleep and workouts.",

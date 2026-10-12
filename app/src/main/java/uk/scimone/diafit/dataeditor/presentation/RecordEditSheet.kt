@@ -186,7 +186,7 @@ private fun MealForm(r: Meal, isNew: Boolean, onSave: (EditableRecord) -> Unit) 
     }
     if (r.e.components.isNotEmpty()) {
         Text(
-            "This meal was split into foods. Totals edited here replace the sum of its foods; use the meal editor in the Journal to change the foods.",
+            "This meal was split into foods. Totals edited here replace the sum of its foods; use the meal editor in the Logs to change the foods.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

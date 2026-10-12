@@ -7,11 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.BarChart
@@ -34,7 +34,7 @@ private data class NavTab(
 private val navTabs = listOf(
     NavTab(0, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     NavTab(1, "Stats", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    NavTab(2, "Journal", Icons.Filled.Book, Icons.Outlined.Book),
+    NavTab(2, "Logs", Icons.AutoMirrored.Filled.ListAlt, Icons.AutoMirrored.Outlined.ListAlt),
     NavTab(3, "History", Icons.Filled.History, Icons.Outlined.History),
 )
 

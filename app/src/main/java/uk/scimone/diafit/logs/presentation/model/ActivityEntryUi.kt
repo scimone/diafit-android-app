@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.model
+package uk.scimone.diafit.logs.presentation.model
 
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
 import uk.scimone.diafit.core.domain.model.HeartRateEntity
@@ -15,8 +15,8 @@ data class SleepEntryUi(
     /** Time per stage, in [SleepStage] order; only stages that occurred. */
     val stageMs: Map<SleepStage, Long>,
     val hasStages: Boolean
-) : JournalEntryUi {
-    override val kind: JournalEntryKind get() = JournalEntryKind.SLEEP
+) : LogsEntryUi {
+    override val kind: LogsEntryKind get() = LogsEntryKind.SLEEP
     val endUtc: Long get() = timeUtc
 }
 
@@ -28,8 +28,8 @@ data class ExerciseEntryUi(
     val title: String,
     val avgBpm: Int?,
     val maxBpm: Int?
-) : JournalEntryUi {
-    override val kind: JournalEntryKind get() = JournalEntryKind.ACTIVITY
+) : LogsEntryUi {
+    override val kind: LogsEntryKind get() = LogsEntryKind.ACTIVITY
     val durationMs: Long get() = endUtc - timeUtc
 }
 

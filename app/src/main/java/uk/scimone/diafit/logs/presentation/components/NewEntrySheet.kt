@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.R
 import coil3.compose.AsyncImage
-import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
+import uk.scimone.diafit.logs.presentation.model.LogsEntryKind
 import uk.scimone.diafit.ui.theme.Carbs
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,13 +50,13 @@ data class OpenMealSummary(
 @Composable
 fun NewEntrySheet(
     onDismiss: () -> Unit,
-    onPick: (JournalEntryKind) -> Unit,
+    onPick: (LogsEntryKind) -> Unit,
     openMeal: OpenMealSummary? = null,
     onAddCourse: (anchorMealId: Int) -> Unit = {}
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Add to journal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text("Add to logs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             openMeal?.let {
                 AddCourseRow(it, onClick = { onAddCourse(it.anchorMealId) })
@@ -67,8 +67,8 @@ fun NewEntrySheet(
                     modifier = Modifier.padding(top = 6.dp, start = 4.dp)
                 )
             }
-            JournalEntryKind.creatableKinds.forEach { kind ->
-                KindRow(kind, onClick = { onPick(kind) }, labelOverride = if (kind == JournalEntryKind.MEAL && openMeal != null) "New meal" else null)
+            LogsEntryKind.creatableKinds.forEach { kind ->
+                KindRow(kind, onClick = { onPick(kind) }, labelOverride = if (kind == LogsEntryKind.MEAL && openMeal != null) "New meal" else null)
             }
         }
     }
@@ -113,7 +113,7 @@ private fun AddCourseRow(meal: OpenMealSummary, onClick: () -> Unit) {
 }
 
 @Composable
-private fun KindRow(kind: JournalEntryKind, onClick: () -> Unit, labelOverride: String? = null) {
+private fun KindRow(kind: LogsEntryKind, onClick: () -> Unit, labelOverride: String? = null) {
     Surface(
         onClick = onClick,
         enabled = kind.available,
@@ -125,7 +125,7 @@ private fun KindRow(kind: JournalEntryKind, onClick: () -> Unit, labelOverride: 
             Surface(shape = RoundedCornerShape(14.dp), color = kind.accent.copy(alpha = 0.18f), modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     when (kind) {
-                        JournalEntryKind.MEAL -> Icon(painterResource(R.drawable.ic_meal_type_lunch), null, tint = kind.accent, modifier = Modifier.size(26.dp))
+                        LogsEntryKind.MEAL -> Icon(painterResource(R.drawable.ic_meal_type_lunch), null, tint = kind.accent, modifier = Modifier.size(26.dp))
                         else -> Icon(kind.vector(), null, tint = kind.accent, modifier = Modifier.size(26.dp))
                     }
                 }
@@ -150,16 +150,16 @@ private fun KindRow(kind: JournalEntryKind, onClick: () -> Unit, labelOverride: 
     }
 }
 
-private fun JournalEntryKind.vector(): ImageVector = when (this) {
-    JournalEntryKind.SLEEP -> Icons.Filled.Bedtime
+private fun LogsEntryKind.vector(): ImageVector = when (this) {
+    LogsEntryKind.SLEEP -> Icons.Filled.Bedtime
     else -> Icons.AutoMirrored.Filled.DirectionsRun
 }
 
-private fun JournalEntryKind.description(): String = when (this) {
-    JournalEntryKind.MEAL -> "Photo, carbs and absorption speed"
-    JournalEntryKind.SLEEP -> "Bedtime, wake-up and quality"
-    JournalEntryKind.ACTIVITY -> "Workouts and how hard they were"
-    JournalEntryKind.GLUCOSE -> "Found in your CGM data"
-    JournalEntryKind.BOLUS -> "Found in your pump data"
-    JournalEntryKind.DEVICE -> "Pod and site changes from your pump"
+private fun LogsEntryKind.description(): String = when (this) {
+    LogsEntryKind.MEAL -> "Photo, carbs and absorption speed"
+    LogsEntryKind.SLEEP -> "Bedtime, wake-up and quality"
+    LogsEntryKind.ACTIVITY -> "Workouts and how hard they were"
+    LogsEntryKind.GLUCOSE -> "Found in your CGM data"
+    LogsEntryKind.BOLUS -> "Found in your pump data"
+    LogsEntryKind.DEVICE -> "Pod and site changes from your pump"
 }

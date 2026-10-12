@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import uk.scimone.diafit.home.presentation.components.UriMosaic
 import androidx.compose.foundation.BorderStroke
@@ -46,18 +46,18 @@ import uk.scimone.diafit.core.domain.model.GlucoseEpisode
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
 import uk.scimone.diafit.core.domain.model.MEAL_OUTCOME_WINDOW_MS
 import uk.scimone.diafit.R
-import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.model.GlucoseStatus
-import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.journal.presentation.model.PumpEventUi
-import uk.scimone.diafit.journal.presentation.model.PumpEventIcon
+import uk.scimone.diafit.logs.presentation.model.BolusEntryUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseStatus
+import uk.scimone.diafit.logs.presentation.model.LogsEntryUi
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventIcon
 import uk.scimone.diafit.ui.theme.Warning
-import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
-import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
+import uk.scimone.diafit.logs.presentation.model.SleepEntryUi
+import uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi
 import uk.scimone.diafit.core.domain.model.SleepStage
-import uk.scimone.diafit.journal.presentation.model.accent
+import uk.scimone.diafit.logs.presentation.model.accent
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
@@ -72,9 +72,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** One row of the journal (and of a History day's journal), whatever the entry kind. */
+/** One row of the logs (and of a History day's logs), whatever the entry kind. */
 @Composable
-fun JournalEntryCard(entry: JournalEntryUi, target: GlucoseTargetRange, onClick: (() -> Unit)?, modifier: Modifier = Modifier, onAddPhoto: ((android.net.Uri) -> Unit)? = null) {
+fun LogsEntryCard(entry: LogsEntryUi, target: GlucoseTargetRange, onClick: (() -> Unit)?, modifier: Modifier = Modifier, onAddPhoto: ((android.net.Uri) -> Unit)? = null) {
     when (entry) {
         is MealEntityUi -> MealCard(entry, target, onClick ?: {}, modifier, onAddPhoto)
         is GlucoseEpisodeUi -> GlucoseEpisodeCard(entry.episode, onClick, modifier)
@@ -189,7 +189,7 @@ private fun HeadingDot() {
 /** Fixed, so the numbers column is the same width on every meal card. */
 private val MEAL_VALUES_WIDTH = 56.dp
 
-/** Every journal card is this tall (icon tile 48 dp + padding), whatever its kind. */
+/** Every logs card is this tall (icon tile 48 dp + padding), whatever its kind. */
 private val ENTRY_HEIGHT = 72.dp
 private fun Modifier.entryRow() = this.fillMaxWidth().height(ENTRY_HEIGHT).padding(horizontal = 12.dp)
 
@@ -236,7 +236,7 @@ fun glucoseColor(mgdl: Int, target: GlucoseTargetRange): Color = when {
     else -> InRange
 }
 
-/** "112 → peak 186 · 1h 43m": what glucose did after a meal, or null when nothing is known. Shown beside the marker in the Journal graph. */
+/** "112 → peak 186 · 1h 43m": what glucose did after a meal, or null when nothing is known. Shown beside the marker in the Logs graph. */
 fun mealPeakText(meal: MealEntityUi, target: GlucoseTargetRange): androidx.compose.ui.text.AnnotatedString? {
     val start = meal.startMgdl
     val peak = meal.peakMgdl

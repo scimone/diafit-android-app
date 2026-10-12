@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.model
+package uk.scimone.diafit.logs.presentation.model
 
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
@@ -13,11 +13,11 @@ import uk.scimone.diafit.ui.theme.Device
 import uk.scimone.diafit.ui.theme.Sleep
 
 /**
- * The kinds of entry the journal can hold. Only [MEAL] is implemented; the others exist so the
+ * The kinds of entry the logs can hold. Only [MEAL] is implemented; the others exist so the
  * "new entry" chooser, the filter row and the list can already treat entries generically.
  * To add a kind: add an editor + detail renderer for it and flip [available].
  */
-enum class JournalEntryKind(
+enum class LogsEntryKind(
     val label: String,
     val pluralLabel: String,
     val accent: Color,
@@ -33,15 +33,15 @@ enum class JournalEntryKind(
     ACTIVITY("Exercise", "Exercise", Activity, available = true, creatable = false);
 
     companion object {
-        val availableKinds: List<JournalEntryKind> get() = entries.filter { it.available }
-        val creatableKinds: List<JournalEntryKind> get() = entries.filter { it.creatable }
+        val availableKinds: List<LogsEntryKind> get() = entries.filter { it.available }
+        val creatableKinds: List<LogsEntryKind> get() = entries.filter { it.creatable }
     }
 }
 
-/** What every journal row needs to know about an entry, whatever its kind. */
-sealed interface JournalEntryUi {
+/** What every logs row needs to know about an entry, whatever its kind. */
+sealed interface LogsEntryUi {
     val id: Int
-    val kind: JournalEntryKind
+    val kind: LogsEntryKind
     val timeUtc: Long
 }
 

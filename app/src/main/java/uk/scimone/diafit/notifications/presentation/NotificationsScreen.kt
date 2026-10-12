@@ -183,7 +183,7 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
 @Composable
 private fun notificationVisual(n: AppNotificationEntity): Pair<@Composable () -> Unit, Color> {
     val kind = n.dedupeKey.substringBefore('-')
-    // Device alerts keep the neutral device colour, like the device events in the Journal.
+    // Device alerts keep the neutral device colour, like the device events in the Logs.
     val tint = if (DeviceKind.entries.any { it.name == kind }) Device else MaterialTheme.colorScheme.primary
     val icon: @Composable () -> Unit = {
         when (kind) {

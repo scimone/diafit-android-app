@@ -16,8 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.MealType
 import uk.scimone.diafit.core.domain.util.friendlyDateString
-import uk.scimone.diafit.journal.presentation.model.accent
-import uk.scimone.diafit.journal.presentation.model.iconRes
+import uk.scimone.diafit.logs.presentation.model.accent
+import uk.scimone.diafit.logs.presentation.model.iconRes
 import uk.scimone.diafit.core.domain.util.localDateTimeToInstant
 import java.time.Instant
 import java.time.LocalDate

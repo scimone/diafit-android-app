@@ -8,7 +8,7 @@ import uk.scimone.diafit.core.domain.model.MealEntity
 data class ActiveEngine(val engine: MealActivityEngine, val modelVersion: Int?, val trainingRevision: String?)
 
 /**
- * Entry point for everything that draws or sums meal activity (Home, Journal, History). This is the one algorithm that
+ * Entry point for everything that draws or sums meal activity (Home, Logs, History). This is the one algorithm that
  * replaced `CarbActivity`'s Beta(2,3) curve: callers get a [MealActivityCurve] and read the quantity they mean
  * ([MealActivityCurve.carbsRateGph] for the charts, [MealActivityCurve.carbsRemainingG] for carbs on board).
  *

@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

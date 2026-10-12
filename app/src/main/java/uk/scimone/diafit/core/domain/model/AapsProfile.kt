@@ -132,7 +132,7 @@ fun formatDurationMinutes(minutes: Int): String = when {
     else -> "${minutes / 60} h ${minutes % 60} min"
 }
 
-/** One-line detail for a journal card: the profile and duration of a switch, else the event's notes. */
+/** One-line detail for a logs card: the profile and duration of a switch, else the event's notes. */
 fun PumpEventEntity.summary(): String? =
     toProfileSwitch()?.let { sw ->
         buildString {

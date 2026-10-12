@@ -59,10 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import uk.scimone.diafit.core.domain.util.friendlyDateString
-import uk.scimone.diafit.journal.presentation.components.MealMetaRow
+import uk.scimone.diafit.logs.presentation.components.MealMetaRow
 import androidx.compose.ui.res.painterResource
-import uk.scimone.diafit.journal.presentation.model.accent
-import uk.scimone.diafit.journal.presentation.model.iconRes
+import uk.scimone.diafit.logs.presentation.model.accent
+import uk.scimone.diafit.logs.presentation.model.iconRes
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.groupIntoSittings
 import uk.scimone.diafit.home.presentation.model.MealEntityUi

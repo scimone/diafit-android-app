@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,10 +19,10 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealType
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.journal.presentation.model.accent
-import uk.scimone.diafit.journal.presentation.model.iconRes
-import uk.scimone.diafit.journal.presentation.model.label
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.accent
+import uk.scimone.diafit.logs.presentation.model.iconRes
+import uk.scimone.diafit.logs.presentation.model.label
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Carbs

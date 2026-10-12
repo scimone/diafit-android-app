@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -40,7 +40,7 @@ import kotlin.math.min
 private const val GAP_MS = 15 * 60_000L
 
 /**
- * Glucose around one journal event: the CGM trace coloured by range, the target band, the span the
+ * Glucose around one logs event: the CGM trace coloured by range, the target band, the span the
  * event is expected to influence, the event itself, insulin, and a scrub readout. Drag across it to
  * read exact values.
  */

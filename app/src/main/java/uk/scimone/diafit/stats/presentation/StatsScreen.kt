@@ -225,7 +225,7 @@ private fun VitalsPermissionCard(onAllow: () -> Unit) {
 
 private val CardShape = RoundedCornerShape(20.dp)
 
-/** The app's card surface (as in the Journal): rounded, hairline border, no fill change. */
+/** The app's card surface (as in the Logs): rounded, hairline border, no fill change. */
 @Composable
 internal fun StatsSurface(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
     val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -234,7 +234,7 @@ internal fun StatsSurface(modifier: Modifier = Modifier, onClick: (() -> Unit)? 
     else Surface(shape = CardShape, color = color, border = border, modifier = modifier.fillMaxWidth(), content = content)
 }
 
-/** The tinted rounded tile with the metric's glyph that every Journal entry uses. */
+/** The tinted rounded tile with the metric's glyph that every Logs entry uses. */
 @Composable
 internal fun IconTile(icon: ImageVector, accent: Color, size: Dp = 44.dp) {
     Box(Modifier.size(size).background(accent.copy(alpha = 0.16f), RoundedCornerShape(size * 0.3f)), contentAlignment = Alignment.Center) {

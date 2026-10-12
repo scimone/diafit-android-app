@@ -11,7 +11,7 @@ import uk.scimone.diafit.core.di.coreModule
 import uk.scimone.diafit.addmeal.di.addmealModule
 import uk.scimone.diafit.history.di.historyModule
 import uk.scimone.diafit.home.di.homeModule
-import uk.scimone.diafit.journal.di.journalModule
+import uk.scimone.diafit.logs.di.logsModule
 import uk.scimone.diafit.settings.di.settingsModule
 import uk.scimone.diafit.profile.di.profileModule
 import uk.scimone.diafit.patterns.di.patternsModule
@@ -33,7 +33,7 @@ class DiafitApp : Application() {
             modules(
                 listOf(
                     coreModule,
-                    journalModule,
+                    logsModule,
                     addmealModule,
                     homeModule,
                     historyModule,

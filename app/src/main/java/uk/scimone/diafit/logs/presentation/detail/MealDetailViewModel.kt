@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.detail
+package uk.scimone.diafit.logs.presentation.detail
 
 import android.content.Context
 import android.util.Log
@@ -23,9 +23,9 @@ import uk.scimone.diafit.core.domain.usecase.GetGlucoseResponseUseCase
 import uk.scimone.diafit.core.domain.usecase.GlucoseResponse
 import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
-import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.journal.presentation.model.toUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseImpact
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 

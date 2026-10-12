@@ -20,22 +20,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import uk.scimone.diafit.addmeal.presentation.MealEditorScreen
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
-import uk.scimone.diafit.journal.presentation.components.NewEntrySheet
-import uk.scimone.diafit.journal.presentation.components.OpenMealSummary
+import uk.scimone.diafit.logs.presentation.components.NewEntrySheet
+import uk.scimone.diafit.logs.presentation.components.OpenMealSummary
 import uk.scimone.diafit.core.domain.repository.FileStorageRepository
 import uk.scimone.diafit.core.domain.usecase.GetOpenSittingUseCase
-import uk.scimone.diafit.journal.presentation.detail.MealDetailScreen
-import uk.scimone.diafit.journal.presentation.model.JournalEntryKind
-import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
+import uk.scimone.diafit.logs.presentation.detail.MealDetailScreen
+import uk.scimone.diafit.logs.presentation.model.LogsEntryKind
+import uk.scimone.diafit.logs.presentation.model.BolusEntryUi
 import uk.scimone.diafit.profile.presentation.ProfileScreen
 import uk.scimone.diafit.profile.presentation.ProfileSwitchDetailScreen
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Insights
-import uk.scimone.diafit.journal.presentation.model.PumpEventUi
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
 import androidx.activity.compose.BackHandler
 import uk.scimone.diafit.ui.theme.DiafitTheme
 import uk.scimone.diafit.core.presentation.ADD_MEAL_TAB_INDEX
@@ -49,7 +49,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.service.CgmServiceManager
-import uk.scimone.diafit.journal.presentation.JournalScreen
+import uk.scimone.diafit.logs.presentation.LogsScreen
 import uk.scimone.diafit.history.presentation.HistoryScreen
 import uk.scimone.diafit.history.presentation.detail.DayDetailScreen
 import uk.scimone.diafit.home.presentation.HomeScreen
@@ -202,7 +202,7 @@ class MainActivity : ComponentActivity() {
                                     Text(
                                         when (selectedTab) {
                                             1 -> "Stats"
-                                            2 -> "Journal"
+                                            2 -> "Logs"
                                             3 -> "History"
                                             else -> "Diafit"
                                         }
@@ -248,15 +248,15 @@ class MainActivity : ComponentActivity() {
                                 userId = userId,
                                 onOpenMetric = { metric, period, offset -> overlays.add(Overlay.StatsDetail(metric, period, offset)) }
                             )
-                            2 -> JournalScreen(
+                            2 -> LogsScreen(
                                 userId = userId,
                                 onOpenEntry = { entry ->
                                     when (entry) {
                                         is MealEntityUi -> overlays.add(Overlay.MealDetail(entry.id))
                                         // A low or high opens its day in History, where the trace around it is visible.
-                                        is uk.scimone.diafit.journal.presentation.model.SleepEntryUi -> overlays.add(Overlay.SleepDetail(entry))
-                                        is BolusEntryUi, is uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi -> Unit
-                                        // Only profile switches reach here; other device events open a dialog in the Journal.
+                                        is uk.scimone.diafit.logs.presentation.model.SleepEntryUi -> overlays.add(Overlay.SleepDetail(entry))
+                                        is BolusEntryUi, is uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi -> Unit
+                                        // Only profile switches reach here; other device events open a dialog in the Logs.
                                         is PumpEventUi -> overlays.add(Overlay.ProfileSwitchDetail(entry.id))
                                         is GlucoseEpisodeUi -> overlays.add(
                                             Overlay.DayDetail(
@@ -293,7 +293,7 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { showNewEntrySheet = false },
                         onPick = { kind ->
                             showNewEntrySheet = false
-                            if (kind == JournalEntryKind.MEAL) overlays.add(Overlay.MealEditor(null))
+                            if (kind == LogsEntryKind.MEAL) overlays.add(Overlay.MealEditor(null))
                         },
                         openMeal = openMeal,
                         onAddCourse = { mealId ->
@@ -318,7 +318,7 @@ class MainActivity : ComponentActivity() {
                                     offset = overlay.offset,
                                     onBack = { overlays.remove(overlay) }
                                 )
-                                is Overlay.SleepDetail -> uk.scimone.diafit.journal.presentation.detail.SleepDetailScreen(overlay.entry, onBack = { overlays.remove(overlay) })
+                                is Overlay.SleepDetail -> uk.scimone.diafit.logs.presentation.detail.SleepDetailScreen(overlay.entry, onBack = { overlays.remove(overlay) })
                                 is Overlay.MealDetail -> MealDetailScreen(
                                     userId = userId,
                                     mealId = overlay.mealId,
@@ -452,7 +452,7 @@ private sealed interface Overlay {
         val period: uk.scimone.diafit.stats.domain.StatsPeriod,
         val offset: Int
     ) : Overlay
-    data class SleepDetail(val entry: uk.scimone.diafit.journal.presentation.model.SleepEntryUi) : Overlay
+    data class SleepDetail(val entry: uk.scimone.diafit.logs.presentation.model.SleepEntryUi) : Overlay
     data class MealDetail(val mealId: Int) : Overlay
     /** One day of History in full; swipeable to neighbouring days. */
     data class DayDetail(val epochDay: Long) : Overlay

@@ -1,10 +1,10 @@
-package uk.scimone.diafit.journal
+package uk.scimone.diafit.logs
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.scimone.diafit.core.domain.model.BolusEntity
-import uk.scimone.diafit.journal.presentation.model.toBolusEntries
+import uk.scimone.diafit.logs.presentation.model.toBolusEntries
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 

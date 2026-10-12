@@ -1,13 +1,13 @@
-package uk.scimone.diafit.journal.di
+package uk.scimone.diafit.logs.di
 
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
-import uk.scimone.diafit.journal.presentation.JournalViewModel
-import uk.scimone.diafit.journal.presentation.detail.MealDetailViewModel
+import uk.scimone.diafit.logs.presentation.LogsViewModel
+import uk.scimone.diafit.logs.presentation.detail.MealDetailViewModel
 
-val journalModule = module {
+val logsModule = module {
     viewModel {
-        JournalViewModel(
+        LogsViewModel(
             mealRepository = get(),
             getMealOutcome = get(),
             cgmRepository = get(),

@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.formatGrams
-import uk.scimone.diafit.journal.presentation.components.SectionLabel
+import uk.scimone.diafit.logs.presentation.components.SectionLabel
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

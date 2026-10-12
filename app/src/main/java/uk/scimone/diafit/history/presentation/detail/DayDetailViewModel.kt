@@ -30,10 +30,10 @@ import uk.scimone.diafit.home.presentation.model.toChartData
 import uk.scimone.diafit.home.presentation.model.toInsulinActivityChartData
 import uk.scimone.diafit.home.presentation.model.toMealEntityUi
 import uk.scimone.diafit.core.domain.model.standalone
-import uk.scimone.diafit.journal.presentation.model.toBolusEntries
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
-import uk.scimone.diafit.journal.presentation.model.toUi
+import uk.scimone.diafit.logs.presentation.model.toBolusEntries
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.model.LogsEntryUi
+import uk.scimone.diafit.logs.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.core.domain.model.deliveredUnits
@@ -128,7 +128,7 @@ class DayDetailViewModel(
     }
 
     /** Sleep that ended on this day and workouts that started on it. */
-    private fun activityCards(activity: ActivityData, start: Long, end: Long): List<JournalEntryUi> =
+    private fun activityCards(activity: ActivityData, start: Long, end: Long): List<LogsEntryUi> =
         activity.sleepSessions.filter { it.endUtc in start until end }.map { it.toUi() } +
             activity.exercise.filter { it.startUtc in start until end }.map { it.toUi(activity.heartRate) }
 
@@ -163,8 +163,8 @@ data class DayDetailState(
     val activityConnected: Boolean = false,
     /** Charts tab: courses for the meal photo strip under the panels. */
     val timelineMeals: List<TimelineMeal> = emptyList(),
-    /** Journal tab: meal and low/high cards, oldest first. */
-    val entries: List<JournalEntryUi> = emptyList(),
+    /** Logs tab: meal and low/high cards, oldest first. */
+    val entries: List<LogsEntryUi> = emptyList(),
     val errorMessage: String? = null
 ) {
     val totalInsulin: Double get() = bolusUnits + smbUnits

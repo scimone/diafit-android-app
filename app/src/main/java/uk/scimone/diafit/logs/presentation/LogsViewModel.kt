@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation
+package uk.scimone.diafit.logs.presentation
 
 import android.content.Context
 import android.util.Log
@@ -29,26 +29,26 @@ import uk.scimone.diafit.core.domain.model.MEAL_DOSE_LEAD_MS
 import uk.scimone.diafit.core.domain.model.standalone
 import uk.scimone.diafit.core.domain.repository.ActivityRepository
 import uk.scimone.diafit.core.domain.repository.BolusRepository
-import uk.scimone.diafit.journal.presentation.model.toUi as activityToUi
+import uk.scimone.diafit.logs.presentation.model.toUi as activityToUi
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.repository.PumpEventRepository
 import uk.scimone.diafit.core.domain.model.pairTemporaryTargets
 import uk.scimone.diafit.core.domain.model.toTemporaryTarget
-import uk.scimone.diafit.journal.presentation.model.PumpEventUi
-import uk.scimone.diafit.journal.presentation.model.toUi as pumpEventToUi
-import uk.scimone.diafit.journal.presentation.model.toMergedChangeUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventUi
+import uk.scimone.diafit.logs.presentation.model.toUi as pumpEventToUi
+import uk.scimone.diafit.logs.presentation.model.toMergedChangeUi
 import uk.scimone.diafit.core.domain.usecase.GetMealOutcomeUseCase
 import uk.scimone.diafit.core.domain.usecase.MergeCarbEntriesUseCase
 import uk.scimone.diafit.core.domain.model.MealMatcher
-import uk.scimone.diafit.journal.presentation.model.PossibleDuplicateUi
-import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
-import uk.scimone.diafit.journal.presentation.model.toBolusEntries
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.model.GlucoseImpact
-import uk.scimone.diafit.journal.presentation.model.JournalEntryUi
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
-import uk.scimone.diafit.journal.presentation.model.toUi
+import uk.scimone.diafit.logs.presentation.model.PossibleDuplicateUi
+import uk.scimone.diafit.logs.presentation.model.BolusEntryUi
+import uk.scimone.diafit.logs.presentation.model.toBolusEntries
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseImpact
+import uk.scimone.diafit.logs.presentation.model.LogsEntryUi
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.model.toUi
 import uk.scimone.diafit.settings.domain.model.toCore
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.presentation.SettingsChangeBus
@@ -56,11 +56,11 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Journal entries: every meal (one per sitting, with its insulin and glucose outcome) and the lows
+ * Logs entries: every meal (one per sitting, with its insulin and glucose outcome) and the lows
  * and highs of the last [EPISODE_DAYS] days. Re-evaluated when meals change and every few minutes,
  * so outcomes fill in and new lows/highs appear without a manual refresh.
  */
-class JournalViewModel(
+class LogsViewModel(
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val getMealOutcome: GetMealOutcomeUseCase,
     private val cgmRepository: CgmRepository,
@@ -74,11 +74,11 @@ class JournalViewModel(
     private val userId: Int
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(JournalUiState(isLoading = true))
-    val uiState: StateFlow<JournalUiState> = _uiState
+    private val _uiState = MutableStateFlow(LogsUiState(isLoading = true))
+    val uiState: StateFlow<LogsUiState> = _uiState
 
     // Declared before init: observeEntries() runs from it and reads this.
-    private var range = JournalRange()
+    private var range = LogsRange()
 
     init {
         observeEntries()
@@ -99,7 +99,7 @@ class JournalViewModel(
 
     /**
      * Makes sure the day of [centerMs] and its neighbours are loaded, and drops days far away, so the graph
-     * only ever holds a few days however long the journal range is. Past days are read once; today is re-read
+     * only ever holds a few days however long the logs range is. Past days are read once; today is re-read
      * after a minute.
      */
     fun ensureGlucose(centerMs: Long) {
@@ -142,7 +142,7 @@ class JournalViewModel(
     }
 
     /** Shows the entries of [newRange] only. */
-    fun setRange(newRange: JournalRange) {
+    fun setRange(newRange: LogsRange) {
         if (newRange == range) return
         range = newRange
         _uiState.update { it.copy(range = newRange, isLoading = true) }
@@ -230,15 +230,15 @@ class JournalViewModel(
     /** All meal courses and doses that can still be acting inside the range (a day of margin before it). */
     private suspend fun activityInputs(
         meals: List<MealEntity>, from: Long, to: Long
-    ): Pair<List<uk.scimone.diafit.journal.presentation.model.CarbCourse>, List<uk.scimone.diafit.journal.presentation.model.BolusPartUi>> {
+    ): Pair<List<uk.scimone.diafit.logs.presentation.model.CarbCourse>, List<uk.scimone.diafit.logs.presentation.model.BolusPartUi>> {
         val courses = meals.filter { it.carbohydrates > 0 && it.mealTimeUtc in (from - DAY_MS)..to }.map {
-            uk.scimone.diafit.journal.presentation.model.CarbCourse(
+            uk.scimone.diafit.logs.presentation.model.CarbCourse(
                 it.carbohydrates.toDouble(), it.mealTimeUtc, uk.scimone.diafit.mealactivity.domain.MealActivity.curve(it)
             )
         }
         val doses = try {
             bolusRepository.getBolusBetween(from - DAY_MS, to, userId).map {
-                uk.scimone.diafit.journal.presentation.model.BolusPartUi(it.timestampUtc, it.value.toDouble(), it.isSmb)
+                uk.scimone.diafit.logs.presentation.model.BolusPartUi(it.timestampUtc, it.value.toDouble(), it.isSmb)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading doses", e)
@@ -255,7 +255,7 @@ class JournalViewModel(
         emptyList()
     }
 
-    /** Device milestones (pod/site changes, ...) in the range; routine temp basals stay out of the journal. */
+    /** Device milestones (pod/site changes, ...) in the range; routine temp basals stay out of the logs. */
     private suspend fun pumpEventEntries(from: Long, to: Long): List<PumpEventUi> = try {
         val milestones = pumpEventRepository.getBetween(from, to, userId).filter { it.isMilestone }
             // AAPS sometimes sends the same event twice under different ids: keep the first of each.
@@ -279,7 +279,7 @@ class JournalViewModel(
     }
 
     /** Sleep (listed on the day the user woke up) and workouts in the range, from Health Connect. */
-    private suspend fun activityEntries(from: Long, to: Long): List<JournalEntryUi> = try {
+    private suspend fun activityEntries(from: Long, to: Long): List<LogsEntryUi> = try {
         val data = activityRepository.getSessionsBetween(from, to, userId)
         val sleep = data.sleepSessions.filter { it.endUtc in from..to }.map { it.activityToUi() }
         val exercise = data.exercise.filter { it.startUtc in from..to }.map {
@@ -305,7 +305,7 @@ class JournalViewModel(
         }
     }
 
-    /** Removes a device event from the journal (soft delete, so AAPS re-sending it doesn't bring it back). */
+    /** Removes a device event from the logs (soft delete, so AAPS re-sending it doesn't bring it back). */
     fun deletePumpEvent(ids: List<Int>) {
         viewModelScope.launch {
             try {
@@ -323,7 +323,7 @@ class JournalViewModel(
     }
 
     private companion object {
-        const val TAG = "JournalViewModel"
+        const val TAG = "LogsViewModel"
         /** Lows and highs are only searched this many days back, however wide the range. */
         const val MAX_EPISODE_DAYS = 180
         const val DAY_MS = 24 * 60 * 60_000L
@@ -334,24 +334,24 @@ class JournalViewModel(
     }
 }
 
-data class JournalUiState(
-    /** Every journal entry, of any kind, in no particular order. */
-    val entries: List<JournalEntryUi> = emptyList(),
+data class LogsUiState(
+    /** Every logs entry, of any kind, in no particular order. */
+    val entries: List<LogsEntryUi> = emptyList(),
     /** Every logged meal course around the range, for the graph's summed carb absorption curve. */
-    val carbCourses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse> = emptyList(),
+    val carbCourses: List<uk.scimone.diafit.logs.presentation.model.CarbCourse> = emptyList(),
     /** Every dose (SMBs too) around the range, for the graph's summed insulin activity curve. */
-    val doses: List<uk.scimone.diafit.journal.presentation.model.BolusPartUi> = emptyList(),
+    val doses: List<uk.scimone.diafit.logs.presentation.model.BolusPartUi> = emptyList(),
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
-    val range: JournalRange = JournalRange(),
+    val range: LogsRange = LogsRange(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
-/** How far back the journal looks when no range was picked. */
+/** How far back the logs looks when no range was picked. */
 const val DEFAULT_RANGE_DAYS = 30
 
-/** The journal's time filter: the last [DEFAULT_RANGE_DAYS] days, or a picked first–last day (both inclusive). */
-data class JournalRange(val customFrom: LocalDate? = null, val customTo: LocalDate? = null) {
+/** The logs's time filter: the last [DEFAULT_RANGE_DAYS] days, or a picked first–last day (both inclusive). */
+data class LogsRange(val customFrom: LocalDate? = null, val customTo: LocalDate? = null) {
     val isCustom: Boolean get() = customFrom != null && customTo != null
 
     fun days(zone: ZoneId = ZoneId.systemDefault()): Pair<LocalDate, LocalDate> {

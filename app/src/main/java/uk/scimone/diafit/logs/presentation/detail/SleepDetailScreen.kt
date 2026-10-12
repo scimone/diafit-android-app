@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.detail
+package uk.scimone.diafit.logs.presentation.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,9 +22,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.SleepStage
-import uk.scimone.diafit.journal.presentation.components.formatDuration
-import uk.scimone.diafit.journal.presentation.components.stageColor
-import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
+import uk.scimone.diafit.logs.presentation.components.formatDuration
+import uk.scimone.diafit.logs.presentation.components.stageColor
+import uk.scimone.diafit.logs.presentation.model.SleepEntryUi
 import uk.scimone.diafit.ui.theme.Sleep
 import java.text.SimpleDateFormat
 import java.util.Date

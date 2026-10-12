@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.model
+package uk.scimone.diafit.logs.presentation.model
 
 import uk.scimone.diafit.core.domain.model.BolusEntity
 
@@ -6,7 +6,7 @@ import uk.scimone.diafit.core.domain.model.BolusEntity
 data class BolusPartUi(val timeUtc: Long, val units: Double, val isSmb: Boolean)
 
 /**
- * Insulin that belongs to no meal, as its own journal entry: one bolus, or several given within
+ * Insulin that belongs to no meal, as its own logs entry: one bolus, or several given within
  * [BOLUS_GROUP_GAP_MS] of each other (at most [BOLUS_GROUP_MAX_SPAN_MS] in total) summed up, with every
  * dose kept in [parts] so the card can be expanded.
  */
@@ -20,8 +20,8 @@ data class BolusEntryUi(
     val isSmb: Boolean,
     val startUtc: Long = timeUtc,
     val parts: List<BolusPartUi> = emptyList()
-) : JournalEntryUi {
-    override val kind: JournalEntryKind get() = JournalEntryKind.BOLUS
+) : LogsEntryUi {
+    override val kind: LogsEntryKind get() = LogsEntryKind.BOLUS
 }
 
 const val BOLUS_GROUP_GAP_MS = 30 * 60_000L

@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.detail
+package uk.scimone.diafit.logs.presentation.detail
 
 import uk.scimone.diafit.core.presentation.components.MealComponentCard
 import androidx.compose.animation.AnimatedVisibility
@@ -35,8 +35,8 @@ import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.util.friendlyDateString
-import uk.scimone.diafit.journal.presentation.components.*
-import uk.scimone.diafit.journal.presentation.model.*
+import uk.scimone.diafit.logs.presentation.components.*
+import uk.scimone.diafit.logs.presentation.model.*
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.Bolus
@@ -131,7 +131,7 @@ fun MealDetailScreen(
             text = {
                 Text(
                     (if (state.isMultiCourse) "All ${state.courses.size} courses will be removed" else "It will be removed") +
-                        " from your journal and the Home graphs. You can undo right after."
+                        " from your logs and the Home graphs. You can undo right after."
                 )
             },
             confirmButton = {
@@ -427,7 +427,7 @@ private fun LegendDot(color: Color, label: String) {
 
 @Composable
 private fun StatRow(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.usecase.GlucoseResponse, target: uk.scimone.diafit.core.domain.model.GlucoseTargetRange) {
-    fun tint(v: Int?) = v?.let { uk.scimone.diafit.journal.presentation.components.glucoseColor(it, target) }
+    fun tint(v: Int?) = v?.let { uk.scimone.diafit.logs.presentation.components.glucoseColor(it, target) }
     val atMeal = response.atEvent?.valueMgdl
     val peak = response.peak
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

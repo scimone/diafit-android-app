@@ -35,15 +35,15 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.model.DayGlucoseStats
 import uk.scimone.diafit.core.domain.model.GlucoseThresholds
 import uk.scimone.diafit.core.domain.model.GlucoseZone
-import uk.scimone.diafit.journal.presentation.components.JournalEntryCard
-import uk.scimone.diafit.journal.presentation.components.formatDuration
-import uk.scimone.diafit.journal.presentation.components.formatUnits
-import uk.scimone.diafit.journal.presentation.model.BolusEntryUi
-import uk.scimone.diafit.journal.presentation.model.PumpEventUi
-import uk.scimone.diafit.journal.presentation.model.SleepEntryUi
-import uk.scimone.diafit.journal.presentation.model.ExerciseEntryUi
-import uk.scimone.diafit.journal.presentation.model.GlucoseEpisodeUi
-import uk.scimone.diafit.journal.presentation.model.MealEntityUi
+import uk.scimone.diafit.logs.presentation.components.LogsEntryCard
+import uk.scimone.diafit.logs.presentation.components.formatDuration
+import uk.scimone.diafit.logs.presentation.components.formatUnits
+import uk.scimone.diafit.logs.presentation.model.BolusEntryUi
+import uk.scimone.diafit.logs.presentation.model.PumpEventUi
+import uk.scimone.diafit.logs.presentation.model.SleepEntryUi
+import uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi
+import uk.scimone.diafit.logs.presentation.model.GlucoseEpisodeUi
+import uk.scimone.diafit.logs.presentation.model.MealEntityUi
 import uk.scimone.diafit.core.domain.model.ActivityDayStats
 import uk.scimone.diafit.core.domain.model.SleepStage
 import uk.scimone.diafit.ui.theme.Activity
@@ -70,11 +70,11 @@ private const val MIN_DAY_COVERAGE = 0.7
 private const val MAX_DAYS_BACK = 3650
 
 /** The three views of a day. */
-private enum class DayTab(val label: String) { CHARTS("Charts"), STATS("Stats"), JOURNAL("Journal") }
+private enum class DayTab(val label: String) { CHARTS("Charts"), STATS("Stats"), LOGS("Logs") }
 
 /**
  * One day in full, opened from a History row, in three tabs: stats, the Home-style charts with the
- * meal photo strip, and the day's journal (meals and lows/highs). Swipe sideways (or use the arrows)
+ * meal photo strip, and the day's logs (meals and lows/highs). Swipe sideways (or use the arrows)
  * to move between days; on the Charts tab swiping is left to the charts (pan/zoom), the arrows still work.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -188,13 +188,13 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
         else -> when (tab) {
             DayTab.STATS -> DayStatsTab(userId, epochDay)
             DayTab.CHARTS -> DayCharts(state, onOpenMeal)
-            DayTab.JOURNAL -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows, highs, sleep or exercise on this day.") else LazyColumn(
+            DayTab.LOGS -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows, highs, sleep or exercise on this day.") else LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(state.entries.asReversed(), key = { "${it.kind}-${it.id}" }) { entry ->
-                    JournalEntryCard(
+                    LogsEntryCard(
                         entry,
                         state.target,
                         onAddPhoto = { uri -> viewModel.addPhoto(entry.id, uri) },

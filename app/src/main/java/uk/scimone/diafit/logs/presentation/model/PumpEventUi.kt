@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.model
+package uk.scimone.diafit.logs.presentation.model
 
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
 import uk.scimone.diafit.core.domain.model.PumpEventNormalizer
@@ -24,8 +24,8 @@ data class PumpEventUi(
     /** Where it was imported from ("AAPS", "Nightscout"), if known. */
     val source: String? = null,
     val icon: PumpEventIcon = PumpEventIcon.GENERIC
-) : JournalEntryUi {
-    override val kind: JournalEntryKind get() = JournalEntryKind.DEVICE
+) : LogsEntryUi {
+    override val kind: LogsEntryKind get() = LogsEntryKind.DEVICE
 
     /** Profile switches and target-only switches open the detail page instead of the plain dialog. */
     val hasDetailPage: Boolean

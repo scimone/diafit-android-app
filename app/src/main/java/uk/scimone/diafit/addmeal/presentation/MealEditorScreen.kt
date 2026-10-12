@@ -54,9 +54,9 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.components.*
 import uk.scimone.diafit.core.domain.model.MealPhoto
-import uk.scimone.diafit.journal.presentation.components.SectionLabel
-import uk.scimone.diafit.journal.presentation.model.hint
-import uk.scimone.diafit.journal.presentation.model.label
+import uk.scimone.diafit.logs.presentation.components.SectionLabel
+import uk.scimone.diafit.logs.presentation.model.hint
+import uk.scimone.diafit.logs.presentation.model.label
 import uk.scimone.diafit.ui.theme.Carbs
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -284,7 +284,7 @@ fun MealEditorScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(if (extendedCourse) "Delete this course?" else "Delete this meal?") },
-            text = { Text("It will be removed from your journal and the Home graphs. You can undo right after.") },
+            text = { Text("It will be removed from your logs and the Home graphs. You can undo right after.") },
             confirmButton = {
                 TextButton(
                     onClick = { confirmDelete = false; viewModel.deleteMeal() },

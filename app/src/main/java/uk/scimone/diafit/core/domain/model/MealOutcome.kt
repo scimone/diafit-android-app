@@ -2,7 +2,7 @@ package uk.scimone.diafit.core.domain.model
 
 import kotlin.math.abs
 
-/** Glucose is judged over this long after a meal starts (Journal, History). */
+/** Glucose is judged over this long after a meal starts (Logs, History). */
 const val MEAL_OUTCOME_WINDOW_MS = 4 * 60 * 60_000L
 
 /** Below this share of 5-minute slots with a reading, a meal's outcome isn't shown. */

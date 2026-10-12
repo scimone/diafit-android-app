@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,9 +13,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealType
-import uk.scimone.diafit.journal.presentation.model.accent
-import uk.scimone.diafit.journal.presentation.model.iconRes
-import uk.scimone.diafit.journal.presentation.model.label
+import uk.scimone.diafit.logs.presentation.model.accent
+import uk.scimone.diafit.logs.presentation.model.iconRes
+import uk.scimone.diafit.logs.presentation.model.label
 
 /** Timestamp, meal type pill and absorption pill (no duration): shared by the meal page and the Home meal preview. */
 @Composable

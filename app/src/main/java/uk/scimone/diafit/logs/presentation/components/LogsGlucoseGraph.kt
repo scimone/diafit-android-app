@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.components
+package uk.scimone.diafit.logs.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,18 +30,18 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
-import uk.scimone.diafit.journal.presentation.DayGlucose
+import uk.scimone.diafit.logs.presentation.DayGlucose
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
 import uk.scimone.diafit.ui.theme.InRange
 import uk.scimone.diafit.ui.theme.targetRangeBandColor
 
 /** The graph shows this many minutes, with the marker (the highlighted entry's timestamp) in the middle. */
-const val JOURNAL_GRAPH_WINDOW_MIN = 480f
+const val LOGS_GRAPH_WINDOW_MIN = 480f
 
 /** Where the selected entry sits across the graph: 2 h in for a point (so its aftermath shows), the middle for a stretch. */
-const val JOURNAL_ANCHOR_POINT = 0.25f
-const val JOURNAL_ANCHOR_STRETCH = 0.5f
+const val LOGS_ANCHOR_POINT = 0.25f
+const val LOGS_ANCHOR_STRETCH = 0.5f
 
 /** Carb absorption (g/h) and insulin activity (U/min) the curves are scaled against at least, so small amounts stay small. */
 private const val MIN_CARB_SCALE_GPH = 20.0
@@ -53,7 +53,7 @@ private const val MIN_MS = 60_000L
 private const val DAY_MS = 24 * 60 * MIN_MS
 
 /**
- * A journal entry on the graph: a point in time (meal, insulin, device event) when [endMs] is null, else the
+ * A logs entry on the graph: a point in time (meal, insulin, device event) when [endMs] is null, else the
  * whole stretch it covers (low/high, sleep, workout).
  */
 class GraphMarker(
@@ -73,22 +73,22 @@ class GraphMarker(
     /** Where the highlighted area starts when that isn't [startMs] (a group of doses starts at its first dose). */
     val areaStartMs: Long? = null,
     /** The doses of an insulin entry, drawn as its own curve over the total. */
-    val doses: List<uk.scimone.diafit.journal.presentation.model.BolusPartUi> = emptyList()
+    val doses: List<uk.scimone.diafit.logs.presentation.model.BolusPartUi> = emptyList()
 ) {
     val colors: List<Color> get() = listOfNotNull(color, extraColor)
 }
 
 /** One absorption curve per course; the graph draws their sum. */
-class CarbCurve(val courses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse>)
+class CarbCurve(val courses: List<uk.scimone.diafit.logs.presentation.model.CarbCourse>)
 
 /**
- * Glucose around the highlighted journal entry, in the style of Home's glucose panel (target band, dots
+ * Glucose around the highlighted logs entry, in the style of Home's glucose panel (target band, dots
  * coloured by range) but fixed at one zoom level. It is drawn directly from the few cached days in
  * [glucose], so scrolling never has to build a chart model. [centerMinutes] is the marker position in minutes
  * after [baseMs]; it is read while drawing only, so moving it redraws without recomposing.
  */
 @Composable
-fun JournalGlucoseGraph(
+fun LogsGlucoseGraph(
     centerMinutes: () -> Float,
     anchorFraction: () -> Float,
     baseMs: Long,
@@ -97,8 +97,8 @@ fun JournalGlucoseGraph(
     upper: Int,
     markers: List<GraphMarker>,
     selectedMarker: Int,
-    allCarbCourses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse>,
-    allDoses: List<uk.scimone.diafit.journal.presentation.model.BolusPartUi>,
+    allCarbCourses: List<uk.scimone.diafit.logs.presentation.model.CarbCourse>,
+    allDoses: List<uk.scimone.diafit.logs.presentation.model.BolusPartUi>,
     onDragStart: () -> Unit,
     onDrag: (deltaMinutes: Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -134,19 +134,19 @@ fun JournalGlucoseGraph(
                         // Dragging right pulls earlier time into view: the marker moves back.
                         onHorizontalDrag = { change, amount ->
                             change.consume()
-                            drag(-amount / (size.width / JOURNAL_GRAPH_WINDOW_MIN))
+                            drag(-amount / (size.width / LOGS_GRAPH_WINDOW_MIN))
                         }
                     )
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures { pos -> tap((pos.x - size.width * anchor()) / (size.width / JOURNAL_GRAPH_WINDOW_MIN)) }
+                    detectTapGestures { pos -> tap((pos.x - size.width * anchor()) / (size.width / LOGS_GRAPH_WINDOW_MIN)) }
                 }
         ) {
             val center = centerMinutes()
             val centerMs = baseMs + (center * MIN_MS).toLong()
-            val startMs = centerMs - (JOURNAL_GRAPH_WINDOW_MIN * anchor() * MIN_MS).toLong()
-            val endMs = startMs + (JOURNAL_GRAPH_WINDOW_MIN * MIN_MS).toLong()
-            val pxPerMs = size.width / (JOURNAL_GRAPH_WINDOW_MIN * MIN_MS)
+            val startMs = centerMs - (LOGS_GRAPH_WINDOW_MIN * anchor() * MIN_MS).toLong()
+            val endMs = startMs + (LOGS_GRAPH_WINDOW_MIN * MIN_MS).toLong()
+            val pxPerMs = size.width / (LOGS_GRAPH_WINDOW_MIN * MIN_MS)
             fun xOf(ms: Long) = (ms - startMs) * pxPerMs
 
             val padTop = 8.dp.toPx()
@@ -243,7 +243,7 @@ fun JournalGlucoseGraph(
                         minScale = MIN_CARB_SCALE_GPH
                     } else {
                         val all = doseList.filter { it.timeUtc <= areaEnd && it.timeUtc + BOLUS_REACH_MS >= areaStart }
-                        fun act(d: uk.scimone.diafit.journal.presentation.model.BolusPartUi, t: Long) =
+                        fun act(d: uk.scimone.diafit.logs.presentation.model.BolusPartUi, t: Long) =
                             if (t >= d.timeUtc) uk.scimone.diafit.core.domain.model.InsulinActivity.calculate(d.units, d.timeUtc, t).activity else 0.0
                         total = { t -> all.sumOf { act(it, t) } }
                         own = { t -> selected.doses.sumOf { act(it, t) } }

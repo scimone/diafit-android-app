@@ -16,9 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.scimone.diafit.core.domain.model.ImpactType
-import uk.scimone.diafit.journal.presentation.model.durationLabel
-import uk.scimone.diafit.journal.presentation.model.iconRes
-import uk.scimone.diafit.journal.presentation.model.label
+import uk.scimone.diafit.logs.presentation.model.durationLabel
+import uk.scimone.diafit.logs.presentation.model.iconRes
+import uk.scimone.diafit.logs.presentation.model.label
 
 /** Fast / Medium / Slow carb absorption, each with its curve glyph and how long it acts for. */
 @Composable

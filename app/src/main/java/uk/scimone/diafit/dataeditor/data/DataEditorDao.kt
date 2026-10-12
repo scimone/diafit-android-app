@@ -38,7 +38,7 @@ interface DataEditorDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun restoreBolus(e: List<BolusEntity>)
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun add(e: BolusEntity)
 
-    // ---- meals (courses): soft delete, like the Journal
+    // ---- meals (courses): soft delete, like the Logs
     @Query("SELECT * FROM MealEntity WHERE userId == :userId AND isValid = 1 AND mergedIntoId IS NULL AND mealTimeUtc >= :start AND mealTimeUtc < :end ORDER BY mealTimeUtc DESC")
     suspend fun meals(start: Long, end: Long, userId: Int): List<MealEntity>
     @Update suspend fun update(e: MealEntity)

@@ -7,7 +7,7 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.repository.BolusRepository
 import uk.scimone.diafit.core.domain.repository.CgmRepository
 
-/** CGM readings and insulin around a journal event, for the "how did this affect my glucose" view. */
+/** CGM readings and insulin around a logs event, for the "how did this affect my glucose" view. */
 data class GlucoseResponse(
     val windowStartUtc: Long,
     val windowEndUtc: Long,

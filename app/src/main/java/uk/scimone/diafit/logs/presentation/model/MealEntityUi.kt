@@ -1,4 +1,4 @@
-package uk.scimone.diafit.journal.presentation.model
+package uk.scimone.diafit.logs.presentation.model
 
 import android.content.Context
 import android.net.Uri
@@ -57,8 +57,8 @@ data class MealEntityUi(
     val components: List<MealComponent> = emptyList(),
     /** Each course's own carbs, time and absorption, so a multi-course meal's carb curve is the sum of its real courses. */
     val carbCourses: List<CarbCourse> = emptyList()
-) : JournalEntryUi {
-    override val kind: JournalEntryKind get() = JournalEntryKind.MEAL
+) : LogsEntryUi {
+    override val kind: LogsEntryKind get() = LogsEntryKind.MEAL
     override val timeUtc: Long get() = mealTimeUtc
 
     /** Headline for lists: the description, falling back to the meal type. */
@@ -93,7 +93,7 @@ fun mealPhotoUri(context: Context, imageId: String): Uri? {
     return if (imageFile.exists()) FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile) else null
 }
 
-/** A whole meal as one journal entry: summed nutrition, all photos, the slowest absorption. */
+/** A whole meal as one logs entry: summed nutrition, all photos, the slowest absorption. */
 fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
     if (!isExtended) return courses.first().toUi(context, impact)
     val first = courses.first()
