@@ -310,13 +310,13 @@ class AddMealViewModel(
         val current = capturePhase as? CapturePhase.Search ?: return
         cancelSearch()
         val q = query.trim()
-        if (q.length < 2) {
+        if (q.length < 3) {
             setPhase(current.copy(query = query, loading = false, results = emptyList(), error = null))
             return
         }
         setPhase(current.copy(query = query, loading = true, error = null))
         searchJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(450)
+            kotlinx.coroutines.delay(800)
             val result = searchFoodByName(q)
             val now = capturePhase as? CapturePhase.Search ?: return@launch
             if (now.query != query) return@launch

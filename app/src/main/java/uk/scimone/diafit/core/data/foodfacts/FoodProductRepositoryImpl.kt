@@ -18,7 +18,17 @@ class FoodProductRepositoryImpl(
         return usda.lookup(barcode).takeIf { it is ProductLookup.Found } ?: first
     }
 
-    override suspend fun searchByName(query: String): Result<List<FoodProduct>> = coroutineScope {
+    private val searchCache = object : LinkedHashMap<String, List<FoodProduct>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<FoodProduct>>) = size > 30
+    }
+
+    override suspend fun searchByName(query: String): Result<List<FoodProduct>> {
+        val key = query.trim().lowercase()
+        synchronized(searchCache) { searchCache[key] }?.let { return Result.success(it) }
+        return searchRemote(query).also { r -> r.getOrNull()?.takeIf { it.isNotEmpty() }?.let { synchronized(searchCache) { searchCache[key] = it } } }
+    }
+
+    private suspend fun searchRemote(query: String): Result<List<FoodProduct>> = coroutineScope {
         val off = async { openFoodFacts.search(query) }
         val us = async { usda.search(query) }
         val a = off.await()

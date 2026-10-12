@@ -32,18 +32,16 @@ class OpenFoodFactsApi(private val client: HttpClient) {
     /** Text search; products without carbohydrate data are left out. */
     suspend fun search(query: String): Result<List<FoodProduct>> = withContext(Dispatchers.IO) {
         try {
-            val response = client.get("https://world.openfoodfacts.org/cgi/search.pl") {
-                parameter("search_terms", query)
-                parameter("search_simple", 1)
-                parameter("action", "process")
-                parameter("json", 1)
+            // Search-a-licious: Open Food Facts' dedicated search service. The old cgi/search.pl is heavily rate limited (503s).
+            val response = client.get("https://search.openfoodfacts.org/search") {
+                parameter("q", query)
                 parameter("page_size", 12)
                 parameter("fields", FIELDS)
                 header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
                 timeout { requestTimeoutMillis = 15_000; connectTimeoutMillis = 8_000; socketTimeoutMillis = 15_000 }
             }
             if (response.status != HttpStatusCode.OK) return@withContext Result.failure(IllegalStateException("Server answered ${response.status.value}"))
-            val products = json.parseToJsonElement(response.bodyAsText()).jsonObject["products"] as? kotlinx.serialization.json.JsonArray
+            val products = json.parseToJsonElement(response.bodyAsText()).jsonObject["hits"] as? kotlinx.serialization.json.JsonArray
             Result.success(products.orEmpty().mapNotNull { el ->
                 val p = el.jsonObject
                 p.text("code")?.let { parseProduct(it, p) }
@@ -94,7 +92,8 @@ internal fun parseProduct(barcode: String, p: JsonObject): FoodProduct? {
     // Energy is often missing or only in kJ: derive it from the macros then.
     val kcal = per100("energy-kcal") ?: per100("energy")?.let { it / 4.184 } ?: (4 * carbs + 4 * protein + 9 * fat)
     val name = p.text("product_name") ?: p.text("product_name_en") ?: p.text("generic_name") ?: "Product $barcode"
-    val brand = p.text("brands")?.substringBefore(',')?.trim()?.takeIf { it.isNotEmpty() && !name.contains(it, ignoreCase = true) }
+    val brands = (p["brands"] as? kotlinx.serialization.json.JsonArray)?.firstOrNull()?.let { (it as? JsonPrimitive)?.contentOrNull?.trim() } ?: p.text("brands")
+    val brand = brands?.substringBefore(',')?.trim()?.takeIf { it.isNotEmpty() && !name.contains(it, ignoreCase = true) }
     val serving = p["serving_quantity"]?.num()?.takeIf { it > 0 }
     return FoodProduct(
         barcode = barcode,
