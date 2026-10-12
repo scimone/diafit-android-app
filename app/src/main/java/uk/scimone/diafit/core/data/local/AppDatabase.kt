@@ -24,7 +24,7 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         uk.scimone.diafit.patterns.data.PatternEntity::class,
         uk.scimone.diafit.core.domain.model.SavedProductEntity::class
     ],
-    version = 24,
+    version = 25,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -63,6 +63,15 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /** The insights table is called patterns now. */
+        /** Favourites among saved products, and which database a product came from (existing ones stay visible as favourites). */
+        val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `SavedProductEntity` ADD COLUMN `isFavorite` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `SavedProductEntity` ADD COLUMN `source` TEXT NOT NULL DEFAULT 'Open Food Facts'")
+                db.execSQL("UPDATE `SavedProductEntity` SET `isFavorite` = 1")
+            }
+        }
+
         /** Products scanned by barcode and saved in a meal, for picking them again. */
         val MIGRATION_23_24 = object : Migration(23, 24) {
             override fun migrate(db: SupportSQLiteDatabase) {

@@ -19,7 +19,9 @@ data class FoodProduct(
     /** Weight of one serving as printed on the pack, if the database knows it. */
     val servingG: Double?,
     /** Weight of the whole pack, if known. */
-    val packageG: Double?
+    val packageG: Double?,
+    /** The database it came from, shown to the user. */
+    val source: String = SOURCE_OFF
 ) {
     /** What a first portion defaults to: one serving, else 100 g. */
     val defaultPortionG: Double get() = servingG ?: 100.0
@@ -31,7 +33,7 @@ data class FoodProduct(
             name = name,
             emoji = "📦",
             basis = listOfNotNull(
-                "Open Food Facts",
+                source,
                 servingG?.let { "serving ${formatGrams(it)}" } ?: "per 100 g",
                 barcode
             ).joinToString(" · "),
@@ -49,6 +51,9 @@ data class FoodProduct(
         )
     }
 }
+
+const val SOURCE_OFF = "Open Food Facts"
+const val SOURCE_USDA = "USDA FoodData Central"
 
 fun formatGrams(g: Double): String = if (g % 1.0 == 0.0) "${g.toInt()} g" else "%.1f g".format(g)
 

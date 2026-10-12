@@ -1,5 +1,6 @@
 package uk.scimone.diafit.core.domain.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -19,18 +20,20 @@ data class SavedProductEntity(
     val servingG: Double?,
     val packageG: Double?,
     val lastUsedUtc: Long,
-    val useCount: Int = 1
+    val useCount: Int = 1,
+    @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false,
+    @ColumnInfo(defaultValue = "'Open Food Facts'") val source: String = SOURCE_OFF
 ) {
     fun toProduct() = FoodProduct(
         barcode = barcode, name = name, brand = brand,
         per100 = NutrientsPer100(kcal100, carbs100, sugar100, fiber100, protein100, fat100),
-        servingG = servingG, packageG = packageG
+        servingG = servingG, packageG = packageG, source = source
     )
 
     companion object {
         fun of(p: FoodProduct, now: Long, useCount: Int = 1) = SavedProductEntity(
             p.barcode, p.name, p.brand, p.per100.kcal, p.per100.carbsG, p.per100.sugarG, p.per100.fiberG,
-            p.per100.proteinG, p.per100.fatG, p.servingG, p.packageG, now, useCount
+            p.per100.proteinG, p.per100.fatG, p.servingG, p.packageG, now, useCount, source = p.source
         )
     }
 }
@@ -40,5 +43,6 @@ fun MealComponent.toSavedProductOrNull(now: Long): SavedProductEntity? {
     val code = barcode ?: return null
     if (weightG <= 0.0) return null
     val k = 100.0 / weightG
-    return SavedProductEntity(code, name, null, calories * k, carbsG * k, sugarG * k, fiberG * k, proteinG * k, fatG * k, servingG, packageG, now)
+    return SavedProductEntity(code, name, null, calories * k, carbsG * k, sugarG * k, fiberG * k, proteinG * k, fatG * k, servingG, packageG, now,
+        source = basis?.substringBefore(" · ")?.takeIf { it.isNotBlank() } ?: SOURCE_OFF)
 }

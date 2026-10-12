@@ -42,3 +42,26 @@ class OpenFoodFactsParseTest {
         assertNotNull(parse("""{"nutriments":{"carbohydrates_100g":0}}"""))
     }
 }
+
+class UsdaParseTest {
+    private fun food(json: String) = Json.parseToJsonElement(json).jsonObject
+
+    @Test
+    fun `matches the zero padded barcode and reads per 100 g values`() {
+        val p = parseFdcFood("0016000275287", food("""{"description":"CHEERIOS CEREAL","brandOwner":"General Mills","gtinUpc":"00016000275287",
+            "servingSize":20.0,"servingSizeUnit":"GRM","foodNutrients":[{"nutrientId":1005,"value":74.4},{"nutrientId":1003,"value":12.8},
+            {"nutrientId":1004,"value":6.41},{"nutrientId":1008,"value":359},{"nutrientId":1079,"value":10.3},{"nutrientId":2000,"value":5.13}]}"""))!!
+        assertEquals("Cheerios cereal", p.name)
+        assertEquals(74.4, p.per100.carbsG, 0.001)
+        assertEquals(20.0, p.servingG!!, 0.001)
+        assertEquals("USDA FoodData Central", p.source)
+        assertEquals(14.88, p.toComponent().carbsG, 0.001)
+    }
+
+    @Test
+    fun `other barcodes and foods without carbs are ignored`() {
+        val nutrients = """"foodNutrients":[{"nutrientId":1005,"value":10}]"""
+        assertNull(parseFdcFood("4000000000000", food("""{"description":"X","gtinUpc":"00016000275287",$nutrients}""")))
+        assertNull(parseFdcFood("16000275287", food("""{"description":"X","gtinUpc":"00016000275287","foodNutrients":[]}""")))
+    }
+}

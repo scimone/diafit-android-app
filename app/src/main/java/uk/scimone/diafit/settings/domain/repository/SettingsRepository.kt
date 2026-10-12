@@ -39,6 +39,10 @@ interface SettingsRepository {
     suspend fun getAiConfig(): AiConfig
     suspend fun setAiConfig(config: AiConfig)
 
+    /** USDA FoodData Central API key: the second barcode database, used when Open Food Facts has no entry. */
+    suspend fun getUsdaApiKey(): String
+    suspend fun setUsdaApiKey(key: String)
+
     /** Health Connect activity import (heart rate, steps, sleep, exercise) switched on by the user. */
     suspend fun isHealthConnectEnabled(): Boolean
     suspend fun setHealthConnectEnabled(enabled: Boolean)

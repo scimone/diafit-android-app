@@ -140,6 +140,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         return AiConfig(baseUrl = baseUrl, apiKey = apiKey, model = model)
     }
 
+    override suspend fun getUsdaApiKey(): String = prefs.getString("usda_api_key", "") ?: ""
+
+    override suspend fun setUsdaApiKey(key: String) {
+        prefs.edit().putString("usda_api_key", key.trim()).apply()
+    }
+
     override suspend fun setAiConfig(config: AiConfig) {
         prefs.edit()
             .putString("ai_base_url", config.baseUrl)

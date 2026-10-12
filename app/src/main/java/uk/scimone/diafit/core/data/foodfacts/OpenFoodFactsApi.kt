@@ -19,18 +19,17 @@ import kotlinx.serialization.json.jsonObject
 import uk.scimone.diafit.core.domain.model.FoodProduct
 import uk.scimone.diafit.core.domain.model.NutrientsPer100
 import uk.scimone.diafit.core.domain.model.ProductLookup
-import uk.scimone.diafit.core.domain.repository.FoodProductRepository
 
 private const val TAG = "OpenFoodFacts"
 private const val BASE_URL = "https://world.openfoodfacts.org/api/v2/product"
 private const val FIELDS = "code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,product_quantity"
 
 /** Looks a barcode up in the Open Food Facts database (https://openfoodfacts.github.io/openfoodfacts-server/api/). */
-class OpenFoodFactsApi(private val client: HttpClient) : FoodProductRepository {
+class OpenFoodFactsApi(private val client: HttpClient) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun lookup(barcode: String): ProductLookup = withContext(Dispatchers.IO) {
+    suspend fun lookup(barcode: String): ProductLookup = withContext(Dispatchers.IO) {
         try {
             val response = client.get("$BASE_URL/$barcode.json") {
                 parameter("fields", FIELDS)

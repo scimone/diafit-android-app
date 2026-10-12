@@ -42,6 +42,8 @@ data class AddMealState(
     val aiRequestOpen: Boolean = false,
     /** Foods identified in the photos; the nutrition totals start as their sum (the user may still override them). */
     val components: List<MealComponent> = emptyList(),
+    /** Barcodes of the scanned products in this meal that are starred (kept in the favourites list when saved). */
+    val favoriteBarcodes: Set<String> = emptySet(),
     val isAnalyzing: Boolean = false,
     val isLoading: Boolean = false,
     /** Non-null while the camera stage (barcode scan / meal photo) is shown in front of the form. */

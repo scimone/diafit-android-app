@@ -12,9 +12,13 @@ class SavedProductRepositoryImpl(private val dao: SavedProductDao) : SavedProduc
     override suspend fun get(barcode: String): FoodProduct? = dao.get(barcode)?.toProduct()
 
     override suspend fun remember(product: FoodProduct) {
-        val uses = (dao.get(product.barcode)?.useCount ?: 0) + 1
-        dao.upsert(SavedProductEntity.of(product, System.currentTimeMillis(), uses))
+        val existing = dao.get(product.barcode)
+        dao.upsert(SavedProductEntity.of(product, System.currentTimeMillis(), (existing?.useCount ?: 0) + 1).copy(isFavorite = existing?.isFavorite ?: false))
     }
+
+    override suspend fun isFavorite(barcode: String) = dao.get(barcode)?.isFavorite ?: false
+
+    override suspend fun setFavorite(barcode: String, favorite: Boolean) = dao.setFavorite(barcode, favorite)
 
     override suspend fun forget(barcode: String) = dao.delete(barcode)
 }

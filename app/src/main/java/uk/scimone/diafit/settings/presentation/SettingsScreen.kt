@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -211,6 +212,10 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             AiConnectionSetup(state, viewModel)
+        }
+
+        SettingsSection(title = "Food database (USDA)", icon = Icons.Filled.Search) {
+            UsdaKeySetup(state, viewModel)
         }
 
         if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
@@ -437,6 +442,42 @@ private fun SetupHint(text: String) {
         Text(if (shown) "Hide setup tips" else "Setup tips", style = MaterialTheme.typography.labelMedium)
     }
     if (shown) Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
+    val check = state.usdaCheck
+    Text(
+        "Barcodes are looked up in Open Food Facts first. Add a free USDA FoodData Central key to search that database too when a product isn't found (mostly US products). Get a key at fdc.nal.usda.gov/api-key-signup.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = state.usdaKey,
+        onValueChange = viewModel::onUsdaKeyChanged,
+        label = { Text("USDA API key") },
+        singleLine = true,
+        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = viewModel::testUsdaKey, enabled = check != NightscoutCheckState.Checking && state.usdaKey.isNotBlank()) {
+            Text("Test connection")
+        }
+        Spacer(Modifier.width(12.dp))
+        when (check) {
+            NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            NightscoutCheckState.Ok -> {
+                Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Key works", style = MaterialTheme.typography.bodySmall)
+            }
+            is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+            else -> Unit
+        }
+    }
 }
 
 @Composable

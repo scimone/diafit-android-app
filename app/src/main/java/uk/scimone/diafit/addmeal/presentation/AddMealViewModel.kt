@@ -330,6 +330,16 @@ class AddMealViewModel(
         applyProduct(product.toProduct())
     }
 
+    /** Star on a saved product in the picker. */
+    fun toggleSavedFavorite(product: SavedProductEntity) {
+        viewModelScope.launch { savedProducts.setFavorite(product.barcode, !product.isFavorite) }
+    }
+
+    /** Star on the scanned product's card: applied when the meal is saved. */
+    fun toggleProductFavorite(barcode: String) {
+        _uiState.update { it.copy(favoriteBarcodes = if (barcode in it.favoriteBarcodes) it.favoriteBarcodes - barcode else it.favoriteBarcodes + barcode) }
+    }
+
     fun forgetSavedProduct(barcode: String) {
         viewModelScope.launch { savedProducts.forget(barcode) }
     }
@@ -343,6 +353,9 @@ class AddMealViewModel(
     /** Fills the form from a scanned product: one portion (its serving) whose weight the user can change. */
     private fun applyProduct(product: FoodProduct) {
         scannedProducts[product.barcode] = product
+        viewModelScope.launch {
+            if (savedProducts.isFavorite(product.barcode)) _uiState.update { it.copy(favoriteBarcodes = it.favoriteBarcodes + product.barcode) }
+        }
         updateComponents { listOf(product.toComponent()) }
         _uiState.update {
             it.copy(
@@ -509,7 +522,12 @@ class AddMealViewModel(
                 state.components.mapNotNull { c ->
                     val code = c.barcode ?: return@mapNotNull null
                     scannedProducts[code] ?: c.toSavedProductOrNull(System.currentTimeMillis())?.toProduct()
-                }.forEach { runCatching { savedProducts.remember(it) } }
+                }.forEach { product ->
+                    runCatching {
+                        savedProducts.remember(product)
+                        savedProducts.setFavorite(product.barcode, product.barcode in state.favoriteBarcodes)
+                    }
+                }
                 _uiState.update {
                     it.copy(isLoading = false, finished = EditorResult.Saved(wasNew = original == null, addedCourse = targetSitting != null))
                 }

@@ -42,6 +42,7 @@ val settingsModule = module {
             getAiConfig = get(),
             setAiConfig = get(),
             listAiModels = get(),
+            foodProducts = get(),
             appContext = get(),
             settingsRepository = get(),
             healthConnectManager = get(),

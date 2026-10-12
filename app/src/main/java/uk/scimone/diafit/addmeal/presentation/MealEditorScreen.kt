@@ -194,7 +194,9 @@ fun MealEditorScreen(
                 ProductPortionCard(
                     product = product,
                     onWeightChange = { viewModel.onComponentWeightChanged(index, it) },
-                    onRescan = viewModel::rescanProduct
+                    onRescan = viewModel::rescanProduct,
+                    isFavorite = product.barcode in uiState.favoriteBarcodes,
+                    onToggleFavorite = { product.barcode?.let(viewModel::toggleProductFavorite) }
                 )
             }
 
@@ -247,6 +249,7 @@ fun MealEditorScreen(
             onEstimateWithAi = viewModel::estimateWithAi,
             savedProducts = savedProducts,
             onUseSaved = viewModel::useSavedProduct,
+            onToggleFavorite = viewModel::toggleSavedFavorite,
             onForgetSaved = viewModel::forgetSavedProduct,
             onRetake = viewModel::retakePhoto
         )

@@ -44,6 +44,7 @@ class SettingsViewModel(
     private val getAiConfig: GetAiConfigUseCase,
     private val setAiConfig: SetAiConfigUseCase,
     private val listAiModels: ListAiModelsUseCase,
+    private val foodProducts: uk.scimone.diafit.core.domain.repository.FoodProductRepository,
     private val appContext: Context,
     private val settingsRepository: SettingsRepository,
     private val healthConnectManager: HealthConnectManager,
@@ -161,6 +162,7 @@ class SettingsViewModel(
                 basalStyle = settingsRepository.getBasalStyle(),
                 nightscoutConfig = nightscoutConfig,
                 aiConfig = aiConfig,
+                usdaKey = settingsRepository.getUsdaApiKey(),
                 isBatteryOptimizationIgnored = batteryIgnored,
                 isLoading = false
             )
@@ -265,6 +267,23 @@ class SettingsViewModel(
         }
         // Always persist the latest state, so out-of-order writes can't bring back an older value.
         viewModelScope.launch { setAiConfig(_state.value.aiConfig) }
+    }
+
+    fun onUsdaKeyChanged(key: String) {
+        _state.update { it.copy(usdaKey = key, usdaCheck = NightscoutCheckState.Idle) }
+        viewModelScope.launch { settingsRepository.setUsdaApiKey(_state.value.usdaKey) }
+    }
+
+    /** Runs a small search with the entered key. */
+    fun testUsdaKey() {
+        val key = _state.value.usdaKey
+        _state.update { it.copy(usdaCheck = NightscoutCheckState.Checking) }
+        viewModelScope.launch {
+            settingsRepository.setUsdaApiKey(key)
+            foodProducts.testUsdaKey(key)
+                .onSuccess { _state.update { it.copy(usdaCheck = NightscoutCheckState.Ok) } }
+                .onFailure { e -> _state.update { it.copy(usdaCheck = NightscoutCheckState.Failed(e.message ?: "Failed")) } }
+        }
     }
 
     fun onAiModelChanged(model: String) {

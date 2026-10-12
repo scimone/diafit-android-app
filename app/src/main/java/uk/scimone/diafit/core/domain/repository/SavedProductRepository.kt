@@ -10,5 +10,7 @@ interface SavedProductRepository {
     suspend fun get(barcode: String): FoodProduct?
     /** Remembers [product] (or refreshes it) and counts one more use. */
     suspend fun remember(product: FoodProduct)
+    suspend fun isFavorite(barcode: String): Boolean
+    suspend fun setFavorite(barcode: String, favorite: Boolean)
     suspend fun forget(barcode: String)
 }

@@ -18,6 +18,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +54,8 @@ fun ProductPortionCard(
     product: MealComponent,
     onWeightChange: (Double) -> Unit,
     onRescan: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val serving = product.servingG
@@ -62,6 +68,13 @@ fun ProductPortionCard(
                 Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 SectionLabel("Scanned product", Modifier.weight(1f))
+                IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                        if (isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 TextButton(onClick = onRescan, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
                     Text("Scan another")
                 }
@@ -72,7 +85,7 @@ fun ProductPortionCard(
                 Text(
                     listOfNotNull(
                         "${(product.carbsG / weight.coerceAtLeast(1.0) * 100).roundToInt()} g carbs per 100 g",
-                        "Open Food Facts"
+                        product.basis?.substringBefore(" · ")?.takeIf { it.isNotBlank() } ?: "Open Food Facts"
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = muted

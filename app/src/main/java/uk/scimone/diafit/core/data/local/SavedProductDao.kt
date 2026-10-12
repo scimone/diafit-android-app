@@ -18,6 +18,9 @@ interface SavedProductDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(product: SavedProductEntity)
 
+    @Query("UPDATE SavedProductEntity SET isFavorite = :favorite WHERE barcode = :barcode")
+    suspend fun setFavorite(barcode: String, favorite: Boolean)
+
     @Query("DELETE FROM SavedProductEntity WHERE barcode = :barcode")
     suspend fun delete(barcode: String)
 }

@@ -115,6 +115,9 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.layout.ContentScale
@@ -155,6 +158,7 @@ fun MealCaptureScreen(
     onEstimateWithAi: () -> Unit,
     savedProducts: List<SavedProductEntity>,
     onUseSaved: (SavedProductEntity) -> Unit,
+    onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
     onRetake: () -> Unit
 ) {
@@ -189,6 +193,7 @@ fun MealCaptureScreen(
                 onEstimateWithAi = onEstimateWithAi,
                 savedProducts = savedProducts,
                 onUseSaved = onUseSaved,
+                onToggleFavorite = onToggleFavorite,
                 onForgetSaved = onForgetSaved,
                 onTypeIt = onManual,
                 onRetake = onRetake,
@@ -210,15 +215,22 @@ private fun PhotoChoiceScreen(
     onEstimateWithAi: () -> Unit,
     savedProducts: List<SavedProductEntity>,
     onUseSaved: (SavedProductEntity) -> Unit,
+    onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
     onTypeIt: () -> Unit,
     onRetake: () -> Unit,
     onClose: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    val shown = remember(savedProducts, query) {
-        val q = query.trim()
-        (if (q.isEmpty()) savedProducts else savedProducts.filter { it.name.contains(q, true) || it.brand?.contains(q, true) == true }).take(6)
+    var showAll by remember { mutableStateOf(false) }
+    val q = query.trim()
+    // Favorites by default; a search looks through everything saved.
+    val shown = remember(savedProducts, q, showAll) {
+        when {
+            q.isNotEmpty() -> savedProducts.filter { it.name.contains(q, true) || it.brand?.contains(q, true) == true }
+            showAll -> savedProducts
+            else -> savedProducts.filter { it.isFavorite }
+        }.take(8)
     }
     Box(Modifier.fillMaxSize().background(Ink)) {
         if (photo != null) {
@@ -276,11 +288,11 @@ private fun PhotoChoiceScreen(
                             style = MaterialTheme.typography.bodySmall, color = OnInkMuted
                         )
                     } else {
-                        if (savedProducts.size > 4) {
+                        run {
                             OutlinedTextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Search", color = OnInkMuted) },
+                                placeholder = { Text("Search all saved products", color = OnInkMuted) },
                                 leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -291,8 +303,23 @@ private fun PhotoChoiceScreen(
                                 )
                             )
                         }
-                        shown.forEach { p -> SavedProductRow(p, { onUseSaved(p) }, { onForgetSaved(p.barcode) }) }
-                        if (shown.isEmpty()) Text("No match.", style = MaterialTheme.typography.bodySmall, color = OnInkMuted)
+                        if (q.isEmpty()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = !showAll, onClick = { showAll = false }, label = { Text("Favorites") }, shape = CircleShape)
+                                FilterChip(selected = showAll, onClick = { showAll = true }, label = { Text("All (${savedProducts.size})") }, shape = CircleShape)
+                            }
+                        }
+                        shown.forEach { p -> SavedProductRow(p, { onUseSaved(p) }, { onToggleFavorite(p) }, { onForgetSaved(p.barcode) }) }
+                        if (shown.isEmpty()) {
+                            Text(
+                                when {
+                                    q.isNotEmpty() -> "No match."
+                                    showAll -> "Nothing saved yet."
+                                    else -> "No favorites yet. Star a product to keep it here, or tap All."
+                                },
+                                style = MaterialTheme.typography.bodySmall, color = OnInkMuted
+                            )
+                        }
                     }
                 }
 
@@ -325,7 +352,7 @@ private fun ChoiceCard(icon: ImageVector, title: String, subtitle: String, conte
 }
 
 @Composable
-private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, onForget: () -> Unit) {
+private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, onToggleFavorite: () -> Unit, onForget: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x14FFFFFF)).clickable(onClick = onClick).padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 2.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -338,6 +365,13 @@ private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, on
                     product.servingG?.let { "serving ${formatGrams(it)} · ${(product.carbs100 * it / 100).roundToInt()} g carbs" } ?: "${product.carbs100.roundToInt()} g carbs per 100 g"
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = onToggleFavorite) {
+            Icon(
+                if (product.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                if (product.isFavorite) "Remove ${product.name} from favorites" else "Add ${product.name} to favorites",
+                tint = if (product.isFavorite) Color(0xFFFFC107) else OnInkMuted, modifier = Modifier.size(22.dp)
             )
         }
         IconButton(onClick = onForget) { Icon(Icons.Outlined.DeleteOutline, "Forget ${product.name}", tint = OnInkMuted, modifier = Modifier.size(20.dp)) }
