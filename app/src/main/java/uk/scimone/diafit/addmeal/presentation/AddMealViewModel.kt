@@ -284,13 +284,23 @@ class AddMealViewModel(
 
     private var searchJob: kotlinx.coroutines.Job? = null
 
+    /**
+     * Cancelling an in-flight request makes Ktor's HttpURLConnection engine drain and close the response
+     * stream on the cancelling thread; on the main thread that throws ("Unbalanced enter/exit") and crashes.
+     */
+    private fun cancelSearch() {
+        val job = searchJob ?: return
+        searchJob = null
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { job.cancel() }
+    }
+
     fun openSearch() {
-        searchJob?.cancel()
+        cancelSearch()
         setPhase(CapturePhase.Search(fromPhoto = _uiState.value.photos.isNotEmpty()))
     }
 
     fun closeSearch() {
-        searchJob?.cancel()
+        cancelSearch()
         val search = capturePhase as? CapturePhase.Search ?: return
         setPhase(if (search.fromPhoto) CapturePhase.PhotoTaken else CapturePhase.Scanning)
     }
@@ -298,7 +308,7 @@ class AddMealViewModel(
     /** Typing: searches shortly after the last keystroke. */
     fun onSearchQuery(query: String) {
         val current = capturePhase as? CapturePhase.Search ?: return
-        searchJob?.cancel()
+        cancelSearch()
         val q = query.trim()
         if (q.length < 2) {
             setPhase(current.copy(query = query, loading = false, results = emptyList(), error = null))
@@ -321,7 +331,7 @@ class AddMealViewModel(
 
     /** A search result was chosen: its default portion goes into the form (with the photo, if one was taken). */
     fun useSearchResult(product: FoodProduct) {
-        searchJob?.cancel()
+        cancelSearch()
         _uiState.update { it.copy(capture = null) }
         applyProduct(product)
     }
