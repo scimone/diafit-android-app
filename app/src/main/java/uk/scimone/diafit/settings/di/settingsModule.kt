@@ -8,12 +8,10 @@ import uk.scimone.diafit.settings.domain.usecase.GetCgmSourceUseCase
 import uk.scimone.diafit.settings.presentation.SettingsViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import uk.scimone.diafit.core.domain.model.GlucoseTargetRange
-import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetBolusSourceUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.domain.usecase.ListAiModelsUseCase
-import uk.scimone.diafit.settings.domain.usecase.SetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetTargetRangeUseCase
 
@@ -29,9 +27,9 @@ val settingsModule = module {
     single { SetTargetRangeUseCase(get()) }
     single { GetNightscoutConfigUseCase(get()) }
     single { SetNightscoutConfigUseCase(get()) }
-    single { GetAiConfigUseCase(get()) }
-    single { SetAiConfigUseCase(get()) }
     single { ListAiModelsUseCase(get()) }
+
+    viewModel { uk.scimone.diafit.settings.presentation.AiLogViewModel(get()) }
 
     viewModel {
         SettingsViewModel(
@@ -39,8 +37,6 @@ val settingsModule = module {
             setGlucoseTargetRange = get(),
             getNightscoutConfig = get(),
             setNightscoutConfig = get(),
-            getAiConfig = get(),
-            setAiConfig = get(),
             listAiModels = get(),
             foodProducts = get(),
             appContext = get(),

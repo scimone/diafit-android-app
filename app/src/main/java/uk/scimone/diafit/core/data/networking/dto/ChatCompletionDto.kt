@@ -4,7 +4,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ChatCompletionResponseDto(
-    val choices: List<ChatCompletionChoiceDto> = emptyList()
+    val choices: List<ChatCompletionChoiceDto> = emptyList(),
+    val usage: ChatCompletionUsageDto? = null
+)
+
+@Serializable
+data class ChatCompletionUsageDto(
+    @kotlinx.serialization.SerialName("prompt_tokens") val promptTokens: Int? = null,
+    @kotlinx.serialization.SerialName("completion_tokens") val completionTokens: Int? = null
 )
 
 @Serializable

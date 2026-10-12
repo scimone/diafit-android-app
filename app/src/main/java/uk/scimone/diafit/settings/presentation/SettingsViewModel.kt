@@ -21,17 +21,15 @@ import uk.scimone.diafit.core.data.healthconnect.HealthConnectPermissions
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
-import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.AiConnection
 import uk.scimone.diafit.settings.domain.model.Connector
 import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.CgmSource
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
 import uk.scimone.diafit.settings.domain.model.SettingsGlucoseTargetRange
-import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import uk.scimone.diafit.settings.domain.usecase.ListAiModelsUseCase
-import uk.scimone.diafit.settings.domain.usecase.SetAiConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetNightscoutConfigUseCase
 import uk.scimone.diafit.settings.domain.usecase.SetTargetRangeUseCase
 import uk.scimone.diafit.settings.isIgnoringBatteryOptimizations
@@ -41,8 +39,6 @@ class SettingsViewModel(
     private val setGlucoseTargetRange: SetTargetRangeUseCase,
     private val getNightscoutConfig: GetNightscoutConfigUseCase,
     private val setNightscoutConfig: SetNightscoutConfigUseCase,
-    private val getAiConfig: GetAiConfigUseCase,
-    private val setAiConfig: SetAiConfigUseCase,
     private val listAiModels: ListAiModelsUseCase,
     private val foodProducts: uk.scimone.diafit.core.domain.repository.FoodProductRepository,
     private val appContext: Context,
@@ -68,7 +64,7 @@ class SettingsViewModel(
             backfillRunner.status.collect { s ->
                 _state.value = _state.value.copy(backfill = s)
                 // New data landed: Home / History re-read it.
-                if (s is BackfillStatus.Done && !s.nothingMissing) SettingsChangeBus.notifyChange()
+                if ((s is BackfillStatus.Done && !s.nothingMissing) || (s is BackfillStatus.DoneAll && !s.nothingMissing)) SettingsChangeBus.notifyChange()
             }
         }
         viewModelScope.launch {
@@ -154,14 +150,14 @@ class SettingsViewModel(
             loadConnectors()
             val range = getGlucoseTargetRange()
             val nightscoutConfig = getNightscoutConfig()
-            val aiConfig = getAiConfig()
             refreshHealthConnect()
 
             _state.value = _state.value.copy(
                 glucoseTargetRange = range,
                 basalStyle = settingsRepository.getBasalStyle(),
                 nightscoutConfig = nightscoutConfig,
-                aiConfig = aiConfig,
+                aiConnections = settingsRepository.getAiConnections(),
+                mealEstimation = settingsRepository.getMealEstimationSettings(),
                 usdaKey = settingsRepository.getUsdaApiKey(),
                 aiEnabled = settingsRepository.isAiEnabled(),
                 userName = settingsRepository.getUserName(),
@@ -210,6 +206,7 @@ class SettingsViewModel(
 
     /** Fetches [type] for [range] from [connector], skipping what is already there. */
     fun startBackfill(type: DataType, connector: Connector, range: TimeRange) = backfillRunner.start(type, connector, range)
+    fun startBackfillAll(connector: Connector, types: List<DataType>, range: TimeRange) = backfillRunner.startAll(connector, types, range)
     fun dismissBackfill() = backfillRunner.dismiss()
 
     /** The parts of [range] that would be fetched (the rest already has data). */
@@ -255,20 +252,58 @@ class SettingsViewModel(
         }
     }
 
-    fun onAiConfigChanged(baseUrl: String, apiKey: String, model: String = _state.value.aiConfig.model) {
-        val newConfig = AiConfig(baseUrl, apiKey, model)
-        val connectionChanged = baseUrl != _state.value.aiConfig.baseUrl || apiKey != _state.value.aiConfig.apiKey
-        // Update the state synchronously so the next edit (e.g. the model) builds on this one instead of a stale copy.
-        _state.update {
-            it.copy(
-                aiConfig = newConfig,
-                aiCheck = if (connectionChanged) NightscoutCheckState.Idle else it.aiCheck,
-                aiModels = if (connectionChanged) emptyList() else it.aiModels,
-                aiModelsError = if (connectionChanged) null else it.aiModelsError
-            )
+    /** Adds a connection, or replaces the one with the same id. The first one also becomes the meal estimation's. */
+    fun saveAiConnection(connection: AiConnection) {
+        val list = _state.value.aiConnections.let { old ->
+            if (old.any { it.id == connection.id }) old.map { if (it.id == connection.id) connection else it } else old + connection
         }
-        // Always persist the latest state, so out-of-order writes can't bring back an older value.
-        viewModelScope.launch { setAiConfig(_state.value.aiConfig) }
+        _state.update { it.copy(aiConnections = list, aiChecks = it.aiChecks - connection.id) }
+        viewModelScope.launch { settingsRepository.setAiConnections(list) }
+        if (_state.value.mealEstimation.connectionId == null) onMealConnectionChanged(connection.id)
+    }
+
+    fun deleteAiConnection(id: String) {
+        val list = _state.value.aiConnections.filterNot { it.id == id }
+        _state.update { it.copy(aiConnections = list, aiChecks = it.aiChecks - id) }
+        viewModelScope.launch { settingsRepository.setAiConnections(list) }
+        if (_state.value.mealEstimation.connectionId == id) onMealConnectionChanged(list.firstOrNull()?.id)
+    }
+
+    /** Asks the endpoint for its models; a connection that answers works. */
+    fun testAiConnection(id: String) {
+        val connection = _state.value.aiConnections.firstOrNull { it.id == id } ?: return
+        _state.update { it.copy(aiChecks = it.aiChecks + (id to NightscoutCheckState.Checking)) }
+        viewModelScope.launch {
+            listAiModels(connection)
+                .onSuccess { _state.update { s -> s.copy(aiChecks = s.aiChecks + (id to NightscoutCheckState.Ok)) } }
+                .onFailure { e -> _state.update { s -> s.copy(aiChecks = s.aiChecks + (id to NightscoutCheckState.Failed(e.message ?: "Failed"))) } }
+        }
+    }
+
+    private fun updateMealEstimation(change: (uk.scimone.diafit.settings.domain.model.MealEstimationSettings) -> uk.scimone.diafit.settings.domain.model.MealEstimationSettings) {
+        _state.update { it.copy(mealEstimation = change(it.mealEstimation)) }
+        viewModelScope.launch { settingsRepository.setMealEstimationSettings(_state.value.mealEstimation) }
+    }
+
+    fun onMealConnectionChanged(id: String?) {
+        updateMealEstimation { it.copy(connectionId = id) }
+        _state.update { it.copy(aiModels = emptyList(), aiModelsError = null) }
+    }
+
+    fun onMealModelChanged(model: String) = updateMealEstimation { it.copy(model = model) }
+
+    /** Blank restores the built-in prompt. */
+    fun onMealPromptChanged(prompt: String) = updateMealEstimation { it.copy(prompt = prompt) }
+
+    /** Loads the model list of the connection meal photos go to. */
+    fun loadMealModels() {
+        val connection = _state.value.mealConnection ?: return
+        _state.update { it.copy(isLoadingAiModels = true, aiModelsError = null) }
+        viewModelScope.launch {
+            listAiModels(connection)
+                .onSuccess { models -> _state.update { it.copy(aiModels = models, isLoadingAiModels = false) } }
+                .onFailure { e -> _state.update { it.copy(aiModelsError = e.message ?: "Failed", isLoadingAiModels = false) } }
+        }
     }
 
     fun onAiEnabledChanged(enabled: Boolean) {
@@ -295,26 +330,6 @@ class SettingsViewModel(
             foodProducts.testUsdaKey(key)
                 .onSuccess { _state.update { it.copy(usdaCheck = NightscoutCheckState.Ok) } }
                 .onFailure { e -> _state.update { it.copy(usdaCheck = NightscoutCheckState.Failed(e.message ?: "Failed")) } }
-        }
-    }
-
-    fun onAiModelChanged(model: String) {
-        val c = _state.value.aiConfig
-        onAiConfigChanged(c.baseUrl, c.apiKey, model)
-    }
-
-    /** Fetches the model list from the configured endpoint (`GET /models`); doubles as the connection test. */
-    fun loadAiModels() {
-        viewModelScope.launch {
-            // Make sure the endpoint being tested is the one the use case will read.
-            setAiConfig(_state.value.aiConfig)
-            _state.update { it.copy(isLoadingAiModels = true, aiModelsError = null, aiCheck = NightscoutCheckState.Checking) }
-            listAiModels()
-                .onSuccess { models -> _state.update { it.copy(aiModels = models, isLoadingAiModels = false, aiCheck = NightscoutCheckState.Ok) } }
-                .onFailure { e ->
-                    val msg = e.message ?: "Failed"
-                    _state.update { it.copy(aiModelsError = msg, isLoadingAiModels = false, aiCheck = NightscoutCheckState.Failed(msg)) }
-                }
         }
     }
 

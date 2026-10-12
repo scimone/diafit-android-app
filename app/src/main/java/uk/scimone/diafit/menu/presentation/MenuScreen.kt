@@ -30,7 +30,9 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -143,6 +145,17 @@ fun MenuScreen(
                     connectedSummary(state.enabledConnectors.map { it.displayName }),
                     { onOpenSettings(SettingsPage.CONNECTED_APPS) }
                 )
+                MenuRow(
+                    Icons.Filled.Tune, Basal, SettingsPage.DATA_SOURCES.title,
+                    "Which app feeds glucose, insulin, food, activity",
+                    { onOpenSettings(SettingsPage.DATA_SOURCES) }
+                )
+                MenuRow(
+                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, SettingsPage.AI.title,
+                    if (!state.aiEnabled) "Off" else if (state.aiConnections.isEmpty()) "On · no connection yet"
+                    else "On · ${state.aiConnections.size} connection${if (state.aiConnections.size > 1) "s" else ""}",
+                    { onOpenSettings(SettingsPage.AI) }
+                )
                 if (BackendSyncFeature.ENABLED) {
                     MenuRow(
                         Icons.Filled.CloudUpload, Device, SettingsPage.BACKEND.title,
@@ -153,11 +166,13 @@ fun MenuScreen(
             }
 
             MenuGroup("Meal logging") {
-                MenuRow(
-                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, SettingsPage.AI.title,
-                    if (state.aiEnabled) "Photo estimates · ${state.aiConfig.model}" else "Off · barcode scanner only",
-                    { onOpenSettings(SettingsPage.AI) }
-                )
+                if (state.aiEnabled) {
+                    MenuRow(
+                        Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, SettingsPage.MEAL_ESTIMATION.title,
+                        state.mealConnection?.let { "Photo estimates · ${it.name} · ${state.mealEstimation.model}" } ?: "Photo estimates · set a connection",
+                        { onOpenSettings(SettingsPage.MEAL_ESTIMATION) }
+                    )
+                }
                 MenuRow(
                     Icons.Filled.Restaurant, uk.scimone.diafit.ui.theme.Activity, SettingsPage.FOOD_DB.title,
                     if (state.usdaKey.isNotBlank()) "Open Food Facts · USDA" else "Open Food Facts",
@@ -167,7 +182,7 @@ fun MenuScreen(
 
             MenuGroup("App") {
                 MenuRow(
-                    Icons.Filled.Tune, MaterialTheme.colorScheme.secondary, SettingsPage.DISPLAY.title,
+                    Icons.Filled.Palette, MaterialTheme.colorScheme.secondary, SettingsPage.DISPLAY.title,
                     "${state.glucoseTargetRange.lowerBound}–${state.glucoseTargetRange.upperBound} mg/dL · ${state.basalStyle.label} basal",
                     { onOpenSettings(SettingsPage.DISPLAY) }
                 )

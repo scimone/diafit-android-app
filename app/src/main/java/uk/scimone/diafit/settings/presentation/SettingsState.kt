@@ -4,7 +4,8 @@ import uk.scimone.diafit.core.data.backfill.BackfillStatus
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncStatus
-import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.AiConnection
+import uk.scimone.diafit.settings.domain.model.MealEstimationSettings
 import uk.scimone.diafit.settings.domain.model.Connector
 import uk.scimone.diafit.settings.domain.model.DataType
 import uk.scimone.diafit.settings.domain.model.NightscoutConfig
@@ -19,11 +20,13 @@ data class SettingsState(
     val basalStyle: uk.scimone.diafit.settings.domain.model.BasalStyle = uk.scimone.diafit.settings.domain.model.BasalStyle.RATE,
     val glucoseTargetRange: SettingsGlucoseTargetRange = SettingsGlucoseTargetRange(),
     val nightscoutConfig: NightscoutConfig = NightscoutConfig(baseUrl = "", apiKey = ""),
-    val aiConfig: AiConfig = AiConfig(baseUrl = "", apiKey = ""),
+    val aiConnections: List<AiConnection> = emptyList(),
+    val mealEstimation: MealEstimationSettings = MealEstimationSettings(),
+    /** Result of the last connection test per connection id. */
+    val aiChecks: Map<String, NightscoutCheckState> = emptyMap(),
     val aiModels: List<String> = emptyList(),
     val isLoadingAiModels: Boolean = false,
     val aiModelsError: String? = null,
-    val aiCheck: NightscoutCheckState = NightscoutCheckState.Idle,
     val aiEnabled: Boolean = true,
     val userName: String = "",
     val usdaKey: String = "",
@@ -31,7 +34,10 @@ data class SettingsState(
     val isBatteryOptimizationIgnored: Boolean = false,
     val healthConnect: HealthConnectUiState = HealthConnectUiState(),
     val isLoading: Boolean = false
-)
+) {
+    /** The connection meal photos go to: the chosen one, else the first. */
+    val mealConnection: AiConnection? get() = aiConnections.firstOrNull { it.id == mealEstimation.connectionId } ?: aiConnections.firstOrNull()
+}
 
 /** The Health Connect card on the Settings screen. */
 data class HealthConnectUiState(

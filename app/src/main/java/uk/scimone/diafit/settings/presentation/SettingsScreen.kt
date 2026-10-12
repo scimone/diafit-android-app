@@ -72,6 +72,7 @@ import uk.scimone.diafit.settings.domain.model.connectorsProviding
 fun SettingsPageScreen(
     page: SettingsPage,
     onBack: () -> Unit,
+    onOpenPage: (SettingsPage) -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
     onRequestIgnoreBatteryOptimizations: () -> Unit = {}
 ) {
@@ -113,7 +114,10 @@ fun SettingsPageScreen(
             when (page) {
                 SettingsPage.CONNECTED_APPS -> ConnectedAppsPage(state, viewModel)
                 SettingsPage.BACKEND -> BackendPage()
-                SettingsPage.AI -> AiPage(state, viewModel)
+                SettingsPage.DATA_SOURCES -> DataSourcesPage(state, viewModel)
+                SettingsPage.AI -> AiPage(state, viewModel, onOpenPage)
+                SettingsPage.AI_LOG -> AiLogPage()
+                SettingsPage.MEAL_ESTIMATION -> MealEstimationPage(state, viewModel, onOpenPage)
                 SettingsPage.FOOD_DB -> FoodDatabasePage(state, viewModel)
                 SettingsPage.DISPLAY -> DisplayPage(state, viewModel)
                 SettingsPage.NOTIFICATIONS -> NotificationsPage(resumeTick)
@@ -134,6 +138,7 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
     val historyPermission = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         viewModel.refreshHealthConnect()
     }
+    val allowHistory = { historyPermission.launch(setOf(HealthConnectPermissions.HISTORY)) }
     val connectHealthConnect = {
         healthConnectPermissions.launch(
             HealthConnectPermissions.activity + HealthConnectPermissions.vitals + HealthConnectPermissions.glucose + HealthConnectPermissions.BACKGROUND + HealthConnectPermissions.HISTORY
@@ -176,6 +181,9 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
                     onInstall = { runCatching { context.startActivity(viewModel.healthConnectStoreIntent()) } },
                     onOpenHealthConnect = { runCatching { context.startActivity(viewModel.healthConnectSettingsIntent()) } }
                 )
+                if (state.healthConnect.connected) {
+                    ConnectorBackfillPanel(connector, state, viewModel::startBackfillAll, viewModel::dismissBackfill, viewModel::missingRanges, allowHistory)
+                }
             } else if (enabled) {
                 Spacer(Modifier.height(8.dp))
                 when (connector) {
@@ -185,11 +193,26 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
                     Connector.JUGGLUCO -> SetupHint("In Juggluco: Settings → Data exchange → Glucodata broadcast, then switch on Diafit in the list of apps. No login needed.")
                     else -> Unit
                 }
+                if (connector == Connector.NIGHTSCOUT && state.nightscoutConfig.baseUrl.isNotBlank()) {
+                    ConnectorBackfillPanel(connector, state, viewModel::startBackfillAll, viewModel::dismissBackfill, viewModel::missingRanges, allowHistory)
+                }
             }
         }
     }
+}
 
-    SettingsSection(title = "Data sources", icon = Icons.Filled.Tune) {
+@Composable
+private fun DataSourcesPage(state: SettingsState, viewModel: SettingsViewModel) {
+    val historyPermission = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        viewModel.refreshHealthConnect()
+    }
+    if (state.enabledConnectors.isEmpty()) {
+        Text(
+            "Nothing is connected yet. Connect Nightscout, AAPS, xDrip+, Juggluco or Health Connect under Connected apps first.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    SettingsSection(title = "Which connector feeds what", icon = Icons.Filled.Tune) {
         Text(
             "Choose which connector feeds each kind of data, or switch it off if you don't want it in Diafit.",
             style = MaterialTheme.typography.bodySmall,
@@ -206,6 +229,7 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
         )
     }
 }
+
 
 @Composable
 private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
@@ -237,35 +261,6 @@ private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
                     Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AiPage(state: SettingsState, viewModel: SettingsViewModel) {
-    SettingsSection(title = "AI meal analysis", icon = Icons.Filled.Psychology) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Use AI", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                Text(
-                    if (state.aiEnabled) "A photo of your meal is sent to the endpoint below, which estimates the foods and nutrients."
-                    else "Off. Meals are filled in with the barcode scanner, saved products, food search or by hand. No photo ever leaves your phone.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(checked = state.aiEnabled, onCheckedChange = viewModel::onAiEnabledChanged)
-        }
-    }
-    if (state.aiEnabled) {
-        SettingsSection(title = "Connection", icon = Icons.Filled.Hub) {
-            Text(
-                "Any OpenAI-compatible endpoint that accepts images (OpenAI, a proxy, or your own server).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            AiConnectionSetup(state, viewModel)
         }
     }
 }
@@ -484,12 +479,12 @@ private fun openXiaomiAutostartSettings(context: Context) {
 }
 
 @Composable
-private fun SettingsSection(
+internal fun SettingsSection(
     title: String,
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+    ElevatedCard(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -688,67 +683,6 @@ private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
                 Text("Key works", style = MaterialTheme.typography.bodySmall)
             }
             is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-            else -> Unit
-        }
-    }
-}
-
-@Composable
-private fun AiConnectionSetup(state: SettingsState, viewModel: SettingsViewModel) {
-    // null = follow the saved config (collapsed once a key is set); true once the user is editing.
-    var editing by remember { mutableStateOf<Boolean?>(null) }
-    val config = state.aiConfig
-    val open = editing ?: config.apiKey.isBlank()
-    val check = state.aiCheck
-    LaunchedEffect(check) { if (check == NightscoutCheckState.Ok) editing = false }
-
-    if (!open) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    config.baseUrl.removePrefix("https://").removePrefix("http://").trimEnd('/'),
-                    style = MaterialTheme.typography.bodyMedium, maxLines = 1
-                )
-                Text(config.model, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            }
-            when (check) {
-                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                else -> TextButton(onClick = viewModel::loadAiModels) { Text("Test") }
-            }
-            TextButton(onClick = { editing = true }) { Text("Edit") }
-        }
-        if (check is NightscoutCheckState.Failed) {
-            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-        }
-        return
-    }
-    ServerConfigInput(
-        baseUrl = config.baseUrl,
-        apiKey = config.apiKey,
-        baseUrlLabel = "Base URL",
-        apiKeyLabel = "API key",
-        onConfigChanged = { baseUrl, apiKey -> editing = true; viewModel.onAiConfigChanged(baseUrl, apiKey) }
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-    ModelPicker(
-        model = config.model,
-        models = state.aiModels,
-        isLoading = state.isLoadingAiModels,
-        error = state.aiModelsError,
-        onModelChanged = viewModel::onAiModelChanged,
-        onLoadModels = viewModel::loadAiModels
-    )
-    Spacer(Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = viewModel::loadAiModels, enabled = check != NightscoutCheckState.Checking) {
-            Text("Test connection")
-        }
-        Spacer(Modifier.width(8.dp))
-        TextButton(onClick = { editing = false }, enabled = config.baseUrl.isNotBlank()) { Text("Done") }
-        Spacer(Modifier.width(4.dp))
-        when (check) {
-            NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             else -> Unit
         }
     }

@@ -25,9 +25,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         uk.scimone.diafit.core.domain.model.SavedProductEntity::class,
         uk.scimone.diafit.mealactivity.data.MealActivityEntity::class,
         uk.scimone.diafit.mealactivity.data.PersonalActivityModelEntity::class,
-        uk.scimone.diafit.mealactivity.data.ActivityPipelineStateEntity::class
+        uk.scimone.diafit.mealactivity.data.ActivityPipelineStateEntity::class,
+        uk.scimone.diafit.core.domain.model.LlmRequestLogEntity::class
     ],
-    version = 26,
+    version = 27,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -50,6 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityDao(): ActivityDao
     abstract fun notificationDao(): NotificationDao
     abstract fun savedProductDao(): SavedProductDao
+    abstract fun llmLogDao(): LlmLogDao
     abstract fun mealActivityDao(): uk.scimone.diafit.mealactivity.data.MealActivityDao
     /** Optional backend upload (see BackendSyncFeature); read-only queries, no tables of its own. */
     abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao
@@ -68,6 +70,18 @@ abstract class AppDatabase : RoomDatabase() {
 
         /** The insights table is called patterns now. */
         /** Meal activity curves, personal activity models and pipeline state (replaces the on-the-fly Beta(2,3) carb curve). */
+        /** Log of requests to LLM endpoints (AI page). */
+        val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `LlmRequestLogEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestampUtc` INTEGER NOT NULL, " +
+                        "`purpose` TEXT NOT NULL, `connectionName` TEXT NOT NULL, `model` TEXT NOT NULL, `durationMs` INTEGER NOT NULL, `inputText` TEXT NOT NULL, " +
+                        "`imageCount` INTEGER NOT NULL, `outputText` TEXT, `inputTokens` INTEGER, `outputTokens` INTEGER, `success` INTEGER NOT NULL, `error` TEXT)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_LlmRequestLogEntity_timestampUtc` ON `LlmRequestLogEntity` (`timestampUtc`)")
+            }
+        }
+
         val MIGRATION_25_26 = object : Migration(25, 26) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(

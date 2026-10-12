@@ -1,6 +1,7 @@
 package uk.scimone.diafit.settings.domain.repository
 
-import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.AiConnection
+import uk.scimone.diafit.settings.domain.model.MealEstimationSettings
 import uk.scimone.diafit.settings.domain.model.BasalStyle
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
@@ -36,8 +37,10 @@ interface SettingsRepository {
     suspend fun getNightscoutConfig(): NightscoutConfig
     suspend fun setNightscoutConfig(config: NightscoutConfig)
 
-    suspend fun getAiConfig(): AiConfig
-    suspend fun setAiConfig(config: AiConfig)
+    suspend fun getAiConnections(): List<AiConnection>
+    suspend fun setAiConnections(connections: List<AiConnection>)
+    suspend fun getMealEstimationSettings(): MealEstimationSettings
+    suspend fun setMealEstimationSettings(settings: MealEstimationSettings)
 
     /** AI features (meal photo estimates) switched on. Off = only barcode / saved product / manual entry. */
     suspend fun isAiEnabled(): Boolean

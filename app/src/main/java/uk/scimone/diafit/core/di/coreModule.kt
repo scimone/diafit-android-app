@@ -59,13 +59,14 @@ val coreModule = module {
             AppDatabase::class.java,
             "diafit_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17, AppDatabase.MIGRATION_17_18, AppDatabase.MIGRATION_18_19, AppDatabase.MIGRATION_19_20, AppDatabase.MIGRATION_20_21, AppDatabase.MIGRATION_21_22, AppDatabase.MIGRATION_22_23, AppDatabase.MIGRATION_23_24, AppDatabase.MIGRATION_24_25, AppDatabase.MIGRATION_25_26)
+            .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17, AppDatabase.MIGRATION_17_18, AppDatabase.MIGRATION_18_19, AppDatabase.MIGRATION_19_20, AppDatabase.MIGRATION_20_21, AppDatabase.MIGRATION_21_22, AppDatabase.MIGRATION_22_23, AppDatabase.MIGRATION_23_24, AppDatabase.MIGRATION_24_25, AppDatabase.MIGRATION_25_26, AppDatabase.MIGRATION_26_27)
             .build()
     }
 
     // Provide DAO from database
     single<MealDao> { get<AppDatabase>().mealDao() }
     single { get<AppDatabase>().savedProductDao() }
+    single { get<AppDatabase>().llmLogDao() }
     single<uk.scimone.diafit.core.domain.repository.SavedProductRepository> { uk.scimone.diafit.core.data.repository.SavedProductRepositoryImpl(get()) }
     single<CgmDao> { get<AppDatabase>().cgmDao() }
     single<BolusDao> { get<AppDatabase>().bolusDao() }
@@ -113,7 +114,7 @@ val coreModule = module {
 
     // OpenAI-compatible meal photo analysis
     single { OpenAiApi(get()) }
-    single<MealAnalysisRepository> { MealAnalysisRepositoryImpl(get(), get(), get()) }
+    single<MealAnalysisRepository> { MealAnalysisRepositoryImpl(get(), get(), get(), get()) }
     single { AnalyzeMealUseCase(get()) }
 
     // Barcode -> nutrients (Open Food Facts)

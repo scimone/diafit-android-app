@@ -29,6 +29,10 @@ sealed interface BackfillStatus {
     /** [nothingMissing]: every part of the range already had data, so nothing was fetched. */
     data class Done(val type: DataType, val connector: Connector, val added: Int, val nothingMissing: Boolean) : BackfillStatus
     data class Failed(val type: DataType, val message: String) : BackfillStatus
+    /** A whole connector being filled in, one data type after the other. */
+    data class RunningAll(val connector: Connector, val type: DataType, val index: Int, val count: Int, val progress: Float) : BackfillStatus
+    /** [added] per type that had gaps; [failed] per type that errored (the others still ran). */
+    data class DoneAll(val connector: Connector, val added: Map<DataType, Int>, val failed: Map<DataType, String>, val nothingMissing: Boolean) : BackfillStatus
 }
 
 /**
@@ -81,6 +85,47 @@ class BackfillRunner(
                 Log.e(TAG, "Backfill of $type from $connector failed", e)
                 _status.value = BackfillStatus.Failed(type, e.message ?: e.javaClass.simpleName)
             }
+        }
+    }
+
+    /**
+     * Fills in several data types of one connector over the same [range], one after the other; a type
+     * that fails does not stop the rest (it is reported in [BackfillStatus.DoneAll.failed]).
+     */
+    fun startAll(connector: Connector, types: List<DataType>, range: TimeRange) {
+        if (job?.isActive == true || types.isEmpty()) return
+        val todo = types.filter { it in connector.canBackfill }
+        _status.value = BackfillStatus.RunningAll(connector, todo.first(), 0, todo.size, 0f)
+        job = scope.launch {
+            val added = mutableMapOf<DataType, Int>()
+            val failed = mutableMapOf<DataType, String>()
+            var anyGap = false
+            todo.forEachIndexed { index, type ->
+                try {
+                    val gaps = missing(type, range)
+                    if (gaps.isEmpty()) return@forEachIndexed
+                    anyGap = true
+                    val total = gaps.sumOf { it.length }.toFloat()
+                    var doneMs = 0L
+                    var count = 0
+                    for (gap in gaps) {
+                        val base = doneMs
+                        count += fetch(type, connector, gap) { f ->
+                            val within = (base + f * gap.length) / total
+                            _status.value = BackfillStatus.RunningAll(connector, type, index, todo.size, (index + within) / todo.size)
+                        }
+                        store.record(type, gap.copy(end = minOf(gap.end, System.currentTimeMillis() - RECENT_GUARD_MS)))
+                        doneMs += gap.length
+                    }
+                    added[type] = count
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Backfill of $type from $connector failed", e)
+                    failed[type] = e.message ?: e.javaClass.simpleName
+                }
+            }
+            _status.value = BackfillStatus.DoneAll(connector, added, failed, nothingMissing = !anyGap)
         }
     }
 

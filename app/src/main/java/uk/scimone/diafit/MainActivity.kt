@@ -351,6 +351,7 @@ class MainActivity : ComponentActivity() {
                                 is Overlay.Settings -> SettingsPageScreen(
                                     page = overlay.page,
                                     onBack = { overlays.remove(overlay) },
+                                    onOpenPage = { overlays.add(Overlay.Settings(it)) },
                                     onRequestIgnoreBatteryOptimizations = {
                                         startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                                     }

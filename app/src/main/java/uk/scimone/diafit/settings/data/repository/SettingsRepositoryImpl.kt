@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import uk.scimone.diafit.BuildConfig
-import uk.scimone.diafit.settings.domain.model.AiConfig
+import uk.scimone.diafit.settings.domain.model.AiConnection
+import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_BASE_URL
+import uk.scimone.diafit.settings.domain.model.MealEstimationSettings
 import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.model.BolusSource
 import uk.scimone.diafit.settings.domain.model.CgmSource
@@ -133,12 +135,56 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             .apply()
     }
 
-    override suspend fun getAiConfig(): AiConfig {
-        val baseUrl = prefs.getString("ai_base_url", DEFAULT_AI_BASE_URL) ?: DEFAULT_AI_BASE_URL
-        val apiKey = prefs.getString("ai_api_key", "") ?: ""
-        val model = prefs.getString("ai_model", DEFAULT_AI_MODEL) ?: DEFAULT_AI_MODEL
-        return AiConfig(baseUrl = baseUrl, apiKey = apiKey, model = model)
+    override suspend fun getAiConnections(): List<AiConnection> {
+        val json = prefs.getString("ai_connections", null)
+        if (json == null) {
+            // First run of the multi-connection model: carry over the single endpoint the user had set up.
+            val key = prefs.getString("ai_api_key", "") ?: ""
+            if (key.isBlank()) return emptyList()
+            val url = prefs.getString("ai_base_url", DEFAULT_AI_BASE_URL) ?: DEFAULT_AI_BASE_URL
+            val migrated = listOf(AiConnection("default", hostOf(url), url, key))
+            setAiConnections(migrated)
+            prefs.edit()
+                .putString("ai_meal_connection_id", "default")
+                .putString("ai_meal_model", prefs.getString("ai_model", DEFAULT_AI_MODEL) ?: DEFAULT_AI_MODEL)
+                .apply()
+            return migrated
+        }
+        return runCatching {
+            val array = org.json.JSONArray(json)
+            (0 until array.length()).map { i ->
+                val o = array.getJSONObject(i)
+                AiConnection(o.getString("id"), o.getString("name"), o.getString("baseUrl"), o.getString("apiKey"))
+            }
+        }.getOrDefault(emptyList())
     }
+
+    override suspend fun setAiConnections(connections: List<AiConnection>) {
+        val array = org.json.JSONArray()
+        connections.forEach {
+            array.put(org.json.JSONObject().put("id", it.id).put("name", it.name).put("baseUrl", it.baseUrl).put("apiKey", it.apiKey))
+        }
+        prefs.edit().putString("ai_connections", array.toString()).apply()
+    }
+
+    override suspend fun getMealEstimationSettings(): MealEstimationSettings {
+        getAiConnections() // runs the one-time migration of the old single endpoint
+        return MealEstimationSettings(
+            connectionId = prefs.getString("ai_meal_connection_id", null),
+            model = prefs.getString("ai_meal_model", DEFAULT_AI_MODEL) ?: DEFAULT_AI_MODEL,
+            prompt = prefs.getString("ai_meal_prompt", "") ?: ""
+        )
+    }
+
+    override suspend fun setMealEstimationSettings(settings: MealEstimationSettings) {
+        prefs.edit()
+            .putString("ai_meal_connection_id", settings.connectionId)
+            .putString("ai_meal_model", settings.model)
+            .putString("ai_meal_prompt", settings.prompt)
+            .apply()
+    }
+
+    private fun hostOf(url: String) = url.removePrefix("https://").removePrefix("http://").substringBefore('/').ifBlank { "AI" }
 
     override suspend fun isAiEnabled(): Boolean = prefs.getBoolean("ai_enabled", true)
 
@@ -156,14 +202,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun setUsdaApiKey(key: String) {
         prefs.edit().putString("usda_api_key", key.trim()).apply()
-    }
-
-    override suspend fun setAiConfig(config: AiConfig) {
-        prefs.edit()
-            .putString("ai_base_url", config.baseUrl)
-            .putString("ai_api_key", config.apiKey)
-            .putString("ai_model", config.model)
-            .apply()
     }
 
     override suspend fun isHealthConnectEnabled(): Boolean = prefs.getBoolean("health_connect_enabled", false)
@@ -191,6 +229,5 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         const val KEY_ENABLED = "connectors_enabled"
         const val SELECTION_OFF = "OFF"
         fun selectionKey(type: DataType) = "source_${type.name.lowercase()}"
-        const val DEFAULT_AI_BASE_URL = "https://api.openai.com/v1"
     }
 }
