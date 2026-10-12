@@ -1,0 +1,12 @@
+<resources>
+    <!-- Impostazioni -> Schermo -->
+    <string name="settings_display_ranges_title">Intervalli di glicemia (mg/dL)</string>
+    <string name="settings_display_ranges_hint">I colori di tutti i grafici, il tempo nell\'intervallo e gli avvisi in Pattern seguono questi limiti.</string>
+    <string name="settings_display_basal_title">Grafico basale</string>
+
+    <!-- Impostazioni -> Schermo -> Lingua -->
+    <string name="settings_language_title">Lingua</string>
+    <string name="settings_language_hint">La lingua dell\'app. \"Predefinita del sistema\" segue il telefono; se il telefono usa una lingua che l\'app non ha ancora, viene usato l\'inglese.</string>
+    <string name="settings_language_system">Predefinita del sistema</string>
+    <string name="settings_language_system_now">Attuale: %1$s</string>
+</resources>

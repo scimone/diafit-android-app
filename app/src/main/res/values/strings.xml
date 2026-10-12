@@ -1,3 +1,17 @@
 <resources>
-    <string name="app_name">Diafit</string>
+    <string name="app_name" translatable="false">Diafit</string>
+
+    <!-- Settings -> Display -->
+    <string name="settings_display_ranges_title">Glucose ranges (mg/dL)</string>
+    <string name="settings_display_ranges_hint">Colours in every chart, time in range and the alerts in Patterns follow these limits.</string>
+    <string name="settings_display_basal_title">Basal chart</string>
+
+    <!-- Settings -> Display -> Language -->
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_hint">The language of the app. \"System default\" follows your phone; if your phone uses a language the app does not have yet, English is used.</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_system_now">Currently: %1$s</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_german" translatable="false">Deutsch</string>
+    <string name="language_italian" translatable="false">Italiano</string>
 </resources>

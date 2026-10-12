@@ -25,6 +25,10 @@ import java.util.concurrent.TimeUnit
 class DiafitApp : Application() {
     private val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(uk.scimone.diafit.settings.domain.model.AppLanguage.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
 

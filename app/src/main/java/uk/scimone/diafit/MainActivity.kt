@@ -82,6 +82,10 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel { parametersOf(userId) }
     private val userId = 1 // replace with real user ID from your auth system
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(uk.scimone.diafit.settings.domain.model.AppLanguage.wrap(newBase))
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

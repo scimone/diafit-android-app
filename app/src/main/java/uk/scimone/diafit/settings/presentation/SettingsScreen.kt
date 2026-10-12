@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -42,6 +43,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import uk.scimone.diafit.R
+import uk.scimone.diafit.settings.domain.model.AppLanguage
+import uk.scimone.diafit.settings.domain.model.findActivity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -233,9 +238,9 @@ private fun DataSourcesPage(state: SettingsState, viewModel: SettingsViewModel) 
 
 @Composable
 private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
-    SettingsSection(title = "Glucose ranges (mg/dL)", icon = Icons.Filled.GpsFixed) {
+    SettingsSection(title = stringResource(R.string.settings_display_ranges_title), icon = Icons.Filled.GpsFixed) {
         Text(
-            "Colours in every chart, time in range and the alerts in Patterns follow these limits.",
+            stringResource(R.string.settings_display_ranges_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -249,7 +254,9 @@ private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
         )
     }
 
-    SettingsSection(title = "Basal chart", icon = Icons.AutoMirrored.Filled.ShowChart) {
+    LanguageSection()
+
+    SettingsSection(title = stringResource(R.string.settings_display_basal_title), icon = Icons.AutoMirrored.Filled.ShowChart) {
         uk.scimone.diafit.settings.domain.model.BasalStyle.values().forEach { style ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -931,6 +938,47 @@ fun GlucoseTargetRangeInput(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Field(veryLowText, "Very low (below)") { veryLowText = it }
             Field(veryHighText, "Very high (above)") { veryHighText = it }
+        }
+    }
+}
+
+
+@Composable
+private fun LanguageSection() {
+    val context = LocalContext.current
+    var selected by remember { mutableStateOf(AppLanguage.current(context)) }
+    SettingsSection(title = stringResource(R.string.settings_language_title), icon = Icons.Filled.Language) {
+        Text(
+            stringResource(R.string.settings_language_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        AppLanguage.entries.forEach { language ->
+            val choose = {
+                if (language != selected) {
+                    selected = language
+                    AppLanguage.apply(context, language)
+                    // Android 13+ recreates the activity by itself; before that we do it.
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) context.findActivity()?.recreate()
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { choose() }
+            ) {
+                RadioButton(selected = selected == language, onClick = { choose() })
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(language.nameRes), style = MaterialTheme.typography.bodyLarge)
+                    if (language == AppLanguage.SYSTEM) {
+                        Text(
+                            stringResource(R.string.settings_language_system_now, AppLanguage.systemLanguageName()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }

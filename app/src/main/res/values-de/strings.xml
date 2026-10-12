@@ -1,0 +1,12 @@
+<resources>
+    <!-- Einstellungen -> Anzeige -->
+    <string name="settings_display_ranges_title">Glukosebereiche (mg/dL)</string>
+    <string name="settings_display_ranges_hint">Die Farben in allen Diagrammen, die Zeit im Zielbereich und die Hinweise unter Muster richten sich nach diesen Grenzen.</string>
+    <string name="settings_display_basal_title">Basaldiagramm</string>
+
+    <!-- Einstellungen -> Anzeige -> Sprache -->
+    <string name="settings_language_title">Sprache</string>
+    <string name="settings_language_hint">Die Sprache der App. „Systemstandard“ folgt deinem Telefon; verwendet dein Telefon eine Sprache, die die App noch nicht hat, wird Englisch genutzt.</string>
+    <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_language_system_now">Aktuell: %1$s</string>
+</resources>
