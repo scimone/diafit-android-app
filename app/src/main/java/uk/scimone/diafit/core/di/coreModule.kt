@@ -23,6 +23,9 @@ import uk.scimone.diafit.core.domain.repository.PumpEventRepository
 import uk.scimone.diafit.core.data.networking.util.HttpClientFactory
 import uk.scimone.diafit.core.data.networking.NightscoutApi
 import uk.scimone.diafit.core.data.networking.OpenAiApi
+import uk.scimone.diafit.core.data.foodfacts.OpenFoodFactsApi
+import uk.scimone.diafit.core.domain.repository.FoodProductRepository
+import uk.scimone.diafit.core.domain.usecase.LookupBarcodeUseCase
 import uk.scimone.diafit.core.data.repository.BolusRepositoryImpl
 import uk.scimone.diafit.core.data.repository.CgmRepositoryImpl
 import uk.scimone.diafit.core.domain.repository.BolusRepository
@@ -110,4 +113,8 @@ val coreModule = module {
     single { OpenAiApi(get()) }
     single<MealAnalysisRepository> { MealAnalysisRepositoryImpl(get(), get(), get()) }
     single { AnalyzeMealUseCase(get()) }
+
+    // Barcode -> nutrients (Open Food Facts)
+    single<FoodProductRepository> { OpenFoodFactsApi(get()) }
+    single { LookupBarcodeUseCase(get()) }
 }

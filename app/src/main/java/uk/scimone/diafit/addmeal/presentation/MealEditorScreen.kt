@@ -122,6 +122,7 @@ fun MealEditorScreen(
     }
     BackHandler(onBack = requestClose)
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -188,6 +189,14 @@ fun MealEditorScreen(
                 AiRequestCard(uiState, viewModel::onAiNotesChanged, viewModel::analyzeMeal)
             }
 
+            uiState.components.withIndex().filter { it.value.barcode != null }.forEach { (index, product) ->
+                ProductPortionCard(
+                    product = product,
+                    onWeightChange = { viewModel.onComponentWeightChanged(index, it) },
+                    onRescan = viewModel::rescanProduct
+                )
+            }
+
             TotalsCard(
                 state = uiState,
                 onCarbs = viewModel::onCarbsChanged,
@@ -196,7 +205,7 @@ fun MealEditorScreen(
                 onUseFoodTotals = viewModel::onUseFoodTotals
             )
 
-            if (uiState.components.isNotEmpty() && !uiState.isAnalyzing && !uiState.aiRequestOpen) {
+            if (uiState.components.any { it.barcode == null } && !uiState.isAnalyzing && !uiState.aiRequestOpen) {
                 FoodsCard(
                     state = uiState,
                     onRedo = viewModel::openAiRequest,
@@ -219,6 +228,20 @@ fun MealEditorScreen(
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    // The camera stage sits in front of the form until the user scanned, photographed or chose to type.
+    uiState.capture?.let { capture ->
+        MealCaptureScreen(
+            phase = capture.phase,
+            onBarcode = viewModel::onBarcodeDetected,
+            onPhotos = viewModel::onCapturedPhotos,
+            onSkipPhoto = viewModel::finishCapture,
+            onManual = viewModel::finishCapture,
+            onRescan = viewModel::rescan,
+            onClose = requestClose
+        )
+    }
     }
 
     if (confirmDiscard) {

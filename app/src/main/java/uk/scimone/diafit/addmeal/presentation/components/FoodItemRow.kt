@@ -144,7 +144,7 @@ fun FoodItemRow(
 
 /** The portion as a small pill to type into; keeps its own text so it can be cleared while typing. */
 @Composable
-private fun WeightField(weightG: Double, onChange: (Double) -> Unit) {
+internal fun WeightField(weightG: Double, onChange: (Double) -> Unit) {
     var text by remember(weightG.roundToInt()) { mutableStateOf(weightG.roundToInt().toString()) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

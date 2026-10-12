@@ -22,7 +22,11 @@ data class MealComponent(
     val fiberG: Double = 0.0,
     val proteinG: Double = 0.0,
     val fatG: Double = 0.0,
-    val confidence: ComponentConfidence = ComponentConfidence.MEDIUM
+    val confidence: ComponentConfidence = ComponentConfidence.MEDIUM,
+    /** Set for packaged foods found by barcode: the printed serving, the whole pack and the barcode. */
+    val servingG: Double? = null,
+    val packageG: Double? = null,
+    val barcode: String? = null
 ) {
     /** The same food at another weight: every nutrient scales proportionally. */
     fun withWeight(newWeightG: Double): MealComponent {

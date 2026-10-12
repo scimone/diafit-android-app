@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import uk.scimone.diafit.core.domain.model.FoodProduct
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.totals
@@ -23,6 +24,9 @@ import uk.scimone.diafit.core.domain.repository.MealRepository
 import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
+import uk.scimone.diafit.core.domain.usecase.LookupBarcodeUseCase
+import uk.scimone.diafit.settings.domain.usecase.GetAiConfigUseCase
+import uk.scimone.diafit.core.domain.model.ProductLookup
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase
 import uk.scimone.diafit.core.domain.util.localDateTimeToInstant
@@ -44,6 +48,8 @@ class AddMealViewModel(
     private val updateMealUseCase: UpdateMealUseCase,
     private val setMealValidUseCase: SetMealValidUseCase,
     private val analyzeMealUseCase: AnalyzeMealUseCase,
+    private val lookupBarcode: LookupBarcodeUseCase,
+    private val getAiConfig: GetAiConfigUseCase,
     private val getMealSitting: GetMealSittingUseCase,
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val bolusRepository: BolusRepository,
@@ -79,7 +85,8 @@ class AddMealViewModel(
         _uiState.value = AddMealState(
             mealTime = localDateTimeToInstant(now).toEpochMilli(),
             mealType = suggestMealType(now.hour, null),
-            description = ""
+            description = "",
+            capture = CaptureState()
         )
         baseline = _uiState.value.formFields()
     }
@@ -103,7 +110,8 @@ class AddMealViewModel(
                 mealTypeAuto = false,
                 description = "",
                 sitting = sittingContext(sitting, excludeId = null),
-                mealName = sitting.title
+                mealName = sitting.title,
+                capture = CaptureState()
             )
             baseline = _uiState.value.formFields()
         }
@@ -224,7 +232,8 @@ class AddMealViewModel(
      * dropped so nothing from the old photos lingers. Values the user typed without AI are kept.
      */
     private fun AddMealState.withoutEstimate(): AddMealState {
-        if (components.isEmpty() && reasoning == null) return this
+        // A scanned product doesn't come from the photos, so changing them leaves it alone.
+        if (reasoning == null && components.all { it.barcode != null }) return this
         val hadFoods = components.isNotEmpty()
         return copy(
             components = emptyList(),
@@ -238,6 +247,89 @@ class AddMealViewModel(
             impactType = if (impactAuto || hadFoods) ImpactType.MEDIUM else impactType,
             impactAuto = impactAuto || hadFoods
         )
+    }
+
+    // ---- Camera stage -------------------------------------------------------------------------
+
+    private fun setPhase(phase: CapturePhase) = _uiState.update { it.copy(capture = CaptureState(phase)) }
+
+    private val capturePhase get() = _uiState.value.capture?.phase
+
+    /** The camera saw a barcode. Only acted on while scanning, so a code that stays in view fires once. */
+    fun onBarcodeDetected(barcode: String) {
+        if (capturePhase != CapturePhase.Scanning) return
+        setPhase(CapturePhase.LookingUp(barcode))
+        viewModelScope.launch {
+            val phase = when (val result = lookupBarcode(barcode)) {
+                is ProductLookup.Found -> CapturePhase.ProductFound(result.product)
+                is ProductLookup.NotFound -> CapturePhase.NotFound(result.barcode)
+                is ProductLookup.Failed -> CapturePhase.Failed(result.barcode, result.reason)
+            }
+            // The user may have left the camera (typed manually) while the lookup ran.
+            if (capturePhase is CapturePhase.LookingUp) setPhase(phase)
+        }
+    }
+
+    /** Back to looking for a barcode (wrong product, or not found). */
+    fun rescan() = setPhase(CapturePhase.Scanning)
+
+    /** Leaves the camera for the form, keeping a scanned product if there is one (the "skip photo" path). */
+    fun finishCapture() {
+        val product = (capturePhase as? CapturePhase.ProductFound)?.product
+        _uiState.update { it.copy(capture = null) }
+        if (product != null) applyProduct(product)
+    }
+
+    /** A photo taken in the camera stage (or picked from the gallery there). */
+    fun onCapturedPhotos(sources: List<Uri>) {
+        val product = (capturePhase as? CapturePhase.ProductFound)?.product
+        if (sources.isEmpty()) return
+        viewModelScope.launch {
+            val copied = sources.take(MAX_PHOTOS_PER_COURSE).mapNotNull { source ->
+                val id = UUID.randomUUID().toString()
+                fileStorageRepository.copyGalleryImageToPrivateStorage(source, id)
+                    .onFailure { Log.e(TAG, "Failed to copy $source", it) }
+                    .getOrNull()
+                    ?.let { MealPhoto(id, it).also { unsavedPhotoIds += id } }
+                    .also { if (source.scheme == "file") source.path?.let { path -> java.io.File(path).delete() } }
+            }
+            if (copied.isEmpty()) {
+                _uiState.update { it.copy(snackbarMessage = "Couldn't save the photo") }
+                return@launch
+            }
+            addPhotos(copied)
+            _uiState.update { it.copy(capture = null) }
+            if (product != null) {
+                applyProduct(product)
+            } else if (getAiConfig().apiKey.isNotBlank()) {
+                // Photo without a barcode = "let the AI estimate it", as the camera said.
+                analyzeMeal()
+            }
+        }
+    }
+
+    /** Fills the form from a scanned product: one portion (its serving) whose weight the user can change. */
+    private fun applyProduct(product: FoodProduct) {
+        updateComponents { listOf(product.toComponent()) }
+        _uiState.update {
+            it.copy(
+                description = if (it.description.isNullOrBlank()) product.name else it.description,
+                dishName = null,
+                reasoning = null
+            )
+        }
+    }
+
+    /** From the form: drop the scanned product and look for another. */
+    fun rescanProduct() {
+        _uiState.update {
+            it.copy(
+                components = emptyList(), carbohydrates = null, proteins = null, fats = null, calories = null,
+                impactType = ImpactType.MEDIUM, impactAuto = true,
+                description = if (it.components.firstOrNull()?.name == it.description) "" else it.description,
+                capture = CaptureState()
+            )
+        }
     }
 
     fun onRemovePhoto(imageId: String) {

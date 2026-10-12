@@ -1,6 +1,7 @@
 package uk.scimone.diafit.addmeal.presentation
 
 import android.net.Uri
+import uk.scimone.diafit.core.domain.model.FoodProduct
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealComponent
 import uk.scimone.diafit.core.domain.model.kcalOf
@@ -43,6 +44,8 @@ data class AddMealState(
     val components: List<MealComponent> = emptyList(),
     val isAnalyzing: Boolean = false,
     val isLoading: Boolean = false,
+    /** Non-null while the camera stage (barcode scan / meal photo) is shown in front of the form. */
+    val capture: CaptureState? = null,
     val snackbarMessage: String? = null,
     /** Set once a save/delete finished; the screen consumes it and closes. */
     val finished: EditorResult? = null
@@ -75,10 +78,22 @@ data class AddMealState(
 
     /** The user-editable fields only, for unsaved-changes detection. */
     fun formFields() = copy(
-        isAnalyzing = false, isLoading = false, snackbarMessage = null, finished = null, dishName = null,
+        isAnalyzing = false, isLoading = false, capture = null, snackbarMessage = null, finished = null, dishName = null,
         sitting = null, aiNotes = "", aiRequestOpen = false
     )
 }
+
+/** Where the camera stage is: always looking for a barcode until a product was found. */
+sealed interface CapturePhase {
+    data object Scanning : CapturePhase
+    data class LookingUp(val barcode: String) : CapturePhase
+    /** A product was recognised; the next (optional) step is a photo of the meal. */
+    data class ProductFound(val product: FoodProduct) : CapturePhase
+    data class NotFound(val barcode: String) : CapturePhase
+    data class Failed(val barcode: String, val reason: String) : CapturePhase
+}
+
+data class CaptureState(val phase: CapturePhase = CapturePhase.Scanning)
 
 /**
  * The meal a course belongs to, shown above the form so the user doses for this course knowing

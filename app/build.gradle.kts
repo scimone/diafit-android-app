@@ -60,6 +60,14 @@ dependencies {
     implementation(libs.androidx.room.runtime.android)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.health.connect.client)
+
+    // Barcode scanning: CameraX preview/analysis + ML Kit's bundled (offline) barcode model
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.mlkit)
+    implementation(libs.mlkit.barcode.scanning)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20250517") // org.json is only a stub in Android unit tests
     androidTestImplementation(libs.androidx.junit)
