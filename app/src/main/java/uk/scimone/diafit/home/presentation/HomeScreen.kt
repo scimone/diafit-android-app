@@ -205,6 +205,13 @@ fun HomeScreen(
         if (scrubbing && focusedMeal != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
+    // A selection ends once its meal has been panned/zoomed out of view.
+    LaunchedEffect(Unit) {
+        snapshotFlow { mealsInView.map { it.key }.toSet() }.collect { visible ->
+            if (selectedMealKeys.any { it !in visible }) selectedMealKeys = selectedMealKeys.filter { it in visible }.toSet()
+        }
+    }
+
     fun timeAtX(x: Float): Long? = geometry.value?.let { g ->
         g.timeAt(x).coerceIn(g.minX.toLong(), window.now)
     }
@@ -386,8 +393,8 @@ fun HomeScreen(
                         geometry = geometry,
                         scrollState = chartScrollState,
                         onGroupClick = { group ->
-                            // Tapping a photo highlights its data point; details open from the card's button or a long press.
-                            selectedMealKeys = if (group.key in selectedMealKeys) emptySet() else setOf(group.key)
+                            // Tapping a photo highlights its data point; tapping it again opens the details.
+                            selectedMealKeys = setOf(group.key)
                         },
                         onGroupOpen = { group ->
                             openMealIds = group.meals.map { it.id }.toSet()

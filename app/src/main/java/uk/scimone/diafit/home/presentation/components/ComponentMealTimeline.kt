@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCircleOutline
-import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -140,13 +139,13 @@ fun MealTimeline(
     allGroups: List<MealGroup>,
     inView: List<MealGroup>,
     highlighted: List<MealGroup>,
-    /** Sittings the user picked by tapping their photo or their bubble (the card shows a Details button). */
+    /** Sittings the user picked by tapping their photo or their bubble; tapping a selected photo opens its details. */
     selectedKeys: Set<Int> = emptySet(),
     geometry: State<ChartGeometry?>,
     scrollState: VicoScrollState,
-    /** Tap on a card: select it (highlights its data point). */
+    /** Tap on an unselected card: select it (highlights its data point). */
     onGroupClick: (MealGroup) -> Unit,
-    /** The Details button on a selected card, or a long press on any card. */
+    /** Tapping an already selected card, or a long press on any card. */
     onGroupOpen: (MealGroup) -> Unit = {},
     /** Tap on the strip outside any card. */
     onBackgroundTap: () -> Unit = {},
@@ -204,7 +203,7 @@ Modifier.draggable(
                             highlighted = group.key in highlightKeys,
                             selected = group.key in selectedKeys,
                             dimmed = highlightKeys.isNotEmpty() && group.key !in highlightKeys,
-                            onClick = { onGroupClick(group) },
+                            onClick = { if (group.key in selectedKeys) onGroupOpen(group) else onGroupClick(group) },
                             onOpen = { onGroupOpen(group) }
                         )
                     }
@@ -288,23 +287,6 @@ private fun MealCard(
                 .background(Color.Black.copy(alpha = 0.55f), CircleShape)
                 .padding(horizontal = 6.dp, vertical = 2.dp)
         )
-        // A selected card offers the way into the details; the tap itself only selects.
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(6.dp)
-                    .size(28.dp)
-                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
-                    .clickable(onClick = onOpen)
-                    .semantics { contentDescription = "Open meal details" },
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.Icon(
-                    Icons.Outlined.OpenInFull, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)
-                )
-            }
-        }
     }
 }
 

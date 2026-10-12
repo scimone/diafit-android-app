@@ -156,16 +156,19 @@ fun ComponentCgmChart(
             bottomAxis = rememberTimeBottomAxis(showLabels = showTimeLabels),
             layerPadding = { LineChartLayerPadding },
             decorations = listOfNotNull(
-                TargetRangeDecoration(
+                // The AGP replaces the target band while it is shown.
+                if (agp == null) TargetRangeDecoration(
                     lower = lowerBound.toDouble(),
                     upper = upperBound.toDouble(),
                     minY = minY.toDouble(),
                     maxY = maxY.toDouble(),
                     color = targetBand
-                ),
+                ) else null,
                 agp?.let {
                     uk.scimone.diafit.home.presentation.utils.AgpDecoration(
-                        agp = it, minY = minY.toDouble(), maxY = maxY.toDouble(), color = androidx.compose.ui.graphics.Color(0xFFB39DDB)
+                        agp = it, minY = minY.toDouble(), maxY = maxY.toDouble(),
+                        lower = lowerBound.toDouble(), upper = upperBound.toDouble(),
+                        aboveColor = AboveRange, inRangeColor = InRange, belowColor = BelowRange
                     )
                 },
                 remember(onGeometry) { GeometryProbe(onGeometry) }

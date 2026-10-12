@@ -19,7 +19,12 @@ class AgpDecoration(
     private val agp: PatternAgp,
     private val minY: Double,
     private val maxY: Double,
-    private val color: Color
+    /** The glucose target range; each band takes the colour of the zone it falls in, as in History's AGP. */
+    private val lower: Double,
+    private val upper: Double,
+    private val aboveColor: Color,
+    private val inRangeColor: Color,
+    private val belowColor: Color
 ) : Decoration {
     override fun drawUnderLayers(context: CartesianDrawingContext) {
         val bounds = context.layerBounds
@@ -63,33 +68,41 @@ class AgpDecoration(
             close()
         }
         val canvas = context.canvas
-        val tint = color
-        canvas.save()
-        canvas.clipRect(bounds.left, bounds.top, bounds.right, bounds.bottom)
-        fun fill(path: Path, alpha: Float) = canvas.drawPath(
-            path, Paint().apply { this.color = tint.copy(alpha = alpha); style = PaintingStyle.Fill; isAntiAlias = true }
+        // Same zone colouring as History's AGP, much fainter so the live curve stays the focus.
+        val zones = listOf(
+            Triple(bounds.top, yOf(upper), aboveColor),
+            Triple(yOf(upper), yOf(lower), inRangeColor),
+            Triple(yOf(lower), bounds.bottom, belowColor)
         )
-        fill(band(agp.p10, agp.p90), 0.16f)
-        fill(band(agp.p25, agp.p75), 0.26f)
-
+        val outer = band(agp.p10, agp.p90)
+        val inner = band(agp.p25, agp.p75)
         val median = Path().apply {
             times.indices.forEach { i ->
                 val x = xOf(times[i]); val y = yOf(agp.p50[bin[i]])
                 if (i == 0) moveTo(x, y) else lineTo(x, y)
             }
         }
-        canvas.drawPath(
-            median,
-            Paint().apply {
-                this.color = tint.copy(alpha = 0.7f); style = PaintingStyle.Stroke
-                strokeWidth = 3f; strokeCap = StrokeCap.Round; isAntiAlias = true
-            }
-        )
-        canvas.restore()
+        for ((zTop, zBottom, tint) in zones) {
+            if (zBottom <= zTop) continue
+            canvas.save()
+            canvas.clipRect(bounds.left, maxOf(zTop, bounds.top), bounds.right, minOf(zBottom, bounds.bottom))
+            canvas.drawPath(outer, Paint().apply { color = tint.copy(alpha = 0.09f); style = PaintingStyle.Fill; isAntiAlias = true })
+            canvas.drawPath(inner, Paint().apply { color = tint.copy(alpha = 0.18f); style = PaintingStyle.Fill; isAntiAlias = true })
+            canvas.drawPath(
+                median,
+                Paint().apply {
+                    color = androidx.compose.ui.graphics.lerp(tint, Color.White, 0.4f).copy(alpha = 0.35f)
+                    style = PaintingStyle.Stroke; strokeWidth = 2.5f; strokeCap = StrokeCap.Round; isAntiAlias = true
+                }
+            )
+            canvas.restore()
+        }
     }
 
     override fun equals(other: Any?) =
-        other is AgpDecoration && other.agp === agp && other.minY == minY && other.maxY == maxY && other.color == color
+        other is AgpDecoration && other.agp === agp && other.minY == minY && other.maxY == maxY &&
+            other.lower == lower && other.upper == upper && other.aboveColor == aboveColor &&
+            other.inRangeColor == inRangeColor && other.belowColor == belowColor
 
-    override fun hashCode() = listOf(System.identityHashCode(agp), minY, maxY, color).hashCode()
+    override fun hashCode() = listOf(System.identityHashCode(agp), minY, maxY, lower, upper, aboveColor, inRangeColor, belowColor).hashCode()
 }
