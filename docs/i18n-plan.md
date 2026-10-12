@@ -1,0 +1,84 @@
+# Plan: translating the whole app (en / de / it)
+
+Status file for the work after the language setting (2026-10-12). Tick a box when a phase is committed; keep this file current so any session can resume from it.
+
+## Where we are
+
+- Done: `AppLanguage` + picker (Settings -> Display), `locales_config.xml`, `values/`, `values-de/`, `values-it/`; translated: Display page, bottom nav, top bar, snackbars (`MainActivity`), Home panel titles/hints/meal strip/macro tiles.
+- Everything else is hard-coded English in Kotlin. Rough count of string literals that start with a capital letter, per package: patterns 230, settings 112, addmeal 102, logs 93, core 83, stats 73, dataeditor 64, history 52, profile 44, menu 37, backendsync 24, devices 13, notifications 9, home 5. (Crude grep, undercounts multi-line strings and templates; expect ~900 strings.)
+
+## Rules (apply to every phase)
+
+1. **Keys:** `<feature>_<screen-or-component>_<element>` in `snake_case` (`logs_card_peak_after`, `stats_metric_in_range`). Shared words in `common_*` (`common_save`, `common_cancel`, `common_delete`, `common_edit`, `common_close`, `common_back`, `common_retry`, `common_on`, `common_off`). Reuse before adding.
+2. **One file per language, sections by feature** with an XML comment header (single `strings.xml`; split into `strings_<feature>.xml` per language only if it passes ~1500 lines; same file names in all three folders).
+3. **Never concatenate sentences.** Use placeholders with positions (`%1$s`, `%2$d`), because German/Italian reorder words. No `"$a $b"` of translated pieces, no `.lowercase()` on a translated word to put it mid-sentence.
+4. **Plurals** via `<plurals>` + `pluralStringResource` / `resources.getQuantityString` (never `if (n == 1) "x" else "xs"`; 13 such spots exist today: grep `== 1`). German/Italian have one/other (Italian also `many` for large numbers is not needed in our usage).
+5. **Units & numbers:** units (mg/dL, U, g, kcal, bpm) are not translated and stay out of strings. Format numbers with the locale where shown to users (`String.format(Locale.getDefault(), ...)`); keep `Locale.US` for anything parsed or sent to servers/AI.
+6. **Dates/times:** the 68 `SimpleDateFormat`/`DateTimeFormatter.ofPattern` uses must use `Locale.getDefault()` (already common) and, where a month/weekday name appears, a localized skeleton (`DateFormat.getBestDateTimePattern(locale, "EEEdMMM")`) instead of fixed English patterns such as `"EEE d MMM"` with literal words. 24 h clock stays (`HH:mm`) for en/de/it.
+7. **Non-composable code** (ViewModels, use cases, domain models, workers, services) must not call `stringResource`. Pick one per case:
+   - *UI text decided in a ViewModel/domain:* expose a `UiText` (sealed: `Res(@StringRes id, args)`, `Plural(...)`, `Raw(String)`; resolve with `asString()` in composables / `asString(context)` elsewhere), or expose an enum/state and map it in the composable. Preferred over `Application.getString` in ViewModels, because it follows a language change while the screen is open.
+   - *Enums with `label`/`title` properties:* replace the `String` with `@StringRes val labelRes: Int` (or an extension `@Composable fun X.label()` in the presentation layer). Do **not** change persisted values (see "Persisted text" below).
+   - *Workers/services/notifications:* `context.getString(...)` using the localized app context (`AppLanguage.wrap` already covers `DiafitApp`, so services get it; on Android 13+ the system does it).
+8. **Do not translate:** log messages, exception text meant for developers, JSON keys, Nightscout/AAPS event types (`Profile Switch`, `Temp Basal`, they are identifiers), prompts' JSON schema, API field names, brand names (Diafit, Nightscout, AAPS, xDrip+, Juggluco, Health Connect, Open Food Facts, USDA).
+9. **Medical wording:** use the established German/Italian diabetes terms: Time in range = Zeit im Zielbereich / Tempo nell'intervallo; Basal / Basale; Bolus / Bolo; Carbs = Kohlenhydrate (KH) / Carboidrati (CHO only if space forces it); Sensor / Sensore; Pod/Patch pump = Patch-Pumpe / Micro a cerotto; Low/High = Unterzuckerung/Hypoglykämie, Überzucker/Hyperglykämie ("niedrig/hoch" in short labels) / Ipoglicemia, Iperglicemia. Keep a glossary at the top of each language file (XML comment) so later phases stay consistent. **Have a native/clinical reader review before release**: wording is machine-drafted.
+10. **Each phase:** extract strings -> build -> `installDebug` -> set the app to German, then Italian (`adb shell cmd locale set-app-locales uk.scimone.diafit --locales de`) and screenshot every changed screen (long German words overflow: check truncation, `maxLines`, fixed-width boxes such as `MEAL_VALUES_WIDTH`, chip rows, bottom-bar labels) -> fix layout -> commit -> tick the box. The phone must be unlocked for screenshots.
+11. **Guardrail test (phase 0):** a JVM unit test that parses `values/`, `values-de/`, `values-it/` and fails if a key exists in one but not the others, if placeholder sets (`%1$s`, `%d`) differ between languages, or if a `<plurals>` lacks `one`/`other`. Plus enabling lint's `MissingTranslation` and `ExtraTranslation` as errors (`lint { error += listOf("MissingTranslation","ExtraTranslation") }`) and optionally a lint/grep CI-less check script (`scripts/find-hardcoded-strings.sh`) that lists remaining `Text("...")`, `title = "..."`, `label = "..."`, `contentDescription = "..."`, `showSnackbar("...")` literals so progress is measurable.
+
+## Persisted text (decide before touching these)
+
+Some English text is **stored**, so changing the source string does not change what is shown.
+
+| Stored thing | Today | Plan |
+|---|---|---|
+| `MealType.type` ("Breakfast"...) is parsed back by `MealType.fromString` | English persisted | Keep the stored value. Add a display mapping (`MealType.labelRes`). Never show `.type`. Audit callers of `.type`. |
+| `ImpactType` / `Connector` / `DataType` / `BasalStyle` `label`, `description` | enum Strings | Move to `@StringRes`; enum names stay (persisted by name). |
+| `PatternEntity` stores the whole `PatternCard` as JSON, including English `title`, `summary`, tips, examples' `note`, `effectLabel` | text frozen at scan time | Store **structured data + a message key** (`titleKey` + args) and render at display time; or at minimum re-run the scan on language change (`PatternScheduler.scanNow`) and mark stored cards stale. Preferred: keys + args, because detectors produce ~230 sentences (largest block of work). Needs a DB migration (new column, old rows are re-generated by the next scan; they are derived data). |
+| `AppNotificationEntity.title/text` (bell) | English text frozen | Store `dedupeKey` + `kind` + args and render at display time (`tidyNotificationText` already re-derives some of it). Pushes already sent stay in the old language. Same migration pattern as patterns. |
+| `PumpEventEntity` notes/`rawJson` | raw external data | Not translated (user/AAPS data). Only the card chrome is. |
+| `MealEntity.description`, `reasoning` (AI text) | AI output in the language of the prompt | Ask the model to answer in the app language (see AI phase); old entries stay as written. |
+| Glucose situation phrases (`GlucoseSituation`, ~40) in the sync notification | computed each minute | Not persisted; convert to `@StringRes`/`UiText`; notification is re-posted every minute so it follows the language. |
+
+## Phases
+
+Order = smallest/visible first, risky data-model work last. Each phase is one or more commits.
+
+- [ ] **0. Foundation** — `UiText` helper (`core/presentation/UiText.kt`), `common_*` strings, the string-file consistency test, lint `MissingTranslation` as error, `scripts/find-hardcoded-strings.sh`, a `docs`-level glossary (de/it) in the string files, decide plural handling helper. Move language picker strings into the final structure. (~0.5 day)
+- [ ] **1. Menu, Notifications page, Devices page** (menu 37, notifications 9, devices 13) — account menu rows and groups, name dialog, device kinds/age text ("due in / overdue by", durations: introduce `formatDuration`/`formatAge` that uses plurals or compact units `3 d 4 h`), lifetimes card. Device expiry alert **texts** raised by `DeviceExpiryWorker` (`AppNotification.kt`): convert generation to keys+args or localized at raise time (and tidy function). (~0.5 day)
+- [ ] **2. Settings pages** (settings 112 + backendsync 24) — Connected apps, Data sources (data type names, accordion, backfill panels and the `BackfillStatus` messages), AI pages (connection form, usage, request log), Meal estimation, Food database, Notifications, Phone permissions (Xiaomi autostart text), Backend sync. Enum `label/description` -> `@StringRes` for `Connector`, `DataType`, `BasalStyle`, `CgmSource`, etc. Error text from `NetworkError`/`Result` -> `UiText`. (~1 day)
+- [ ] **3. Logs** (93) — day headers ("Today/Yesterday", per-day summary with plurals "2 meals, 1 bolus"), `MealCard`/`GlucoseEpisodeCard`/`BolusCard`/`PumpEventCard`/`SleepCard`/`ExerciseCard` texts (compact "after 1h 6m" built from format strings, e.g. `logs_peak_after` = "peak %1$s after %2$s"), filter chips, range chip + date range picker, new-entry sheet, meal detail page (courses & insulin timeline), sleep detail, AAPS match strip ("Same meal? ..."), `EntryVisuals` (meal type / absorption / entry kind labels), sleep/exercise type names. Meal type via display mapping (see Persisted text). (~1.5 days)
+- [ ] **4. Meal editor & capture** (addmeal 102) — editor fields, `WhenRow` pills, totals/foods cards, course banner, camera/capture/photo-choice/search screens, product portion card, error messages in `AddMealViewModel` (-> `UiText`), AI request card. Default meal names. (~1.5 days)
+- [ ] **5. History** (52) — period header, range menu (`HistoryRange` labels incl. "Custom…" dialog), layer toggles, day page tabs, Stats/Charts view texts, AGP card, day-detail stats card labels (zone names: very low/low/in range/high/very high), activity card, `HistoryTimeAxis` labels. Replace English weekday/month patterns with localized skeletons (rule 6). (~1 day)
+- [ ] **6. Stats** (73) — `StatsMetric` names/figures, period chips D/W/M/Y (consider `D W M Y` -> `T W M J` de, `G S M A` it: make them strings), pager/date picker, detail page (summary, trend card), sleep card texts, empty states and "Allow access" card. Metric labels are shared with the W/M/Y charts. (~1 day)
+- [ ] **7. Profile / Treatment plan** (44) — profile page, "Right now" tiles, switch diff page ("What changed", per-schedule "no change", `ProfileDiff` change lines "06:00–07:00 0.40 → 0.45"), temporary target card, `AapsProfile.summary()` text. (~0.5 day)
+- [ ] **8. Data editor** (64) — record kinds, forms, validation messages (`DataEditorRepository` results -> `UiText`), `NewRecords` defaults, multi-select bar, undo snackbars. (~0.5 day)
+- [ ] **9. Home leftovers & charts** (home 5 + activity chart) — labels drawn on Canvas ("Sleep 7h 18m", "Exercise", "Asleep", sleep stage names, inspect readout lines "bpm", "U/h"): resolve strings in the composable and pass to draw functions (do not call resources inside `DrawScope`). Meal timeline/sheet remaining texts. (~0.5 day)
+- [ ] **10. Patterns** (patterns 230 — biggest, own plan below) (~3-4 days)
+- [ ] **11. Services, notifications, workers** (core 83 incl. other) — sync notification (`SyncNotificationUpdater`: title/delta, `GlucoseSituation` ~40 phrases), channel names/descriptions (`createNotificationChannel` in `MainActivity`, `GLUCOSE_PATTERNS_CHANNEL`, `DEVICE_EXPIRY_CHANNEL`; channels are created once, so a language change needs a re-create of channel *names* by `createNotificationChannel` on each start — safe, same id), `NotificationManagerCompat` pushes, Health Connect rationale activity text, permission rationale dialogs, AndroidManifest labels (`@string`), foreground-service notification text. (~1 day)
+- [ ] **12. AI output language** — add the app language to the meal-estimation request ("Write `reasoning`, `dishes` names and food names in <German|Italian|English>") in `MealAnalysisRepositoryImpl`; keep `DEFAULT_MEAL_ESTIMATION_PROMPT` in English with a `{language}` line appended (the user's prompt override stays untouched, the language line is added separately). Product names from Open Food Facts/USDA stay as the databases give them (OFF can request `lc=`/`lang`: pass the app language for the text search and for `product_name_<lang>` where present). (~0.5 day)
+- [ ] **13. Release pass** — read-through of all three languages by a native speaker (de/it) and, ideally, a diabetes-literate reviewer; long-string layout sweep on a small-width device/emulator (360 dp) and at font scale 1.3; plural/number sanity (0, 1, 2, 11, 21); TalkBack labels (`contentDescription`s) translated; remove the "hard-coded English" caveat from CLAUDE.md; run the guardrail test and lint. (~1 day)
+
+## Patterns plan (phase 10 in detail)
+
+The detectors (`patterns/domain/*Detector.kt`, `PatternTips`, `PatternCases`, `PatternSide`, `PatternExampleView`) build user-facing sentences by string templates, and the result is persisted. Translating by sprinkling `getString` would be fragile. Steps:
+
+1. **Message model:** `PatternText(key: String, args: List<PatternArg>)` (`PatternArg` = number/text/duration/clock time/percent; numbers stay numbers so formatting follows the locale). Resolve with a `when(key)`-free lookup: `key` is the **string resource name**, resolved by `resources.getIdentifier` once at display time (or an explicit `Map<String, Int>` generated per detector, safer against shrinking: keep a `PatternStrings` object listing every `R.string.pattern_*` id, covered by a test that every key used by a detector exists in all three languages).
+2. **Card fields to convert:** `title`, `summary`, `effectLabel`, `uncertainty`, `limitations`, `baselineLabel`, tips (`PatternTips.select` already uses `TipTopic` ids: tips become plain string resources `tip_<topic>_<n>`; keep "exactly three, one sentence, no dosing directives" rule and the existing `InsightTipsTest` constraints, applied per language), examples' `note`/`eventLabel`/`group`, graph titles/captions/axis labels (`MiniGraph`, `PatternDetailScreen`).
+3. **Storage:** `PatternEntity.cardJson` keeps its current shape but text fields become `PatternText`; DB **v28** migration deletes derived pattern rows (they are re-created by the next scan; add a one-off `PatternScheduler.scanNow` after migration; lifecycle state such as DISMISSED would be lost, so migrate by keeping `id`, `state`, `dismissedAtUtc`, `firstSeen` columns and only blanking `cardJson`, then re-scan fills it back; verify the lifecycle test still passes).
+4. **Cards with plurals** ("24 of 40 meals", "3 days"): one `<plurals>` per phrase; the sample size is the quantity.
+5. **Lifecycle compare:** `PatternLifecycle.reconcile` compares effect numbers, not text, so it is unaffected; verify no code compares titles (`PatternSide.glucoseSide()` derives the side **from the title** for either-direction detectors today: change it to use a `side` field/key, otherwise it breaks in German/Italian).
+6. **Order of work:** time-of-day -> meals -> exercise -> sleep -> trends -> combined -> context detectors, one commit each, tests updated to assert on keys/args, not English text (`TimeOfDayDetectorTest`, `MealDetectorTest`, ... currently may assert on titles: grep before starting).
+7. Push notification text for new patterns (`PatternWorker`) is built from the card in the language active **at scan time**; acceptable, document it.
+
+## Risks / things to watch
+
+- **Layout overflow** is the main visible risk: German is ~30 % longer. Known tight spots: bottom bar labels, `MEAL_VALUES_WIDTH` card column, History/Stats chips and the D W M Y chips, Home inspect readout (one line, fixed height `InspectBarHeight`), pills in `WhenRow`, panel titles overlaying charts.
+- **Process-wide state caching strings:** any `object`/`val` that caches a resolved string at class-load (e.g. top-level `val labels = listOf("...")` today) would not follow a language change; resolve at use.
+- **ViewModel-held text** stays in the old language until the next state emission after a language change; with `UiText` it re-resolves on recomposition (activity is recreated by the language change anyway, ViewModels survive it).
+- **AI prompt override** (user's own text) and AI-generated replies are not translated.
+- **Backend sync / exported data** keep English identifiers (`MealType.type` etc.).
+- **Unit tests** that assert English strings must be updated to assert on keys/data.
+- **Release size:** negligible.
+
+## Estimate
+
+About 12-14 working days of agent+review time in total (phases 1-9 + 11 ≈ 8 days, patterns 3-4, AI/release 1.5). Phases are independent after phase 0 and can be reordered; patterns (10) is the only one that needs a DB migration besides notifications (phase 1 notification persisted-text change).
