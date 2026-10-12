@@ -59,8 +59,8 @@ fun StatsMetric.accent(): Color = when (this) {
 
 fun StatsMetric.colors(): List<Color> = when (this) {
     // Stacks: the very low / very high part in the full colour, the milder part lighter.
-    StatsMetric.GLUCOSE_BELOW -> listOf(BelowRange, BelowRange.copy(alpha = 0.6f))
-    StatsMetric.GLUCOSE_ABOVE -> listOf(AboveRange, AboveRange.copy(alpha = 0.6f))
+    StatsMetric.GLUCOSE_BELOW -> listOf(androidx.compose.ui.graphics.lerp(BelowRange, Color.Black, 0.45f), BelowRange)
+    StatsMetric.GLUCOSE_ABOVE -> listOf(androidx.compose.ui.graphics.lerp(AboveRange, Color.Black, 0.45f), AboveRange)
     else -> listOf(accent())
 }
 

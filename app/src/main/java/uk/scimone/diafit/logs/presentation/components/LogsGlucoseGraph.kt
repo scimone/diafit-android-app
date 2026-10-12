@@ -204,6 +204,7 @@ fun LogsGlucoseGraph(
                 val x0 = xOf(from).coerceAtLeast(0f)
                 val x1 = xOf(after).coerceAtMost(size.width)
                 drawRect(m.color.copy(alpha = 0.06f), Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2.dp.toPx()), plotBottom))
+                if (xOf(from) >= 0f) drawLine(m.color.copy(alpha = 0.4f), Offset(x0, 0f), Offset(x0, plotBottom), strokeWidth = 1.dp.toPx())
                 if (xOf(after) <= size.width) drawLine(m.color.copy(alpha = 0.4f), Offset(x1, 0f), Offset(x1, plotBottom), strokeWidth = 1.dp.toPx())
             }
             run {

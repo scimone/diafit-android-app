@@ -129,7 +129,8 @@ fun StatsBarChart(
                     var bottom = plotH
                     segments.forEachIndexed { s, v ->
                         if (v <= 0) return@forEachIndexed
-                        val h = barH * (v / total).toFloat()
+                        // A thin part still gets a visible sliver (at the cost of the segment above it).
+                        val h = (barH * (v / total).toFloat()).coerceAtLeast(2.dp.toPx()).coerceAtMost(bottom - (plotH - barH))
                         drawRect(colors[s].copy(alpha = if (dim) 0.35f else 1f), Offset(x, bottom - h), Size(barW, h))
                         bottom -= h
                     }
