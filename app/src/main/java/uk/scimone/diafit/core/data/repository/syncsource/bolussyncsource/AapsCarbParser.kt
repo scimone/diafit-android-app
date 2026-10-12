@@ -31,6 +31,7 @@ object AapsCarbParser {
                     createdAtUtc = System.currentTimeMillis(),
                     mealTimeUtc = timestamp,
                     carbohydrates = Math.round(carbs).toInt(),
+                    mealType = MealEntity.suggestMealTypeAt(timestamp, Math.round(carbs).toInt()),
                     calories = null,
                     proteins = null,
                     fats = null,

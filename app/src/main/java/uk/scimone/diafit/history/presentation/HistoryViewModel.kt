@@ -45,6 +45,7 @@ class HistoryViewModel(
     private var weekdays: Set<DayOfWeek> = emptySet()
     private var page = 0
     private var range = HistoryRange.TWO_WEEKS
+    private var custom: CustomPeriod? = null
 
     init {
         observe()
@@ -54,17 +55,27 @@ class HistoryViewModel(
 
     /** Switches the time frame shown and jumps back to the latest period. */
     fun setRange(newRange: HistoryRange) {
-        if (newRange == range) return
+        if (newRange == range && custom == null) return
         range = newRange
+        custom = null
         page = 0
-        _state.update { it.copy(range = newRange, page = 0, isLoading = true) }
+        _state.update { it.copy(range = newRange, custom = null, page = 0, isLoading = true) }
+        observe()
+    }
+
+    /** Shows exactly [period] (a valid one, see [CustomPeriod.isValid]); the arrows are disabled while it is active. */
+    fun setCustomPeriod(period: CustomPeriod) {
+        if (!period.isValid(LocalDate.now())) return
+        custom = period
+        page = 0
+        _state.update { it.copy(custom = period, page = 0, isLoading = true) }
         observe()
     }
 
     /** Pages are windows of [HistoryRange.days] days; 0 is the latest, higher is older. */
-    fun showOlder() = setPage(page + 1)
+    fun showOlder() { if (custom == null) setPage(page + 1) }
 
-    fun showNewer() = setPage((page - 1).coerceAtLeast(0))
+    fun showNewer() { if (custom == null) setPage((page - 1).coerceAtLeast(0)) }
 
     private fun setPage(newPage: Int) {
         if (newPage == page) return
@@ -80,7 +91,10 @@ class HistoryViewModel(
             val thresholds = target.toThresholds()
             val range = range
             val page = page
-            getDailyHistory(userId, range.days, page)
+            val custom = custom
+            val source = if (custom != null) getDailyHistory.forDates(userId, custom.first, custom.last)
+            else getDailyHistory(userId, range.days, page)
+            source
                 .map { days ->
                     val ui = days.map { it.toUi(target, clusterTreatments) }
                     rawDays = ui
@@ -127,6 +141,7 @@ class HistoryViewModel(
             thresholds = thresholds,
             range = range,
             page = page,
+            custom = custom,
             weekdays = weekdays,
             periodFirstDay = all.lastOrNull()?.epochDay,
             periodLastDay = all.firstOrNull()?.epochDay,
@@ -146,6 +161,8 @@ data class HistoryState(
     val thresholds: GlucoseThresholds = GlucoseThresholds(low = 70, high = 180),
     val range: HistoryRange = HistoryRange.TWO_WEEKS,
     val page: Int = 0,
+    /** A user-chosen period replacing [range] and paging, or null. */
+    val custom: CustomPeriod? = null,
     /** Glucose statistics over the whole period (time-weighted across all days); null without readings. */
     val periodStats: DayGlucoseStats? = null,
     /** Ambulatory glucose profile over the whole period; null without readings. */
@@ -167,4 +184,13 @@ enum class HistoryRange(val days: Int, val label: String) {
     TWO_WEEKS(14, "2 weeks"),
     MONTH(30, "1 month"),
     THREE_MONTHS(90, "3 months")
+}
+
+/** A user-chosen History period: whole local days [first]..[last], at most three calendar months, not in the future. */
+data class CustomPeriod(val first: LocalDate, val last: LocalDate) {
+    fun isValid(today: LocalDate) = !first.isAfter(last) && !last.isAfter(today) && !last.isAfter(first.plusMonths(MAX_MONTHS.toLong()).minusDays(1))
+
+    companion object {
+        const val MAX_MONTHS = 3
+    }
 }

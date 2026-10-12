@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private val cgmServiceManager: CgmServiceManager by inject()
     private val settingsRepository: uk.scimone.diafit.settings.domain.repository.SettingsRepository by inject()
     private val pumpEventRepair: uk.scimone.diafit.core.data.repository.PumpEventRepair by inject()
+    private val mealTypeRepair: uk.scimone.diafit.core.data.repository.MealTypeRepair by inject()
     private val nightscoutSyncScheduler: uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler by inject()
     private val deviceExpiryScheduler: uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler by inject()
     private val patternScheduler: uk.scimone.diafit.patterns.data.PatternScheduler by inject()
@@ -117,6 +118,7 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch { pumpEventRepair.runOnce() }
+        lifecycleScope.launch { mealTypeRepair.runOnce() }
 
         // Nightscout treatments (insulin, carbs, profile, device changes): routine job plus a catch-up on open.
         nightscoutSyncScheduler.schedulePeriodic()

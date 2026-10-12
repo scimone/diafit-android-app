@@ -57,6 +57,7 @@ object NightscoutTreatmentMapper {
         return MealEntity(
             userId = userId, description = "Carbs", createdAtUtc = now, mealTimeUtc = ts,
             carbohydrates = Math.round(carbs).toInt(),
+            mealType = MealEntity.suggestMealTypeAt(ts, Math.round(carbs).toInt()),
             calories = null, proteins = null, fats = null,
             impactType = ImpactType.MEDIUM, imageId = "", recommendation = null, reasoning = null,
             sourceId = t.str("_id") ?: "aaps-carbs-$ts"

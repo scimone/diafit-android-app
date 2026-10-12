@@ -82,6 +82,7 @@ val coreModule = module {
     single { GetActivityBetweenUseCase(get()) }
     single<PumpEventRepository> { PumpEventRepositoryImpl(get()) }
     single { uk.scimone.diafit.core.data.repository.PumpEventRepair(get(), androidContext()) }
+    single { uk.scimone.diafit.core.data.repository.MealTypeRepair(get(), androidContext()) }
 
     // Provide file storage
     single<FileStorageRepository> { FileStorageRepositoryImpl(get()) }

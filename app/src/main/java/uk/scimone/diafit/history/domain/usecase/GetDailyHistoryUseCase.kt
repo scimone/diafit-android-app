@@ -21,7 +21,14 @@ class GetDailyHistoryUseCase(
 ) {
     operator fun invoke(userId: Int, days: Int, page: Int = 0, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayHistory>> {
         // Page 0 ends today; each further page steps back by [days] days.
-        val lastDay = LocalDate.now(zone).minusDays(page.toLong() * days)
+        return load(userId, LocalDate.now(zone).minusDays(page.toLong() * days), days, zone)
+    }
+
+    /** The local days [first]..[last] (inclusive), newest first. */
+    fun forDates(userId: Int, first: LocalDate, last: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayHistory>> =
+        load(userId, last, (java.time.temporal.ChronoUnit.DAYS.between(first, last) + 1).toInt(), zone)
+
+    private fun load(userId: Int, lastDay: LocalDate, days: Int, zone: ZoneId): Flow<List<DayHistory>> {
         val start = lastDay.minusDays(days - 1L).atStartOfDay(zone).toInstant().toEpochMilli()
         fun dayOf(timeUtc: Long) = Instant.ofEpochMilli(timeUtc).atZone(zone).toLocalDate()
 

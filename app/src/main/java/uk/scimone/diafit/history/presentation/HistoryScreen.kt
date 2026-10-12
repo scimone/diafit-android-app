@@ -58,8 +58,10 @@ fun HistoryScreen(
             first = state.periodFirstDay,
             last = state.periodLastDay,
             range = state.range,
+            custom = state.custom,
             isLatest = state.page == 0,
             onRange = viewModel::setRange,
+            onCustom = viewModel::setCustomPeriod,
             weekdays = state.weekdays,
             onWeekdays = viewModel::setWeekdays,
             layers = layers,
@@ -134,8 +136,10 @@ private fun PeriodHeader(
     first: Long?,
     last: Long?,
     range: HistoryRange,
+    custom: CustomPeriod?,
     isLatest: Boolean,
     onRange: (HistoryRange) -> Unit,
+    onCustom: (CustomPeriod) -> Unit,
     weekdays: Set<DayOfWeek>,
     onWeekdays: (Set<DayOfWeek>) -> Unit,
     layers: HistoryLayers,
@@ -144,26 +148,33 @@ private fun PeriodHeader(
     onNewer: () -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    var customOpen by remember { mutableStateOf(false) }
+    if (customOpen) CustomPeriodDialog(custom, onDismiss = { customOpen = false }, onApply = { customOpen = false; onCustom(it) })
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onOlder, Modifier.size(40.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
+        IconButton(onClick = onOlder, Modifier.size(40.dp), enabled = custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             val label = if (first == null || last == null) "" else
                 "${LocalDate.ofEpochDay(first).format(RANGE_FORMAT)} – ${LocalDate.ofEpochDay(last).format(RANGE_FORMAT)}"
             TextButton(onClick = { menuOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text("  ${range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("  ${if (custom != null) "Custom" else range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Icon(Icons.Filled.ArrowDropDown, "Change time frame", tint = MaterialTheme.colorScheme.primary)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 HistoryRange.entries.forEach { r ->
                     DropdownMenuItem(
-                        text = { Text(r.label, fontWeight = if (r == range) FontWeight.Bold else null) },
+                        text = { Text(r.label, fontWeight = if (r == range && custom == null) FontWeight.Bold else null) },
                         onClick = { menuOpen = false; onRange(r) }
                     )
                 }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Custom…", fontWeight = if (custom != null) FontWeight.Bold else null) },
+                    onClick = { menuOpen = false; customOpen = true }
+                )
             }
         }
-        IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
+        IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest && custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
         FilterButton(weekdays, onWeekdays, layers, onLayers)
     }
 }

@@ -3,6 +3,7 @@ package uk.scimone.diafit.core.data.local
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import uk.scimone.diafit.core.domain.model.MealEntity
+import uk.scimone.diafit.core.domain.model.MealType
 
 @Dao
 interface MealDao {
@@ -34,6 +35,13 @@ interface MealDao {
 
     @Query("SELECT * FROM MealEntity WHERE userId = :userId AND isValid = 1 AND mergedIntoId IS NULL ORDER BY mealTimeUtc DESC")
     fun observeMealsByUserId(userId: Int): Flow<List<MealEntity>>
+
+    /** Photo-less imported rows (AAPS / Nightscout), including hidden ones. */
+    @Query("SELECT * FROM MealEntity WHERE sourceId IS NOT NULL AND imageId = ''")
+    suspend fun getImportedWithoutPhoto(): List<MealEntity>
+
+    @Query("UPDATE MealEntity SET mealType = :mealType WHERE id = :id")
+    suspend fun setMealType(id: Int, mealType: MealType)
 
     @Query("SELECT COUNT(*) FROM MealEntity WHERE sourceId = :sourceId")
     suspend fun countBySourceId(sourceId: String): Int

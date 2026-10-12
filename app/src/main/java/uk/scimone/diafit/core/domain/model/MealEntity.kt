@@ -79,6 +79,10 @@ data class MealEntity(
         fun suggestMealType(hour: Int, carbs: Int?): MealType =
             if (carbs != null && carbs < SNACK_CARBS_LIMIT_G) MealType.SNACK else inferMealType(hour)
 
+        /** [suggestMealType] for a stored meal time, using the local clock hour. */
+        fun suggestMealTypeAt(mealTimeUtc: Long, carbs: Int?, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): MealType =
+            suggestMealType(java.time.Instant.ofEpochMilli(mealTimeUtc).atZone(zone).hour, carbs)
+
         fun inferMealType(hour: Int): MealType {
             return when (hour) {
                 in 5 until 10 -> MealType.BREAKFAST
