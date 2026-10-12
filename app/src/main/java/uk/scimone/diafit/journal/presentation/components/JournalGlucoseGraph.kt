@@ -66,7 +66,7 @@ class GraphMarker(
     val colors: List<Color> get() = listOfNotNull(color, extraColor)
 }
 
-/** One absorption curve per course; they are drawn stacked, so the top edge is the meal's summed carb activity. */
+/** One absorption curve per course; the graph draws their sum. */
 class CarbCurve(val courses: List<uk.scimone.diafit.journal.presentation.model.CarbCourse>)
 
 /**
@@ -202,7 +202,7 @@ fun JournalGlucoseGraph(
                 }
             }
 
-            // A meal's carb activity: each course's curve stacked on the previous ones, behind the readings.
+            // A meal's carb activity: the summed curve of its courses, behind the readings.
             markers.getOrNull(selectedMarker)?.carbs?.let { c ->
                 val courses = c.courses.sortedBy { it.timeUtc }.filter { it.grams > 0.0 }
                 if (courses.isEmpty()) return@let
@@ -220,18 +220,16 @@ fun JournalGlucoseGraph(
                 if (to <= from) return@let
                 val maxH = plotH * 0.4f
                 val base = markers[selectedMarker].color
-                fun yAt(k: Int, t: Long) = if (k < 0) plotBottom else plotBottom - (cumulative(k, t) / peakRate).toFloat() * maxH
-                for (k in courses.indices) {
-                    val path = androidx.compose.ui.graphics.Path()
-                    path.moveTo(xOf(from), yAt(k - 1, from))
-                    var t1 = from
-                    while (t1 < to) { path.lineTo(xOf(t1), yAt(k, t1)); t1 += stepMs }
-                    path.lineTo(xOf(to), yAt(k, to))
-                    var t2 = to
-                    while (t2 > from) { path.lineTo(xOf(t2), yAt(k - 1, t2)); t2 -= stepMs }
-                    path.close()
-                    drawPath(path, base.copy(alpha = if (k % 2 == 0) 0.16f else 0.09f))
-                }
+                // One area: at every moment the sum of all courses' absorption rates, like Home's carb panel.
+                fun yAt(t: Long) = plotBottom - (cumulative(courses.lastIndex, t) / peakRate).toFloat() * maxH
+                val path = androidx.compose.ui.graphics.Path()
+                path.moveTo(xOf(from), plotBottom)
+                var t1 = from
+                while (t1 < to) { path.lineTo(xOf(t1), yAt(t1)); t1 += stepMs }
+                path.lineTo(xOf(to), yAt(to))
+                path.lineTo(xOf(to), plotBottom)
+                path.close()
+                drawPath(path, base.copy(alpha = 0.16f))
             }
 
             val radius = 2.5.dp.toPx()
