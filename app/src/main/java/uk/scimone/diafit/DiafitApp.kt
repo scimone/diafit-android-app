@@ -19,9 +19,11 @@ import uk.scimone.diafit.core.di.syncModule
 import uk.scimone.diafit.backendsync.BackendSyncFeature
 import uk.scimone.diafit.backendsync.data.BackendSyncScheduler
 import uk.scimone.diafit.backendsync.di.backendSyncModule
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class DiafitApp : Application() {
+    private val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -39,6 +41,7 @@ class DiafitApp : Application() {
                     settingsModule,
                     profileModule,
                     patternsModule,
+                    uk.scimone.diafit.mealactivity.di.mealActivityModule,
                     uk.scimone.diafit.stats.di.statsModule
                 ) + if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()
             )
@@ -55,6 +58,10 @@ class DiafitApp : Application() {
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler>(uk.scimone.diafit.core.data.worker.DeviceExpiryScheduler::class.java).schedulePeriodic()
         // Glucose patterns (recurring patterns), twice a day.
         org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.patterns.data.PatternScheduler>(uk.scimone.diafit.patterns.data.PatternScheduler::class.java).schedulePeriodic()
+        // Meal activity curves: load the active personal model, watch meals/CGM for changes, and reconcile from persisted data.
+        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.mealactivity.data.MealActivityInvalidationObserver>(uk.scimone.diafit.mealactivity.data.MealActivityInvalidationObserver::class.java).start(appScope)
+        org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.mealactivity.data.MealActivityScheduler>(uk.scimone.diafit.mealactivity.data.MealActivityScheduler::class.java).also { it.schedulePeriodic(); it.checkNow() }
+        appScope.launch { runCatching { org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.mealactivity.data.MealActivityService>(uk.scimone.diafit.mealactivity.data.MealActivityService::class.java).loadActive(uk.scimone.diafit.mealactivity.data.MealActivityScheduler.USER_ID) } }
         // Optional upload to the user's Diafit backend; the worker is a no-op until one is configured.
         if (BackendSyncFeature.ENABLED) {
             org.koin.java.KoinJavaComponent.get<BackendSyncScheduler>(BackendSyncScheduler::class.java).schedulePeriodic()

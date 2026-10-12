@@ -188,7 +188,8 @@ class HomeViewModel(
 
     private fun observeMealData(nowMinus24h: Long = nowMinusXMinutes(24 * 60)) {
         viewModelScope.launch {
-            getAllMealsSinceUseCase(nowMinus24h, userId)
+            // Re-map when the user's activity model changes, so the carb panel always shows the model in force.
+            kotlinx.coroutines.flow.combine(getAllMealsSinceUseCase(nowMinus24h, userId), uk.scimone.diafit.mealactivity.domain.MealActivity.active) { meals, _ -> meals }
                 .catch { e ->
                     _state.update {
                         it.copy(

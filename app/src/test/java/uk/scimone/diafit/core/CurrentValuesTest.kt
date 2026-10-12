@@ -22,10 +22,14 @@ class CurrentValuesTest {
     }
 
     @Test
-    fun carbsDeclineAcrossTheAbsorptionWindow() {
-        assertEquals(40.0, remainingCarbs(listOf(Triple(0L, 40.0, 240)), 0L), 1e-6)
-        assertEquals(0.0, remainingCarbs(listOf(Triple(0L, 40.0, 240)), 240 * min), 1e-9)
-        assertTrue(remainingCarbs(listOf(Triple(0L, 40.0, 240)), 120 * min) < 40.0)
+    fun carbsOnBoardIsTheSumOfRemainingCarbsAndDeclines() {
+        val engine = uk.scimone.diafit.mealactivity.domain.MealActivityEngine()
+        fun curve(g: Double) = engine.curve(uk.scimone.diafit.mealactivity.domain.MealInput(g, 0.0, 0.0, null, uk.scimone.diafit.mealactivity.domain.AbsorptionSpeed.MEDIUM, 0L))!!
+        val meals = listOf(curve(40.0), curve(20.0))
+        assertEquals(60.0, remainingCarbs(meals, 0L), 1e-6)
+        assertEquals(60.0, remainingCarbs(meals, -10 * min), 1e-6) // not yet eaten: all still to come
+        assertTrue(remainingCarbs(meals, 120 * min) < 60.0)
+        assertEquals(0.0, remainingCarbs(meals, 24 * 60 * min), 0.05)
     }
 
     @Test

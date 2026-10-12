@@ -67,7 +67,7 @@ data class MealEntityUi(
     val courseCount: Int get() = courseIds.size
 }
 
-class CarbCourse(val grams: Double, val timeUtc: Long, val durationMinutes: Int)
+class CarbCourse(val grams: Double, val timeUtc: Long, val curve: uk.scimone.diafit.mealactivity.domain.MealActivityCurve)
 
 /** An unmerged imported carb entry that looks like part of a logged meal but wasn't certain enough to merge. */
 data class PossibleDuplicateUi(val importedId: Int, val timeUtc: Long, val carbohydrates: Int)
@@ -125,7 +125,7 @@ fun MealSitting.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         components = courses.flatMap { it.components },
         courseIds = courses.map { it.id },
         endTimeUtc = endTime,
-        carbCourses = courses.filter { it.carbohydrates > 0 }.map { CarbCourse(it.carbohydrates.toDouble(), it.mealTimeUtc, it.impactType.durationMinutes) }
+        carbCourses = courses.filter { it.carbohydrates > 0 }.map { CarbCourse(it.carbohydrates.toDouble(), it.mealTimeUtc, uk.scimone.diafit.mealactivity.domain.MealActivity.curve(it)) }
     )
 }
 
@@ -156,7 +156,8 @@ fun MealEntity.toUi(context: Context, impact: GlucoseImpact): MealEntityUi {
         hasGlucoseData = impact.hasData,
         glucoseStatus = impact.status,
         photoUris = photos,
-        components = components
+        components = components,
+        carbCourses = if (carbohydrates > 0) listOf(CarbCourse(carbohydrates.toDouble(), mealTimeUtc, uk.scimone.diafit.mealactivity.domain.MealActivity.curve(this))) else emptyList()
     )
 }
 

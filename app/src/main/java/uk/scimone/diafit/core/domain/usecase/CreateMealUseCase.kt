@@ -14,7 +14,8 @@ import java.util.UUID
 class CreateMealUseCase(
     private val mealRepository: MealRepository,
     private val fileStorageRepository: FileStorageRepository,
-    private val mergeCarbEntries: MergeCarbEntriesUseCase
+    private val mergeCarbEntries: MergeCarbEntriesUseCase,
+    private val activityRefresher: uk.scimone.diafit.mealactivity.domain.MealActivityRefresher
 ) {
     suspend operator fun invoke(
         photos: List<MealPhoto>,
@@ -61,6 +62,8 @@ class CreateMealUseCase(
         return mealRepository.createMeal(meal).map { meal }.onSuccess {
             // The matching AAPS carb entry may already have arrived (dose before photo).
             runCatching { mergeCarbEntries(userId) }
+            // The meal's activity curve exists straight away (baseline or the user's model); the background pass keeps it current.
+            runCatching { activityRefresher.refresh(meal) }
         }
     }
 }

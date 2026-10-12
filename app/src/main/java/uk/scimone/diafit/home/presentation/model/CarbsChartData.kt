@@ -1,15 +1,13 @@
 package uk.scimone.diafit.home.presentation.model
 
+import uk.scimone.diafit.mealactivity.domain.MealActivityCurve
+
+/** A meal on the carb panel: [value] grams eaten at [timeLong], with its activity curve (the charts draw its absorption rate, g/h). */
 data class CarbsChartData(
     override val timeLong: Long,
     override val value: Int,
-    val durationMinutes: Int = 240
+    val curve: MealActivityCurve
 ) : ChartData
 
-fun MealEntityUi.toChartData(): CarbsChartData {
-    return CarbsChartData(
-        timeLong = this.mealTimeUtc,
-        value = this.carbohydrates,
-        durationMinutes = this.impactType.durationMinutes
-    )
-}
+fun MealEntityUi.toChartData(): CarbsChartData =
+    CarbsChartData(timeLong = mealTimeUtc, value = carbohydrates, curve = activity)

@@ -46,11 +46,12 @@ import uk.scimone.diafit.home.presentation.utils.rememberTimeBottomAxis
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** A dose/meal event: [value] is units (insulin) or grams (carbs); [durationMinutes] feeds the curve. */
+/** A dose/meal event: [value] is units (insulin) or grams (carbs); [durationMinutes] feeds the insulin curve, [curve] the carb one. */
 data class ChartEvent(
     val time: Long,
     val value: Double,
-    val durationMinutes: Int = 0
+    val durationMinutes: Int = 0,
+    val curve: uk.scimone.diafit.mealactivity.domain.MealActivityCurve? = null
 )
 
 /**

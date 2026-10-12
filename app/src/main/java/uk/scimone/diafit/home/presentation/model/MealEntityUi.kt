@@ -26,6 +26,8 @@ data class MealEntityUi(
     val sittingId: String? = null,
     val sittingName: String? = null,
     val isImported: Boolean = false,
+    /** The meal activity curve (nutrient absorption), from the active model. */
+    val activity: uk.scimone.diafit.mealactivity.domain.MealActivityCurve,
 )
 
 fun MealEntity.toMealEntityUi(context: Context
@@ -52,6 +54,7 @@ fun MealEntity.toMealEntityUi(context: Context
         photoUris = photos,
         sittingId = sittingId,
         sittingName = sittingName,
-        isImported = sourceId != null
+        isImported = sourceId != null,
+        activity = uk.scimone.diafit.mealactivity.domain.MealActivity.curve(this)
     )
 }

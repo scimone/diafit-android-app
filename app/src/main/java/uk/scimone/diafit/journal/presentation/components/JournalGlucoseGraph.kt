@@ -29,7 +29,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
-import uk.scimone.diafit.core.domain.model.CarbActivity
 import uk.scimone.diafit.journal.presentation.DayGlucose
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
@@ -208,8 +207,9 @@ fun JournalGlucoseGraph(
                 if (courses.isEmpty()) return@let
                 val stepMs = 3 * MIN_MS
                 val first = courses.first().timeUtc
-                val last = courses.maxOf { it.timeUtc + it.durationMinutes * MIN_MS }
-                fun rate(k: Int, t: Long) = courses[k].let { CarbActivity.calculate(it.grams, it.timeUtc, t, it.durationMinutes) }
+                val last = courses.maxOf { it.curve.carbsEndTimeUtc() }
+                // Each course's carbohydrate absorption rate (g/h) from the meal activity model.
+                fun rate(k: Int, t: Long) = courses[k].curve.carbsRateGphAt(t)
                 fun cumulative(k: Int, t: Long): Double { var sum = 0.0; for (i in 0..k) sum += rate(i, t); return sum }
                 var peakRate = 0.0
                 var tp = first

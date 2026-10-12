@@ -318,7 +318,7 @@ private fun JournalEntryUi.toGraphMarker(): GraphMarker = when (this) {
         peakMs = peakTimeUtc?.takeIf { peakMgdl != null && (startMgdl == null || peakMgdl > startMgdl) },
         peakMgdl = peakMgdl,
         carbs = carbohydrates.takeIf { it > 0 }?.let { g ->
-            CarbCurve(carbCourses.ifEmpty { listOf(CarbCourse(g.toDouble(), mealTimeUtc, impactType.durationMinutes)) })
+            CarbCurve(carbCourses)
         }
     )
     else -> GraphMarker(timeUtc, null, kind.accent)

@@ -22,9 +22,12 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         uk.scimone.diafit.core.domain.model.AppNotificationEntity::class,
         uk.scimone.diafit.core.domain.model.HealthMetricEntity::class,
         uk.scimone.diafit.patterns.data.PatternEntity::class,
-        uk.scimone.diafit.core.domain.model.SavedProductEntity::class
+        uk.scimone.diafit.core.domain.model.SavedProductEntity::class,
+        uk.scimone.diafit.mealactivity.data.MealActivityEntity::class,
+        uk.scimone.diafit.mealactivity.data.PersonalActivityModelEntity::class,
+        uk.scimone.diafit.mealactivity.data.ActivityPipelineStateEntity::class
     ],
-    version = 25,
+    version = 26,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -47,6 +50,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityDao(): ActivityDao
     abstract fun notificationDao(): NotificationDao
     abstract fun savedProductDao(): SavedProductDao
+    abstract fun mealActivityDao(): uk.scimone.diafit.mealactivity.data.MealActivityDao
     /** Optional backend upload (see BackendSyncFeature); read-only queries, no tables of its own. */
     abstract fun backendSyncDao(): uk.scimone.diafit.backendsync.data.BackendSyncDao
 
@@ -63,6 +67,35 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /** The insights table is called patterns now. */
+        /** Meal activity curves, personal activity models and pipeline state (replaces the on-the-fly Beta(2,3) carb curve). */
+        val MIGRATION_25_26 = object : Migration(25, 26) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `MealActivityEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, " +
+                        "`mealId` INTEGER NOT NULL, `mealTimeUtc` INTEGER NOT NULL, `algorithmVersion` INTEGER NOT NULL, `method` TEXT NOT NULL, " +
+                        "`modelVersion` INTEGER, `trainingRevision` TEXT, `inputFingerprint` TEXT NOT NULL, `quality` TEXT NOT NULL, `qualityNotes` TEXT, " +
+                        "`horizonMinutes` INTEGER NOT NULL, `stepMinutes` INTEGER NOT NULL, `activityWindowHours` REAL NOT NULL, `carbsG` REAL NOT NULL, " +
+                        "`carbsRemainingG` TEXT NOT NULL, `carbsRateGph` TEXT NOT NULL, `proteinRemainingG` TEXT, `proteinActivityGph` TEXT, " +
+                        "`fatRemainingG` TEXT, `fatActivityGph` TEXT, `generatedAtUtc` INTEGER NOT NULL, `status` TEXT NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_MealActivityEntity_mealId_inputFingerprint` ON `MealActivityEntity` (`mealId`, `inputFingerprint`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_MealActivityEntity_mealId_status` ON `MealActivityEntity` (`mealId`, `status`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_MealActivityEntity_userId_status` ON `MealActivityEntity` (`userId`, `status`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `PersonalActivityModelEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, " +
+                        "`version` INTEGER NOT NULL, `status` TEXT NOT NULL, `adjustJson` TEXT NOT NULL, `datasetRevision` TEXT NOT NULL, `algoKey` TEXT NOT NULL, " +
+                        "`trainedAtUtc` INTEGER NOT NULL, `episodeCount` INTEGER NOT NULL, `reportJson` TEXT NOT NULL, `note` TEXT)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_PersonalActivityModelEntity_userId_version` ON `PersonalActivityModelEntity` (`userId`, `version`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_PersonalActivityModelEntity_userId_status` ON `PersonalActivityModelEntity` (`userId`, `status`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `ActivityPipelineStateEntity` (`userId` INTEGER NOT NULL, `processedRevision` TEXT, `processedAlgoKey` TEXT, " +
+                        "`lastFullRunUtc` INTEGER NOT NULL, `lastRunUtc` INTEGER NOT NULL, `lastResult` TEXT NOT NULL, `lastMessage` TEXT, " +
+                        "`eligibleEpisodes` INTEGER NOT NULL, `curvesRecalculated` INTEGER NOT NULL, `curvesTotal` INTEGER NOT NULL, PRIMARY KEY(`userId`))"
+                )
+            }
+        }
+
         /** Favourites among saved products, and which database a product came from (existing ones stay visible as favourites). */
         val MIGRATION_24_25 = object : Migration(24, 25) {
             override fun migrate(db: SupportSQLiteDatabase) {

@@ -59,7 +59,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import uk.scimone.diafit.core.domain.model.CarbActivity
 import uk.scimone.diafit.core.domain.model.InsulinActivity
 import uk.scimone.diafit.home.presentation.components.cgmMaxY
 import uk.scimone.diafit.home.presentation.components.CGM_MIN_Y
@@ -776,12 +775,13 @@ fun CarbActivityDisplay(
     highlightTime: Long? = null,
     headline: PanelValue? = null
 ) {
-    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), it.durationMinutes) } }
+    val events = remember(history) { history.map { ChartEvent(it.timeLong, it.value.toDouble(), curve = it.curve) } }
     BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
         ComponentEventActivityChart(
             plotHeightDp = maxHeight.value - if (SHOW_TIME_LABELS) 22f else 0f,
             events = events,
-            activityOf = { e, t -> CarbActivity.calculate(e.value, e.time, t, e.durationMinutes) },
+            // The carb panel draws the meal's carbohydrate absorption rate (g/h), the same quantity the old curve showed.
+            activityOf = { e, t -> e.curve?.carbsRateGphAt(t) ?: 0.0 },
             color = Carbs,
             valueUnit = "g",
             bubbleRefValue = 10.0,
@@ -867,7 +867,7 @@ internal fun homeHeadlines(state: HomeState, now: Long): HomeHeadlines {
     val basalInsulin = state.basal.takeIf { it.isNotEmpty() || state.smbs.isNotEmpty() }
         ?.let { PanelValue("%.2f".format(java.util.Locale.US, basalRemainingInsulin(it, now, state.smbs)), "U", Bolus) }
     val insulin = remainingInsulin(state.insulinActivityHistory.map { it.timeLong to it.value.toDouble() }, now)
-    val carbs = remainingCarbs(state.carbHistory.map { Triple(it.timeLong, it.value.toDouble(), it.durationMinutes) }, now)
+    val carbs = remainingCarbs(state.carbHistory.map { it.curve }, now)
     return HomeHeadlines(
         glucose = glucose,
         activity = activity,

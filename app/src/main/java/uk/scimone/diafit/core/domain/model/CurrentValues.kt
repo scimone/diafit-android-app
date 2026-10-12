@@ -26,15 +26,12 @@ fun remainingInsulin(bolus: List<Pair<Long, Double>>, now: Long, diaHours: Doubl
     }
 }
 
-/** Carbs still to be absorbed at [now] (carbs on board), by the same principle; [meals] are (time, grams, absorption minutes). */
-fun remainingCarbs(meals: List<Triple<Long, Double, Int>>, now: Long): Double =
-    meals.sumOf { (time, grams, minutes) ->
-        val end = time + minutes * MINUTE_MS
-        if (grams <= 0.0 || minutes <= 0 || now >= end) return@sumOf 0.0
-        val activity = { t: Long -> CarbActivity.calculate(grams, time, t, minutes) }
-        val total = areaPerMinute(time, end, activity)
-        if (total <= 0.0) 0.0 else grams * areaPerMinute(max(now, time), end, activity) / total
-    }
+/**
+ * Carbs on board at [now]: the sum of every meal's `carbs_remaining_g` (a quantity: carbohydrate eaten but not yet
+ * absorbed, from the meal activity model). Not the amount already in the bloodstream.
+ */
+fun remainingCarbs(curves: List<uk.scimone.diafit.mealactivity.domain.MealActivityCurve>, now: Long): Double =
+    curves.sumOf { it.carbsRemainingGAt(now) }
 
 /** How active the person is right now, for the Home activity heading. */
 enum class ActivityLevel(val label: String) {
