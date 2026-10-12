@@ -65,3 +65,15 @@ class UsdaParseTest {
         assertNull(parseFdcFood("16000275287", food("""{"description":"X","gtinUpc":"00016000275287","foodNutrients":[]}""")))
     }
 }
+
+class UsdaSearchHitTest {
+    @Test
+    fun `generic foods get a usda id and kJ energy is converted`() {
+        val f = Json.parseToJsonElement("""{"fdcId":172678,"description":"Bread, oatmeal","foodNutrients":[
+            {"nutrientId":1005,"value":48.5},{"nutrientId":1008,"unitName":"KJ","value":1046}]}""").jsonObject
+        val p = parseFdcSearchHit(f)!!
+        assertEquals("usda:172678", p.barcode)
+        assertEquals(250.0, p.per100.kcal, 0.5)
+        assertNull(p.servingG)
+    }
+}

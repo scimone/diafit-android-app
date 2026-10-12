@@ -67,7 +67,7 @@ fun ProductPortionCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                SectionLabel("Scanned product", Modifier.weight(1f))
+                SectionLabel("Product", Modifier.weight(1f))
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,

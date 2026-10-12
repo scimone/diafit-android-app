@@ -15,6 +15,7 @@ val addmealModule = module {
             bolusRepository = get(),
             analyzeMealUseCase = get(),
             lookupBarcode = get(),
+            searchFoodByName = get(),
             savedProducts = get(),
             fileStorageRepository = get(),
             userId = userId,

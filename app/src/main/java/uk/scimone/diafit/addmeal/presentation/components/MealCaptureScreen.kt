@@ -115,6 +115,8 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.FilterChip
@@ -160,7 +162,11 @@ fun MealCaptureScreen(
     onUseSaved: (SavedProductEntity) -> Unit,
     onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
-    onRetake: () -> Unit
+    onRetake: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+    onSearchQuery: (String) -> Unit,
+    onUseSearchResult: (FoodProduct) -> Unit
 ) {
     val context = LocalContext.current
     var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
@@ -175,7 +181,7 @@ fun MealCaptureScreen(
 
     Box(Modifier.fillMaxSize().background(Ink)) {
         if (granted) {
-            CameraLayer(phase, onBarcode, onPhotos, onSkipPhoto, onManual, onRescan, onClose, openGallery)
+            CameraLayer(phase, onBarcode, onPhotos, onSkipPhoto, onManual, onRescan, onClose, openGallery, onOpenSearch)
         } else {
             NoCameraPanel(
                 askedBefore = asked,
@@ -196,10 +202,12 @@ fun MealCaptureScreen(
                 onToggleFavorite = onToggleFavorite,
                 onForgetSaved = onForgetSaved,
                 onTypeIt = onManual,
+                onSearch = onOpenSearch,
                 onRetake = onRetake,
                 onClose = onClose
             )
         }
+        if (phase is CapturePhase.Search) FoodSearchScreen(phase, onSearchQuery, onUseSearchResult, onCloseSearch)
     }
 }
 
@@ -218,6 +226,7 @@ private fun PhotoChoiceScreen(
     onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
     onTypeIt: () -> Unit,
+    onSearch: () -> Unit,
     onRetake: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -323,6 +332,14 @@ private fun PhotoChoiceScreen(
                     }
                 }
 
+                ChoiceCard(Icons.Outlined.Search, "Search by name", "Find the product or food in the food databases.") {
+                    Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                        Icon(Icons.Outlined.Search, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Search")
+                    }
+                }
+
                 TextButton(onClick = onTypeIt, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     Icon(Icons.Outlined.EditNote, null, tint = OnInkMuted, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -387,7 +404,8 @@ private fun BoxScope.CameraLayer(
     onManual: () -> Unit,
     onRescan: () -> Unit,
     onClose: () -> Unit,
-    onGallery: () -> Unit
+    onGallery: () -> Unit,
+    onOpenSearch: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -477,14 +495,17 @@ private fun BoxScope.CameraLayer(
     Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
         RoundIconButton(Icons.Filled.Close, "Close", onClose, Modifier.align(Alignment.CenterStart))
         StepPill(phase, Modifier.align(Alignment.Center))
+        Row(Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RoundIconButton(Icons.Outlined.Search, "Search by name", onOpenSearch)
         if (controller.cameraInfo?.hasFlashUnit() != false) {
             RoundIconButton(
                 if (torch) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
                 if (torch) "Turn flash off" else "Turn flash on",
                 { torch = !torch },
-                Modifier.align(Alignment.CenterEnd),
+                Modifier,
                 active = torch
             )
+        }
         }
     }
 
@@ -503,7 +524,7 @@ private fun BoxScope.CameraLayer(
         }
     }
     if (searching) {
-        ScanStatus(phase, onRescan)
+        ScanStatus(phase, onRescan, onOpenSearch)
     }
 
     ControlBar(
@@ -571,7 +592,7 @@ private fun ScanFrameOverlay(phase: CapturePhase) {
 
 /** The line of guidance under the frame. */
 @Composable
-private fun ScanStatus(phase: CapturePhase, onRescan: () -> Unit) {
+private fun ScanStatus(phase: CapturePhase, onRescan: () -> Unit, onSearch: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val frameBottom = maxHeight * 0.30f + (maxWidth * 0.8f * 0.58f) / 2f + 40.dp
         Column(
@@ -597,10 +618,11 @@ private fun ScanStatus(phase: CapturePhase, onRescan: () -> Unit) {
                 }
                 is CapturePhase.NotFound -> NoticeCard(
                     "Not in the food database",
-                    "We couldn't find ${phase.barcode}. Photograph the meal for an AI estimate, or type it.",
-                    onRescan
+                    "We couldn't find ${phase.barcode}. Search by name, photograph the meal for an AI estimate, or type it.",
+                    onRescan,
+                    onSearch
                 )
-                is CapturePhase.Failed -> NoticeCard("Couldn't look it up", phase.reason + ".", onRescan)
+                is CapturePhase.Failed -> NoticeCard("Couldn't look it up", phase.reason + ".", onRescan, onSearch)
                 else -> Unit
             }
         }
@@ -608,13 +630,18 @@ private fun ScanStatus(phase: CapturePhase, onRescan: () -> Unit) {
 }
 
 @Composable
-private fun NoticeCard(title: String, text: String, onRescan: () -> Unit) {
+private fun NoticeCard(title: String, text: String, onRescan: () -> Unit, onSearch: () -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = Color(0xE6101418)) {
         Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = OnInk, fontWeight = FontWeight.SemiBold)
             Text(text, style = MaterialTheme.typography.bodySmall, color = OnInkMuted, textAlign = TextAlign.Center)
-            OutlinedButton(onClick = onRescan, border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
-                Text("Scan again", color = OnInk)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRescan, border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
+                    Text("Scan again", color = OnInk)
+                }
+                OutlinedButton(onClick = onSearch, border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
+                    Text("Search by name", color = OnInk)
+                }
             }
         }
     }
@@ -770,6 +797,71 @@ private fun NoCameraPanel(askedBefore: Boolean, onAllow: () -> Unit, onGallery: 
                 Text("Pick a photo", color = OnInk)
             }
             TextButton(onClick = onManual) { Text("Type it instead", color = OnInk) }
+        }
+    }
+}
+
+/** Search the food databases by name; picking a result fills the form with its default portion. */
+@Composable
+private fun FoodSearchScreen(
+    phase: CapturePhase.Search,
+    onQuery: (String) -> Unit,
+    onPick: (FoodProduct) -> Unit,
+    onBack: () -> Unit
+) {
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    Column(Modifier.fillMaxSize().background(Ink).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RoundIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+            OutlinedTextField(
+                value = phase.query,
+                onValueChange = onQuery,
+                placeholder = { Text("Search a food or product", color = OnInkMuted) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                modifier = Modifier.weight(1f).focusRequester(focus),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = OnInk, unfocusedTextColor = OnInk, cursorColor = OnInk,
+                    focusedBorderColor = OnInk, unfocusedBorderColor = Color(0x55FFFFFF)
+                )
+            )
+        }
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            when {
+                phase.loading -> Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) {
+                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = Good)
+                }
+                phase.error != null -> Text(phase.error, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFF8A80))
+                phase.query.trim().length < 2 -> Text(
+                    "Type at least two letters. Values are per 100 g; you set the portion on the next page.",
+                    style = MaterialTheme.typography.bodyMedium, color = OnInkMuted
+                )
+                phase.results.isEmpty() -> Text("Nothing found. Try another word.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
+                else -> phase.results.forEach { SearchResultRow(it) { onPick(it) } }
+            }
+            if (!phase.loading) Text(
+                "Results come from Open Food Facts and, with a key set in Settings, USDA FoodData Central.",
+                style = MaterialTheme.typography.bodySmall, color = OnInkMuted.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchResultRow(product: FoodProduct, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1E242B)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(product.name, style = MaterialTheme.typography.bodyLarge, color = OnInk, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(product.brand, "${product.per100.carbsG.roundToInt()} g carbs per 100 g", product.source).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -62,6 +62,29 @@ class UsdaFoodDataApi(private val client: HttpClient, private val settings: Sett
         }
     }
 
+    /** Generic (Foundation, SR Legacy) and branded foods matching [query]; empty without a key. */
+    suspend fun search(query: String): Result<List<FoodProduct>> = withContext(Dispatchers.IO) {
+        val key = settings.getUsdaApiKey()
+        if (key.isBlank()) return@withContext Result.success(emptyList())
+        try {
+            val response = client.get(SEARCH_URL) {
+                parameter("query", query)
+                parameter("dataType", "Foundation,SR Legacy,Branded")
+                parameter("pageSize", 10)
+                parameter("api_key", key)
+                timeout { requestTimeoutMillis = 12_000; connectTimeoutMillis = 8_000; socketTimeoutMillis = 12_000 }
+            }
+            if (response.status != HttpStatusCode.OK) return@withContext Result.failure(IllegalStateException("USDA answered ${response.status.value}"))
+            val foods = json.parseToJsonElement(response.bodyAsText()).jsonObject["foods"] as? JsonArray ?: return@withContext Result.success(emptyList())
+            Result.success(foods.mapNotNull { parseFdcSearchHit(it.jsonObject) })
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Search for $query failed", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun testKey(apiKey: String): Result<Unit> = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) return@withContext Result.failure(IllegalStateException("Enter an API key first."))
         try {
@@ -98,8 +121,22 @@ private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive
 internal fun parseFdcFood(barcode: String, food: JsonObject): FoodProduct? {
     val code = food.text("gtinUpc") ?: return null
     if (code.gtin() != barcode.gtin()) return null
+    return parseFdcNutrition(barcode, food)
+}
+
+/** A search result by name: branded foods keep their barcode as id, generic ones get "usda:<fdcId>". */
+internal fun parseFdcSearchHit(food: JsonObject): FoodProduct? {
+    val id = food.text("gtinUpc") ?: food.num("fdcId")?.toLong()?.let { "usda:$it" } ?: return null
+    return parseFdcNutrition(id, food)
+}
+
+private fun parseFdcNutrition(barcode: String, food: JsonObject): FoodProduct? {
     val nutrients = (food["foodNutrients"] as? JsonArray)?.map { it.jsonObject }.orEmpty()
     fun value(id: Int) = nutrients.firstOrNull { it.num("nutrientId")?.toInt() == id }?.num("value")
+    // Energy is sometimes reported in kJ under the same id.
+    val kcal = nutrients.firstOrNull { it.num("nutrientId")?.toInt() == 1008 }?.let { n ->
+        n.num("value")?.let { v -> if (n.text("unitName")?.equals("kj", true) == true) v / 4.184 else v }
+    }
     val carbs = value(1005) ?: return null
     val protein = value(1003) ?: 0.0
     val fat = value(1004) ?: 0.0
@@ -111,7 +148,7 @@ internal fun parseFdcFood(barcode: String, food: JsonObject): FoodProduct? {
         name = name,
         brand = (food.text("brandName") ?: food.text("brandOwner"))?.takeIf { !name.contains(it, ignoreCase = true) },
         per100 = NutrientsPer100(
-            kcal = value(1008) ?: (4 * carbs + 4 * protein + 9 * fat),
+            kcal = kcal ?: (4 * carbs + 4 * protein + 9 * fat),
             carbsG = carbs,
             sugarG = value(2000) ?: 0.0,
             fiberG = value(1079) ?: 0.0,

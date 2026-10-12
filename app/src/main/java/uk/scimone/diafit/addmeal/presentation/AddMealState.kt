@@ -93,6 +93,14 @@ sealed interface CapturePhase {
     data class ProductFound(val product: FoodProduct) : CapturePhase
     /** A meal photo was taken without a barcode: choose how to fill in the nutrients (AI, saved product, by hand). */
     data object PhotoTaken : CapturePhase
+    /** Searching the food databases by name. [fromPhoto]: a meal photo was already taken (back returns to its choice). */
+    data class Search(
+        val query: String = "",
+        val loading: Boolean = false,
+        val results: List<FoodProduct> = emptyList(),
+        val error: String? = null,
+        val fromPhoto: Boolean = false
+    ) : CapturePhase
     data class NotFound(val barcode: String) : CapturePhase
     data class Failed(val barcode: String, val reason: String) : CapturePhase
 }

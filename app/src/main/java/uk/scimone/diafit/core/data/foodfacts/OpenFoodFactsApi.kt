@@ -29,6 +29,33 @@ class OpenFoodFactsApi(private val client: HttpClient) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Text search; products without carbohydrate data are left out. */
+    suspend fun search(query: String): Result<List<FoodProduct>> = withContext(Dispatchers.IO) {
+        try {
+            val response = client.get("https://world.openfoodfacts.org/cgi/search.pl") {
+                parameter("search_terms", query)
+                parameter("search_simple", 1)
+                parameter("action", "process")
+                parameter("json", 1)
+                parameter("page_size", 12)
+                parameter("fields", FIELDS)
+                header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
+                timeout { requestTimeoutMillis = 15_000; connectTimeoutMillis = 8_000; socketTimeoutMillis = 15_000 }
+            }
+            if (response.status != HttpStatusCode.OK) return@withContext Result.failure(IllegalStateException("Server answered ${response.status.value}"))
+            val products = json.parseToJsonElement(response.bodyAsText()).jsonObject["products"] as? kotlinx.serialization.json.JsonArray
+            Result.success(products.orEmpty().mapNotNull { el ->
+                val p = el.jsonObject
+                p.text("code")?.let { parseProduct(it, p) }
+            })
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Search for $query failed", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun lookup(barcode: String): ProductLookup = withContext(Dispatchers.IO) {
         try {
             val response = client.get("$BASE_URL/$barcode.json") {

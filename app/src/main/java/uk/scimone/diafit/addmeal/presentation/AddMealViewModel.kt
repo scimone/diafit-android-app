@@ -25,6 +25,7 @@ import uk.scimone.diafit.core.domain.usecase.AnalyzeMealUseCase
 import uk.scimone.diafit.core.domain.usecase.CreateMealUseCase
 import uk.scimone.diafit.core.domain.usecase.GetMealSittingUseCase
 import uk.scimone.diafit.core.domain.usecase.LookupBarcodeUseCase
+import uk.scimone.diafit.core.domain.usecase.SearchFoodByNameUseCase
 import uk.scimone.diafit.core.domain.repository.SavedProductRepository
 import uk.scimone.diafit.core.domain.model.SavedProductEntity
 import uk.scimone.diafit.core.domain.model.toSavedProductOrNull
@@ -51,6 +52,7 @@ class AddMealViewModel(
     private val setMealValidUseCase: SetMealValidUseCase,
     private val analyzeMealUseCase: AnalyzeMealUseCase,
     private val lookupBarcode: LookupBarcodeUseCase,
+    private val searchFoodByName: SearchFoodByNameUseCase,
     private val savedProducts: SavedProductRepository,
     private val getMealSitting: GetMealSittingUseCase,
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
@@ -278,6 +280,50 @@ class AddMealViewModel(
             // The user may have left the camera (typed manually) while the lookup ran.
             if (capturePhase is CapturePhase.LookingUp) setPhase(phase)
         }
+    }
+
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    fun openSearch() {
+        searchJob?.cancel()
+        setPhase(CapturePhase.Search(fromPhoto = _uiState.value.photos.isNotEmpty()))
+    }
+
+    fun closeSearch() {
+        searchJob?.cancel()
+        val search = capturePhase as? CapturePhase.Search ?: return
+        setPhase(if (search.fromPhoto) CapturePhase.PhotoTaken else CapturePhase.Scanning)
+    }
+
+    /** Typing: searches shortly after the last keystroke. */
+    fun onSearchQuery(query: String) {
+        val current = capturePhase as? CapturePhase.Search ?: return
+        searchJob?.cancel()
+        val q = query.trim()
+        if (q.length < 2) {
+            setPhase(current.copy(query = query, loading = false, results = emptyList(), error = null))
+            return
+        }
+        setPhase(current.copy(query = query, loading = true, error = null))
+        searchJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(450)
+            val result = searchFoodByName(q)
+            val now = capturePhase as? CapturePhase.Search ?: return@launch
+            if (now.query != query) return@launch
+            setPhase(
+                result.fold(
+                    onSuccess = { now.copy(loading = false, results = it, error = null) },
+                    onFailure = { now.copy(loading = false, results = emptyList(), error = "Couldn't reach the food databases") }
+                )
+            )
+        }
+    }
+
+    /** A search result was chosen: its default portion goes into the form (with the photo, if one was taken). */
+    fun useSearchResult(product: FoodProduct) {
+        searchJob?.cancel()
+        _uiState.update { it.copy(capture = null) }
+        applyProduct(product)
     }
 
     /** Back to looking for a barcode (wrong product, or not found). */

@@ -251,7 +251,11 @@ fun MealEditorScreen(
             onUseSaved = viewModel::useSavedProduct,
             onToggleFavorite = viewModel::toggleSavedFavorite,
             onForgetSaved = viewModel::forgetSavedProduct,
-            onRetake = viewModel::retakePhoto
+            onRetake = viewModel::retakePhoto,
+            onOpenSearch = viewModel::openSearch,
+            onCloseSearch = viewModel::closeSearch,
+            onSearchQuery = viewModel::onSearchQuery,
+            onUseSearchResult = viewModel::useSearchResult
         )
     }
     }

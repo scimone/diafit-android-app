@@ -121,4 +121,5 @@ val coreModule = module {
     single { uk.scimone.diafit.core.data.foodfacts.UsdaFoodDataApi(get(), get()) }
     single<FoodProductRepository> { uk.scimone.diafit.core.data.foodfacts.FoodProductRepositoryImpl(get(), get()) }
     single { LookupBarcodeUseCase(get()) }
+    single { uk.scimone.diafit.core.domain.usecase.SearchFoodByNameUseCase(get()) }
 }
