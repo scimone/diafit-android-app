@@ -23,6 +23,7 @@ data class SettingsState(
     val aiModels: List<String> = emptyList(),
     val isLoadingAiModels: Boolean = false,
     val aiModelsError: String? = null,
+    val aiCheck: NightscoutCheckState = NightscoutCheckState.Idle,
     val isBatteryOptimizationIgnored: Boolean = false,
     val healthConnect: HealthConnectUiState = HealthConnectUiState(),
     val isLoading: Boolean = false

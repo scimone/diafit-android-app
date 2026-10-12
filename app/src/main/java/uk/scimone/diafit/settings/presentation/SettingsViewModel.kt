@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uk.scimone.diafit.core.data.backfill.BackfillRunner
 import uk.scimone.diafit.core.data.backfill.BackfillStatus
@@ -251,11 +252,19 @@ class SettingsViewModel(
     }
 
     fun onAiConfigChanged(baseUrl: String, apiKey: String, model: String = _state.value.aiConfig.model) {
-        viewModelScope.launch {
-            val newConfig = AiConfig(baseUrl, apiKey, model)
-            setAiConfig(newConfig)
-            _state.value = _state.value.copy(aiConfig = newConfig)
+        val newConfig = AiConfig(baseUrl, apiKey, model)
+        val connectionChanged = baseUrl != _state.value.aiConfig.baseUrl || apiKey != _state.value.aiConfig.apiKey
+        // Update the state synchronously so the next edit (e.g. the model) builds on this one instead of a stale copy.
+        _state.update {
+            it.copy(
+                aiConfig = newConfig,
+                aiCheck = if (connectionChanged) NightscoutCheckState.Idle else it.aiCheck,
+                aiModels = if (connectionChanged) emptyList() else it.aiModels,
+                aiModelsError = if (connectionChanged) null else it.aiModelsError
+            )
         }
+        // Always persist the latest state, so out-of-order writes can't bring back an older value.
+        viewModelScope.launch { setAiConfig(_state.value.aiConfig) }
     }
 
     fun onAiModelChanged(model: String) {
@@ -263,13 +272,18 @@ class SettingsViewModel(
         onAiConfigChanged(c.baseUrl, c.apiKey, model)
     }
 
-    /** Fetches the model list from the configured endpoint (`GET /models`). */
+    /** Fetches the model list from the configured endpoint (`GET /models`); doubles as the connection test. */
     fun loadAiModels() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoadingAiModels = true, aiModelsError = null)
+            // Make sure the endpoint being tested is the one the use case will read.
+            setAiConfig(_state.value.aiConfig)
+            _state.update { it.copy(isLoadingAiModels = true, aiModelsError = null, aiCheck = NightscoutCheckState.Checking) }
             listAiModels()
-                .onSuccess { _state.value = _state.value.copy(aiModels = it, isLoadingAiModels = false) }
-                .onFailure { _state.value = _state.value.copy(aiModelsError = it.message ?: "Failed", isLoadingAiModels = false) }
+                .onSuccess { models -> _state.update { it.copy(aiModels = models, isLoadingAiModels = false, aiCheck = NightscoutCheckState.Ok) } }
+                .onFailure { e ->
+                    val msg = e.message ?: "Failed"
+                    _state.update { it.copy(aiModelsError = msg, isLoadingAiModels = false, aiCheck = NightscoutCheckState.Failed(msg)) }
+                }
         }
     }
 

@@ -210,22 +210,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
-            ServerConfigInput(
-                baseUrl = state.aiConfig.baseUrl,
-                apiKey = state.aiConfig.apiKey,
-                baseUrlLabel = "Base URL",
-                apiKeyLabel = "API key",
-                onConfigChanged = { baseUrl, apiKey -> viewModel.onAiConfigChanged(baseUrl, apiKey) }
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            ModelPicker(
-                model = state.aiConfig.model,
-                models = state.aiModels,
-                isLoading = state.isLoadingAiModels,
-                error = state.aiModelsError,
-                onModelChanged = viewModel::onAiModelChanged,
-                onLoadModels = viewModel::loadAiModels
-            )
+            AiConnectionSetup(state, viewModel)
         }
 
         if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
@@ -452,6 +437,67 @@ private fun SetupHint(text: String) {
         Text(if (shown) "Hide setup tips" else "Setup tips", style = MaterialTheme.typography.labelMedium)
     }
     if (shown) Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun AiConnectionSetup(state: SettingsState, viewModel: SettingsViewModel) {
+    // null = follow the saved config (collapsed once a key is set); true once the user is editing.
+    var editing by remember { mutableStateOf<Boolean?>(null) }
+    val config = state.aiConfig
+    val open = editing ?: config.apiKey.isBlank()
+    val check = state.aiCheck
+    LaunchedEffect(check) { if (check == NightscoutCheckState.Ok) editing = false }
+
+    if (!open) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    config.baseUrl.removePrefix("https://").removePrefix("http://").trimEnd('/'),
+                    style = MaterialTheme.typography.bodyMedium, maxLines = 1
+                )
+                Text(config.model, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+            when (check) {
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else -> TextButton(onClick = viewModel::loadAiModels) { Text("Test") }
+            }
+            TextButton(onClick = { editing = true }) { Text("Edit") }
+        }
+        if (check is NightscoutCheckState.Failed) {
+            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        return
+    }
+    ServerConfigInput(
+        baseUrl = config.baseUrl,
+        apiKey = config.apiKey,
+        baseUrlLabel = "Base URL",
+        apiKeyLabel = "API key",
+        onConfigChanged = { baseUrl, apiKey -> editing = true; viewModel.onAiConfigChanged(baseUrl, apiKey) }
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    ModelPicker(
+        model = config.model,
+        models = state.aiModels,
+        isLoading = state.isLoadingAiModels,
+        error = state.aiModelsError,
+        onModelChanged = viewModel::onAiModelChanged,
+        onLoadModels = viewModel::loadAiModels
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = viewModel::loadAiModels, enabled = check != NightscoutCheckState.Checking) {
+            Text("Test connection")
+        }
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = { editing = false }, enabled = config.baseUrl.isNotBlank()) { Text("Done") }
+        Spacer(Modifier.width(4.dp))
+        when (check) {
+            NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            else -> Unit
+        }
+    }
 }
 
 @Composable
