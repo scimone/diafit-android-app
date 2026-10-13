@@ -1,5 +1,7 @@
 package uk.scimone.diafit.home.presentation.components
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -110,10 +112,10 @@ fun ComponentActivityChart(
         clipRect(left = g.left, top = 0f, right = clipRight, bottom = size.height) {
             // Sleep and workouts: the fill itself is drawn behind all panels ([ActivityBackdrop]); the label sits here, under the panel title.
             sessions.forEach { s ->
-                drawWashLabel(g.xOf(s.startUtc), g.xOf(s.endUtc), g, Sleep, "Sleep ${formatDuration(s.asleepMs)}", textMeasurer)
+                drawWashLabel(g.xOf(s.startUtc), g.xOf(s.endUtc), g, Sleep, AppStrings.get(R.string.home_activity_sleep, formatDuration(s.asleepMs)), textMeasurer)
             }
             data.exercise.forEach { e ->
-                val title = e.title ?: "Exercise"
+                val title = e.title ?: AppStrings.get(R.string.datatype_exercise)
                 drawWashLabel(g.xOf(e.startUtc), g.xOf(e.endUtc), g, Activity, "$title ${formatDuration(e.durationMs)}", textMeasurer, fallback = title)
             }
 
@@ -201,7 +203,7 @@ internal fun lowerBound(sorted: LongArray, value: Long): Int {
 }
 
 /** What the inspection readout says about activity at the cursor. */
-data class ActivityReadout(val bpm: Int?, val label: String?)
+data class ActivityReadout(val bpm: Int?, val label: String?, val isSleep: Boolean = false)
 
 private const val HR_READOUT_SNAP_MS = 10 * 60_000L
 
@@ -209,9 +211,12 @@ private const val HR_READOUT_SNAP_MS = 10 * 60_000L
 fun ActivityData.readoutAt(time: Long): ActivityReadout? {
     val bpm = heartRate.minByOrNull { kotlin.math.abs(it.timestamp - time) }
         ?.takeIf { kotlin.math.abs(it.timestamp - time) <= HR_READOUT_SNAP_MS }?.bpm
-    val doing = exercise.firstOrNull { time in it.startUtc..it.endUtc }?.let { it.title ?: "Exercise" }
-        ?: sleep.firstOrNull { time in it.startUtc until it.endUtc }?.let {
-            if (it.sleepStage == SleepStage.SLEEPING) "Asleep" else "Sleep · ${it.sleepStage.label}"
+    val workout = exercise.firstOrNull { time in it.startUtc..it.endUtc }
+    val asleep = if (workout == null) sleep.firstOrNull { time in it.startUtc until it.endUtc } else null
+    val doing = workout?.let { it.title ?: AppStrings.get(R.string.datatype_exercise) }
+        ?: asleep?.let {
+            if (it.sleepStage == SleepStage.SLEEPING) AppStrings.get(R.string.sleep_stage_asleep)
+            else AppStrings.get(R.string.home_sleep_stage, it.sleepStage.label)
         }
-    return if (bpm == null && doing == null) null else ActivityReadout(bpm, doing)
+    return if (bpm == null && doing == null) null else ActivityReadout(bpm, doing, isSleep = asleep != null)
 }

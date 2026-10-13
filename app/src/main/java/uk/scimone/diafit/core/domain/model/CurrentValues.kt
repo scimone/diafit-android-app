@@ -1,5 +1,8 @@
 package uk.scimone.diafit.core.domain.model
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.annotation.StringRes
 import kotlin.math.max
 
 private const val MINUTE_MS = 60_000L
@@ -34,8 +37,11 @@ fun remainingCarbs(curves: List<uk.scimone.diafit.mealactivity.domain.MealActivi
     curves.sumOf { it.carbsRemainingGAt(now) }
 
 /** How active the person is right now, for the Home activity heading. */
-enum class ActivityLevel(val label: String) {
-    SLEEPING("Sleeping"), WORKOUT("Workout"), LOW("Low"), MODERATE("Moderate"), HIGH("High")
+enum class ActivityLevel(@StringRes private val labelRes: Int) {
+    SLEEPING(R.string.act_level_sleeping), WORKOUT(R.string.act_level_workout), LOW(R.string.act_level_low),
+    MODERATE(R.string.act_level_moderate), HIGH(R.string.act_level_high);
+
+    val label: String get() = AppStrings.get(labelRes)
 }
 
 private const val RECENT_HEART_MS = 15 * MINUTE_MS

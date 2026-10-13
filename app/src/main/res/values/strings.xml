@@ -972,4 +972,21 @@
         <item quantity="one">%1$d stage</item>
         <item quantity="other">%1$d stages</item>
     </plurals>
+
+    <!-- Home leftovers and activity chart -->
+    <string name="home_ago">%1$s ago</string>
+    <string name="home_error">Error: %1$s</string>
+    <string name="home_no_reading">no reading</string>
+    <string name="home_activity_sleep">Sleep %1$s</string>
+    <string name="home_sleep_stage">Sleep · %1$s</string>
+    <string name="home_meal_cd">%1$s, %2$d grams of carbs at %3$s</string>
+    <string name="act_level_sleeping">Sleeping</string>
+    <string name="act_level_workout">Workout</string>
+    <string name="act_level_low">Low</string>
+    <string name="act_level_moderate">Moderate</string>
+    <string name="act_level_high">High</string>
+    <plurals name="home_courses">
+        <item quantity="one">%1$d course</item>
+        <item quantity="other">%1$d courses</item>
+    </plurals>
 </resources>

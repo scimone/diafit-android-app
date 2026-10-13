@@ -1,5 +1,6 @@
 package uk.scimone.diafit.home.presentation.components
 
+import androidx.compose.ui.res.pluralStringResource
 import uk.scimone.diafit.R
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -251,6 +252,7 @@ private fun MealCard(
     val scale by animateFloatAsState(if (highlighted) 1.04f else 1f, label = "cardScale")
     val alpha by animateFloatAsState(if (dimmed) 0.45f else 1f, label = "cardAlpha")
     val time = formatTime(group.startTime)
+    val mealCd = stringResource(R.string.home_meal_cd, group.title(), group.totalCarbs, time)
 
     Box(
         modifier = Modifier
@@ -260,13 +262,13 @@ private fun MealCard(
             .clip(CardShape)
             .then(if (highlighted) Modifier.border(3.dp, Carbs, CardShape) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onOpen)
-            .semantics { contentDescription = "${group.title()}, ${group.totalCarbs} grams of carbs at $time" }
+            .semantics { contentDescription = mealCd }
     ) {
         PhotoMosaic(group)
         // Count badge for multi-item sittings
         if (group.meals.size > 1) {
             Text(
-                text = "${group.meals.size} courses",
+                text = pluralStringResource(R.plurals.home_courses, group.meals.size, group.meals.size),
                 color = Color.White,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,

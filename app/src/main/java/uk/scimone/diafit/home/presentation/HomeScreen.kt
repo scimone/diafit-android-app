@@ -1,5 +1,6 @@
 package uk.scimone.diafit.home.presentation
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import uk.scimone.diafit.R
@@ -248,7 +249,7 @@ fun HomeScreen(
 
             state.error != null -> {
                 Text(
-                    text = "Error: ${state.error}",
+                    text = stringResource(R.string.home_error, state.error.toString()),
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -637,7 +638,7 @@ internal fun InspectReadout(
                             Spacer(Modifier.width(2.dp))
                             Text("mg/dL", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
-                            Text("no reading", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.home_no_reading), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     // Order: glucose (above), carbs, bolus, basal, activity.
@@ -649,7 +650,7 @@ internal fun InspectReadout(
                         activity?.bpm?.let { "$it bpm" }
                     )
                     if (doing.isNotEmpty()) {
-                        val asleep = activity?.label?.let { it.startsWith("Sleep") || it == "Asleep" } == true
+                        val asleep = activity?.isSleep == true
                         ReadoutEvent(R.drawable.ic_readout_activity, if (asleep) Sleep else Activity, doing.joinToString(" · "))
                     }
                     Icon(
@@ -706,7 +707,7 @@ fun HomeTitle(state: HomeState) {
             textDecoration = if (cgm.isStale) TextDecoration.LineThrough else TextDecoration.None
         )
         ComponentRotatingArrowIcon(inputValue = cgm.rate, size = 40.dp)
-        Text("${cgm.timeSince} ago", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.home_ago, cgm.timeSince.orEmpty()), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

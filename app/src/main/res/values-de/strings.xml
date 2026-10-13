@@ -969,4 +969,21 @@
         <item quantity="one">%1$d Phase</item>
         <item quantity="other">%1$d Phasen</item>
     </plurals>
+
+    <!-- Home leftovers and activity chart -->
+    <string name="home_ago">vor %1$s</string>
+    <string name="home_error">Fehler: %1$s</string>
+    <string name="home_no_reading">kein Messwert</string>
+    <string name="home_activity_sleep">Schlaf %1$s</string>
+    <string name="home_sleep_stage">Schlaf · %1$s</string>
+    <string name="home_meal_cd">%1$s, %2$d Gramm Kohlenhydrate um %3$s</string>
+    <string name="act_level_sleeping">Schlafend</string>
+    <string name="act_level_workout">Training</string>
+    <string name="act_level_low">Niedrig</string>
+    <string name="act_level_moderate">Mittel</string>
+    <string name="act_level_high">Hoch</string>
+    <plurals name="home_courses">
+        <item quantity="one">%1$d Gang</item>
+        <item quantity="other">%1$d Gänge</item>
+    </plurals>
 </resources>
