@@ -70,7 +70,8 @@ class OpenAiApi(private val client: HttpClient) {
             })
         }
 
-        return safeCall {
+        var refusal: AiHttpException? = null
+        val result = safeCall<ChatCompletionResponseDto> {
             val response = client.post(url) {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "Bearer $apiKey")
@@ -84,10 +85,12 @@ class OpenAiApi(private val client: HttpClient) {
             }
             // Keep the endpoint's own explanation (e.g. a 400 about the schema or model name).
             if (response.status.value in 400..499 && response.status.value != 408 && response.status.value != 429) {
-                throw AiHttpException(response.status.value, response.bodyAsText())
+                refusal = AiHttpException(response.status.value, response.bodyAsText())
             }
             response
         }
+        refusal?.let { throw it }
+        return result
     }
 
     suspend fun listModels(baseUrl: String, apiKey: String): Result<ModelListResponseDto, NetworkError> =
