@@ -61,7 +61,7 @@ class ExerciseDetectorTest {
         val drop = detect(s).single { it.card.detector == "ex-drop" }
         assertEquals(PatternTone.UNFAVORABLE, drop.card.tone)
         assertTrue(drop.card.miniGraph is MiniGraph.EventResponse)
-        assertEquals("start", (drop.card.miniGraph as MiniGraph.EventResponse).eventLabel)
+        assertEquals("pat_ev_start", (drop.card.miniGraph as MiniGraph.EventResponse).eventLabel.k)
         assertTrue((drop.card.miniGraph as MiniGraph.EventResponse).spanMinutes!! > 0)
     }
 
@@ -131,7 +131,7 @@ class ExerciseDetectorTest {
         val long = (0..26).filter { it % 2 == 0 }.toSet()
         val t = scenario(duration = { if (it in long) 90 else 45 }) { d, m, dur -> if (d in long && m in (dur + 40)..(dur + 300)) 72f else 110f }
         val found = detect(t).single { it.card.detector == "ex-long" }
-        assertTrue(found.card.summary.contains("90 minutes or more"))
+        assertTrue(found.card.summary.k == "pat_ex_long_summary" && found.card.summary.a[0] == "90")
     }
 
     @Test fun backToBackActivitiesAreLeftOut() {
@@ -156,7 +156,7 @@ class ExerciseDetectorTest {
         val s = scenario(duration = { if (it in long) 60 else 25 }) { d, m, dur -> if (d in long && m in (dur + 40)..(dur + 300)) 72f else 110f }
         val l = detect(s).single { it.card.detector == "ex-long" }
         assertTrue(l.card.effectSize >= 20)
-        assertTrue(l.card.limitations.any { "can't explain" in it })
+        assertTrue(l.card.limitations.any { it.k == "pat_ex_long_lim" })
     }
 
     @Test fun eveningActivityWithLowerGlucoseAfterwardsIsFound() {
@@ -169,7 +169,7 @@ class ExerciseDetectorTest {
         val hard = (0..26).filter { it % 2 == 0 }.toSet()
         val s = scenario(bpm = { if (it in hard) 150.0 else 100.0 }) { d, m, dur -> if (d in hard && m in 0..dur) 110f - 45f * m / dur else if (d in hard && m > dur) 65f else 110f }
         val i = detect(s).single { it.card.detector == "ex-intensity" }
-        assertTrue(i.card.title.contains("drop"))
+        assertTrue(i.card.title.k.startsWith("pat_ex_int_title_down"))
         assertEquals(PatternTone.MIXED, i.card.tone)
     }
 
@@ -182,7 +182,7 @@ class ExerciseDetectorTest {
         val events = active.map { ActivityEvent(startMs(it, 10), startMs(it, 10) + 40 * 60_000L, "Running", true) }
         val n = ExerciseDetector.detect(DetectionInput(days, thresholds, now, zone, emptyList(), emptyList(), events)).single { it.card.detector == "ex-nextday" }
         assertEquals(PatternTone.FAVORABLE, n.card.tone)
-        assertTrue(n.card.limitations.any { "watch" in it })
+        assertTrue(n.card.limitations.any { it.k == "pat_ex_nextday_lim1" })
     }
 
     @Test fun eventsAreBuiltFromWorkoutsAndHeartRate() {

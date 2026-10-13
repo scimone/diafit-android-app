@@ -17,8 +17,8 @@ internal object Cases {
      * likely reason) and [afterMin] after it. [markBin] is a bin of the same day.
      */
     fun window(
-        input: DetectionInput, date: LocalDate, focus: IntRange, beforeMin: Int, afterMin: Int, note: String,
-        markBin: Int? = null, group: String? = null
+        input: DetectionInput, date: LocalDate, focus: IntRange, beforeMin: Int, afterMin: Int, note: Msg,
+        markBin: Int? = null, group: Msg? = null
     ): PatternExample {
         val day0 = input.startOfDayUtc(date)
         val f0 = day0 + focus.first * BIN_MS
@@ -30,7 +30,7 @@ internal object Cases {
     }
 
     /** A whole local day. */
-    fun day(input: DetectionInput, date: LocalDate, note: String, markBin: Int? = null, group: String? = null) =
+    fun day(input: DetectionInput, date: LocalDate, note: Msg, markBin: Int? = null, group: Msg? = null) =
         window(input, date, 0 until BINS_PER_DAY, 0, 0, note, markBin, group)
 
     /**
@@ -38,8 +38,8 @@ internal object Cases {
      * [afterMin] after the end; the focus is [focusFromMin]..[focusToMin] minutes after the start.
      */
     fun event(
-        startUtc: Long, endUtc: Long, label: String?, beforeMin: Int, afterMin: Int, focusFromMin: Int, focusToMin: Int,
-        note: String, markUtc: Long? = null, group: String? = null
+        startUtc: Long, endUtc: Long, label: Msg?, beforeMin: Int, afterMin: Int, focusFromMin: Int, focusToMin: Int,
+        note: Msg, markUtc: Long? = null, group: Msg? = null
     ) = PatternExample(
         fromUtc = startUtc - beforeMin * MIN, toUtc = endUtc + afterMin * MIN,
         focusFromUtc = startUtc + focusFromMin * MIN, focusToUtc = startUtc + focusToMin * MIN, note = note,

@@ -12,7 +12,7 @@ class EventCurve(val values: FloatArray, val baseline: Float)
  */
 internal fun eventGraph(
     group: List<EventCurve>, compare: List<EventCurve>?, firstK: Int, lastK: Int, stepBins: Int,
-    aLabel: String, bLabel: String?, eventLabel: String, spanMinutes: Int?, axis: List<Int>
+    aLabel: Msg, bLabel: Msg?, eventLabel: Msg, spanMinutes: Int?, axis: List<Int>
 ): MiniGraph.EventResponse {
     fun series(curves: List<EventCurve>, fraction: Double): List<Int> {
         var last = 0

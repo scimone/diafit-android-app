@@ -33,12 +33,12 @@ object SleepDetector {
     /** One night with the share of the rest of the wake-up day spent in range. */
     internal class Night(val n: SleepNight, val day: DayGlucose, val tir: Double) {
         /** The night and the day after it, from an hour before bed to midnight; the hours after waking are shaded. */
-        fun case(input: DetectionInput, note: String, group: String? = null): PatternExample {
+        fun case(input: DetectionInput, noteKey: String, noteArg: String, group: Msg? = null): PatternExample {
             val midnight = input.startOfDayUtc(n.wakeDate.plusDays(1))
             return PatternExample(
                 fromUtc = n.startUtc - 3_600_000L, toUtc = midnight, focusFromUtc = n.endUtc, focusToUtc = midnight,
-                note = "$note · ${tir.roundToInt()} % in range after waking",
-                eventUtc = n.startUtc, eventEndUtc = n.endUtc, eventLabel = "Asleep ${Cases.duration(n.asleepMin)}", group = group
+                note = msg(noteKey, noteArg, tir.roundToInt()),
+                eventUtc = n.startUtc, eventEndUtc = n.endUtc, eventLabel = msg("pat_sleep_event", Cases.duration(n.asleepMin)), group = group
             )
         }
     }
@@ -86,8 +86,8 @@ object SleepDetector {
     }
 
     private fun compare(
-        c: Ctx, id: String, detector: String, title: String, summary: String, topic: TipTopic, hit: List<Night>, rest: List<Night>,
-        hitLabel: String, restLabel: String, extra: (Night) -> String, limitation: String
+        c: Ctx, id: String, detector: String, title: Msg, summary: Msg, topic: TipTopic, hit: List<Night>, rest: List<Night>,
+        hitLabel: Msg, restLabel: Msg, noteKey: String, noteArg: (Night) -> String, limitation: Msg
     ): PatternCandidate? {
         if (hit.size < MIN_GROUP || rest.size < MIN_GROUP) return null
         val (diff, se) = gap(hit, rest)
@@ -100,16 +100,12 @@ object SleepDetector {
                 id = id, category = PatternCategory.SLEEP, detector = detector, title = title, summary = summary,
                 miniGraph = MiniGraph.ProfileComparison(hitLabel, agpHit.medianGraph(), restLabel, agpRest.medianGraph()),
                 observationFromUtc = c.from, observationToUtc = c.input.nowUtc, baselineFromUtc = c.from, baselineToUtc = c.input.nowUtc,
-                baselineLabel = restLabel, sampleSize = n, sampleUnit = "nights", positiveCount = hit.size,
-                effectSize = diff, effectLabel = "−${diff.roundToInt()} points in range",
-                uncertainty = "The difference is about ${"%.1f".format(diff / se.coerceAtLeast(0.01))}× its likely margin of error (±${se.roundToInt()} points), and it points the same way in the earlier and the later half of the period.",
-                limitations = listOf(
-                    "Only the hours after waking count, and days with less than 70 % sensor data are left out.",
-                    limitation,
-                    "Meals, activity and stress differ between days too, so this can't show that sleep is the reason."
-                ),
-                cases = Cases.typical(hit) { it.tir }.map { it.case(c.input, extra(it), hitLabel) } +
-                    Cases.typical(rest) { it.tir }.map { it.case(c.input, extra(it), restLabel) },
+                baselineLabel = restLabel, sampleSize = n, sampleUnit = SampleUnit.NIGHTS, positiveCount = hit.size,
+                effectSize = diff, effectLabel = msg("pat_sleep_effect", diff.roundToInt()),
+                uncertainty = msg("pat_sleep_unc", "%.1f".format(java.util.Locale.ROOT, diff / se.coerceAtLeast(0.01)), se.roundToInt()),
+                limitations = listOf(msg("pat_sleep_lim1"), limitation, msg("pat_sleep_lim3")),
+                cases = Cases.typical(hit) { it.tir }.map { it.case(c.input, noteKey, noteArg(it), hitLabel) } +
+                    Cases.typical(rest) { it.tir }.map { it.case(c.input, noteKey, noteArg(it), restLabel) },
                 tone = PatternTone.UNFAVORABLE,
                 priority = 45.0 * (0.6 + 0.4 * (diff / 25.0).coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 20.0).coerceAtMost(1.0))
             ),
@@ -126,10 +122,10 @@ object SleepDetector {
         val shortTypical = median(hit.map { it.n.asleepMin.toDouble() }); val restTypical = median(rest.map { it.n.asleepMin.toDouble() })
         if (shortTypical >= SHORT_CEILING_MIN || restTypical - shortTypical < SHORT_GAP_MIN) return null
         return compare(
-            c, "sleep.short", "sleep-short", "Less time in range after short sleep",
-            "After nights with under ${dur(cut.roundToInt())} of sleep (${hit.size}, typically ${dur(shortTypical.roundToInt())}) you spent ${pct(hit.map { it.tir }.average())} of the rest of the day in range, against ${pct(rest.map { it.tir }.average())} after longer nights (${rest.size}).",
-            TipTopic.SLEEP_SHORT, hit, rest, "Short nights", "Longer nights", { dur(it.n.asleepMin) + " asleep" },
-            "Short means under your median of ${dur(cut.roundToInt())}, and clearly shorter than your other nights."
+            c, "sleep.short", "sleep-short", msg("pat_sleep_short_title"),
+            msg("pat_sleep_short_summary", dur(cut.roundToInt()), hit.size, dur(shortTypical.roundToInt()), pct(hit.map { it.tir }.average()), pct(rest.map { it.tir }.average()), rest.size),
+            TipTopic.SLEEP_SHORT, hit, rest, Msg("pat_label_short_nights"), Msg("pat_label_longer_nights"), "pat_sleep_case_asleep", { dur(it.n.asleepMin) },
+            msg("pat_sleep_short_lim", dur(cut.roundToInt()))
         )
     }
 
@@ -142,10 +138,10 @@ object SleepDetector {
         val hitShare = hit.map { it.n.awakeShare!! }.sorted()[hit.size / 2]; val restShare = rest.map { it.n.awakeShare!! }.sorted()[rest.size / 2]
         if (hitShare < RESTLESS_RATIO * restShare || hitShare - restShare < RESTLESS_GAP) return null
         return compare(
-            c, "sleep.restless", "sleep-restless", "Less time in range after restless nights",
-            "After the ${hit.size} most restless nights (typically ${pct(hitShare * 100)} of the night awake) you spent ${pct(hit.map { it.tir }.average())} of the rest of the day in range, against ${pct(rest.map { it.tir }.average())} after calmer nights (${rest.size}).",
-            TipTopic.SLEEP_RESTLESS, hit, rest, "Restless nights", "Calmer nights", { pct(it.n.awakeShare!! * 100) + " awake" },
-            "Restless means more time awake than on your median night; only nights where your watch or app records sleep stages count."
+            c, "sleep.restless", "sleep-restless", msg("pat_sleep_restless_title"),
+            msg("pat_sleep_restless_summary", hit.size, pct(hitShare * 100), pct(hit.map { it.tir }.average()), pct(rest.map { it.tir }.average()), rest.size),
+            TipTopic.SLEEP_RESTLESS, hit, rest, Msg("pat_label_restless_nights"), Msg("pat_label_calmer_nights"), "pat_sleep_case_awake", { pct(it.n.awakeShare!! * 100) },
+            msg("pat_sleep_restless_lim")
         )
     }
 
@@ -154,11 +150,11 @@ object SleepDetector {
         val (hit, rest) = c.nights.partition { abs(it.n.bedtimeMin - usual) >= IRREGULAR_MIN }
         val clock = { m: Double -> (((m.roundToInt() + 18 * 60) % 1440).let { "%02d:%02d".format(it / 60, it % 60) }) }
         return compare(
-            c, "sleep.irregular", "sleep-irregular", "Less time in range after irregular bedtimes",
-            "After the ${hit.size} nights with a bedtime an hour or more away from your usual ${clock(usual)} you spent ${pct(hit.takeIf { it.isNotEmpty() }?.map { it.tir }?.average() ?: 0.0)} of the rest of the day in range, against ${pct(rest.takeIf { it.isNotEmpty() }?.map { it.tir }?.average() ?: 0.0)} after your usual nights (${rest.size}).",
-            TipTopic.SLEEP_IRREGULAR, hit, rest, "Irregular bedtime", "Usual bedtime",
-            { n -> Instant.ofEpochMilli(n.n.startUtc).atZone(c.input.zone).toLocalTime().let { "bed ${"%02d:%02d".format(it.hour, it.minute)}" } },
-            "Your usual bedtime is the median of the period (${clock(usual)}); an hour or more earlier or later counts as irregular."
+            c, "sleep.irregular", "sleep-irregular", msg("pat_sleep_irregular_title"),
+            msg("pat_sleep_irregular_summary", hit.size, clock(usual), pct(hit.takeIf { it.isNotEmpty() }?.map { it.tir }?.average() ?: 0.0), pct(rest.takeIf { it.isNotEmpty() }?.map { it.tir }?.average() ?: 0.0), rest.size),
+            TipTopic.SLEEP_IRREGULAR, hit, rest, Msg("pat_label_irregular_bed"), Msg("pat_label_usual_bed"), "pat_sleep_case_bed",
+            { n -> Instant.ofEpochMilli(n.n.startUtc).atZone(c.input.zone).toLocalTime().let { "%02d:%02d".format(it.hour, it.minute) } },
+            msg("pat_sleep_irregular_lim", clock(usual))
         )
     }
 }

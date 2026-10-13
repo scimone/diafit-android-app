@@ -53,7 +53,7 @@ class TimeOfDayDetectorTest {
         for (c in low.card.cases) {
             assertTrue(c.fromUtc < c.focusFromUtc && c.focusFromUtc < c.focusToUtc && c.focusToUtc <= c.toUtc)
             assertTrue(c.markUtc!! in c.focusFromUtc..c.focusToUtc)
-            assertTrue(c.note.startsWith("Lowest 60 mg/dL"))
+            assertTrue(c.note.k == "pat_tod_low_case" && c.note.a[0] == "60")
         }
     }
 

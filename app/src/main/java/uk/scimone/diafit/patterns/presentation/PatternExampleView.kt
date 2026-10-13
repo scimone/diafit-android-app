@@ -1,5 +1,8 @@
 package uk.scimone.diafit.patterns.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -50,11 +53,9 @@ import uk.scimone.diafit.ui.theme.Sleep
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-private val dayFormat = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
 
 /** The y range shared by every example on a page, so their levels can be compared at a glance. */
@@ -86,13 +87,13 @@ internal fun ExampleCard(
                     val wholeDay = example.toUtc - example.fromUtc in 23 * 3_600_000L..25 * 3_600_000L &&
                         Instant.ofEpochMilli(example.fromUtc).atZone(zone).let { it.hour == 0 && it.minute == 0 }
                     Text(
-                        "${dayFormat.format(anchor)} · " + if (wholeDay) "whole day"
+                        "${formatStamp(anchor.toInstant().toEpochMilli(), "EEEdMMM")} · " + if (wholeDay) stringResource(R.string.pat_ui_whole_day)
                         else "${timeFormat.format(Instant.ofEpochMilli(example.fromUtc).atZone(zone))}–${timeFormat.format(Instant.ofEpochMilli(example.toUtc).atZone(zone))}",
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(example.note, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(example.note.text(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Open this day", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.pat_ui_open_day), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             ExampleChart(example, data, thresholds, yMax, accent, Modifier.fillMaxWidth().padding(top = 6.dp, end = 8.dp).height(160.dp))
         }
@@ -106,6 +107,7 @@ private fun ExampleChart(example: PatternExample, data: ExampleData?, t: Glucose
     val onSurface = MaterialTheme.colorScheme.onSurface
     val surface = MaterialTheme.colorScheme.surfaceContainerLow
     val label = TextStyle(fontSize = 9.sp, color = muted)
+    val noSensor = stringResource(R.string.pat_ui_no_sensor)
     val zone = ZoneId.systemDefault()
     Canvas(modifier) {
         val laneH = 40.dp.toPx()
@@ -154,7 +156,7 @@ private fun ExampleChart(example: PatternExample, data: ExampleData?, t: Glucose
             if (end != null) drawRect(muted.copy(alpha = 0.08f), Offset(ex.coerceAtLeast(0f), 0f), Size(end.coerceAtMost(size.width) - ex.coerceAtLeast(0f), plotH))
             if (ex in 0f..size.width) drawLine(onSurface.copy(alpha = 0.55f), Offset(ex, 0f), Offset(ex, plotH), 1.dp.toPx(), pathEffect = dash)
             example.eventLabel?.let { name ->
-                val text = measurer.measure(name, label.copy(color = onSurface, fontWeight = FontWeight.Medium))
+                val text = measurer.measure(name.text(), label.copy(color = onSurface, fontWeight = FontWeight.Medium))
                 val lx = (ex.coerceAtLeast(0f) + 3.dp.toPx()).coerceAtMost(size.width - text.size.width)
                 drawRoundRect(surface.copy(alpha = 0.85f), Offset(lx - 2.dp.toPx(), 4.dp.toPx()), Size(text.size.width + 4.dp.toPx(), text.size.height.toFloat()), CornerRadius(3.dp.toPx()))
                 drawText(text, topLeft = Offset(lx, 4.dp.toPx()))
@@ -164,7 +166,7 @@ private fun ExampleChart(example: PatternExample, data: ExampleData?, t: Glucose
         if (data == null) return@Canvas
         val readings = data.readings
         if (readings.isEmpty()) {
-            val text = measurer.measure("No sensor data", label)
+            val text = measurer.measure(noSensor, label)
             drawText(text, topLeft = Offset((size.width - text.size.width) / 2, plotH / 2))
         }
         // Glucose, coloured by zone, broken where the sensor had a gap.
@@ -244,11 +246,11 @@ private fun DrawScope.drawLane(
 @Composable
 internal fun ExampleLegend(accent: Color) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        LegendSwatch(accent.copy(alpha = 0.25f), "Pattern window")
-        LegendDot(Carbs, "Carbs")
-        LegendTriangle(Bolus, "Insulin")
-        LegendSwatch(Activity.copy(alpha = 0.8f), "Activity")
-        LegendSwatch(Sleep.copy(alpha = 0.55f), "Sleep")
+        LegendSwatch(accent.copy(alpha = 0.25f), stringResource(R.string.pat_ui_leg_window))
+        LegendDot(Carbs, stringResource(R.string.pat_ui_leg_carbs))
+        LegendTriangle(Bolus, stringResource(R.string.pat_ui_leg_insulin))
+        LegendSwatch(Activity.copy(alpha = 0.8f), stringResource(R.string.pat_ui_leg_activity))
+        LegendSwatch(Sleep.copy(alpha = 0.55f), stringResource(R.string.pat_ui_leg_sleep))
     }
 }
 

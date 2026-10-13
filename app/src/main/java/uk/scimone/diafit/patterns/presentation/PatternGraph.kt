@@ -1,5 +1,8 @@
 package uk.scimone.diafit.patterns.presentation
 
+import uk.scimone.diafit.patterns.domain.EVENT_START
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,21 +59,21 @@ internal fun PatternGraph(
         else HourLabels(Modifier.fillMaxWidth().padding(top = 2.dp))
         if (graph is MiniGraph.ProfileComparison) {
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Legend(MaterialTheme.colorScheme.primary, graph.aLabel)
-                Legend(MaterialTheme.colorScheme.onSurfaceVariant, graph.bLabel)
+                Legend(MaterialTheme.colorScheme.primary, graph.aLabel.text())
+                Legend(MaterialTheme.colorScheme.onSurfaceVariant, graph.bLabel.text())
             }
         } else if (graph is MiniGraph.EventResponse) {
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Legend(MaterialTheme.colorScheme.primary, graph.aLabel)
-                graph.bLabel?.let { Legend(MaterialTheme.colorScheme.onSurfaceVariant, it) }
+                Legend(MaterialTheme.colorScheme.primary, graph.aLabel.text())
+                graph.bLabel?.let { Legend(MaterialTheme.colorScheme.onSurfaceVariant, it.text()) }
             }
             if (large) Text(
-                "Change in glucose from the starting level of each ${if (graph.eventLabel == "meal") "meal" else "session"}; line = typical, band = middle half",
+                stringResource(if (graph.eventLabel.k == EVENT_START) R.string.pat_ui_gcap_session else R.string.pat_ui_gcap_meal),
                 Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else if (graph is MiniGraph.AgpWindow && large) {
             Text(
-                "Median with 25–75 % and 10–90 % ranges, by time of day",
+                stringResource(R.string.pat_ui_gcap_agp),
                 Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -122,6 +125,7 @@ private fun HourLabels(modifier: Modifier) {
 
 @Composable
 private fun MealPlot(graph: MiniGraph.EventResponse, large: Boolean, modifier: Modifier) {
+    val startLabel = stringResource(R.string.pat_ui_y_start)
     val a = MaterialTheme.colorScheme.primary
     val b = MaterialTheme.colorScheme.onSurfaceVariant
     val guide = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
@@ -162,7 +166,7 @@ private fun MealPlot(graph: MiniGraph.EventResponse, large: Boolean, modifier: M
         if (large) {
             // Change in mg/dL from the starting level: the top, zero and the bottom of the scale.
             for (v in listOf(yMax.toInt(), 0, yMin.toInt())) {
-                val text = measurer.measure(if (v > 0) "+$v" else if (v < 0) "−${-v}" else "start", labelStyle)
+                val text = measurer.measure(if (v > 0) "+$v" else if (v < 0) "−${-v}" else startLabel, labelStyle)
                 val ty = (y(v) - text.size.height / 2).coerceIn(0f, size.height - text.size.height)
                 drawText(text, topLeft = Offset(size.width - text.size.width, ty))
             }
@@ -178,7 +182,7 @@ private fun MealLabels(graph: MiniGraph.EventResponse, modifier: Modifier) {
         for (minute in graph.axis) {
             val frac = (minute - graph.startMinute).toFloat() / span
             Text(
-                if (minute == 0) graph.eventLabel else "${minute / 60}h",
+                if (minute == 0) graph.eventLabel.text() else "${minute / 60}h",
                 Modifier.padding(start = (maxWidth * frac - 10.dp).coerceIn(0.dp, maxWidth - 24.dp)),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )

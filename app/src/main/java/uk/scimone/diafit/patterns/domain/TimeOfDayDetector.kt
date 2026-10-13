@@ -116,17 +116,17 @@ object TimeOfDayDetector {
     /** "at night", "in the evening"...: the part of the day a window is mostly in, for short titles. */
     private fun partOfDay(r: IntRange): String {
         val centre = (r.first + r.last + 1) / 2 / BINS_PER_HOUR
-        return when {
-            centre < 5 -> "at night"
-            centre < 9 -> "in the early morning"
-            centre < 12 -> "in the morning"
-            centre < 14 -> "around midday"
-            centre < 18 -> "in the afternoon"
-            else -> "in the evening"
-        }
+        return ref(when {
+            centre < 5 -> "pat_pod_night"
+            centre < 9 -> "pat_pod_early_morning"
+            centre < 12 -> "pat_pod_morning"
+            centre < 14 -> "pat_pod_midday"
+            centre < 18 -> "pat_pod_afternoon"
+            else -> "pat_pod_evening"
+        })
     }
 
-    private fun title(prefix: String, r: IntRange) = "$prefix ${partOfDay(r)}"
+    private fun title(key: String, r: IntRange) = msg(key, partOfDay(r))
 
     private fun id(kind: String, r: IntRange) = "tod.$kind.%02d-%02d".format(r.first / BINS_PER_HOUR, (r.last + 1) / BINS_PER_HOUR % 24)
 
@@ -135,6 +135,8 @@ object TimeOfDayDetector {
     private fun share(n: Int, d: Int) = if (d == 0) 0.0 else n.toDouble() / d
 
     private fun pct(x: Double) = "${(x * 100).roundToInt()} %"
+
+    private fun dec1(x: Double) = "%.1f".format(java.util.Locale.ROOT, x)
 
     private fun cv(values: List<Float>): Double {
         if (values.size < 2) return 0.0
@@ -171,22 +173,19 @@ object TimeOfDayDetector {
             val examples = f.lowDays.mapNotNull { d -> Cases.extreme(d, r, lowest = true)?.let { d to it } }.sortedBy { it.second.second }
                 .take(Cases.SINGLE).map { (d, e) ->
                     val below = d.count(r) { it < c.t.low } * BIN_MINUTES
-                    Cases.window(c.input, d.date, r, 180, 60, "Lowest ${e.second.roundToInt()} mg/dL at ${timeLabel(e.first)} · $below min below ${c.t.low}", e.first)
+                    Cases.window(c.input, d.date, r, 180, 60, msg("pat_tod_low_case", e.second.roundToInt(), timeLabel(e.first), below, c.t.low), e.first)
                 }
             PatternCandidate(
                 card = PatternCard(
                     id = id("low", r), category = PatternCategory.TIME_OF_DAY, detector = "low",
-                    title = title("Low glucose", r),
-                    summary = "Glucose dropped below ${c.t.low} mg/dL for at least 15 minutes on ${f.lowDays.size} of ${f.valid.size} days" +
-                        " in this window" + if (severe) ", and below ${c.t.veryLow} mg/dL on ${f.severeDays}." else ".",
+                    title = title("pat_tod_low_title", r),
+                    summary = if (severe) msg("pat_tod_low_summary_severe", c.t.low, f.lowDays.size, f.valid.size, c.t.veryLow, f.severeDays)
+                    else msg("pat_tod_low_summary", c.t.low, f.lowDays.size, f.valid.size),
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
-                    sampleSize = f.valid.size, sampleUnit = "days", positiveCount = f.lowDays.size,
-                    effectSize = s, effectLabel = "${f.lowDays.size} of ${f.valid.size} days (${pct(s)})",
-                    uncertainty = "Seen in both the first and the second half of the period.",
-                    limitations = listOf(
-                        "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
-                        "Meals, insulin and activity from earlier in the day aren't part of this check, so the reason isn't known."
-                    ),
+                    sampleSize = f.valid.size, sampleUnit = SampleUnit.DAYS, positiveCount = f.lowDays.size,
+                    effectSize = s, effectLabel = msg("pat_tod_low_effect", f.lowDays.size, f.valid.size, pct(s)), effectIsCount = true,
+                    uncertainty = msg("pat_unc_both_halves"),
+                    limitations = listOf(msg("pat_lim_coverage", pct(MIN_COVERAGE)), msg("pat_tod_low_lim")),
                     cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (severe) 100.0 else 85.0, (s / 0.5).coerceIn(0.0, 1.0), f.valid.size)
                 ),
@@ -217,21 +216,18 @@ object TimeOfDayDetector {
             val examples = f.highDays.mapNotNull { d -> Cases.extreme(d, r, lowest = false)?.let { d to it } }.sortedByDescending { it.second.second }
                 .take(Cases.SINGLE).map { (d, e) ->
                     val above = d.count(r) { it > c.t.high } * BIN_MINUTES
-                    Cases.window(c.input, d.date, r, 180, 60, "Peak ${e.second.roundToInt()} mg/dL at ${timeLabel(e.first)} · ${Cases.duration(above)} above ${c.t.high}", e.first)
+                    Cases.window(c.input, d.date, r, 180, 60, msg("pat_tod_high_case", e.second.roundToInt(), timeLabel(e.first), Cases.duration(above), c.t.high), e.first)
                 }
             PatternCandidate(
                 card = PatternCard(
                     id = id("high", r), category = PatternCategory.TIME_OF_DAY, detector = "high",
-                    title = title("High glucose", r),
-                    summary = "Glucose was above ${c.t.high} mg/dL ${pct(f.tar)} of the time in this window, and for a quarter of it or more on ${f.highDays.size} of ${f.valid.size} days.",
+                    title = title("pat_tod_high_title", r),
+                    summary = msg("pat_tod_high_summary", c.t.high, pct(f.tar), f.highDays.size, f.valid.size),
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
-                    sampleSize = f.valid.size, sampleUnit = "days", positiveCount = f.highDays.size,
-                    effectSize = f.tar, effectLabel = "${pct(f.tar)} of the time above ${c.t.high} mg/dL",
-                    uncertainty = "Seen in both the first and the second half of the period.",
-                    limitations = listOf(
-                        "Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted.",
-                        "Meals, insulin and activity aren't part of this check, so the reason isn't known."
-                    ),
+                    sampleSize = f.valid.size, sampleUnit = SampleUnit.DAYS, positiveCount = f.highDays.size,
+                    effectSize = f.tar, effectLabel = msg("pat_tod_high_effect", pct(f.tar), c.t.high),
+                    uncertainty = msg("pat_unc_both_halves"),
+                    limitations = listOf(msg("pat_lim_coverage", pct(MIN_COVERAGE)), msg("pat_tod_high_lim")),
                     cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(if (veryHigh) 75.0 else 60.0, (f.tar / 0.6).coerceIn(0.0, 1.0), f.valid.size)
                 ),
@@ -262,21 +258,18 @@ object TimeOfDayDetector {
                 val hi = Cases.extreme(d, r, lowest = false) ?: return@mapNotNull null
                 Triple(d, lo, hi)
             }.sortedByDescending { it.third.second - it.second.second }.take(Cases.SINGLE).map { (d, lo, hi) ->
-                Cases.window(c.input, d.date, r, 120, 60, "From ${lo.second.roundToInt()} to ${hi.second.roundToInt()} mg/dL within the window", hi.first)
+                Cases.window(c.input, d.date, r, 120, 60, msg("pat_tod_var_case", lo.second.roundToInt(), hi.second.roundToInt()), hi.first)
             }
             PatternCandidate(
                 card = PatternCard(
                     id = id("var", r), category = PatternCategory.TIME_OF_DAY, detector = "variability",
-                    title = title("Variable glucose", r),
-                    summary = "In this window glucose swings more than at other times of the day (variability ${f.cv.roundToInt()} % compared with ${c.overallCv.roundToInt()} % overall).",
+                    title = title("pat_tod_var_title", r),
+                    summary = msg("pat_tod_var_summary", f.cv.roundToInt(), c.overallCv.roundToInt()),
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
-                    sampleSize = f.valid.size, sampleUnit = "days",
-                    effectSize = f.cv, effectLabel = "variability ${f.cv.roundToInt()} % (overall ${c.overallCv.roundToInt()} %)",
-                    uncertainty = "Present in both the first and the second half of the period.",
-                    limitations = listOf(
-                        "Variability here includes day-to-day differences, not only swings within a day.",
-                        "Meals, insulin and activity aren't part of this check, so the reason isn't known."
-                    ),
+                    sampleSize = f.valid.size, sampleUnit = SampleUnit.DAYS,
+                    effectSize = f.cv, effectLabel = msg("pat_tod_var_effect", f.cv.roundToInt(), c.overallCv.roundToInt()),
+                    uncertainty = msg("pat_unc_present_both"),
+                    limitations = listOf(msg("pat_tod_var_lim"), msg("pat_lim_no_context")),
                     cases = examples,
                     tone = PatternTone.UNFAVORABLE,
                     priority = rank(40.0, ((f.cv - MIN_CV) / 20.0).coerceIn(0.0, 1.0), f.valid.size)
@@ -302,23 +295,20 @@ object TimeOfDayDetector {
         val examples = rising.sortedByDescending { it.first.second }.take(Cases.SINGLE).map { (p, end) ->
             Cases.window(
                 c.input, p.first.date, (3 * BINS_PER_HOUR) until (7 * BINS_PER_HOUR), 180, 120,
-                "Up ${p.second.roundToInt()} mg/dL between 03:00 and 07:00, to ${end.roundToInt()}"
+                msg("pat_tod_dawn_case", p.second.roundToInt(), end.roundToInt())
             )
         }
         return listOf(
             PatternCandidate(
                 card = PatternCard(
                     id = "tod.dawn", category = PatternCategory.TIME_OF_DAY, detector = "dawn",
-                    title = "Rising glucose at dawn",
-                    summary = "Between about 03:00 and 07:00 glucose climbed by a typical ${medianRise.roundToInt()} mg/dL, on ${rising.size} of ${rises.size} days.",
+                    title = msg("pat_tod_dawn_title"),
+                    summary = msg("pat_tod_dawn_summary", medianRise.roundToInt(), rising.size, rises.size),
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
-                    sampleSize = rises.size, sampleUnit = "days", positiveCount = rising.size,
-                    effectSize = medianRise, effectLabel = "+${medianRise.roundToInt()} mg/dL (median)",
-                    uncertainty = "The rise appeared on ${pct(share(rising.size, rises.size))} of days.",
-                    limitations = listOf(
-                        "Compares 03:00–03:30 with 06:30–07:00 only, and ends at a typical ${endLevel.roundToInt()} mg/dL.",
-                        "Overnight insulin, late meals and lows earlier in the night can also shape this curve."
-                    ),
+                    sampleSize = rises.size, sampleUnit = SampleUnit.DAYS, positiveCount = rising.size,
+                    effectSize = medianRise, effectLabel = msg("pat_tod_dawn_effect", medianRise.roundToInt()),
+                    uncertainty = msg("pat_tod_dawn_unc", pct(share(rising.size, rises.size))),
+                    limitations = listOf(msg("pat_tod_dawn_lim1", endLevel.roundToInt()), msg("pat_tod_dawn_lim2")),
                     cases = examples, tone = PatternTone.UNFAVORABLE,
                     priority = rank(45.0, ((medianRise - DAWN_RISE) / 40.0).coerceIn(0.0, 1.0), rises.size)
                 ),
@@ -346,18 +336,18 @@ object TimeOfDayDetector {
             val examples = Cases.typical(f.valid, Cases.SINGLE) { inRange(it) }.sortedByDescending { it.date }.mapNotNull { d ->
                 val lo = Cases.extreme(d, r, lowest = true) ?: return@mapNotNull null
                 val hi = Cases.extreme(d, r, lowest = false) ?: return@mapNotNull null
-                Cases.window(c.input, d.date, r, 120, 60, "${pct(inRange(d))} in range, ${lo.second.roundToInt()}–${hi.second.roundToInt()} mg/dL")
+                Cases.window(c.input, d.date, r, 120, 60, msg("pat_tod_steady_case", pct(inRange(d)), lo.second.roundToInt(), hi.second.roundToInt()))
             }
             PatternCandidate(
                 card = PatternCard(
                     id = id("steady", r), category = PatternCategory.TIME_OF_DAY, detector = "steady",
-                    title = title("Steady glucose", r),
-                    summary = "Glucose stayed between ${c.t.low} and ${c.t.high} mg/dL ${pct(f.tir)} of the time in this window over ${f.valid.size} days.",
+                    title = title("pat_tod_steady_title", r),
+                    summary = msg("pat_tod_steady_summary", c.t.low, c.t.high, pct(f.tir), f.valid.size),
                     miniGraph = graph, observationFromUtc = c.fromUtc, observationToUtc = c.input.nowUtc,
-                    sampleSize = f.valid.size, sampleUnit = "days",
-                    effectSize = f.tir, effectLabel = "${pct(f.tir)} in range",
-                    uncertainty = "Consistent across the period (variability ${f.cv.roundToInt()} %).",
-                    limitations = listOf("Only days with at least ${pct(MIN_COVERAGE)} of this window measured are counted."),
+                    sampleSize = f.valid.size, sampleUnit = SampleUnit.DAYS,
+                    effectSize = f.tir, effectLabel = msg("pat_tod_steady_effect", pct(f.tir)),
+                    uncertainty = msg("pat_tod_steady_unc", f.cv.roundToInt()),
+                    limitations = listOf(msg("pat_lim_coverage", pct(MIN_COVERAGE))),
                     cases = examples,
                     tone = PatternTone.FAVORABLE,
                     priority = rank(30.0, ((f.tir - STEADY_MIN_TIR) / 0.1).coerceIn(0.0, 1.0), f.valid.size)
@@ -391,25 +381,22 @@ object TimeOfDayDetector {
         val better = diff > 0
         val from = input.startOfDayUtc(input.today.minusDays((WEEKEND_WINDOW_DAYS - 1).toLong()))
         // A typical weekend day and weekday (in-range share closest to each group's median).
-        val examples = listOf(weekend to "Weekends", weekdays to "Weekdays").flatMap { (g, label) ->
-            Cases.typical(g) { tir(it) }.map { d -> Cases.day(input, d.date, "${tir(d).roundToInt()} % in range", group = label) }
+        val examples = listOf(weekend to msg("pat_label_weekends"), weekdays to msg("pat_label_weekdays")).flatMap { (g, label) ->
+            Cases.typical(g) { tir(it) }.map { d -> Cases.day(input, d.date, msg("pat_tod_weekend_case", tir(d).roundToInt()), group = label) }
         }
         return listOf(
             PatternCandidate(
                 card = PatternCard(
                     id = "tod.weekend", category = PatternCategory.TIME_OF_DAY, detector = "weekend",
-                    title = if (better) "Steadier glucose on weekends" else "Less time in range on weekends",
-                    summary = "Time in range was ${a.average().roundToInt()} % on weekends and ${b.average().roundToInt()} % on weekdays.",
-                    miniGraph = MiniGraph.ProfileComparison("Weekends", agpWeekend.medianGraph(), "Weekdays", agpWeekdays.medianGraph()),
+                    title = msg(if (better) "pat_tod_weekend_better" else "pat_tod_weekend_worse"),
+                    summary = msg("pat_tod_weekend_summary", a.average().roundToInt(), b.average().roundToInt()),
+                    miniGraph = MiniGraph.ProfileComparison(msg("pat_label_weekends"), agpWeekend.medianGraph(), msg("pat_label_weekdays"), agpWeekdays.medianGraph()),
                     observationFromUtc = from, observationToUtc = input.nowUtc,
-                    baselineFromUtc = from, baselineToUtc = input.nowUtc, baselineLabel = "Weekdays in the same period",
-                    sampleSize = days.size, sampleUnit = "days", positiveCount = weekend.size,
-                    effectSize = abs(diff), effectLabel = "${abs(diff).roundToInt()} points in range, ${weekend.size} weekend vs ${weekdays.size} weekday days",
-                    uncertainty = "The difference is about ${(abs(diff) / se).let { "%.1f".format(it) }}× its likely margin of error (±${se.roundToInt()} points).",
-                    limitations = listOf(
-                        "Weekends have fewer days (${weekend.size}), so one unusual weekend can move the result.",
-                        "Sleep times, meals and activity aren't separated here; they may all differ between weekends and weekdays."
-                    ),
+                    baselineFromUtc = from, baselineToUtc = input.nowUtc, baselineLabel = msg("pat_tod_weekend_baseline"),
+                    sampleSize = days.size, sampleUnit = SampleUnit.DAYS, positiveCount = weekend.size,
+                    effectSize = abs(diff), effectLabel = msg("pat_tod_weekend_effect", abs(diff).roundToInt(), weekend.size, weekdays.size),
+                    uncertainty = msg("pat_tod_weekend_unc", dec1(abs(diff) / se), se.roundToInt()),
+                    limitations = listOf(msg("pat_tod_weekend_lim1", weekend.size), msg("pat_tod_weekend_lim2")),
                     cases = examples,
                     tone = if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE,
                     priority = rank(if (better) 30.0 else 35.0, (abs(diff) / 25.0).coerceIn(0.0, 1.0), days.size)

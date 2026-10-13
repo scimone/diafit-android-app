@@ -5,6 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.scimone.diafit.patterns.domain.HourSpan
 import uk.scimone.diafit.patterns.domain.PatternCard
+import uk.scimone.diafit.patterns.domain.Msg
 import uk.scimone.diafit.patterns.domain.PatternCategory
 import uk.scimone.diafit.patterns.domain.PatternLifecycle
 import uk.scimone.diafit.patterns.domain.PatternState
@@ -16,10 +17,10 @@ class PatternLifecycleTest {
     private val day = 24L * 3_600_000
 
     private fun card(id: String = "a", effect: Double = 0.4, tone: PatternTone = PatternTone.UNFAVORABLE) = PatternCard(
-        id = id, category = PatternCategory.TIME_OF_DAY, detector = "low", title = id, summary = "s",
+        id = id, category = PatternCategory.TIME_OF_DAY, detector = "low", title = Msg(id), summary = Msg("s"),
         miniGraph = MiniGraph.AgpWindow(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), listOf(HourSpan(0, 4))),
         observationFromUtc = 0, observationToUtc = 1, sampleSize = 14, sampleUnit = "days",
-        effectSize = effect, effectLabel = "e", uncertainty = "u", limitations = listOf("l"),
+        effectSize = effect, effectLabel = Msg("e"), uncertainty = Msg("u"), limitations = listOf(Msg("l")),
         tips = listOf("1", "2", "3"), tone = tone, priority = 50.0
     )
 

@@ -1,5 +1,6 @@
 package uk.scimone.diafit.patterns.data
 
+import uk.scimone.diafit.core.presentation.AppStrings
 import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
@@ -105,8 +106,8 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         store.replaceAll(result.patterns)
         if (result.toNotify.isNotEmpty() && !simulated) {
             val single = result.toNotify.singleOrNull()
-            val title = if (single != null) "New pattern" else "${result.toNotify.size} new patterns"
-            val text = result.toNotify.joinToString("\n") { it.card.title }
+            val title = if (single != null) AppStrings.byName("pat_ui_push_one") else AppStrings.byName("pat_ui_push_many", listOf(result.toNotify.size.toString()))
+            val text = result.toNotify.joinToString("\n") { it.card.title.text() }
             notifier.pushOnly(CHANNEL, "patterns-${result.toNotify.map { it.card.id }.sorted().hashCode()}", title, text, single?.let { patternLink(it.card.id) } ?: PATTERNS_LINK)
             store.markNotified(result.toNotify.map { it.card.id }, now)
         }

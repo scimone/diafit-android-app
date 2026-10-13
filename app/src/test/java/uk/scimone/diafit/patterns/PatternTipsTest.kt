@@ -8,7 +8,15 @@ import uk.scimone.diafit.patterns.domain.PatternTips
 import uk.scimone.diafit.patterns.domain.TipTopic
 
 class PatternTipsTest {
-    private val all = PatternTips.all()
+    /** Tips are stored as string-resource names; the rules below are about the English wording. */
+    private val en: Map<String, String> by lazy {
+        val xml = java.io.File("src/main/res/values/strings.xml").readText()
+        Regex("<string name=\"([^\"]+)\">(.*?)</string>", RegexOption.DOT_MATCHES_ALL).findAll(xml).associate { m ->
+            m.groupValues[1] to m.groupValues[2].replace("\\'", "'").replace("\\\"", "\"").replace("\\?", "?").replace("&amp;", "&")
+        }
+    }
+    private fun List<String>.text() = map { en[it] ?: error("missing tip string $it") }
+    private val all = PatternTips.all().mapValues { it.value.text() }
 
     @Test fun everyTopicYieldsExactlyThreeDistinctTips() {
         for (topic in TipTopic.entries) for (escalate in listOf(false, true)) {
@@ -58,8 +66,8 @@ class PatternTipsTest {
             if (topic.isLow) assertEquals(1, mentions) else if (topic == TipTopic.MEAL_BOLUS) assertEquals(1, mentions) else assertEquals("$topic", 0, mentions)
         }
         // And first for escalated lows, last (replaced by a practical line) otherwise.
-        assertTrue("team" in PatternTips.select(TipTopic.LOW_NIGHT, escalate = true)[2].lowercase())
-        assertFalse("team" in PatternTips.select(TipTopic.LOW_NIGHT, escalate = false)[2].lowercase())
+        assertTrue("team" in PatternTips.select(TipTopic.LOW_NIGHT, escalate = true).text()[2].lowercase())
+        assertFalse("team" in PatternTips.select(TipTopic.LOW_NIGHT, escalate = false).text()[2].lowercase())
     }
 
     @Test fun variantsAvoidTipsAlreadyInUse() {
@@ -71,7 +79,7 @@ class PatternTipsTest {
     @Test fun favourableTopicsIncludeAWayToKeepWhatWorks() {
         for (topic in listOf(TipTopic.STEADY_NIGHT, TipTopic.STEADY_DAY, TipTopic.WEEKEND_BETTER, TipTopic.MEAL_GOOD)) {
             val keep = Regex("\\b(keep|stick|build|reuse|borrow)\\b", RegexOption.IGNORE_CASE)
-            assertTrue("$topic", PatternTips.select(topic, false).drop(1).any { keep.containsMatchIn(it) })
+            assertTrue("$topic", PatternTips.select(topic, false).text().drop(1).any { keep.containsMatchIn(it) })
         }
     }
 }

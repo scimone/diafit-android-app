@@ -116,13 +116,13 @@ object ContextDetector {
     }
 
     private fun margin(c: Cmp<*>, unit: String) =
-        "The difference is about ${"%.1f".format(c.z)}× its likely margin of error (±${c.se.roundToInt()} $unit), and it points the same way in the earlier and the later half of the period."
+        msg(if (unit == "mg/dL") "pat_combo_margin" else "pat_sleep_unc", "%.1f".format(java.util.Locale.ROOT, c.z), c.se.roundToInt())
 
     private fun rank(base: Double, z: Double, n: Int) = base * (0.6 + 0.4 * (z / 6.0).coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 24.0).coerceAtMost(1.0))
 
     private fun card(
-        c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, unit: String, cmp: Cmp<*>, effectLabel: String,
-        uncertainty: String, limits: List<String>, examples: List<PatternExample>, tone: PatternTone, priority: Double, baseline: String,
+        c: Ctx, id: String, detector: String, title: Msg, summary: Msg, graph: MiniGraph, unit: String, cmp: Cmp<*>, effectLabel: Msg,
+        uncertainty: Msg, limits: List<Msg>, examples: List<PatternExample>, tone: PatternTone, priority: Double, baseline: Msg,
         topic: TipTopic, escalate: Boolean = false
     ) = PatternCandidate(
         PatternCard(
@@ -136,24 +136,21 @@ object ContextDetector {
 
     // ---- exercise ---------------------------------------------------------------------------------------------------
 
-    private fun exGraph(hit: List<ExerciseDetector.Response>, rest: List<ExerciseDetector.Response>, a: String, b: String): MiniGraph =
+    private fun exGraph(hit: List<ExerciseDetector.Response>, rest: List<ExerciseDetector.Response>, a: Msg, b: Msg): MiniGraph =
         eventGraph(
             hit.map { EventCurve(it.values, it.baseline) }, rest.map { EventCurve(it.values, it.baseline) },
-            ExerciseDetector.FIRST_K, ExerciseDetector.LAST_K, 3, a, b, "start", median(hit.map { it.event.durationMin.toDouble() }).roundToInt(),
+            ExerciseDetector.FIRST_K, ExerciseDetector.LAST_K, 3, a, b, Msg(EVENT_START), median(hit.map { it.event.durationMin.toDouble() }).roundToInt(),
             listOf(0, 120, 240, 360, 480)
         )
 
-    private val exLimits = listOf(
-        "Activities with a sizeable meal right around them, another activity within 2 hours, too little sensor data, or glucose already low at the start are left out.",
-        "Insulin can't be separated from the effect of the activity here, and it is not used to explain the result."
-    )
+    private val exLimits = listOf(msg("pat_ctx_ex_lim1"), msg("pat_ctx_ex_lim2"))
 
     /** Typical activities of both groups, shaded over the activity (and the [preMin] before it), noting the change by the end. */
     private fun <T> exCases(
-        hit: List<T>, rest: List<T>, a: String, b: String, r: (T) -> ExerciseDetector.Response, preMin: Int = 0, extra: (T) -> String = { "" }
+        hit: List<T>, rest: List<T>, a: Msg, b: Msg, r: (T) -> ExerciseDetector.Response, preMin: Int = 0, note: ((T, ExerciseDetector.Response) -> Msg)? = null
     ): List<PatternExample> {
-        fun ex(item: T, group: String) = r(item).let { x ->
-            x.case(120, -preMin, x.event.durationMin, extra(item) + "${Cases.signed(x.change)} mg/dL by the end", group = group)
+        fun ex(item: T, group: Msg) = r(item).let { x ->
+            x.case(120, -preMin, x.event.durationMin, note?.invoke(item, x) ?: msg("pat_ex_during_case", Cases.signed(x.change)), group = group)
         }
         return Cases.typical(hit) { r(it).change.toDouble() }.map { ex(it, a) } + Cases.typical(rest) { r(it).change.toDouble() }.map { ex(it, b) }
     }
@@ -171,16 +168,16 @@ object ContextDetector {
         }.maxByOrNull { it.first.z } ?: return null
         val (cm, name) = best
         val falling = name == "falling"
-        val dirWord = if (falling) "dropped" else "rose"
+        val hitLabel = Msg(if (falling) "pat_label_gl_falling" else "pat_label_gl_rising"); val steadyLabel = Msg("pat_label_gl_steady")
         return card(
-            c, "ctx.expre", "ctx-expre", if (falling) "Bigger drop when glucose is already falling" else "Bigger rise when glucose is already rising",
-            "When glucose was $name in the 30 minutes before the start (${cm.hit.size} activities), it ${dirWord} ${abs(cm.hit.map { it.change }.average()).roundToInt()} mg/dL by the end, against ${cm.rest.map { it.change }.average().roundToInt().let { if (it > 0) "+$it" else "$it" }} mg/dL when it was steady (${cm.rest.size}).",
-            exGraph(cm.hit, cm.rest, "Glucose $name at the start", "Glucose steady at the start"), "activities", cm,
-            "${abs(cm.diff).roundToInt()} mg/dL ${if (falling) "lower" else "higher"} at the end", margin(cm, "mg/dL"),
-            exLimits + "Falling or rising means a change of at least ${t.roundToInt()} mg/dL over the 30 minutes before the start; steady is anything smaller.",
-            exCases(cm.hit, cm.rest, "Glucose $name at the start", "Glucose steady at the start", { it }, 30) { "${Cases.signed(trend(it))} mg/dL in the 30 min before · " },
+            c, "ctx.expre", "ctx-expre", msg(if (falling) "pat_ctx_expre_title_fall" else "pat_ctx_expre_title_rise"),
+            msg(if (falling) "pat_ctx_expre_sum_fall" else "pat_ctx_expre_sum_rise", cm.hit.size, abs(cm.hit.map { it.change }.average()).roundToInt(), cm.rest.map { it.change }.average().roundToInt().let { if (it > 0) "+$it" else "$it" }, cm.rest.size),
+            exGraph(cm.hit, cm.rest, hitLabel, steadyLabel), SampleUnit.ACTIVITIES, cm,
+            msg(if (falling) "pat_ctx_lower_end" else "pat_ctx_higher_end", abs(cm.diff).roundToInt()), margin(cm, "mg/dL"),
+            exLimits + msg("pat_ctx_expre_lim", t.roundToInt()),
+            exCases(cm.hit, cm.rest, hitLabel, steadyLabel, { it }, 30) { it, x -> msg("pat_ctx_expre_case", Cases.signed(trend(it)), Cases.signed(x.change)) },
             if (falling) PatternTone.UNFAVORABLE else PatternTone.MIXED,
-            rank(55.0, cm.z, cm.hit.size + cm.rest.size), "Activities starting with steady glucose", TipTopic.CTX_EX_PRE
+            rank(55.0, cm.z, cm.hit.size + cm.rest.size), msg("pat_ctx_expre_baseline"), TipTopic.CTX_EX_PRE
         )
     }
 
@@ -202,25 +199,21 @@ object ContextDetector {
         if (!solid(cm, c.input.scaled(GAP_DIFF), { it.r.event.startUtc }, { it.r.change.toDouble() })) return null
         val lowerSoon = cm.diff < 0
         val low = if (lowerSoon) soon else later; val other = if (lowerSoon) later else soon
-        val lowName = if (lowerSoon) "soon after eating" else "long after eating"
         fun h(m: Double) = if (m >= 90) "${(m / 60).roundToInt()} h" else "${m.roundToInt()} min"
+        val lowLabel = Msg(if (lowerSoon) "pat_label_soon_after" else "pat_label_long_after"); val otherLabel = Msg(if (lowerSoon) "pat_label_longer_after" else "pat_label_sooner_after")
         return card(
-            c, "ctx.exgap", "ctx-exgap", "Lower glucose when active $lowName",
-            "Activity ${if (lowerSoon) "within about ${h(cut)} of" else "more than about ${h(cut)} after"} a meal (${low.size}) ended with glucose ${low.map { it.r.change }.average().roundToInt()} mg/dL from its start, against ${other.map { it.r.change }.average().roundToInt()} mg/dL when ${if (lowerSoon) "longer" else "sooner"} after eating (${other.size}).",
-            exGraph(low.map { it.r }, other.map { it.r }, if (lowerSoon) "Soon after eating" else "Long after eating", if (lowerSoon) "Longer after eating" else "Sooner after eating"),
-            "activities", Cmp(low, other, -abs(cm.diff), cm.se), "${abs(cm.diff).roundToInt()} mg/dL lower at the end", margin(cm, "mg/dL"),
-            exLimits + "Time since eating is the time since the last meal of at least 15 g carbs; your median is ${h(cut)}. Only meals in the 8 hours before count.",
-            exCases(
-                low, other, if (lowerSoon) "Soon after eating" else "Long after eating", if (lowerSoon) "Longer after eating" else "Sooner after eating", { it.r }
-            ) { "${h(it.gapMin)} after eating · " },
-            PatternTone.MIXED, rank(45.0, cm.z, items.size), "Activities at a different time after eating", TipTopic.CTX_EX_GAP
+            c, "ctx.exgap", "ctx-exgap", msg(if (lowerSoon) "pat_ctx_exgap_title_soon" else "pat_ctx_exgap_title_long"),
+            msg(if (lowerSoon) "pat_ctx_exgap_sum_soon" else "pat_ctx_exgap_sum_long", h(cut), low.size, low.map { it.r.change }.average().roundToInt(), other.map { it.r.change }.average().roundToInt(), other.size),
+            exGraph(low.map { it.r }, other.map { it.r }, lowLabel, otherLabel),
+            SampleUnit.ACTIVITIES, Cmp(low, other, -abs(cm.diff), cm.se), msg("pat_ctx_lower_end", abs(cm.diff).roundToInt()), margin(cm, "mg/dL"),
+            exLimits + msg("pat_ctx_exgap_lim", h(cut)),
+            exCases(low, other, lowLabel, otherLabel, { it.r }) { it, x -> msg("pat_ctx_exgap_case", h(it.gapMin), Cases.signed(x.change)) },
+            PatternTone.MIXED, rank(45.0, cm.z, items.size), msg("pat_ctx_exgap_baseline"), TipTopic.CTX_EX_GAP
         )
     }
 
-    private val genericLabels = setOf("workout", "activity")
-
     private fun exType(c: Ctx, all: List<ExerciseDetector.Response>): PatternCandidate? {
-        val workouts = all.filter { it.event.isWorkout && it.event.label.lowercase() !in genericLabels }
+        val workouts = all.filter { it.event.isWorkout && !it.event.label.startsWith("@") }
         val best = workouts.groupBy { it.event.label }.mapNotNull { (label, g) ->
             val rest = workouts.filter { it.event.label != label }
             if (g.size < MIN_GROUP || rest.size < MIN_GROUP) return@mapNotNull null
@@ -229,29 +222,27 @@ object ContextDetector {
         }.maxByOrNull { it.first.z } ?: return null
         val (cm, label) = best
         val lower = cm.diff < 0; val l = label.lowercase()
+        val labelMsg = msg("pat_literal", label); val otherLabel = Msg("pat_label_other_workouts")
         return card(
-            c, "ctx.extype", "ctx-extype", if (lower) "Bigger glucose drop in $l" else "Higher glucose after $l",
-            "By the end of $l sessions (${cm.hit.size}) glucose had changed ${cm.hit.map { it.change }.average().roundToInt()} mg/dL, against ${cm.rest.map { it.change }.average().roundToInt()} mg/dL in your other logged workouts (${cm.rest.size}).",
-            exGraph(cm.hit, cm.rest, label, "Other workouts"), "workouts", cm, "${abs(cm.diff).roundToInt()} mg/dL ${if (lower) "lower" else "higher"}",
+            c, "ctx.extype", "ctx-extype", msg(if (lower) "pat_ctx_extype_title_low" else "pat_ctx_extype_title_high", l),
+            msg("pat_ctx_extype_summary", l, cm.hit.size, cm.hit.map { it.change }.average().roundToInt(), cm.rest.map { it.change }.average().roundToInt(), cm.rest.size),
+            exGraph(cm.hit, cm.rest, labelMsg, otherLabel), SampleUnit.WORKOUTS, cm, msg(if (lower) "pat_ctx_lower" else "pat_ctx_higher", abs(cm.diff).roundToInt()),
             margin(cm, "mg/dL"),
-            exLimits + "Only logged workouts with a name are compared; detected stretches of activity and unnamed workouts are not. Types differ in length and intensity too.",
-            exCases(cm.hit, cm.rest, label, "Other workouts", { it }), if (lower) PatternTone.UNFAVORABLE else PatternTone.MIXED,
-            rank(40.0, cm.z, cm.hit.size + cm.rest.size), "Your other logged workouts", TipTopic.CTX_EX_TYPE
+            exLimits + msg("pat_ctx_extype_lim"),
+            exCases(cm.hit, cm.rest, labelMsg, otherLabel, { it }), if (lower) PatternTone.UNFAVORABLE else PatternTone.MIXED,
+            rank(40.0, cm.z, cm.hit.size + cm.rest.size), msg("pat_ctx_extype_baseline"), TipTopic.CTX_EX_TYPE
         )
     }
 
     // ---- meals --------------------------------------------------------------------------------------------------
 
-    private fun mealGraph(hit: List<MealDetector.Response>, rest: List<MealDetector.Response>, a: String, b: String): MiniGraph =
+    private fun mealGraph(hit: List<MealDetector.Response>, rest: List<MealDetector.Response>, a: Msg, b: Msg): MiniGraph =
         eventGraph(
             hit.map { EventCurve(it.values, it.baseline) }, rest.map { EventCurve(it.values, it.baseline) },
-            MealDetector.FIRST_K, MealDetector.LAST_K, 3, a, b, "meal", null, listOf(0, 60, 120, 180, 240)
+            MealDetector.FIRST_K, MealDetector.LAST_K, 3, a, b, Msg(EVENT_MEAL), null, listOf(0, 60, 120, 180, 240)
         )
 
-    private val mealLimits = listOf(
-        "Meals with another meal close by, too little sensor data, or glucose already low at the start are left out.",
-        "Insulin can't be separated from the meal's effect here, and it is not used to explain the result."
-    )
+    private val mealLimits = listOf(msg("pat_meal_lim_excluded"), msg("pat_ctx_meal_lim2"))
 
     /** Meals of similar size (carbohydrates within 35 % of the median meal), so size isn't what differs. */
     private fun carbBand(meals: List<MealDetector.Response>): List<MealDetector.Response> {
@@ -273,8 +264,8 @@ object ContextDetector {
     }
 
     /** Typical meals of both groups, shaded over the first 3 hours, with the peak marked. */
-    private fun mealCases(hit: List<MealDetector.Response>, rest: List<MealDetector.Response>, a: String, b: String): List<PatternExample> {
-        fun ex(r: MealDetector.Response, group: String) = r.case(0, 180, "Rose ${r.peakRise.roundToInt()} mg/dL to ${r.peak.roundToInt()}", r.peakK, group)
+    private fun mealCases(hit: List<MealDetector.Response>, rest: List<MealDetector.Response>, a: Msg, b: Msg): List<PatternExample> {
+        fun ex(r: MealDetector.Response, group: Msg) = r.case(0, 180, msg("pat_ctx_meal_case", r.peakRise.roundToInt(), r.peak.roundToInt()), r.peakK, group)
         return Cases.typical(hit) { it.peakRise.toDouble() }.map { ex(it, a) } + Cases.typical(rest) { it.peakRise.toDouble() }.map { ex(it, b) }
     }
 
@@ -297,21 +288,18 @@ object ContextDetector {
         if (cm.diff <= 0 || !solid(cm, c.input.scaled(SECOND_RISE_DIFF), { it.startUtc }, { secondRise(it)!! })) return null
         val carbsMed = median(band.map { it.carbs.toDouble() }).roundToInt()
         return card(
-            c, "ctx.mealdelay", "ctx-mealdelay", "Richer meals bring a second rise",
-            "After similar-sized meals (about $carbsMed g carbs) with ${cut.roundToInt()} g or more of recorded fat and protein (${rich.size}), glucose rose again ${cm.hit.map { secondRise(it)!! }.average().roundToInt()} mg/dL between 2.5 and 4 hours after eating, against ${cm.rest.map { secondRise(it)!! }.average().roundToInt()} mg/dL after lighter ones (${light.size}).",
-            mealGraph(rich, light, "Richer meals", "Lighter meals"), "meals", cm, "+${cm.diff.roundToInt()} mg/dL second rise", margin(cm, "mg/dL"),
-            mealLimits + listOf(
-                "Only meals with recorded fat or protein, within about ${(SIMILAR_CARBS * 100).roundToInt()} % of your median carbs, are compared; the logged absorption is not used.",
-                "A second rise is the highest value 2.5–4 hours after eating minus the lowest value between 1 and 2.5 hours."
-            ),
-            listOf(rich to "Richer meals", light to "Lighter meals").flatMap { (g, label) ->
+            c, "ctx.mealdelay", "ctx-mealdelay", msg("pat_ctx_delay_title"),
+            msg("pat_ctx_delay_summary", carbsMed, cut.roundToInt(), rich.size, cm.hit.map { secondRise(it)!! }.average().roundToInt(), cm.rest.map { secondRise(it)!! }.average().roundToInt(), light.size),
+            mealGraph(rich, light, Msg("pat_label_richer"), Msg("pat_label_lighter_meals")), SampleUnit.MEALS, cm, msg("pat_ctx_delay_effect", cm.diff.roundToInt()), margin(cm, "mg/dL"),
+            mealLimits + listOf(msg("pat_ctx_delay_lim3", (SIMILAR_CARBS * 100).roundToInt()), msg("pat_ctx_delay_lim4")),
+            listOf(rich to Msg("pat_label_richer"), light to Msg("pat_label_lighter_meals")).flatMap { (g, label) ->
                 Cases.typical(g) { secondRise(it)!! }.map { r ->
                     val peakK = (30..48).filter { !r.values[it - MealDetector.FIRST_K].isNaN() }.maxByOrNull { r.values[it - MealDetector.FIRST_K] }
-                    r.case(150, 240, "Second rise ${Cases.signed(secondRise(r)!!)} mg/dL · ${r.fat + r.protein} g fat + protein", peakK, label)
+                    r.case(150, 240, msg("pat_ctx_delay_case", Cases.signed(secondRise(r)!!), r.fat + r.protein), peakK, label)
                 }
             },
             PatternTone.UNFAVORABLE,
-            rank(50.0, cm.z, band.size), "Lighter meals of similar size", TipTopic.CTX_MEAL_DELAY
+            rank(50.0, cm.z, band.size), msg("pat_ctx_delay_baseline"), TipTopic.CTX_MEAL_DELAY
         )
     }
 
@@ -328,16 +316,13 @@ object ContextDetector {
         val (cm, p) = best
         val worse = cm.diff > 0
         return card(
-            c, "ctx.mealtime.$p", "ctx-mealtime", if (worse) "Bigger rises after $p meals" else "Smoother glucose after $p meals",
-            "After $p meals (${cm.hit.size}) glucose rose ${cm.hit.map { it.peakRise }.average().roundToInt()} mg/dL, against ${cm.rest.map { it.peakRise }.average().roundToInt()} mg/dL after similar-sized meals at other times of day (${cm.rest.size}).",
-            mealGraph(cm.hit, cm.rest, "${p.replaceFirstChar { it.uppercase() }} meals", "Meals at other times"), "meals", cm,
-            "${if (worse) "+" else "−"}${abs(cm.diff).roundToInt()} mg/dL peak rise", margin(cm, "mg/dL"),
-            mealLimits + listOf(
-                "Meals are matched on size (within ${(SIMILAR_CARBS * 100).roundToInt()} % of your median carbs) and, where recorded, on fat and protein; what exactly you ate can still differ.",
-                "Morning is 05:00–11:00, midday 11:00–16:00 and evening 16:00–24:00 by the start of the meal."
-            ),
-            mealCases(cm.hit, cm.rest, "${p.replaceFirstChar { it.uppercase() }} meals", "Meals at other times"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
-            rank(if (worse) 50.0 else 28.0, cm.z, cm.hit.size + cm.rest.size), "Similar-sized meals at other times of day",
+            c, "ctx.mealtime.$p", "ctx-mealtime", msg(if (worse) "pat_ctx_time_title_worse" else "pat_ctx_time_title_better", ref("pat_period_$p")),
+            msg("pat_ctx_time_summary", ref("pat_period_$p"), cm.hit.size, cm.hit.map { it.peakRise }.average().roundToInt(), cm.rest.map { it.peakRise }.average().roundToInt(), cm.rest.size),
+            mealGraph(cm.hit, cm.rest, Msg("pat_label_per_$p"), Msg("pat_label_meals_other_times")), SampleUnit.MEALS, cm,
+            msg(if (worse) "pat_ctx_peak_up" else "pat_ctx_peak_down", abs(cm.diff).roundToInt()), margin(cm, "mg/dL"),
+            mealLimits + listOf(msg("pat_ctx_time_lim3", (SIMILAR_CARBS * 100).roundToInt()), msg("pat_ctx_time_lim4")),
+            mealCases(cm.hit, cm.rest, Msg("pat_label_per_$p"), Msg("pat_label_meals_other_times")), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            rank(if (worse) 50.0 else 28.0, cm.z, cm.hit.size + cm.rest.size), msg("pat_ctx_time_baseline"),
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
     }
@@ -352,13 +337,13 @@ object ContextDetector {
         if (!solid(cm, c.input.scaled(MEAL_DIFF), { it.startUtc }, { it.peakRise.toDouble() })) return null
         val worse = cm.diff > 0
         return card(
-            c, "ctx.mealweekend", "ctx-mealweekend", if (worse) "Bigger rises after weekend meals" else "Smoother glucose after weekend meals",
-            "After similar-sized meals at weekends (${weekend.size}) glucose rose ${weekend.map { it.peakRise }.average().roundToInt()} mg/dL, against ${weekday.map { it.peakRise }.average().roundToInt()} mg/dL on weekdays (${weekday.size}).",
-            mealGraph(weekend, weekday, "Weekend meals", "Weekday meals"), "meals", cm, "${if (worse) "+" else "−"}${abs(cm.diff).roundToInt()} mg/dL peak rise",
+            c, "ctx.mealweekend", "ctx-mealweekend", msg(if (worse) "pat_ctx_we_title_worse" else "pat_ctx_we_title_better"),
+            msg("pat_ctx_we_summary", weekend.size, weekend.map { it.peakRise }.average().roundToInt(), weekday.map { it.peakRise }.average().roundToInt(), weekday.size),
+            mealGraph(weekend, weekday, Msg("pat_label_weekend_meals"), Msg("pat_label_weekday_meals")), SampleUnit.MEALS, cm, msg(if (worse) "pat_ctx_peak_up" else "pat_ctx_peak_down", abs(cm.diff).roundToInt()),
             margin(cm, "mg/dL"),
-            mealLimits + "Weekends differ from weekdays in many ways (meal timing, activity, sleep); the cause can't be told from this, and no work schedule or holiday is assumed.",
-            mealCases(weekend, weekday, "Weekend meals", "Weekday meals"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
-            rank(if (worse) 45.0 else 26.0, cm.z, weekend.size + weekday.size), "Similar-sized weekday meals",
+            mealLimits + msg("pat_ctx_we_lim3"),
+            mealCases(weekend, weekday, Msg("pat_label_weekend_meals"), Msg("pat_label_weekday_meals")), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            rank(if (worse) 45.0 else 26.0, cm.z, weekend.size + weekday.size), msg("pat_ctx_we_baseline"),
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
     }
@@ -373,13 +358,13 @@ object ContextDetector {
         if (!solid(cm, c.input.scaled(MEAL_DIFF), { it.startUtc }, { it.peakRise.toDouble() })) return null
         val worse = cm.diff > 0
         return card(
-            c, "ctx.mealactivity", "ctx-mealactivity", if (worse) "Bigger rises after meals following activity" else "Smaller rises after meals following activity",
-            "When a meal came within $ACTIVITY_BEFORE_MEAL_H hours of activity (${after.size}) glucose rose ${after.map { it.peakRise }.average().roundToInt()} mg/dL, against ${other.map { it.peakRise }.average().roundToInt()} mg/dL for similar-sized meals without activity beforehand (${other.size}).",
-            mealGraph(after, other, "After activity", "No activity before"), "meals", cm, "${if (worse) "+" else "−"}${abs(cm.diff).roundToInt()} mg/dL peak rise",
+            c, "ctx.mealactivity", "ctx-mealactivity", msg(if (worse) "pat_ctx_act_title_worse" else "pat_ctx_act_title_better"),
+            msg("pat_ctx_act_summary", ACTIVITY_BEFORE_MEAL_H, after.size, after.map { it.peakRise }.average().roundToInt(), other.map { it.peakRise }.average().roundToInt(), other.size),
+            mealGraph(after, other, Msg("pat_label_after_activity"), Msg("pat_label_no_activity_before")), SampleUnit.MEALS, cm, msg(if (worse) "pat_ctx_peak_up" else "pat_ctx_peak_down", abs(cm.diff).roundToInt()),
             margin(cm, "mg/dL"),
-            mealLimits + "Activity means a logged workout or a stretch of raised heart rate or steps of at least $MIN_ACTIVITY_MIN minutes that ended less than $ACTIVITY_BEFORE_MEAL_H hours before the meal, or was still going.",
-            mealCases(after, other, "After activity", "No activity before"), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
-            rank(if (worse) 45.0 else 27.0, cm.z, after.size + other.size), "Similar-sized meals without activity beforehand",
+            mealLimits + msg("pat_ctx_act_lim3", MIN_ACTIVITY_MIN, ACTIVITY_BEFORE_MEAL_H),
+            mealCases(after, other, Msg("pat_label_after_activity"), Msg("pat_label_no_activity_before")), if (worse) PatternTone.UNFAVORABLE else PatternTone.FAVORABLE,
+            rank(if (worse) 45.0 else 27.0, cm.z, after.size + other.size), msg("pat_ctx_act_baseline"),
             if (worse) TipTopic.CTX_MEAL_WORSE else TipTopic.CTX_MEAL_BETTER
         )
     }
@@ -415,27 +400,23 @@ object ContextDetector {
         val agpA = agpOfDays(active.map { it.next }) ?: return null
         val agpQ = agpOfDays(quiet.map { it.next }) ?: return null
         return card(
-            c, "ctx.night", "ctx-night", if (better) "Steadier nights after active days" else "Less steady nights after active days",
-            "Between midnight and 06:00 after days with $cutMin+ minutes of activity (${active.size}) you spent ${pct(active.map { it.tir }.average())} of the time in range, against ${pct(quiet.map { it.tir }.average())} after quieter days (${quiet.size}).",
-            MiniGraph.ProfileComparison("Night after active days", agpA.medianGraph(), "Night after quieter days", agpQ.medianGraph()),
-            "nights", cm, "${if (better) "+" else "−"}${abs(cm.diff).roundToInt()} points in range overnight", margin(cm, "points"),
-            listOf(
-                "Days with activity ending between 17:00 and 22:00 are left out (they belong to the evening-activity pattern), as are nights with under 70 % sensor data.",
-                "Days without activity data (for example a watch left at home) count as quieter days.",
-                "Meals, sleep and routine differ between days too, so this can't show that activity is the reason."
-            ),
-            listOf(active to "Night after active days", quiet to "Night after quieter days").flatMap { (g, label) ->
+            c, "ctx.night", "ctx-night", msg(if (better) "pat_ctx_night_title_better" else "pat_ctx_night_title_worse"),
+            msg("pat_ctx_night_summary", cutMin, active.size, pct(active.map { it.tir }.average()), pct(quiet.map { it.tir }.average()), quiet.size),
+            MiniGraph.ProfileComparison(Msg("pat_label_night_after_active"), agpA.medianGraph(), Msg("pat_label_night_after_quiet"), agpQ.medianGraph()),
+            SampleUnit.NIGHTS, cm, msg(if (better) "pat_ctx_night_eff_up" else "pat_ctx_night_eff_down", abs(cm.diff).roundToInt()), margin(cm, "points"),
+            listOf(msg("pat_ctx_night_lim1"), msg("pat_ctx_night_lim2"), msg("pat_ctx_night_lim3")),
+            listOf(active to Msg("pat_label_night_after_active"), quiet to Msg("pat_label_night_after_quiet")).flatMap { (g, label) ->
                 Cases.typical(g) { it.tir }.map { n ->
                     val day0 = input.startOfDayUtc(n.date)
                     val h = 3_600_000L
                     PatternExample(
                         fromUtc = day0 + 12 * h, toUtc = day0 + 31 * h, focusFromUtc = day0 + 24 * h, focusToUtc = day0 + 30 * h,
-                        note = "${n.minutes} min active that day · ${n.tir.roundToInt()} % in range 00:00–06:00", group = label
+                        note = msg("pat_ctx_night_case", n.minutes, n.tir.roundToInt()), group = label
                     )
                 }
             },
             if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE, rank(if (better) 28.0 else 40.0, cm.z, active.size + quiet.size),
-            "Nights after quieter days", if (better) TipTopic.CTX_NIGHT_BETTER else TipTopic.CTX_NIGHT_WORSE
+            msg("pat_ctx_night_baseline"), if (better) TipTopic.CTX_NIGHT_BETTER else TipTopic.CTX_NIGHT_WORSE
         )
     }
 
@@ -449,7 +430,7 @@ object ContextDetector {
         return if (nonZero.size < MIN_GROUP) null else maxOf(MIN_ACTIVE_DAY_MIN, nonZero[nonZero.size / 2])
     }
 
-    private fun sleepGraph(hit: List<SleepDetector.Night>, rest: List<SleepDetector.Night>, a: String, b: String): MiniGraph? {
+    private fun sleepGraph(hit: List<SleepDetector.Night>, rest: List<SleepDetector.Night>, a: Msg, b: Msg): MiniGraph? {
         val agpA = agpOfDays(hit.map { it.day }) ?: return null
         val agpB = agpOfDays(rest.map { it.day }) ?: return null
         return MiniGraph.ProfileComparison(a, agpA.medianGraph(), b, agpB.medianGraph())
@@ -481,21 +462,20 @@ object ContextDetector {
         // The larger penalty must itself be real and hold in both halves of the period.
         if (!solid(Cmp(big.hit, big.rest, big.diff, big.se), SLEEP_TIR_DIFF, { it.n.endUtc }, { it.tir })) return null
         val small = if (quietWorse) penA else penQ
-        val which = if (quietWorse) "quieter" else "active"
-        val graph = sleepGraph(hit, big.hit, "Short night after $which day", "Longer night after $which day") ?: return null
+        val whichS = ref(if (quietWorse) "pat_day_quieter_s" else "pat_day_active_s")
+        val whichP = ref(if (quietWorse) "pat_day_quieter_p" else "pat_day_active_p")
+        val otherP = ref(if (quietWorse) "pat_day_active_p" else "pat_day_quieter_p")
+        val shortLabel = msg("pat_label_short_after", whichS); val longerLabel = msg("pat_label_longer_after_day", whichS)
+        val graph = sleepGraph(hit, big.hit, shortLabel, longerLabel) ?: return null
         return card(
-            c, "ctx.sleepactivity", "ctx-sleepactivity", "Short sleep matters more after ${if (quietWorse) "quiet" else "active"} days",
-            "After a $which day, nights under ${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min (${hit.size}) were followed by ${pct(hit.map { it.tir }.average())} of the rest of the day in range, against ${pct(big.hit.map { it.tir }.average())} after longer nights (${big.hit.size}); after ${if (quietWorse) "active" else "quieter"} days the gap was only ${abs(small.diff).roundToInt()} points.",
-            graph, "nights", Cmp(hit, big.hit, -big.diff, big.se), "${big.diff.roundToInt()} points lower in range (vs ${small.diff.roundToInt()} the other way)",
-            "The two gaps differ by ${abs(inter).roundToInt()} points, about ${"%.1f".format(abs(inter) / seI.coerceAtLeast(0.01))}× the margin of error of that difference (±${seI.roundToInt()} points), so this needs more evidence than a single comparison; the larger gap holds in both halves of the period.",
-            listOf(
-                "Four groups of at least $MIN_GROUP nights each are compared over up to $WINDOW_DAYS days; days with under 70 % sensor data after waking are left out.",
-                "An active previous day means at least $cutMin minutes of activity (your typical active day); days without activity data count as quieter.",
-                "Meals and routine differ between days too, so this can't show that sleep or activity is the reason."
-            ),
-            Cases.typical(hit) { it.tir }.map { it.case(c.input, "${minutes[it.n.wakeDate.minusDays(1)] ?: 0} min active the day before", "Short night after $which day") } +
-                Cases.typical(big.hit) { it.tir }.map { it.case(c.input, "${minutes[it.n.wakeDate.minusDays(1)] ?: 0} min active the day before", "Longer night after $which day") },
-            PatternTone.UNFAVORABLE, rank(42.0, abs(inter) / seI, nights.size), "Longer nights after $which days", TipTopic.CTX_SLEEP_ACTIVITY
+            c, "ctx.sleepactivity", "ctx-sleepactivity", Msg(if (quietWorse) "pat_ctx_sa_title_quiet" else "pat_ctx_sa_title_active"),
+            msg("pat_ctx_sa_summary", whichS, "${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min", hit.size, pct(hit.map { it.tir }.average()), pct(big.hit.map { it.tir }.average()), big.hit.size, otherP, abs(small.diff).roundToInt()),
+            graph, SampleUnit.NIGHTS, Cmp(hit, big.hit, -big.diff, big.se), msg("pat_ctx_sa_effect", big.diff.roundToInt(), small.diff.roundToInt()),
+            msg("pat_ctx_sa_unc", abs(inter).roundToInt(), "%.1f".format(java.util.Locale.ROOT, abs(inter) / seI.coerceAtLeast(0.01)), seI.roundToInt()),
+            listOf(msg("pat_ctx_sa_lim1", MIN_GROUP, WINDOW_DAYS), msg("pat_ctx_sa_lim2", cutMin), msg("pat_ctx_sa_lim3")),
+            Cases.typical(hit) { it.tir }.map { it.case(c.input, "pat_ctx_sleep_case_active", (minutes[it.n.wakeDate.minusDays(1)] ?: 0).toString(), shortLabel) } +
+                Cases.typical(big.hit) { it.tir }.map { it.case(c.input, "pat_ctx_sleep_case_active", (minutes[it.n.wakeDate.minusDays(1)] ?: 0).toString(), longerLabel) },
+            PatternTone.UNFAVORABLE, rank(42.0, abs(inter) / seI, nights.size), msg("pat_ctx_sa_baseline", whichP), TipTopic.CTX_SLEEP_ACTIVITY
         )
     }
 
@@ -518,20 +498,16 @@ object ContextDetector {
         if (good.size < GOOD_NIGHTS || rest.size < MIN_GROUP) return null
         val cm = cmp(good, rest) { it.tir }
         if (cm.diff <= 0 || cm.diff < SLEEP_TIR_DIFF || cm.diff < INTERACTION_SE * cm.se || !solid(cm, SLEEP_TIR_DIFF, { it.n.endUtc }, { it.tir })) return null
-        val graph = sleepGraph(good, rest, "After a full, regular night", "Other nights") ?: return null
+        val graph = sleepGraph(good, rest, Msg("pat_label_full_regular"), Msg("pat_label_other_nights")) ?: return null
         fun clock(m: Double) = (((m.roundToInt() + 18 * 60) % 1440).let { "%02d:%02d".format(it / 60, it % 60) })
         return card(
-            c, "ctx.sleepgood", "ctx-sleepgood", "Steadier days after full, regular nights",
-            "After nights with at least ${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min of sleep, a bedtime within an hour of your usual ${clock(bedMed)} and an active day before (${good.size}) you spent ${pct(good.map { it.tir }.average())} of the rest of the day in range, against ${pct(rest.map { it.tir }.average())} after other nights (${rest.size}).",
-            graph, "nights", cm, "+${cm.diff.roundToInt()} points in range", margin(cm, "points"),
-            listOf(
-                "All three conditions must hold at once, so this group is small; $GOOD_NIGHTS nights are needed and the evidence bar is higher than for a single comparison.",
-                "Active means at least $cutMin minutes of activity the day before; sleep length and bedtime are compared with your own median.",
-                "Meals and routine differ between days too, so this can't show what exactly is helping."
-            ),
-            Cases.typical(good) { it.tir }.map { it.case(c.input, "Bed ${Cases.clock(it.n.startUtc, c.zone)}", "After a full, regular night") } +
-                Cases.typical(rest) { it.tir }.map { it.case(c.input, "Bed ${Cases.clock(it.n.startUtc, c.zone)}", "Other nights") },
-            PatternTone.FAVORABLE, rank(30.0, cm.z, nights.size), "All other nights", TipTopic.CTX_SLEEP_GOOD
+            c, "ctx.sleepgood", "ctx-sleepgood", msg("pat_ctx_sg_title"),
+            msg("pat_ctx_sg_summary", "${(sleepCut / 60).toInt()} h ${"%02d".format(sleepCut.toInt() % 60)} min", clock(bedMed), good.size, pct(good.map { it.tir }.average()), pct(rest.map { it.tir }.average()), rest.size),
+            graph, SampleUnit.NIGHTS, cm, msg("pat_ex_nextday_effect", cm.diff.roundToInt()), margin(cm, "points"),
+            listOf(msg("pat_ctx_sg_lim1", GOOD_NIGHTS), msg("pat_ctx_sg_lim2", cutMin), msg("pat_ctx_sg_lim3")),
+            Cases.typical(good) { it.tir }.map { it.case(c.input, "pat_ctx_sleep_case_bed", Cases.clock(it.n.startUtc, c.zone), Msg("pat_label_full_regular")) } +
+                Cases.typical(rest) { it.tir }.map { it.case(c.input, "pat_ctx_sleep_case_bed", Cases.clock(it.n.startUtc, c.zone), Msg("pat_label_other_nights")) },
+            PatternTone.FAVORABLE, rank(30.0, cm.z, nights.size), msg("pat_ctx_sg_baseline"), TipTopic.CTX_SLEEP_GOOD
         )
     }
 
@@ -561,20 +537,16 @@ object ContextDetector {
         val cm = cmp(rich, light) { it.night }
         if (cm.diff <= 0 || cm.diff < INTERACTION_SE * cm.se || !solid(cm, c.input.scaled(LATE_RICH_DIFF), { it.startUtc }, { it.night })) return null
         fun curves(l: List<CombinedDetector.Dinner>) = l.map { EventCurve(it.values, it.baseline) }
-        val graph = eventGraph(curves(rich), curves(light), -6, 120, 6, "Late rich dinners", "Late lighter dinners", "dinner", null, listOf(0, 120, 240, 360, 480, 600))
+        val graph = eventGraph(curves(rich), curves(light), -6, 120, 6, Msg("pat_label_late_rich"), Msg("pat_label_late_lighter"), Msg("pat_ev_dinner"), null, listOf(0, 120, 240, 360, 480, 600))
         fun hhmm(m: Double) = "%02d:%02d".format(m.roundToInt() / 60, m.roundToInt() % 60)
         return card(
-            c, "ctx.latedinnerrich", "ctx-latedinnerrich", "Late rich dinners keep glucose higher overnight",
-            "After late dinners (from about ${hhmm(median(late.map { it.minute }))}) with ${fpCut.roundToInt()} g or more of recorded fat and protein (${rich.size}) glucose between midnight and 06:00 averaged ${cm.diff.roundToInt()} mg/dL more than after lighter late dinners of similar carbs (${light.size}).",
-            graph, "dinners", cm, "+${cm.diff.roundToInt()} mg/dL overnight", margin(cm, "mg/dL"),
-            listOf(
-                "Only late dinners (later than your median dinner time) with recorded fat or protein and similar carbohydrates (within ${(CARBS_RATIO * 100 - 100).roundToInt()} % of each other) are compared; the logged absorption is not used.",
-                "Multi-factor finding: the evidence bar is 3x the margin of error, over up to $WINDOW_DAYS days.",
-                "Insulin, activity and what else happened that evening can't be separated out, so this can't show that the fat and protein are the reason."
-            ),
-            Cases.typical(rich) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Late rich dinners") } +
-                Cases.typical(light) { it.night }.map { it.case(c.input, "Dinner at ${hhmm(it.minute)}", "Late lighter dinners") },
-            PatternTone.UNFAVORABLE, rank(52.0, cm.z, rich.size + light.size), "Lighter late dinners of similar size", TipTopic.CTX_LATE_RICH
+            c, "ctx.latedinnerrich", "ctx-latedinnerrich", msg("pat_ctx_ld_title"),
+            msg("pat_ctx_ld_summary", hhmm(median(late.map { it.minute })), fpCut.roundToInt(), rich.size, cm.diff.roundToInt(), light.size),
+            graph, SampleUnit.DINNERS, cm, msg("pat_combo_dinner_effect", cm.diff.roundToInt()), margin(cm, "mg/dL"),
+            listOf(msg("pat_ctx_ld_lim1", (CARBS_RATIO * 100 - 100).roundToInt()), msg("pat_ctx_ld_lim2", WINDOW_DAYS), msg("pat_ctx_ld_lim3")),
+            Cases.typical(rich) { it.night }.map { it.case(c.input, msg("pat_combo_dinner_case", hhmm(it.minute), it.night.roundToInt()), Msg("pat_label_late_rich")) } +
+                Cases.typical(light) { it.night }.map { it.case(c.input, msg("pat_combo_dinner_case", hhmm(it.minute), it.night.roundToInt()), Msg("pat_label_late_lighter")) },
+            PatternTone.UNFAVORABLE, rank(52.0, cm.z, rich.size + light.size), msg("pat_ctx_ld_baseline"), TipTopic.CTX_LATE_RICH
         )
     }
 }

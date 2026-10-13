@@ -1,5 +1,7 @@
 package uk.scimone.diafit.patterns.presentation
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,9 +61,9 @@ fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Patterns") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = { if (unread > 0) TextButton(onClick = viewModel::markAllRead) { Text("Mark all read") } }
+                title = { Text(stringResource(R.string.patterns_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } },
+                actions = { if (unread > 0) TextButton(onClick = viewModel::markAllRead) { Text(stringResource(R.string.pat_ui_mark_read)) } }
             )
         }
     ) { padding ->
@@ -76,7 +78,7 @@ fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 if (active.isEmpty() && resolved.isEmpty() && dismissed.isEmpty()) {
                     Box(Modifier.fillMaxSize().padding(padding).padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "No patterns yet. They appear once there are at least a week of CGM readings and something that keeps coming back.",
+                            stringResource(R.string.pat_ui_empty),
                             textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -86,7 +88,7 @@ fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (active.isEmpty()) item {
-                        Text("Nothing to report right now.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.pat_ui_nothing), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     PatternCategory.entries.forEach { category ->
                         val group = active.filter { it.card.category == category }
@@ -96,11 +98,11 @@ fun PatternsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                         }
                     }
                     if (resolved.isNotEmpty()) {
-                        item { SectionTitle("No longer observed") }
+                        item { SectionTitle(stringResource(R.string.pat_state_resolved)) }
                         items(resolved, key = { "r-" + it.card.id }) { CompactRow(it) { onOpen(it.card.id) } }
                     }
                     if (dismissed.isNotEmpty()) {
-                        item { SectionTitle("Dismissed") }
+                        item { SectionTitle(stringResource(R.string.pat_state_dismissed)) }
                         items(dismissed, key = { "d-" + it.card.id }) { CompactRow(it) { onOpen(it.card.id) } }
                     }
                 }
@@ -142,9 +144,9 @@ internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier:
         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PatternGlyph(card.detector, tint)
             Column(Modifier.weight(1f)) {
-                Text(card.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(card.title.text(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${card.category.label} · ${card.effectLabel}",
+                    "${card.category.label} · ${card.effectLabel.text()}",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
@@ -168,6 +170,6 @@ private fun CompactRow(item: StoredPattern, onClick: () -> Unit) {
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Text(item.card.title, Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(item.card.title.text(), Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

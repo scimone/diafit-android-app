@@ -51,31 +51,28 @@ object TrendDetector {
     private fun pct(x: Double) = "${x.roundToInt()} %"
 
     private fun card(
-        c: Ctx, id: String, detector: String, title: String, summary: String, effect: Double, effectLabel: String, margin: String,
+        c: Ctx, id: String, detector: String, title: Msg, summary: Msg, effect: Double, effectLabel: Msg, margin: Msg,
         better: Boolean, topic: TipTopic, escalate: Boolean = false, examples: List<PatternExample>? = null,
-        metric: ((Stat) -> Double)? = null, describe: ((Stat) -> String)? = null
+        metric: ((Stat) -> Double)? = null, describe: ((Stat) -> Msg)? = null
     ): PatternCandidate? {
         val a = agpOfDays(c.recent.map { it.day }) ?: return null
         val b = agpOfDays(c.before.map { it.day }) ?: return null
         val from = c.input.startOfDayUtc(c.before.first().day.date)
         // By default a typical recent day against a typical earlier day, on the metric that changed.
+        val lastLabel = msg("pat_label_last_days", PERIOD_DAYS); val beforeLabel = msg("pat_label_days_before", PERIOD_DAYS)
         val cases = examples ?: if (metric != null && describe != null) {
-            Cases.typical(c.recent, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = "Last $PERIOD_DAYS days") } +
-                Cases.typical(c.before, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = "The $PERIOD_DAYS days before") }
+            Cases.typical(c.recent, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = lastLabel) } +
+                Cases.typical(c.before, value = metric).map { Cases.day(c.input, it.day.date, describe(it), group = beforeLabel) }
         } else emptyList()
         return PatternCandidate(
             PatternCard(
                 id = id, category = PatternCategory.TREND, detector = detector, title = title, summary = summary,
-                miniGraph = MiniGraph.ProfileComparison("Last $PERIOD_DAYS days", a.medianGraph(), "The $PERIOD_DAYS days before", b.medianGraph()),
+                miniGraph = MiniGraph.ProfileComparison(lastLabel, a.medianGraph(), beforeLabel, b.medianGraph()),
                 observationFromUtc = c.input.startOfDayUtc(c.recent.first().day.date), observationToUtc = c.input.nowUtc,
-                baselineFromUtc = from, baselineToUtc = c.input.startOfDayUtc(c.recent.first().day.date), baselineLabel = "The $PERIOD_DAYS days before",
-                sampleSize = c.recent.size + c.before.size, sampleUnit = "days", positiveCount = c.recent.size,
+                baselineFromUtc = from, baselineToUtc = c.input.startOfDayUtc(c.recent.first().day.date), baselineLabel = beforeLabel,
+                sampleSize = c.recent.size + c.before.size, sampleUnit = SampleUnit.DAYS, positiveCount = c.recent.size,
                 effectSize = effect, effectLabel = effectLabel, uncertainty = margin,
-                limitations = listOf(
-                    "Only days with at least 70 % sensor data count, and today is left out.",
-                    "Two weeks is a short stretch: illness, travel, a new sensor or a change of routine can move these numbers.",
-                    "This compares two periods and can't show what caused the difference."
-                ),
+                limitations = listOf(msg("pat_trend_lim1"), msg("pat_trend_lim2"), msg("pat_trend_lim3")),
                 cases = cases,
                 tone = if (better) PatternTone.FAVORABLE else PatternTone.UNFAVORABLE,
                 priority = (if (better) 28.0 else 42.0) * (0.6 + 0.4 * effect.coerceIn(0.0, 1.0))
@@ -84,8 +81,8 @@ object TrendDetector {
         )
     }
 
-    private fun margin(diff: Double, se: Double, unit: String) =
-        "The difference is about ${"%.1f".format(abs(diff) / se.coerceAtLeast(0.01))}× its likely margin of error (±${se.roundToInt()} $unit)."
+    private fun margin(diff: Double, se: Double, points: Boolean) =
+        msg(if (points) "pat_tod_weekend_unc" else "pat_meal_margin", "%.1f".format(java.util.Locale.ROOT, abs(diff) / se.coerceAtLeast(0.01)), se.roundToInt())
 
     private fun tir(c: Ctx): PatternCandidate? {
         val r = c.recent.map { it.tir }; val b = c.before.map { it.tir }
@@ -93,11 +90,11 @@ object TrendDetector {
         if (abs(diff) < TIR_DIFF || abs(diff) < SE_FACTOR * se) return null
         val up = diff > 0
         return card(
-            c, "trend.tir", "trend-tir", if (up) "More time in range lately" else "Less time in range lately",
-            "Over the last $PERIOD_DAYS days you spent ${pct(r.average())} of the time in range, ${if (up) "up" else "down"} from ${pct(b.average())} in the $PERIOD_DAYS days before.",
-            abs(diff) / 20.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} points in range", margin(diff, se, "points"), up,
+            c, "trend.tir", "trend-tir", msg(if (up) "pat_trend_tir_up" else "pat_trend_tir_down"),
+            msg(if (up) "pat_trend_tir_sum_up" else "pat_trend_tir_sum_down", PERIOD_DAYS, pct(r.average()), pct(b.average())),
+            abs(diff) / 20.0, msg(if (up) "pat_trend_tir_eff_up" else "pat_sleep_effect", abs(diff).roundToInt()), margin(diff, se, true), up,
             if (up) TipTopic.TREND_BETTER else TipTopic.TREND_WORSE,
-            metric = { it.tir }, describe = { "${pct(it.tir)} in range · average ${it.mean.roundToInt()} mg/dL" }
+            metric = { it.tir }, describe = { msg("pat_trend_tir_case", pct(it.tir), it.mean.roundToInt()) }
         )
     }
 
@@ -108,11 +105,11 @@ object TrendDetector {
         if (abs(diff) < minDiff || abs(diff) < SE_FACTOR * se) return null
         val up = diff > 0
         return card(
-            c, "trend.mean", "trend-mean", if (up) "Higher average glucose lately" else "Lower average glucose lately",
-            "Average glucose over the last $PERIOD_DAYS days was ${r.average().roundToInt()} mg/dL, ${if (up) "up" else "down"} from ${b.average().roundToInt()} in the $PERIOD_DAYS days before.",
-            abs(diff) / 30.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} mg/dL average", margin(diff, se, "mg/dL"), !up,
+            c, "trend.mean", "trend-mean", msg(if (up) "pat_trend_mean_up" else "pat_trend_mean_down"),
+            msg(if (up) "pat_trend_mean_sum_up" else "pat_trend_mean_sum_down", PERIOD_DAYS, r.average().roundToInt(), b.average().roundToInt()),
+            abs(diff) / 30.0, msg(if (up) "pat_trend_mean_eff_up" else "pat_trend_mean_eff_down", abs(diff).roundToInt()), margin(diff, se, false), !up,
             if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER,
-            metric = { it.mean }, describe = { "Average ${it.mean.roundToInt()} mg/dL · ${pct(it.tir)} in range" }
+            metric = { it.mean }, describe = { msg("pat_trend_mean_case", it.mean.roundToInt(), pct(it.tir)) }
         )
     }
 
@@ -122,11 +119,11 @@ object TrendDetector {
         if (abs(diff) < CV_DIFF || abs(diff) < SE_FACTOR * se) return null
         val up = diff > 0
         return card(
-            c, "trend.variability", "trend-variability", if (up) "Glucose more variable lately" else "Glucose steadier lately",
-            "Day-to-day swings (coefficient of variation) averaged ${pct(r.average())} over the last $PERIOD_DAYS days, ${if (up) "up" else "down"} from ${pct(b.average())} in the $PERIOD_DAYS days before.",
-            abs(diff) / 10.0, "${if (up) "+" else "−"}${abs(diff).roundToInt()} points variability", margin(diff, se, "points"), !up,
+            c, "trend.variability", "trend-variability", msg(if (up) "pat_trend_var_up" else "pat_trend_var_down"),
+            msg(if (up) "pat_trend_var_sum_up" else "pat_trend_var_sum_down", PERIOD_DAYS, pct(r.average()), pct(b.average())),
+            abs(diff) / 10.0, msg(if (up) "pat_trend_var_eff_up" else "pat_trend_var_eff_down", abs(diff).roundToInt()), margin(diff, se, true), !up,
             if (up) TipTopic.TREND_WORSE else TipTopic.TREND_BETTER,
-            metric = { it.cv }, describe = { "Variability ${pct(it.cv)} · ${pct(it.tir)} in range" }
+            metric = { it.cv }, describe = { msg("pat_trend_var_case", pct(it.cv), pct(it.tir)) }
         )
     }
 
@@ -138,17 +135,17 @@ object TrendDetector {
         val rn = c.recent.count { it.low }; val bn = c.before.count { it.low }
         if (up && rn < 3) return null
         return card(
-            c, "trend.lows", "trend-lows", if (up) "Lows more often lately" else "Fewer lows lately",
-            "A low (at least $MIN_LOW_MIN minutes under ${c.input.thresholds.low} mg/dL) happened on $rn of the last ${c.recent.size} days, against $bn of ${c.before.size} in the $PERIOD_DAYS days before.",
-            abs(diff) / 0.4, "$rn vs $bn days with a low",
-            "Counts of days, not a measured margin: ${c.recent.size} and ${c.before.size} days were compared.", !up,
+            c, "trend.lows", "trend-lows", msg(if (up) "pat_trend_lows_up" else "pat_trend_lows_down"),
+            msg("pat_trend_lows_summary", MIN_LOW_MIN, c.input.thresholds.low, rn, c.recent.size, bn, c.before.size, PERIOD_DAYS),
+            abs(diff) / 0.4, msg("pat_trend_lows_effect", rn, bn),
+            msg("pat_trend_lows_unc", c.recent.size, c.before.size), !up,
             if (up) TipTopic.TREND_LOWS_UP else TipTopic.TREND_BETTER, escalate = up && r >= 0.4,
             examples = (if (up) c.recent.filter { it.low } else c.before.filter { it.low }).takeLast(Cases.SINGLE).reversed().mapNotNull { st ->
                 val (bin, v) = Cases.extreme(st.day, 0 until BINS_PER_DAY, lowest = true) ?: return@mapNotNull null
                 val below = st.day.count(0 until BINS_PER_DAY) { it < c.input.thresholds.low } * BIN_MINUTES
                 Cases.day(
-                    c.input, st.day.date, "Lowest ${v.roundToInt()} mg/dL at ${Cases.clock(bin)} · ${Cases.duration(below)} below ${c.input.thresholds.low}", bin,
-                    if (up) "Last $PERIOD_DAYS days" else "The $PERIOD_DAYS days before"
+                    c.input, st.day.date, msg("pat_trend_lows_case", v.roundToInt(), Cases.clock(bin), Cases.duration(below), c.input.thresholds.low), bin,
+                    if (up) msg("pat_label_last_days", PERIOD_DAYS) else msg("pat_label_days_before", PERIOD_DAYS)
                 )
             }
         )

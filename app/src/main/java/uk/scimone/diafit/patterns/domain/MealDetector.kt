@@ -69,8 +69,8 @@ object MealDetector {
          * This meal as an example: drawn from an hour before (so insulin given ahead shows) to 4.5 h after, with
          * [focusFromMin]..[focusToMin] after the start shaded and [markK] (5-minute steps from the start) marked.
          */
-        fun case(focusFromMin: Int, focusToMin: Int, note: String, markK: Int? = null, group: String? = null) =
-            Cases.event(startUtc, startUtc, "${type.type} · $carbs g", 60, 270, focusFromMin, focusToMin, note, markK?.let(::at), group)
+        fun case(focusFromMin: Int, focusToMin: Int, note: Msg, markK: Int? = null, group: Msg? = null) =
+            Cases.event(startUtc, startUtc, msg("pat_meal_event", ref("meal_type_${type.name.lowercase()}"), carbs), 60, 270, focusFromMin, focusToMin, note, markK?.let(::at), group)
     }
 
     fun detect(input: DetectionInput): List<PatternCandidate> {
@@ -140,9 +140,19 @@ object MealDetector {
 
     // -------------------------------------------------------------------------------------------------------------
 
+    /** The scope as it appears in stored ids (stable, English). */
     private fun scopeLabel(type: MealType?) = when (type) {
         null -> "meals"; MealType.BREAKFAST -> "breakfast"; MealType.LUNCH -> "lunch"; MealType.DINNER -> "dinner"; MealType.SNACK -> "snacks"
     }
+
+    private fun scopeKey(type: MealType?) = when (type) {
+        null -> "meals"; MealType.BREAKFAST -> "breakfast"; MealType.LUNCH -> "lunch"; MealType.DINNER -> "dinner"; MealType.SNACK -> "snack"
+    }
+
+    /** "after <this>": the scope with the article it needs after "after". */
+    private fun afterScope(type: MealType?) = ref("pat_scope_${scopeKey(type)}_after")
+    private fun pluralScope(type: MealType?) = ref("pat_scope_${scopeKey(type)}_pl")
+    private fun labelScope(type: MealType?) = Msg("pat_scope_${scopeKey(type)}_label")
 
     /** Evaluates the whole set first; only when that finds nothing, each meal type with enough meals on its own. */
     private fun scoped(c: Ctx, eval: (Ctx, List<Response>, MealType?) -> PatternCandidate?): List<PatternCandidate> {
@@ -162,22 +172,21 @@ object MealDetector {
 
     private fun after(k: Int): String = (k * BIN_MINUTES).let { m -> if (m >= 60) "${m / 60} h ${m % 60} min" else "$m min" }
 
+    private fun dec1(x: Double) = "%.1f".format(java.util.Locale.ROOT, x)
+
     private fun rank(base: Double, effect: Double, n: Int) = base * (0.6 + 0.4 * effect.coerceIn(0.0, 1.0)) * (0.7 + 0.3 * (n / 20.0).coerceAtMost(1.0))
 
-    private fun limitations(extra: String) = listOf(
-        "Meals with another meal close by, too little sensor data, or glucose already low at the start are left out.",
-        extra
-    )
+    private fun limitations(extra: Msg) = listOf(msg("pat_meal_lim_excluded"), extra)
 
     private fun card(
-        c: Ctx, id: String, detector: String, title: String, summary: String, graph: MiniGraph, n: Int, positive: Int?,
-        effect: Double, effectLabel: String, uncertainty: String, limits: List<String>, examples: List<PatternExample>,
-        tone: PatternTone, priority: Double, baseline: String? = null
+        c: Ctx, id: String, detector: String, title: Msg, summary: Msg, graph: MiniGraph, n: Int, positive: Int?,
+        effect: Double, effectLabel: Msg, uncertainty: Msg, limits: List<Msg>, examples: List<PatternExample>,
+        tone: PatternTone, priority: Double, baseline: Msg? = null, countLabel: Boolean = false
     ) = PatternCard(
         id = id, category = PatternCategory.MEAL, detector = detector, title = title, summary = summary, miniGraph = graph,
         observationFromUtc = c.from, observationToUtc = c.to, baselineFromUtc = baseline?.let { c.from }, baselineToUtc = baseline?.let { c.to },
-        baselineLabel = baseline, sampleSize = n, sampleUnit = "meals", positiveCount = positive, effectSize = effect,
-        effectLabel = effectLabel, uncertainty = uncertainty, limitations = limits, cases = examples, tone = tone, priority = priority
+        baselineLabel = baseline, sampleSize = n, sampleUnit = SampleUnit.MEALS, positiveCount = positive, effectSize = effect,
+        effectLabel = effectLabel, effectIsCount = countLabel, uncertainty = uncertainty, limitations = limits, cases = examples, tone = tone, priority = priority
     )
 
     // ---- single-group findings -----------------------------------------------------------------------------------
@@ -191,16 +200,16 @@ object MealDetector {
         val s = share(lowMeals.size, g.size)
         val examples = lowMeals.sortedBy { it.minAfter()!!.second }.take(Cases.SINGLE).map {
             val (k, v) = it.minAfter()!!
-            it.case(60, 240, "Down to ${v.roundToInt()} mg/dL, ${after(k)} after eating", k)
+            it.case(60, 240, msg("pat_meal_low_case", v.roundToInt(), after(k)), k)
         }
         return PatternCandidate(
             card(
-                c, "meal.low.${scopeLabel(type)}", "meal-low", "Low glucose after ${scopeLabel(type)}",
-                "Glucose went below ${c.t.low} mg/dL between 1 and 4 hours after ${lowMeals.size} of ${g.size} ${scopeLabel(type)}.",
-                responseGraph(g, null, scopeLabel(type), null), g.size, lowMeals.size, s, "${lowMeals.size} of ${g.size} meals (${pct(s)})",
-                "Seen in both the earlier and the later half of the period.",
-                limitations("Insulin from the meal or a correction is likely part of the story but can't be separated out here."),
-                examples, PatternTone.UNFAVORABLE, rank(90.0, s / 0.5, g.size)
+                c, "meal.low.${scopeLabel(type)}", "meal-low", msg("pat_meal_low_title", afterScope(type)),
+                msg("pat_meal_low_summary", c.t.low, lowMeals.size, g.size, pluralScope(type)),
+                responseGraph(g, null, labelScope(type), null), g.size, lowMeals.size, s, msg("pat_meal_count_effect", lowMeals.size, g.size, pct(s)),
+                msg("pat_meal_unc_halves"),
+                limitations(msg("pat_meal_low_lim")),
+                examples, PatternTone.UNFAVORABLE, rank(90.0, s / 0.5, g.size), countLabel = true
             ),
             TipTopic.MEAL_LOW, escalate = s >= 0.4
         )
@@ -214,15 +223,15 @@ object MealDetector {
         val (a, b) = halves(g)
         if (median(a.map { it.peakRise.toDouble() }) < c.spikeMedian * 0.75 || median(b.map { it.peakRise.toDouble() }) < c.spikeMedian * 0.75) return null
         val examples = g.sortedByDescending { it.peakRise }.take(Cases.SINGLE).map {
-            it.case(0, 180, "Up ${it.peakRise.roundToInt()} mg/dL to ${it.peak.roundToInt()}, ${after(it.peakK)} after eating", it.peakK)
+            it.case(0, 180, msg("pat_meal_spike_case", it.peakRise.roundToInt(), it.peak.roundToInt(), after(it.peakK)), it.peakK)
         }
         return PatternCandidate(
             card(
-                c, "meal.spike.${scopeLabel(type)}", "meal-spike", "Big rise after ${scopeLabel(type)}",
-                "Glucose typically rose ${med.roundToInt()} mg/dL after ${scopeLabel(type)}, and by ${c.spikeRise.roundToInt()} or more after $big of ${g.size} ${scopeLabel(type)}.",
-                responseGraph(g, null, scopeLabel(type), null), g.size, big, med, "median rise ${med.roundToInt()} mg/dL",
-                "The typical rise was large in both halves of the period.",
-                limitations("Carb amounts come from what was logged, and insulin timing and amount aren't part of this finding."),
+                c, "meal.spike.${scopeLabel(type)}", "meal-spike", msg("pat_meal_spike_title", afterScope(type)),
+                msg("pat_meal_spike_summary", med.roundToInt(), afterScope(type), c.spikeRise.roundToInt(), big, g.size, pluralScope(type)),
+                responseGraph(g, null, labelScope(type), null), g.size, big, med, msg("pat_meal_spike_effect", med.roundToInt()),
+                msg("pat_meal_spike_unc"),
+                limitations(msg("pat_meal_spike_lim")),
                 examples, PatternTone.UNFAVORABLE, rank(65.0, (med - c.spikeMedian) / 40.0, g.size)
             ),
             TipTopic.MEAL_SPIKE
@@ -237,16 +246,16 @@ object MealDetector {
         if (a.none(has) || b.none(has)) return null
         val s = share(high.size, g.size)
         val examples = high.sortedByDescending { it.lateMean }.take(Cases.SINGLE).map {
-            it.case(180, 240, "Still ${it.lateMean.roundToInt()} mg/dL on average 3–4 h after eating")
+            it.case(180, 240, msg("pat_meal_slow_case", it.lateMean.roundToInt()))
         }
         return PatternCandidate(
             card(
-                c, "meal.slow.${scopeLabel(type)}", "meal-slow", "Glucose stays high after ${scopeLabel(type)}",
-                "Three to four hours after ${high.size} of ${g.size} ${scopeLabel(type)}, glucose was still above ${c.t.high} mg/dL.",
-                responseGraph(g, null, scopeLabel(type), null), g.size, high.size, s, "${high.size} of ${g.size} meals (${pct(s)})",
-                "Seen in both the earlier and the later half of the period.",
-                limitations("Meals that run into each other are excluded, but a late correction or snack can still affect the later hours."),
-                examples, PatternTone.UNFAVORABLE, rank(60.0, s / 0.6, g.size)
+                c, "meal.slow.${scopeLabel(type)}", "meal-slow", msg("pat_meal_slow_title", afterScope(type)),
+                msg("pat_meal_slow_summary", high.size, g.size, pluralScope(type), c.t.high),
+                responseGraph(g, null, labelScope(type), null), g.size, high.size, s, msg("pat_meal_count_effect", high.size, g.size, pct(s)),
+                msg("pat_meal_unc_halves"),
+                limitations(msg("pat_meal_slow_lim")),
+                examples, PatternTone.UNFAVORABLE, rank(60.0, s / 0.6, g.size), countLabel = true
             ),
             TipTopic.MEAL_SLOW
         )
@@ -259,15 +268,15 @@ object MealDetector {
         val s = share(smooth, g.size)
         if (med < GOOD_MIN_RISE || med > GOOD_MAX_RISE || s < GOOD_MIN_SHARE) return null
         val examples = Cases.typical(g, Cases.SINGLE) { it.peakRise.toDouble() }.sortedByDescending { it.startUtc }.map {
-            it.case(0, 240, "Rose ${it.peakRise.roundToInt()} mg/dL to ${it.peak.roundToInt()}, then settled", it.peakK)
+            it.case(0, 240, msg("pat_meal_good_case", it.peakRise.roundToInt(), it.peak.roundToInt()), it.peakK)
         }
         return PatternCandidate(
             card(
-                c, "meal.good.${scopeLabel(type)}", "meal-good", "Smooth glucose after ${scopeLabel(type)}",
-                "After $smooth of ${g.size} ${scopeLabel(type)} glucose rose gently (typically ${med.roundToInt()} mg/dL), stayed in range and settled back within 4 hours.",
-                responseGraph(g, null, scopeLabel(type), null), g.size, smooth, s, "${pct(s)} of meals smooth",
-                "Consistent across the period.",
-                listOf("Meals with another meal close by, too little sensor data, or glucose already low at the start are left out."),
+                c, "meal.good.${scopeLabel(type)}", "meal-good", msg("pat_meal_good_title", afterScope(type)),
+                msg("pat_meal_good_summary", smooth, g.size, pluralScope(type), med.roundToInt()),
+                responseGraph(g, null, labelScope(type), null), g.size, smooth, s, msg("pat_meal_good_effect", pct(s)),
+                msg("pat_meal_good_unc"),
+                listOf(msg("pat_meal_lim_excluded")),
                 examples, PatternTone.FAVORABLE, rank(30.0, (s - GOOD_MIN_SHARE) / 0.3, g.size)
             ),
             TipTopic.MEAL_GOOD
@@ -290,10 +299,10 @@ object MealDetector {
         val usable = withComp.size >= 2 * MIN_GROUP && compCut >= RICH_MIN_CUT_G &&
             byComposition.first.size >= MIN_GROUP && byComposition.second.size >= MIN_GROUP &&
             median(byComposition.first.map { (it.fat + it.protein).toDouble() }) >= RICH_RATIO * median(byComposition.second.map { (it.fat + it.protein).toDouble() })
-        val (rich, light, basis) = if (usable) Triple(byComposition.first, byComposition.second, "recorded fat and protein")
+        val (rich, light, basis) = if (usable) Triple(byComposition.first, byComposition.second, ref("pat_basis_composition"))
         else {
             val slowLogged = c.all.partition { it.impact == ImpactType.LONG }
-            Triple(slowLogged.first, slowLogged.second, "the absorption you logged")
+            Triple(slowLogged.first, slowLogged.second, ref("pat_basis_logged"))
         }
         if (rich.size < MIN_GROUP || light.size < MIN_GROUP) return emptyList()
         val lateRich = rich.filter { !it.lateMean.isNaN() }.map { it.lateRise.toDouble() }
@@ -302,25 +311,28 @@ object MealDetector {
         val (diff, se) = welch(lateRich, lateLight)
         if (diff < c.richDiff || diff < SE_FACTOR * se) return emptyList()
         val composition = usable
-        val groupName = if (composition) "Richer meals" else "Slow-absorbing meals"
-        fun late(r: Response, group: String) = r.case(
-            180, 240, "${Cases.signed(r.lateRise)} mg/dL from the start at 3–4 h" + if (r.hasComposition) " · ${r.fat + r.protein} g fat + protein" else "", group = group
+        val groupLabel = Msg(if (composition) "pat_label_richer" else "pat_label_slowabs")
+        val groupName = ref(if (composition) "pat_grp_richer" else "pat_grp_slowabs")
+        val otherMeals = Msg("pat_label_other_meals")
+        fun late(r: Response, group: Msg) = r.case(
+            180, 240,
+            if (r.hasComposition) msg("pat_meal_rich_case_comp", Cases.signed(r.lateRise), r.fat + r.protein) else msg("pat_meal_rich_case", Cases.signed(r.lateRise)),
+            group = group
         )
-        val examples = Cases.typical(rich.filter { !it.lateMean.isNaN() }) { it.lateRise.toDouble() }.map { late(it, groupName) } +
-            Cases.typical(light.filter { !it.lateMean.isNaN() }) { it.lateRise.toDouble() }.map { late(it, "Other meals") }
+        val examples = Cases.typical(rich.filter { !it.lateMean.isNaN() }) { it.lateRise.toDouble() }.map { late(it, groupLabel) } +
+            Cases.typical(light.filter { !it.lateMean.isNaN() }) { it.lateRise.toDouble() }.map { late(it, otherMeals) }
         val limits = limitations(
-            if (composition) "Richer means $compCut g or more of fat and protein combined, the middle of what you record; meals without recorded fat or protein aren't compared."
-            else "Fat and protein weren't recorded often enough, so this uses the absorption you logged for each meal, which is less reliable than recorded composition."
-        ) + "Richer meals are often bigger meals as well, so size and composition can't be told apart here."
+            if (composition) msg("pat_meal_rich_lim_comp", compCut) else msg("pat_meal_rich_lim_logged")
+        ) + msg("pat_meal_rich_lim_size")
         return listOf(
             PatternCandidate(
                 card(
-                    c, "meal.rich", "meal-rich", if (composition) "Richer meals keep glucose up longer" else "Slow-absorbing meals keep glucose up longer",
-                    "3–4 hours after $groupName (${rich.size}) glucose was ${diff.roundToInt()} mg/dL higher above its starting level than after the others (${light.size}).",
-                    responseGraph(rich, light, groupName, "Other meals"), rich.size + light.size, rich.size, diff, "+${diff.roundToInt()} mg/dL at 3–4 h",
-                    "The difference is about ${"%.1f".format(diff / se)}× its likely margin of error (±${se.roundToInt()} mg/dL); based on $basis.",
+                    c, "meal.rich", "meal-rich", msg(if (composition) "pat_meal_rich_title" else "pat_meal_slowabs_title"),
+                    msg("pat_meal_rich_summary", groupName, rich.size, diff.roundToInt(), light.size),
+                    responseGraph(rich, light, groupLabel, otherMeals), rich.size + light.size, rich.size, diff, msg("pat_meal_rich_effect", diff.roundToInt()),
+                    msg("pat_meal_margin_basis", dec1(diff / se), se.roundToInt(), basis),
                     limits, examples, PatternTone.UNFAVORABLE,
-                    rank(55.0, diff / 50.0, rich.size + light.size) * if (composition) 1.0 else 0.8, baseline = "Other meals in the same period"
+                    rank(55.0, diff / 50.0, rich.size + light.size) * if (composition) 1.0 else 0.8, baseline = msg("pat_meal_rich_baseline")
                 ),
                 TipTopic.MEAL_RICH
             )
@@ -333,18 +345,19 @@ object MealDetector {
         if (g.size < MIN_MEALS_PER_TYPE || rest.size < MIN_MEALS_PER_TYPE) return@mapNotNull null
         val (diff, se) = welch(g.map { it.peakRise.toDouble() }, rest.map { it.peakRise.toDouble() })
         if (diff < c.typeDiff || diff < SE_FACTOR * se) return@mapNotNull null
-        val aLabel = scopeLabel(type).replaceFirstChar { it.uppercase() }
-        fun rise(r: Response, group: String) = r.case(0, 180, "Rose ${r.peakRise.roundToInt()} mg/dL, ${after(r.peakK)} after eating", r.peakK, group)
+        val aLabel = labelScope(type)
+        val otherMeals = Msg("pat_label_other_meals")
+        fun rise(r: Response, group: Msg) = r.case(0, 180, msg("pat_meal_type_case", r.peakRise.roundToInt(), after(r.peakK)), r.peakK, group)
         val examples = Cases.typical(g) { it.peakRise.toDouble() }.map { rise(it, aLabel) } +
-            Cases.typical(rest) { it.peakRise.toDouble() }.map { rise(it, "Other meals") }
+            Cases.typical(rest) { it.peakRise.toDouble() }.map { rise(it, otherMeals) }
         PatternCandidate(
             card(
-                c, "meal.type.${scopeLabel(type)}", "meal-type", "Bigger rises after ${scopeLabel(type)}",
-                "After ${scopeLabel(type)} (${g.size}) glucose rose ${diff.roundToInt()} mg/dL more than after your other meals (${rest.size}).",
-                responseGraph(g, rest, aLabel, "Other meals"), g.size + rest.size, g.size, diff,
-                "+${diff.roundToInt()} mg/dL rise", "The difference is about ${"%.1f".format(diff / se)}× its likely margin of error (±${se.roundToInt()} mg/dL).",
-                limitations("What you eat at this meal, its size and the insulin used can all differ from your other meals."),
-                examples, PatternTone.UNFAVORABLE, rank(45.0, diff / 60.0, g.size + rest.size), baseline = "Your other meals in the same period"
+                c, "meal.type.${scopeLabel(type)}", "meal-type", msg("pat_meal_type_title", afterScope(type)),
+                msg("pat_meal_type_summary", afterScope(type), g.size, diff.roundToInt(), rest.size),
+                responseGraph(g, rest, aLabel, otherMeals), g.size + rest.size, g.size, diff,
+                msg("pat_meal_type_effect", diff.roundToInt()), msg("pat_meal_margin", dec1(diff / se), se.roundToInt()),
+                limitations(msg("pat_meal_type_lim")),
+                examples, PatternTone.UNFAVORABLE, rank(45.0, diff / 60.0, g.size + rest.size), baseline = msg("pat_meal_type_baseline")
             ),
             TipTopic.MEAL_TYPE
         )
@@ -358,19 +371,24 @@ object MealDetector {
         if (abs(ca - cb) / maxOf(ca, cb) > SIMILAR_CARBS) return emptyList() // not comparable meals
         val (diff, se) = welch(other.map { it.peakRise.toDouble() }, early.map { it.peakRise.toDouble() })
         if (diff < c.bolusDiff || diff < SE_FACTOR * se) return emptyList()
-        fun lead(m: Int) = if (m < 0) "${-m} min before eating" else if (m == 0) "when eating" else "$m min after eating"
-        fun ex(r: Response, group: String) = r.case(0, 180, "Insulin ${lead(r.bolusLeadMin!!)} · rose ${r.peakRise.roundToInt()} mg/dL", r.peakK, group)
-        val examples = Cases.typical(early) { it.peakRise.toDouble() }.map { ex(it, "Insulin before the meal") } +
-            Cases.typical(other) { it.peakRise.toDouble() }.map { ex(it, "Insulin at or after") }
+        val beforeLabel = Msg("pat_label_insulin_before")
+        val afterLabel = Msg("pat_label_insulin_after")
+        fun ex(r: Response, group: Msg): PatternExample {
+            val m = r.bolusLeadMin!!; val rise = r.peakRise.roundToInt()
+            val note = if (m < 0) msg("pat_meal_bolus_case_before", -m, rise) else if (m == 0) msg("pat_meal_bolus_case_with", rise) else msg("pat_meal_bolus_case_after", m, rise)
+            return r.case(0, 180, note, r.peakK, group)
+        }
+        val examples = Cases.typical(early) { it.peakRise.toDouble() }.map { ex(it, beforeLabel) } +
+            Cases.typical(other) { it.peakRise.toDouble() }.map { ex(it, afterLabel) }
         return listOf(
             PatternCandidate(
                 card(
-                    c, "meal.bolus", "meal-bolus", "Smaller rises when insulin comes first",
-                    "When insulin was given at least $EARLY_BOLUS_MIN minutes before eating (${early.size} meals), glucose rose ${diff.roundToInt()} mg/dL less than when it was given later (${other.size}).",
-                    responseGraph(early, other, "Insulin before the meal", "Insulin at or after"), early.size + other.size, early.size, diff,
-                    "${diff.roundToInt()} mg/dL smaller rise", "The difference is about ${"%.1f".format(diff / se)}× its likely margin of error (±${se.roundToInt()} mg/dL); typical carbs were similar (${ca.roundToInt()} vs ${cb.roundToInt()} g).",
-                    limitations("Insulin is often given in response to how glucose looks, so this may reflect why it was given when it was, not only the timing. It says nothing about how much to give.") ,
-                    examples, PatternTone.MIXED, rank(40.0, diff / 50.0, early.size + other.size), baseline = "Meals with insulin at or after eating"
+                    c, "meal.bolus", "meal-bolus", msg("pat_meal_bolus_title"),
+                    msg("pat_meal_bolus_summary", EARLY_BOLUS_MIN, early.size, diff.roundToInt(), other.size),
+                    responseGraph(early, other, beforeLabel, afterLabel), early.size + other.size, early.size, diff,
+                    msg("pat_meal_bolus_effect", diff.roundToInt()), msg("pat_meal_bolus_unc", dec1(diff / se), se.roundToInt(), ca.roundToInt(), cb.roundToInt()),
+                    limitations(msg("pat_meal_bolus_lim")),
+                    examples, PatternTone.MIXED, rank(40.0, diff / 50.0, early.size + other.size), baseline = msg("pat_meal_bolus_baseline")
                 ),
                 TipTopic.MEAL_BOLUS
             )
@@ -379,9 +397,9 @@ object MealDetector {
 
     // ---- graph ----------------------------------------------------------------------------------------------------
 
-    private fun responseGraph(g: List<Response>, compare: List<Response>?, aLabel: String, bLabel: String?): MiniGraph =
+    private fun responseGraph(g: List<Response>, compare: List<Response>?, aLabel: Msg, bLabel: Msg?): MiniGraph =
         eventGraph(
             g.map { EventCurve(it.values, it.baseline) }, compare?.map { EventCurve(it.values, it.baseline) },
-            FIRST_K, LAST_K, GRAPH_STEP, aLabel, bLabel, "meal", null, listOf(0, 60, 120, 180, 240)
+            FIRST_K, LAST_K, GRAPH_STEP, aLabel, bLabel, Msg(EVENT_MEAL), null, listOf(0, 60, 120, 180, 240)
         )
 }

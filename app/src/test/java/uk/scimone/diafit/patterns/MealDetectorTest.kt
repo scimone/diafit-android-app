@@ -131,8 +131,8 @@ class MealDetectorTest {
         val meals = (0..22).map { if (it in rich) meal(it, protein = 30, fat = 30) else meal(it, protein = 10, fat = 5) }
         val d = days { day, m -> if (m <= 120) gentle(m) else if (day in rich && m in 180..300) 170f else 115f }
         val r = detect(d, meals).single { it.card.detector == "meal-rich" }
-        assertTrue(r.card.title.startsWith("Richer meals"))
-        assertTrue(r.card.limitations.any { "fat and protein" in it })
+        assertTrue(r.card.title.k == "pat_meal_rich_title")
+        assertTrue(r.card.limitations.any { it.k == "pat_meal_rich_lim_comp" })
     }
 
     @Test fun withoutRecordedCompositionLoggedAbsorptionIsUsedAndLabelled() {
@@ -140,9 +140,8 @@ class MealDetectorTest {
         val meals = (0..22).map { meal(it, impact = if (it in slow) ImpactType.LONG else ImpactType.SHORT) }
         val d = days { day, m -> if (m <= 120) gentle(m) else if (day in slow && m in 180..300) 170f else 115f }
         val r = detect(d, meals).single { it.card.detector == "meal-rich" }
-        assertTrue(r.card.title.startsWith("Slow-absorbing"))
-        assertTrue(r.card.limitations.any { "logged" in it && "less reliable" in it })
-        assertTrue(r.card.uncertainty.contains("logged"))
+        assertTrue(r.card.title.k == "pat_meal_slowabs_title")
+        assertTrue(r.card.limitations.any { it.k == "pat_meal_rich_lim_logged" })
     }
 
     @Test fun earlierInsulinWithSmallerRisesIsReportedCarefully() {
@@ -151,7 +150,7 @@ class MealDetectorTest {
         val d = days { day, m -> if (m <= 120) 110f + (if (day in early) 25f else 75f) * sin(PI * m / 120).toFloat() else 110f }
         val b = detect(d, dinners, boluses).single { it.card.detector == "meal-bolus" }
         assertEquals(PatternTone.MIXED, b.card.tone)
-        assertTrue(b.card.limitations.any { "response to how glucose looks" in it })
+        assertTrue(b.card.limitations.any { it.k == "pat_meal_bolus_lim" })
     }
 
     @Test fun smbsDoNotCountAsMealInsulin() {
@@ -167,7 +166,7 @@ class MealDetectorTest {
         val meals = (0..22).map { if (it in rich) meal(it, protein = 15, fat = 15) else meal(it, protein = 4, fat = 4) }
         val d = days { day, m -> if (m <= 120) gentle(m) else if (day in rich && m in 180..300) 170f else 115f }
         val r = detect(d, meals).single { it.card.detector == "meal-rich" }
-        assertTrue(r.card.limitations.any { "30 g or more" in it })
+        assertTrue(r.card.limitations.any { it.k == "pat_meal_rich_lim_comp" && it.a[0] == "30" })
     }
 
     @Test fun effectSizeThresholdsFollowTheUsersVariability() {

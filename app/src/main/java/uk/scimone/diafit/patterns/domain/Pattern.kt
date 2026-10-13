@@ -1,12 +1,34 @@
 package uk.scimone.diafit.patterns.domain
 
+import androidx.annotation.StringRes
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
+
+/**
+ * Text a detector produced, stored as a string-resource name plus its arguments, so a pattern is shown in the
+ * language the app has when it is opened rather than the one it was found in. Arguments are plain strings (already
+ * formatted numbers, clock times); one that starts with "@" names another string resource ([ref]). For a plurals
+ * resource the first argument is the count.
+ */
+@Serializable
+data class Msg(val k: String, val a: List<String> = emptyList()) {
+    fun text(): String = AppStrings.byName(k, a)
+}
+
+fun msg(key: String, vararg args: Any): Msg = Msg(key, args.map { it.toString() })
+
+/** An argument that is itself a string resource ("evening" in "Low glucose in the evening"). */
+fun ref(key: String): String = "@$key"
 
 /** The five MVP pattern families (multivariable "combined" patterns are a later phase). */
 @Serializable
-enum class PatternCategory(val label: String) {
-    TIME_OF_DAY("Time of day"), MEAL("Meals"), EXERCISE("Activity"), SLEEP("Sleep"), TREND("Trends"), COMBINED("Combined")
+enum class PatternCategory(@StringRes private val labelRes: Int) {
+    TIME_OF_DAY(R.string.pat_cat_time_of_day), MEAL(R.string.pat_cat_meal), EXERCISE(R.string.pat_cat_exercise),
+    SLEEP(R.string.pat_cat_sleep), TREND(R.string.pat_cat_trend), COMBINED(R.string.pat_cat_combined);
+
+    val label: String get() = AppStrings.get(labelRes)
 }
 
 /** Whether the pattern is something to improve, to keep, or neither. */
@@ -15,8 +37,11 @@ enum class PatternTone { UNFAVORABLE, MIXED, FAVORABLE }
 
 /** Lifecycle of a stored pattern (see [PatternLifecycle]). */
 @Serializable
-enum class PatternState(val label: String) {
-    NEW("New"), UPDATED("Updated"), ONGOING("Ongoing"), RESOLVED("No longer observed"), DISMISSED("Dismissed")
+enum class PatternState(@StringRes private val labelRes: Int) {
+    NEW(R.string.pat_state_new), UPDATED(R.string.pat_state_updated), ONGOING(R.string.pat_state_ongoing),
+    RESOLVED(R.string.pat_state_resolved), DISMISSED(R.string.pat_state_dismissed);
+
+    val label: String get() = AppStrings.get(labelRes)
 }
 
 /** Hours of the day a pattern lives in; `startHour > endHour` wraps midnight. */
@@ -49,9 +74,9 @@ sealed interface MiniGraph {
     data class EventResponse(
         val startMinute: Int, val stepMinutes: Int,
         val median: List<Int>, val p25: List<Int>, val p75: List<Int>,
-        val aLabel: String,
-        val compare: List<Int>? = null, val bLabel: String? = null,
-        val eventLabel: String = "meal",
+        val aLabel: Msg,
+        val compare: List<Int>? = null, val bLabel: Msg? = null,
+        val eventLabel: Msg = Msg(EVENT_MEAL),
         val spanMinutes: Int? = null,
         val axis: List<Int> = listOf(0, 60, 120, 180, 240)
     ) : MiniGraph
@@ -59,7 +84,7 @@ sealed interface MiniGraph {
     /** Two median profiles by time of day (mg/dL), e.g. weekdays vs weekends. */
     @Serializable
     @SerialName("compare")
-    data class ProfileComparison(val aLabel: String, val a: List<Int>, val bLabel: String, val b: List<Int>) : MiniGraph
+    data class ProfileComparison(val aLabel: Msg, val a: List<Int>, val bLabel: Msg, val b: List<Int>) : MiniGraph
 }
 
 /**
@@ -76,12 +101,12 @@ data class PatternExample(
     val toUtc: Long,
     val focusFromUtc: Long,
     val focusToUtc: Long,
-    val note: String,
+    val note: Msg,
     val eventUtc: Long? = null,
     val eventEndUtc: Long? = null,
-    val eventLabel: String? = null,
+    val eventLabel: Msg? = null,
     val markUtc: Long? = null,
-    val group: String? = null
+    val group: Msg? = null
 )
 
 /**
@@ -95,33 +120,44 @@ data class PatternCard(
     val category: PatternCategory,
     /** The detector that found it ("low", "high", "dawn", ...). */
     val detector: String,
-    val title: String,
-    val summary: String,
+    val title: Msg,
+    val summary: Msg,
     val miniGraph: MiniGraph,
     val observationFromUtc: Long,
     val observationToUtc: Long,
     val baselineFromUtc: Long? = null,
     val baselineToUtc: Long? = null,
-    val baselineLabel: String? = null,
+    val baselineLabel: Msg? = null,
     val sampleSize: Int,
-    /** "days", "nights", "meals", "workouts". */
+    /** "days", "nights", "meals", "workouts" (see [SampleUnit]). */
     val sampleUnit: String,
     /** How many of the [sampleSize] observations showed the pattern, when that is a meaningful count. */
     val positiveCount: Int? = null,
     /** Comparable size of the effect, used to judge material change (a fraction, percentage points, mg/dL...). */
     val effectSize: Double,
-    val effectLabel: String,
-    val uncertainty: String,
-    val limitations: List<String>,
-    /** Older cards only: example lines as text. New cards carry [cases] instead. */
-    val examples: List<String> = emptyList(),
+    val effectLabel: Msg,
+    /** The effect label only restates "[positiveCount] of [sampleSize] <unit>", which the detail page shows as a figure anyway. */
+    val effectIsCount: Boolean = false,
+    val uncertainty: Msg,
+    val limitations: List<Msg>,
     /** The days (or meals, workouts, nights) the detail page draws to show the pattern on the person's own data. */
     val cases: List<PatternExample> = emptyList(),
+    /** String-resource names of the three tips (see [PatternTips]). */
     val tips: List<String> = emptyList(),
     val tone: PatternTone,
     val priority: Double,
     val detailRoute: String = "pattern/$id"
 )
+
+/** Resource-name suffixes of the units a sample is counted in: `pat_unit_<unit>` is the plural noun. */
+object SampleUnit {
+    const val DAYS = "days"; const val NIGHTS = "nights"; const val MEALS = "meals"; const val WORKOUTS = "workouts"
+    const val ACTIVITY = "activity"
+    const val ACTIVITIES = "activities"; const val DINNERS = "dinners"
+}
+
+const val EVENT_MEAL = "pat_ev_meal"
+const val EVENT_START = "pat_ev_start"
 
 /** Which tip set a detector's finding uses (see [PatternTips]). */
 enum class TipTopic(val isLow: Boolean = false) {

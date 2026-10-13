@@ -5,655 +5,242 @@ package uk.scimone.diafit.patterns.domain
  * practical step) and maintain/improve. Each role has ordered variants so unrelated patterns don't repeat the same
  * sentence. Wording rules (checked by PatternTipsTest): plain language, one sentence, association not cause, no
  * insulin dose or treatment changes, no asking the user to analyse data. The diabetes team is mentioned only for
- * recurring lows.
+ * recurring lows. A tip is stored as the name of its string resource (`tip_<topic>_<role><n>`), so it is shown in the
+ * language the app has when the pattern is opened; the wording lives in strings.xml.
  */
 object PatternTips {
     private class Set(val understand: List<String>, val act: List<String>, val maintain: List<String>)
 
     private val sets: Map<TipTopic, Set> = mapOf(
         TipTopic.LOW_NIGHT to Set(
-            understand = listOf(
-                "Insulin from the evening can still be working overnight, which may play a part in lows like these.",
-                "Evening activity or a lighter dinner may be linked to glucose dipping while you sleep."
-            ),
-            act = listOf(
-                "Keep fast-acting carbs within reach of your bed.",
-                "Glance at your glucose trend arrow before you go to sleep."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Keeping fast-acting carbs close by means a low stays short."
-            )
+            understand = listOf("tip_low_night_u1", "tip_low_night_u2"),
+            act = listOf("tip_low_night_a1", "tip_low_night_a2"),
+            maintain = listOf("tip_low_night_m1", "tip_low_night_m2")
         ),
         TipTopic.LOW_DAY to Set(
-            understand = listOf(
-                "Lows at the same time of day often follow a meal, a workout or active insulin from earlier.",
-                "Busy stretches with skipped or delayed meals may be linked to these lows."
-            ),
-            act = listOf(
-                "Carry fast-acting carbs on days when this time slot is likely to be busy.",
-                "If you feel shaky or hungry around this time, treat it as your hypo plan describes."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Having a snack ready for this time slot keeps a dip from turning into a low."
-            )
+            understand = listOf("tip_low_day_u1", "tip_low_day_u2"),
+            act = listOf("tip_low_day_a1", "tip_low_day_a2"),
+            maintain = listOf("tip_low_day_m1", "tip_low_day_m2")
         ),
         TipTopic.HIGH_DAY to Set(
-            understand = listOf(
-                "Meals, snacks or stress can all push glucose up around this time of day.",
-                "Higher glucose here may be linked to what and when you eat just before it."
-            ),
-            act = listOf(
-                "A short walk after eating often helps flatten a rise.",
-                "Moving a larger meal or snack away from this window may be worth trying."
-            ),
-            maintain = listOf(
-                "Notice which meals keep you steadier here and repeat them.",
-                "On days this window stays calmer, keep the routine that got you there."
-            )
+            understand = listOf("tip_high_day_u1", "tip_high_day_u2"),
+            act = listOf("tip_high_day_a1", "tip_high_day_a2"),
+            maintain = listOf("tip_high_day_m1", "tip_high_day_m2")
         ),
         TipTopic.HIGH_NIGHT to Set(
-            understand = listOf(
-                "Late meals, evening snacks or hormones released overnight may keep glucose elevated.",
-                "A heavy or late dinner may be linked to glucose staying high into the night."
-            ),
-            act = listOf(
-                "An earlier or lighter dinner may help glucose settle before bed.",
-                "A short walk after dinner is an easy way to ease an evening rise."
-            ),
-            maintain = listOf(
-                "Pick the evenings that went well and make that your usual routine.",
-                "A steady bedtime routine can help overnight glucose stay calmer."
-            )
+            understand = listOf("tip_high_night_u1", "tip_high_night_u2"),
+            act = listOf("tip_high_night_a1", "tip_high_night_a2"),
+            maintain = listOf("tip_high_night_m1", "tip_high_night_m2")
         ),
         TipTopic.VARIABILITY to Set(
-            understand = listOf(
-                "Swings like these often come from differences in meal size, timing or activity between days.",
-                "When glucose changes this much, mixed meals and varied routines may play a part."
-            ),
-            act = listOf(
-                "Keeping meal times and portions similar at this time of day can make glucose more predictable.",
-                "Plan snacks and activity for this stretch so it looks alike from day to day."
-            ),
-            maintain = listOf(
-                "Once things settle, a steady routine here is worth keeping.",
-                "Reuse the meals that gave you smooth results in this window."
-            )
+            understand = listOf("tip_variability_u1", "tip_variability_u2"),
+            act = listOf("tip_variability_a1", "tip_variability_a2"),
+            maintain = listOf("tip_variability_m1", "tip_variability_m2")
         ),
         TipTopic.DAWN to Set(
-            understand = listOf(
-                "Early-morning hormones can make glucose climb before you wake up.",
-                "A late or large evening meal may be linked to a rise in the early hours."
-            ),
-            act = listOf(
-                "An earlier, lighter dinner may smooth the morning rise.",
-                "A short walk soon after waking can take the edge off a morning rise."
-            ),
-            maintain = listOf(
-                "Mornings are easier when evenings stay steady, so keep your calm evenings going.",
-                "Keep a regular wake-up and breakfast time to make mornings more predictable."
-            )
+            understand = listOf("tip_dawn_u1", "tip_dawn_u2"),
+            act = listOf("tip_dawn_a1", "tip_dawn_a2"),
+            maintain = listOf("tip_dawn_m1", "tip_dawn_m2")
         ),
         TipTopic.STEADY_NIGHT to Set(
-            understand = listOf(
-                "Your glucose stays steady in this window, which suggests your evening routine is working.",
-                "Steady nights usually mean dinner and evening habits are a good match for you."
-            ),
-            act = listOf(
-                "Keep dinner timing and portions close to what they are on these nights.",
-                "Stick with the evening habits that work, even on busy days."
-            ),
-            maintain = listOf(
-                "A calm night sets up a good morning, so build on this.",
-                "Reuse this routine on days that feel less predictable."
-            )
+            understand = listOf("tip_steady_night_u1", "tip_steady_night_u2"),
+            act = listOf("tip_steady_night_a1", "tip_steady_night_a2"),
+            maintain = listOf("tip_steady_night_m1", "tip_steady_night_m2")
         ),
         TipTopic.STEADY_DAY to Set(
-            understand = listOf(
-                "Your glucose stays steady in this window, which suggests your meals and activity fit well here.",
-                "Steady stretches like this often come from consistent meals and routines."
-            ),
-            act = listOf(
-                "Keep the meals and activity you have in this window.",
-                "Stick with what you do here when your schedule changes."
-            ),
-            maintain = listOf(
-                "Borrow this routine for the times of day that are harder.",
-                "Build on this one step at a time."
-            )
+            understand = listOf("tip_steady_day_u1", "tip_steady_day_u2"),
+            act = listOf("tip_steady_day_a1", "tip_steady_day_a2"),
+            maintain = listOf("tip_steady_day_m1", "tip_steady_day_m2")
         ),
         TipTopic.WEEKEND_BETTER to Set(
-            understand = listOf(
-                "Different sleep times, meals or activity may play a part in steadier weekends.",
-                "More relaxed days with more regular meals may be linked to steadier glucose."
-            ),
-            act = listOf(
-                "Try keeping one of your helpful weekend routines on weekdays, too.",
-                "Bring the weekend meal rhythm into a weekday or two."
-            ),
-            maintain = listOf(
-                "Stick with the habits that help keep your glucose steady.",
-                "Keep what works on weekends going."
-            )
+            understand = listOf("tip_weekend_better_u1", "tip_weekend_better_u2"),
+            act = listOf("tip_weekend_better_a1", "tip_weekend_better_a2"),
+            maintain = listOf("tip_weekend_better_m1", "tip_weekend_better_m2")
         ),
         TipTopic.MEAL_LOW to Set(
-            understand = listOf(
-                "Insulin taken for a meal can still be working a few hours later, which may be linked to lows after eating.",
-                "A lighter meal than usual may play a part in a dip a few hours after eating."
-            ),
-            act = listOf(
-                "Keep fast-acting carbs handy in the hours after meals.",
-                "Stay alert to the signs of a low in the hours after you eat."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Treating a low promptly, as your plan describes, keeps it short."
-            )
+            understand = listOf("tip_meal_low_u1", "tip_meal_low_u2"),
+            act = listOf("tip_meal_low_a1", "tip_meal_low_a2"),
+            maintain = listOf("tip_meal_low_m1", "tip_meal_low_m2")
         ),
         TipTopic.MEAL_SPIKE to Set(
-            understand = listOf(
-                "Fast-digesting carbs can push glucose up quickly after a meal.",
-                "Meal size and the type of carbs may both play a part in a big rise."
-            ),
-            act = listOf(
-                "Pairing carbs with protein or fibre may slow the rise.",
-                "A short walk after eating often takes the edge off a rise."
-            ),
-            maintain = listOf(
-                "Notice which meals give you smaller rises and make them your regulars.",
-                "Keep the meals that stay gentle on your glucose in rotation."
-            )
+            understand = listOf("tip_meal_spike_u1", "tip_meal_spike_u2"),
+            act = listOf("tip_meal_spike_a1", "tip_meal_spike_a2"),
+            maintain = listOf("tip_meal_spike_m1", "tip_meal_spike_m2")
         ),
         TipTopic.MEAL_SLOW to Set(
-            understand = listOf(
-                "Fat and protein can slow digestion, so glucose may stay up for hours after a meal.",
-                "A large meal can keep glucose elevated for longer."
-            ),
-            act = listOf(
-                "A walk a little while after eating may help glucose come down sooner.",
-                "Smaller portions may be easier on the hours after eating."
-            ),
-            maintain = listOf(
-                "Reuse the meals after which your glucose settles back sooner.",
-                "Keep the habits that help glucose come back down."
-            )
+            understand = listOf("tip_meal_slow_u1", "tip_meal_slow_u2"),
+            act = listOf("tip_meal_slow_a1", "tip_meal_slow_a2"),
+            maintain = listOf("tip_meal_slow_m1", "tip_meal_slow_m2")
         ),
         TipTopic.MEAL_GOOD to Set(
-            understand = listOf(
-                "Your glucose rises gently and comes back down, which suggests these meals suit you.",
-                "Steady responses like this often come from consistent portions and food choices."
-            ),
-            act = listOf(
-                "Keep portions and food choices close to what they are for these meals.",
-                "Reuse these meals when you want a predictable result."
-            ),
-            maintain = listOf(
-                "Build on this one meal at a time.",
-                "Save the meals that give you predictable results."
-            )
+            understand = listOf("tip_meal_good_u1", "tip_meal_good_u2"),
+            act = listOf("tip_meal_good_a1", "tip_meal_good_a2"),
+            maintain = listOf("tip_meal_good_m1", "tip_meal_good_m2")
         ),
         TipTopic.MEAL_RICH to Set(
-            understand = listOf(
-                "Fat and protein can make a meal affect your glucose for longer.",
-                "Slow-digesting meals may keep glucose up for hours."
-            ),
-            act = listOf(
-                "Pay attention to your glucose a few hours after richer meals.",
-                "Plan for a longer-lasting effect when you have richer meals."
-            ),
-            maintain = listOf(
-                "Save meals that give you more predictable results.",
-                "Keep the richer meals that sit well with you."
-            )
+            understand = listOf("tip_meal_rich_u1", "tip_meal_rich_u2"),
+            act = listOf("tip_meal_rich_a1", "tip_meal_rich_a2"),
+            maintain = listOf("tip_meal_rich_m1", "tip_meal_rich_m2")
         ),
         TipTopic.MEAL_TYPE to Set(
-            understand = listOf(
-                "The time of day can change how your body handles food, which may play a part.",
-                "Typical foods at this meal may be linked to its bigger rises."
-            ),
-            act = listOf(
-                "Try the choices from your steadier meals at this meal, too.",
-                "A short walk afterwards is an easy thing to add to this meal."
-            ),
-            maintain = listOf(
-                "Keep what works at your steadier meals.",
-                "Build on the meals that stay gentle."
-            )
+            understand = listOf("tip_meal_type_u1", "tip_meal_type_u2"),
+            act = listOf("tip_meal_type_a1", "tip_meal_type_a2"),
+            maintain = listOf("tip_meal_type_m1", "tip_meal_type_m2")
         ),
         TipTopic.MEAL_BOLUS to Set(
-            understand = listOf(
-                "Insulin that starts working before the food does may help keep a rise smaller.",
-                "Timing may play a part in how big the rise after a meal is."
-            ),
-            act = listOf(
-                "If you'd like to explore different insulin timing, your diabetes team can help you plan it.",
-                "Planning meals a little ahead makes it easier to time things well."
-            ),
-            maintain = listOf(
-                "Keep doing what works on the meals that went smoothly.",
-                "Reuse the routines of your smoother meals."
-            )
+            understand = listOf("tip_meal_bolus_u1", "tip_meal_bolus_u2"),
+            act = listOf("tip_meal_bolus_a1", "tip_meal_bolus_a2"),
+            maintain = listOf("tip_meal_bolus_m1", "tip_meal_bolus_m2")
         ),
         TipTopic.EX_DROP to Set(
-            understand = listOf(
-                "Your muscles use extra glucose while you move, so glucose can drop during activity.",
-                "Insulin that is still active from earlier may play a part in dips during activity."
-            ),
-            act = listOf(
-                "Keep a quick carb source with you when you're active.",
-                "Stay alert to the signs of a low while you move."
-            ),
-            maintain = listOf(
-                "Notice which activities keep you steadier and make them a habit.",
-                "Keep the routines that go well around your workouts."
-            )
+            understand = listOf("tip_ex_drop_u1", "tip_ex_drop_u2"),
+            act = listOf("tip_ex_drop_a1", "tip_ex_drop_a2"),
+            maintain = listOf("tip_ex_drop_m1", "tip_ex_drop_m2")
         ),
         TipTopic.EX_LOW_NOW to Set(
-            understand = listOf(
-                "Muscles keep taking up glucose right after activity, which may be linked to lows soon afterwards.",
-                "Insulin that is still active may add to a low in the first hours after activity."
-            ),
-            act = listOf(
-                "Keep fast-acting carbs handy for the first hours after activity.",
-                "Stay alert to the signs of a low after you finish."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Treating a low promptly, as your plan describes, keeps it short."
-            )
+            understand = listOf("tip_ex_low_now_u1", "tip_ex_low_now_u2"),
+            act = listOf("tip_ex_low_now_a1", "tip_ex_low_now_a2"),
+            maintain = listOf("tip_ex_low_now_m1", "tip_ex_low_now_m2")
         ),
         TipTopic.EX_LOW_LATER to Set(
-            understand = listOf(
-                "Your muscles may keep using extra glucose for hours after exercise.",
-                "Refilling the body's glucose stores can lower glucose long after a workout."
-            ),
-            act = listOf(
-                "Keep an eye on your glucose for several hours after a workout.",
-                "Keep fast-acting carbs close by in the evening after a workout."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Longer workouts may need extra planning under your usual exercise management plan."
-            )
+            understand = listOf("tip_ex_low_later_u1", "tip_ex_low_later_u2"),
+            act = listOf("tip_ex_low_later_a1", "tip_ex_low_later_a2"),
+            maintain = listOf("tip_ex_low_later_m1", "tip_ex_low_later_m2")
         ),
         TipTopic.EX_RISE to Set(
-            understand = listOf(
-                "Intense or short bursts of activity can make glucose rise for a while.",
-                "Stress hormones during hard efforts may push glucose up."
-            ),
-            act = listOf(
-                "A gentle cool-down or walk afterwards may help glucose settle.",
-                "Be patient after hard efforts, as glucose often comes back down on its own."
-            ),
-            maintain = listOf(
-                "Keep the workouts that leave you feeling good and steady.",
-                "Reuse the types of activity that keep your glucose calmer."
-            )
+            understand = listOf("tip_ex_rise_u1", "tip_ex_rise_u2"),
+            act = listOf("tip_ex_rise_a1", "tip_ex_rise_a2"),
+            maintain = listOf("tip_ex_rise_m1", "tip_ex_rise_m2")
         ),
         TipTopic.EX_GOOD to Set(
-            understand = listOf(
-                "Your glucose stays steady during activity, which suggests your routine around it works.",
-                "Steady responses like this often come from consistent timing and fuelling."
-            ),
-            act = listOf(
-                "Keep the way you prepare for and recover from activity much as it is.",
-                "Reuse this routine when you try new activities."
-            ),
-            maintain = listOf(
-                "Build on this, one session at a time.",
-                "Keep doing what works around your workouts."
-            )
+            understand = listOf("tip_ex_good_u1", "tip_ex_good_u2"),
+            act = listOf("tip_ex_good_a1", "tip_ex_good_a2"),
+            maintain = listOf("tip_ex_good_m1", "tip_ex_good_m2")
         ),
         TipTopic.EX_LONG to Set(
-            understand = listOf(
-                "Longer sessions use more glucose, which may be linked to lower glucose afterwards.",
-                "The longer you move, the longer muscles can keep taking up glucose."
-            ),
-            act = listOf(
-                "Plan some extra care for glucose in the hours after longer sessions.",
-                "Keep fast-acting carbs close by after longer sessions."
-            ),
-            maintain = listOf(
-                "Shorter sessions seem to go smoothly, so keep them in your routine.",
-                "Longer workouts may need extra planning under your usual exercise management plan."
-            )
+            understand = listOf("tip_ex_long_u1", "tip_ex_long_u2"),
+            act = listOf("tip_ex_long_a1", "tip_ex_long_a2"),
+            maintain = listOf("tip_ex_long_m1", "tip_ex_long_m2")
         ),
         TipTopic.EX_EVENING to Set(
-            understand = listOf(
-                "Evening activity can keep glucose lower into the night, which may be linked to this.",
-                "Overnight insulin and recovery after an evening workout may play a part."
-            ),
-            act = listOf(
-                "Keep fast-acting carbs near your bed after evening activity.",
-                "Be extra alert to the signs of a low after evening activity."
-            ),
-            maintain = listOf(
-                "Earlier sessions seem to leave you steadier, so keep them in the mix.",
-                "Keep the habits that work on the days you move earlier."
-            )
+            understand = listOf("tip_ex_evening_u1", "tip_ex_evening_u2"),
+            act = listOf("tip_ex_evening_a1", "tip_ex_evening_a2"),
+            maintain = listOf("tip_ex_evening_m1", "tip_ex_evening_m2")
         ),
         TipTopic.EX_NEXTDAY to Set(
-            understand = listOf(
-                "Regular movement can help the body use insulin more effectively the next day.",
-                "Active days may be linked to steadier glucose the day after."
-            ),
-            act = listOf(
-                "Try to keep a bit of movement in most of your days.",
-                "Short walks add up, so fit them in where you can."
-            ),
-            maintain = listOf(
-                "Keep the activity habits that work for you.",
-                "Build on this one active day at a time."
-            )
+            understand = listOf("tip_ex_nextday_u1", "tip_ex_nextday_u2"),
+            act = listOf("tip_ex_nextday_a1", "tip_ex_nextday_a2"),
+            maintain = listOf("tip_ex_nextday_m1", "tip_ex_nextday_m2")
         ),
         TipTopic.EX_INTENSITY to Set(
-            understand = listOf(
-                "Harder efforts can change how much glucose the body uses and releases.",
-                "Higher heart rates during activity may be linked to this bigger change."
-            ),
-            act = listOf(
-                "Plan a little extra care around your harder sessions.",
-                "A steady, easier pace may suit you better when you want glucose to stay level."
-            ),
-            maintain = listOf(
-                "Keep the intensity that leaves your glucose steadier.",
-                "Reuse the kind of session that keeps your glucose calm."
-            )
+            understand = listOf("tip_ex_intensity_u1", "tip_ex_intensity_u2"),
+            act = listOf("tip_ex_intensity_a1", "tip_ex_intensity_a2"),
+            maintain = listOf("tip_ex_intensity_m1", "tip_ex_intensity_m2")
         ),
         TipTopic.SLEEP_SHORT to Set(
-            understand = listOf(
-                "Short nights can make the body respond less well to insulin the next day, which may show up in glucose.",
-                "Tired days often bring more snacking and less movement, which may be linked to this."
-            ),
-            act = listOf(
-                "Try moving your bedtime a little earlier on the nights you can.",
-                "Winding down at a regular time gives you the best chance of a full night."
-            ),
-            maintain = listOf(
-                "Protect the nights you sleep well, as they seem to go with steadier days.",
-                "Keep the evening habits that help you get a full night."
-            )
+            understand = listOf("tip_sleep_short_u1", "tip_sleep_short_u2"),
+            act = listOf("tip_sleep_short_a1", "tip_sleep_short_a2"),
+            maintain = listOf("tip_sleep_short_m1", "tip_sleep_short_m2")
         ),
         TipTopic.SLEEP_RESTLESS to Set(
-            understand = listOf(
-                "Restless nights may be linked to stress, late meals, caffeine or glucose swings, and they can carry into the next day.",
-                "Broken sleep can leave you tired and less active the next day, which may be linked to this."
-            ),
-            act = listOf(
-                "A dark, cool and quiet bedroom may help you sleep more soundly.",
-                "Try keeping caffeine and large meals away from bedtime."
-            ),
-            maintain = listOf(
-                "Keep whatever helps you settle on your calmer nights.",
-                "Repeat the evening routine of your quieter nights."
-            )
+            understand = listOf("tip_sleep_restless_u1", "tip_sleep_restless_u2"),
+            act = listOf("tip_sleep_restless_a1", "tip_sleep_restless_a2"),
+            maintain = listOf("tip_sleep_restless_m1", "tip_sleep_restless_m2")
         ),
         TipTopic.SLEEP_IRREGULAR to Set(
-            understand = listOf(
-                "Going to bed at very different times can unsettle the body clock, which may be linked to less steady days.",
-                "A shifting bedtime often shifts meals and activity too, which may play a part."
-            ),
-            act = listOf(
-                "Aim for a bedtime within about an hour of your usual one.",
-                "Pick a regular wind-down time and keep to it where you can."
-            ),
-            maintain = listOf(
-                "Keep the regular evenings that go with your steadier days.",
-                "A steady routine is a good habit to hold on to."
-            )
+            understand = listOf("tip_sleep_irregular_u1", "tip_sleep_irregular_u2"),
+            act = listOf("tip_sleep_irregular_a1", "tip_sleep_irregular_a2"),
+            maintain = listOf("tip_sleep_irregular_m1", "tip_sleep_irregular_m2")
         ),
         TipTopic.TREND_BETTER to Set(
-            understand = listOf(
-                "Steadier stretches often follow more regular meals, sleep and activity, which may be what is behind this.",
-                "A calmer period can come from routines settling in, which may be linked to this."
-            ),
-            act = listOf(
-                "Think about what has been different lately and try to keep it going.",
-                "Stick with the routines of the past two weeks while they are working."
-            ),
-            maintain = listOf(
-                "Keep doing what you have been doing, as it seems to be paying off.",
-                "Build on this good run one day at a time."
-            )
+            understand = listOf("tip_trend_better_u1", "tip_trend_better_u2"),
+            act = listOf("tip_trend_better_a1", "tip_trend_better_a2"),
+            maintain = listOf("tip_trend_better_m1", "tip_trend_better_m2")
         ),
         TipTopic.TREND_WORSE to Set(
-            understand = listOf(
-                "Illness, stress, a new sensor or a change in routine can all move glucose for a couple of weeks.",
-                "Changes in sleep, meals or activity may be linked to this shift."
-            ),
-            act = listOf(
-                "Ease back towards the routines that worked for you before.",
-                "A regular rhythm of meals, sleep and movement often helps glucose settle."
-            ),
-            maintain = listOf(
-                "Small steady habits tend to bring the numbers back over time.",
-                "Pick one routine to tighten up first and build from there."
-            )
+            understand = listOf("tip_trend_worse_u1", "tip_trend_worse_u2"),
+            act = listOf("tip_trend_worse_a1", "tip_trend_worse_a2"),
+            maintain = listOf("tip_trend_worse_m1", "tip_trend_worse_m2")
         ),
         TipTopic.TREND_LOWS_UP to Set(
-            understand = listOf(
-                "Lows becoming more frequent can follow changes in activity, meals or routine.",
-                "More lows can come from a stretch of extra activity or lighter eating, which may be linked to this."
-            ),
-            act = listOf(
-                "Keep fast-acting carbs with you wherever you go.",
-                "Carry a quick snack for the times of day when lows tend to show up."
-            ),
-            maintain = listOf(
-                "Because lows are becoming more frequent, it's worth raising them with your diabetes team.",
-                "Having fast-acting carbs at hand keeps a low short."
-            )
+            understand = listOf("tip_trend_lows_up_u1", "tip_trend_lows_up_u2"),
+            act = listOf("tip_trend_lows_up_a1", "tip_trend_lows_up_a2"),
+            maintain = listOf("tip_trend_lows_up_m1", "tip_trend_lows_up_m2")
         ),
         TipTopic.COMBO_LATE_DINNER to Set(
-            understand = listOf(
-                "Food eaten late can still be digesting while you sleep, which may keep glucose higher through the night.",
-                "Late dinners often overlap with the hours when the body is less sensitive to insulin, which may play a part."
-            ),
-            act = listOf(
-                "Try finishing dinner a little earlier on the evenings you can.",
-                "A lighter late meal may sit more gently overnight."
-            ),
-            maintain = listOf(
-                "Keep the earlier dinners going, as they seem to go with calmer nights.",
-                "Stick with the dinner times that give you steadier nights."
-            )
+            understand = listOf("tip_combo_late_dinner_u1", "tip_combo_late_dinner_u2"),
+            act = listOf("tip_combo_late_dinner_a1", "tip_combo_late_dinner_a2"),
+            maintain = listOf("tip_combo_late_dinner_m1", "tip_combo_late_dinner_m2")
         ),
         TipTopic.COMBO_EVENING_LOW to Set(
-            understand = listOf(
-                "Activity in the evening can keep using up glucose for many hours afterwards, which may be linked to these lows.",
-                "Muscles refill their energy stores overnight after exercise, which can pull glucose down."
-            ),
-            act = listOf(
-                "Have fast-acting carbs within reach by your bed on evenings you've been active.",
-                "A small snack before bed on active evenings may help keep the night steadier."
-            ),
-            maintain = listOf(
-                "Because these lows keep coming back, it's worth raising them with your diabetes team.",
-                "Keeping fast-acting carbs close by means a low stays short."
-            )
+            understand = listOf("tip_combo_evening_low_u1", "tip_combo_evening_low_u2"),
+            act = listOf("tip_combo_evening_low_a1", "tip_combo_evening_low_a2"),
+            maintain = listOf("tip_combo_evening_low_m1", "tip_combo_evening_low_m2")
         ),
         TipTopic.COMBO_SLEEP_BREAKFAST to Set(
-            understand = listOf(
-                "After a short night the body can respond less well to insulin, which may make breakfast raise glucose more.",
-                "Tiredness and stress hormones after poor sleep may be linked to a bigger rise."
-            ),
-            act = listOf(
-                "After a short night, a gentler breakfast may be worth a try.",
-                "A short walk after breakfast often helps flatten the rise."
-            ),
-            maintain = listOf(
-                "Protect your sleep where you can, as longer nights seem to go with calmer mornings.",
-                "Keep the evening habits that help you get a full night."
-            )
+            understand = listOf("tip_combo_sleep_breakfast_u1", "tip_combo_sleep_breakfast_u2"),
+            act = listOf("tip_combo_sleep_breakfast_a1", "tip_combo_sleep_breakfast_a2"),
+            maintain = listOf("tip_combo_sleep_breakfast_m1", "tip_combo_sleep_breakfast_m2")
         ),
         TipTopic.CTX_EX_PRE to Set(
-            understand = listOf(
-                "Glucose that is already moving tends to keep going once activity starts, which may explain this.",
-                "Food and medication from earlier hours may still be acting when you start, which can add to the effect."
-            ),
-            act = listOf(
-                "Glance at your trend arrow before you start and plan fast-acting carbs if it points down.",
-                "Starting a little later, once glucose has levelled off, may give a steadier session."
-            ),
-            maintain = listOf(
-                "Keep noting your trend before you start, since it seems to matter for you.",
-                "Repeat the starts that went smoothly, as they seem to help."
-            )
+            understand = listOf("tip_ctx_ex_pre_u1", "tip_ctx_ex_pre_u2"),
+            act = listOf("tip_ctx_ex_pre_a1", "tip_ctx_ex_pre_a2"),
+            maintain = listOf("tip_ctx_ex_pre_m1", "tip_ctx_ex_pre_m2")
         ),
         TipTopic.CTX_EX_GAP to Set(
-            understand = listOf(
-                "How recently you ate can change how much glucose the body draws on during activity, which may be linked to this.",
-                "Digestion is still under way soon after eating, which can make activity at that time behave differently."
-            ),
-            act = listOf(
-                "Plan your sessions for the time after eating that suits your glucose best.",
-                "Keep fast-acting carbs with you for sessions at the time that tends to bring glucose down."
-            ),
-            maintain = listOf(
-                "Stick with the timing that keeps your glucose steadier.",
-                "Reuse the gap after eating that has worked well for you."
-            )
+            understand = listOf("tip_ctx_ex_gap_u1", "tip_ctx_ex_gap_u2"),
+            act = listOf("tip_ctx_ex_gap_a1", "tip_ctx_ex_gap_a2"),
+            maintain = listOf("tip_ctx_ex_gap_m1", "tip_ctx_ex_gap_m2")
         ),
         TipTopic.CTX_EX_TYPE to Set(
-            understand = listOf(
-                "Different activities use energy in different ways, which can change how much they pull glucose down.",
-                "Intensity and length often differ between activity types, which may be linked to this."
-            ),
-            act = listOf(
-                "Have fast-acting carbs ready for the activity type that changes glucose most.",
-                "Plan a little extra care around the activity type with the biggest change."
-            ),
-            maintain = listOf(
-                "Keep choosing the activities that suit your glucose.",
-                "Mix in the activity types that keep glucose steadier."
-            )
+            understand = listOf("tip_ctx_ex_type_u1", "tip_ctx_ex_type_u2"),
+            act = listOf("tip_ctx_ex_type_a1", "tip_ctx_ex_type_a2"),
+            maintain = listOf("tip_ctx_ex_type_m1", "tip_ctx_ex_type_m2")
         ),
         TipTopic.CTX_MEAL_DELAY to Set(
-            understand = listOf(
-                "Fat and protein slow digestion, so carbohydrate can reach the blood hours later, which may explain a second rise.",
-                "Rich meals often keep releasing glucose long after the first rise has settled, which may be linked to this."
-            ),
-            act = listOf(
-                "Keep an eye on your glucose a few hours after richer meals.",
-                "A short walk a couple of hours after a rich meal may help flatten the later rise."
-            ),
-            maintain = listOf(
-                "Lighter versions of your favourite meals may give a calmer evening.",
-                "Spreading a rich meal into smaller portions may keep the later rise smaller."
-            )
+            understand = listOf("tip_ctx_meal_delay_u1", "tip_ctx_meal_delay_u2"),
+            act = listOf("tip_ctx_meal_delay_a1", "tip_ctx_meal_delay_a2"),
+            maintain = listOf("tip_ctx_meal_delay_m1", "tip_ctx_meal_delay_m2")
         ),
         TipTopic.CTX_MEAL_WORSE to Set(
-            understand = listOf(
-                "Meal size, timing, activity and sleep all shape how the body handles food, and the context here may play a part.",
-                "Routine usually differs between these situations, and that may be linked to the bigger rise."
-            ),
-            act = listOf(
-                "Try a smaller portion or a gentler meal in the situations where rises are biggest.",
-                "A short walk after eating in those situations often helps flatten the rise."
-            ),
-            maintain = listOf(
-                "Borrow the habits from the situations where your rises are smaller.",
-                "Build on the meals that give you the calmest response."
-            )
+            understand = listOf("tip_ctx_meal_worse_u1", "tip_ctx_meal_worse_u2"),
+            act = listOf("tip_ctx_meal_worse_a1", "tip_ctx_meal_worse_a2"),
+            maintain = listOf("tip_ctx_meal_worse_m1", "tip_ctx_meal_worse_m2")
         ),
         TipTopic.CTX_MEAL_BETTER to Set(
-            understand = listOf(
-                "Something about this situation, such as timing, movement or routine, may be helping glucose stay smoother after eating.",
-                "The mix of routine and activity in this situation often supports a gentler response."
-            ),
-            act = listOf(
-                "Reuse what you do in this situation for meals in other situations.",
-                "Try bringing the timing or movement of this situation to other meals."
-            ),
-            maintain = listOf(
-                "Keep this routine going, as it seems to work well for you.",
-                "Stick with the habits around these meals."
-            )
+            understand = listOf("tip_ctx_meal_better_u1", "tip_ctx_meal_better_u2"),
+            act = listOf("tip_ctx_meal_better_a1", "tip_ctx_meal_better_a2"),
+            maintain = listOf("tip_ctx_meal_better_m1", "tip_ctx_meal_better_m2")
         ),
         TipTopic.CTX_NIGHT_BETTER to Set(
-            understand = listOf(
-                "Regular movement during the day can support steadier glucose overnight, which may be linked to this.",
-                "Active days often go with better sleep, which may play a part."
-            ),
-            act = listOf(
-                "Keep some movement in most of your days.",
-                "Short walks add up, so fit them in where you can."
-            ),
-            maintain = listOf(
-                "Keep the activity habits that go with your calmer nights.",
-                "Build on this one active day at a time."
-            )
+            understand = listOf("tip_ctx_night_better_u1", "tip_ctx_night_better_u2"),
+            act = listOf("tip_ctx_night_better_a1", "tip_ctx_night_better_a2"),
+            maintain = listOf("tip_ctx_night_better_m1", "tip_ctx_night_better_m2")
         ),
         TipTopic.CTX_NIGHT_WORSE to Set(
-            understand = listOf(
-                "Active days often change meals, snacks and bedtime, which may play a part in less steady nights.",
-                "Glucose can keep shifting for hours after activity, which may reach into the night."
-            ),
-            act = listOf(
-                "Glance at your glucose trend before bed on active days.",
-                "Keep fast-acting carbs within reach on nights after active days."
-            ),
-            maintain = listOf(
-                "Small steady habits tend to keep nights calmer.",
-                "Pick one evening habit and keep it up on active days."
-            )
+            understand = listOf("tip_ctx_night_worse_u1", "tip_ctx_night_worse_u2"),
+            act = listOf("tip_ctx_night_worse_a1", "tip_ctx_night_worse_a2"),
+            maintain = listOf("tip_ctx_night_worse_m1", "tip_ctx_night_worse_m2")
         ),
         TipTopic.CTX_SLEEP_ACTIVITY to Set(
-            understand = listOf(
-                "Activity the day before can change how much a short night affects the next day, which may play a part.",
-                "Movement and sleep both influence how well the body copes the next day, which may be linked to this."
-            ),
-            act = listOf(
-                "On days when a short night is likely, plan a little extra care for the next day.",
-                "Try a bit more movement or an earlier night when you expect to sleep less."
-            ),
-            maintain = listOf(
-                "Keep a regular bedtime where you can, as it seems to make the following day steadier.",
-                "Build on the nights of full sleep, since they seem to go with steadier days."
-            )
+            understand = listOf("tip_ctx_sleep_activity_u1", "tip_ctx_sleep_activity_u2"),
+            act = listOf("tip_ctx_sleep_activity_a1", "tip_ctx_sleep_activity_a2"),
+            maintain = listOf("tip_ctx_sleep_activity_m1", "tip_ctx_sleep_activity_m2")
         ),
         TipTopic.CTX_SLEEP_GOOD to Set(
-            understand = listOf(
-                "A full, regular night after an active day often gives the body a good reset, which may be linked to this.",
-                "Sleep, routine and movement tend to support each other, which may play a part."
-            ),
-            act = listOf(
-                "Aim to repeat this combination of an active day, a regular bedtime and enough sleep.",
-                "Keep your bedtime steady on the evenings after an active day."
-            ),
-            maintain = listOf(
-                "Keep this routine going, as it seems to work well for you.",
-                "Stick with the rhythm that gives you these steadier days."
-            )
+            understand = listOf("tip_ctx_sleep_good_u1", "tip_ctx_sleep_good_u2"),
+            act = listOf("tip_ctx_sleep_good_a1", "tip_ctx_sleep_good_a2"),
+            maintain = listOf("tip_ctx_sleep_good_m1", "tip_ctx_sleep_good_m2")
         ),
         TipTopic.CTX_LATE_RICH to Set(
-            understand = listOf(
-                "Fat and protein slow digestion, so a late rich meal may still be releasing glucose into the night.",
-                "Rich food late in the evening often lingers into the night, which may be linked to this."
-            ),
-            act = listOf(
-                "Try keeping dinners that are rich in fat and protein a little earlier.",
-                "On late evenings, a lighter meal may sit more gently overnight."
-            ),
-            maintain = listOf(
-                "Keep the lighter late dinners going, as they seem to give calmer nights.",
-                "Stick with the dinner choices that leave your nights steadier."
-            )
+            understand = listOf("tip_ctx_late_rich_u1", "tip_ctx_late_rich_u2"),
+            act = listOf("tip_ctx_late_rich_a1", "tip_ctx_late_rich_a2"),
+            maintain = listOf("tip_ctx_late_rich_m1", "tip_ctx_late_rich_m2")
         ),
         TipTopic.WEEKEND_WORSE to Set(
-            understand = listOf(
-                "Later meals, different sleep times or less structure may play a part on weekends.",
-                "Weekend food and activity often differ from weekdays, which may be linked to this."
-            ),
-            act = listOf(
-                "Try keeping your weekday meal and sleep times on weekends, too.",
-                "Plan an activity for the weekend the way you do on weekdays."
-            ),
-            maintain = listOf(
-                "Your weekdays work well, so borrow their rhythm where you can.",
-                "Weekday habits are a good template for weekends."
-            )
+            understand = listOf("tip_weekend_worse_u1", "tip_weekend_worse_u2"),
+            act = listOf("tip_weekend_worse_a1", "tip_weekend_worse_a2"),
+            maintain = listOf("tip_weekend_worse_m1", "tip_weekend_worse_m2")
         )
     )
 
@@ -667,6 +254,6 @@ object PatternTips {
         return listOf(set.understand, set.act, maintain).map { variants -> variants.firstOrNull { it !in used } ?: variants.first() }
     }
 
-    /** Every tip sentence, for tests. */
+    /** Every tip key, for tests. */
     internal fun all(): Map<TipTopic, List<String>> = sets.mapValues { (_, s) -> s.understand + s.act + s.maintain }
 }

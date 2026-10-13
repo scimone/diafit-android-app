@@ -17,6 +17,7 @@ import uk.scimone.diafit.patterns.domain.DetectionInput
 import uk.scimone.diafit.patterns.domain.MiniGraph
 import uk.scimone.diafit.patterns.domain.PatternCandidate
 import uk.scimone.diafit.patterns.domain.PatternCard
+import uk.scimone.diafit.patterns.domain.Msg
 import uk.scimone.diafit.patterns.domain.PatternCategory
 import uk.scimone.diafit.patterns.domain.PatternPipeline
 import uk.scimone.diafit.patterns.domain.PatternTone
@@ -149,8 +150,8 @@ class ContextDetectorTest {
 
     private fun candidate(id: String, tone: PatternTone) = PatternCandidate(
         PatternCard(
-            id = id, category = PatternCategory.MEAL, detector = "x", title = id, summary = "", miniGraph = MiniGraph.ProfileComparison("a", emptyList(), "b", emptyList()),
-            observationFromUtc = 0, observationToUtc = 0, sampleSize = 1, sampleUnit = "meals", effectSize = 1.0, effectLabel = "", uncertainty = "", limitations = emptyList(),
+            id = id, category = PatternCategory.MEAL, detector = "x", title = Msg(id), summary = Msg(""), miniGraph = MiniGraph.ProfileComparison(Msg("a"), emptyList(), Msg("b"), emptyList()),
+            observationFromUtc = 0, observationToUtc = 0, sampleSize = 1, sampleUnit = "meals", effectSize = 1.0, effectLabel = Msg(""), uncertainty = Msg(""), limitations = emptyList(),
             tone = tone, priority = 1.0
         ),
         TipTopic.MEAL_RICH
