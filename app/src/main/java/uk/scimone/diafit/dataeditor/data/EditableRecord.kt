@@ -1,5 +1,9 @@
 package uk.scimone.diafit.dataeditor.data
 
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
+
 import uk.scimone.diafit.core.domain.model.BolusEntity
 import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.ExerciseEntity
@@ -10,15 +14,17 @@ import uk.scimone.diafit.core.domain.model.SleepStageEntity
 import uk.scimone.diafit.core.domain.model.StepsEntity
 
 /** What the data editor can list, in the order of the chips. */
-enum class RecordKind(val label: String, val plural: String, val single: String) {
-    GLUCOSE("Glucose", "glucose readings", "glucose reading"),
-    INSULIN("Insulin", "insulin doses", "insulin dose"),
-    MEALS("Meals", "meals", "meal"),
-    WORKOUTS("Workouts", "workouts", "workout"),
-    SLEEP("Sleep", "sleep sessions", "sleep session"),
-    DEVICE("Device events", "device events", "device event"),
-    HEART_RATE("Heart rate", "heart-rate values", "heart-rate value"),
-    STEPS("Steps", "step slots", "step slot")
+enum class RecordKind(@StringRes val labelRes: Int) {
+    GLUCOSE(R.string.de_kind_glucose),
+    INSULIN(R.string.de_kind_insulin),
+    MEALS(R.string.logs_kind_meal_plural),
+    WORKOUTS(R.string.de_kind_workouts),
+    SLEEP(R.string.datatype_sleep),
+    DEVICE(R.string.logs_kind_device_plural),
+    HEART_RATE(R.string.datatype_heart_rate),
+    STEPS(R.string.datatype_steps);
+
+    val label: String get() = AppStrings.get(labelRes)
 }
 
 /** One stored row (or, for sleep, one session) as the editor sees it. */

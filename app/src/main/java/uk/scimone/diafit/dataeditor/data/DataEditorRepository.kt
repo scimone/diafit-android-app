@@ -1,5 +1,7 @@
 package uk.scimone.diafit.dataeditor.data
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.database.sqlite.SQLiteConstraintException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -8,7 +10,7 @@ import uk.scimone.diafit.dataeditor.data.EditableRecord.*
 /** The outcome of a save: failures carry text that can be shown as is. */
 sealed interface EditResult {
     data object Saved : EditResult
-    data class Failed(val message: String) : EditResult
+    data class Failed(val message: UiText) : EditResult
 }
 
 class DataEditorRepository(private val dao: DataEditorDao) {
@@ -43,9 +45,9 @@ class DataEditorRepository(private val dao: DataEditorDao) {
             }
             EditResult.Saved
         } catch (e: SQLiteConstraintException) {
-            EditResult.Failed("Another record already exists at that time. Pick a different time.")
+            EditResult.Failed(UiText.of(R.string.de_err_time_taken))
         } catch (e: Exception) {
-            EditResult.Failed(e.message ?: "Could not save")
+            EditResult.Failed(e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.de_err_save))
         }
     }
 
@@ -64,9 +66,9 @@ class DataEditorRepository(private val dao: DataEditorDao) {
             }
             EditResult.Saved
         } catch (e: SQLiteConstraintException) {
-            EditResult.Failed("A record already exists at that time. Pick a different time.")
+            EditResult.Failed(UiText.of(R.string.de_err_time_taken))
         } catch (e: Exception) {
-            EditResult.Failed(e.message ?: "Could not add")
+            EditResult.Failed(e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.de_err_add))
         }
     }
 

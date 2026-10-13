@@ -1,5 +1,9 @@
 package uk.scimone.diafit.dataeditor.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -76,7 +80,7 @@ fun RecordEditSheet(record: EditableRecord, isNew: Boolean, onDismiss: () -> Uni
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(if (isNew) "Add ${record.kind.single}" else "Edit ${record.kind.label.lowercase()}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(if (isNew) R.string.de_new_record else R.string.de_edit_record, stringResource(record.kind.labelRes)), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             when (record) {
                 is Glucose -> GlucoseForm(record, isNew, onSave)
                 is Insulin -> InsulinForm(record, isNew, onSave)
@@ -97,30 +101,31 @@ fun RecordEditSheet(record: EditableRecord, isNew: Boolean, onDismiss: () -> Uni
             ) {
                 Icon(Icons.Filled.Delete, null, Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("Delete this record")
+                Text(stringResource(R.string.de_delete_this))
             }
         }
     }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this record?") },
-            text = { Text("It disappears from charts, statistics and patterns. You can undo right after.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+            title = { Text(stringResource(R.string.de_delete_this_q)) },
+            text = { Text(stringResource(R.string.de_delete_text)) },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
 
+@Composable
 private fun importNote(record: EditableRecord): String? {
     val source = when (record) {
         is Glucose -> record.e.source.takeIf { it != "Unknown" && it.isNotBlank() }
-        is Insulin -> if (record.e.sourceId != null) "your pump app" else null
-        is Meal -> if (record.e.sourceId != null) "AAPS or Nightscout" else null
+        is Insulin -> if (record.e.sourceId != null) stringResource(R.string.de_src_pump) else null
+        is Meal -> if (record.e.sourceId != null) stringResource(R.string.de_src_aaps_ns) else null
         is Workout, is Sleep, is HeartRate, is Steps -> "Health Connect"
-        is Device -> "AAPS or Nightscout"
+        is Device -> stringResource(R.string.de_src_aaps_ns)
     } ?: return null
-    return "Imported from $source. Fetching that period again (a past-data fill-in or re-import) can bring the original back."
+    return stringResource(R.string.de_imported, source)
 }
 
 private val DEVICE_TYPES = listOf("Site Change", "Insulin Change", "Sensor Start", "Sensor Change", "Pump Battery Change", "Note", "Announcement")
@@ -129,7 +134,7 @@ private val DEVICE_TYPES = listOf("Site Change", "Insulin Change", "Sensor Start
 
 @Composable
 private fun SaveButton(enabled: Boolean, isNew: Boolean, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(if (isNew) "Add record" else "Save changes") }
+    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(if (isNew) stringResource(R.string.de_add) else stringResource(R.string.de_save_changes)) }
 }
 
 @Composable
@@ -138,8 +143,8 @@ private fun GlucoseForm(r: Glucose, isNew: Boolean, onSave: (EditableRecord) -> 
     var value by remember { mutableStateOf(if (isNew) "" else r.e.valueMgdl.toString()) }
     val v = value.toIntOrNull()
     val valid = v != null && v in 20..700
-    DateTimeField("Time", time) { time = it }
-    NumberField("Glucose", value, "mg/dL", { value = it }, error = value.isNotEmpty() && !valid, hint = "20–700")
+    DateTimeField(stringResource(R.string.de_time), time) { time = it }
+    NumberField(stringResource(R.string.de_kind_glucose), value, "mg/dL", { value = it }, error = value.isNotEmpty() && !valid, hint = "20–700")
     SaveButton(valid, isNew) { onSave(Glucose(r.e.copy(timestamp = resolve(r.e.timestamp, time), valueMgdl = v!!))) }
 }
 
@@ -150,12 +155,12 @@ private fun InsulinForm(r: Insulin, isNew: Boolean, onSave: (EditableRecord) -> 
     var smb by remember { mutableStateOf(r.e.isSmb) }
     val v = value.replace(',', '.').toFloatOrNull()
     val valid = v != null && v > 0f && v <= 100f
-    DateTimeField("Time", time) { time = it }
-    NumberField("Dose", value, "U", { value = it }, decimal = true, error = value.isNotEmpty() && !valid, hint = "Up to 100 U")
+    DateTimeField(stringResource(R.string.de_time), time) { time = it }
+    NumberField(stringResource(R.string.de_dose), value, "U", { value = it }, decimal = true, error = value.isNotEmpty() && !valid, hint = stringResource(R.string.de_dose_hint))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Automatic micro-bolus (SMB)", style = MaterialTheme.typography.bodyLarge)
-            Text("Given by the loop, not by you", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.de_smb), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.de_smb_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = smb, onCheckedChange = { smb = it })
     }
@@ -174,19 +179,19 @@ private fun MealForm(r: Meal, isNew: Boolean, onSave: (EditableRecord) -> Unit) 
     var kcal by remember { mutableStateOf((r.e.calories ?: 0).toString()) }
     val c = carbs.toIntOrNull(); val p = protein.toIntOrNull(); val f = fat.toIntOrNull(); val k = kcal.toIntOrNull()
     val valid = c != null && p != null && f != null && k != null && listOf(c, p, f, k).all { it in 0..5000 }
-    DateTimeField("Time", time) { time = it }
-    OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    DateTimeField(stringResource(R.string.de_time), time) { time = it }
+    OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.de_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        NumberField("Carbs", carbs, "g", { carbs = it }, Modifier.weight(1f), error = c == null)
-        NumberField("Protein", protein, "g", { protein = it }, Modifier.weight(1f), error = p == null)
+        NumberField(stringResource(R.string.macro_carbs), carbs, "g", { carbs = it }, Modifier.weight(1f), error = c == null)
+        NumberField(stringResource(R.string.macro_protein), protein, "g", { protein = it }, Modifier.weight(1f), error = p == null)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        NumberField("Fat", fat, "g", { fat = it }, Modifier.weight(1f), error = f == null)
-        NumberField("Energy", kcal, "kcal", { kcal = it }, Modifier.weight(1f), error = k == null)
+        NumberField(stringResource(R.string.macro_fat), fat, "g", { fat = it }, Modifier.weight(1f), error = f == null)
+        NumberField(stringResource(R.string.macro_energy), kcal, "kcal", { kcal = it }, Modifier.weight(1f), error = k == null)
     }
     if (r.e.components.isNotEmpty()) {
         Text(
-            "This meal was split into foods. Totals edited here replace the sum of its foods; use the meal editor in the Logs to change the foods.",
+            stringResource(R.string.de_meal_split_note),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -209,10 +214,10 @@ private fun WorkoutForm(r: Workout, isNew: Boolean, onSave: (EditableRecord) -> 
     var minutes by remember { mutableStateOf(if (isNew) "" else ((r.e.endUtc - r.e.startUtc) / 60_000).toString()) }
     val m = minutes.toLongOrNull()
     val valid = m != null && m in 1..1440
-    DateTimeField("Start", start) { start = it }
-    NumberField("Duration", minutes, "min", { minutes = it }, error = minutes.isNotEmpty() && !valid, hint = "1–1440")
-    if (valid) Text("Ends at ${clock(resolve(r.e.startUtc, start) + m!! * 60_000)} · ${formatDurationMinutes(m.toInt())}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    DateTimeField(stringResource(R.string.de_start), start) { start = it }
+    NumberField(stringResource(R.string.de_duration), minutes, "min", { minutes = it }, error = minutes.isNotEmpty() && !valid, hint = "1–1440")
+    if (valid) Text(stringResource(R.string.de_ends_at, clock(resolve(r.e.startUtc, start) + m!! * 60_000), formatDurationMinutes(m.toInt())), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.de_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     SaveButton(valid, isNew) {
         val s = resolve(r.e.startUtc, start)
         onSave(Workout(r.e.copy(startUtc = s, endUtc = s + m!! * 60_000, title = title.trim().ifBlank { null })))
@@ -224,12 +229,12 @@ private fun SleepForm(r: Sleep, isNew: Boolean, onSave: (EditableRecord) -> Unit
     var start by remember { mutableStateOf(r.startUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     var end by remember { mutableStateOf(r.endUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     val valid = end.isAfter(start) && ChronoUnit.HOURS.between(start, end) <= 24
-    DateTimeField("Fell asleep", start) { start = it }
-    DateTimeField("Woke up", end) { end = it }
-    if (valid) Text("Slept ${formatDurationMinutes(ChronoUnit.MINUTES.between(start, end).toInt())} in total", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    else Text("Waking time must be after falling asleep, and within 24 h.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    DateTimeField(stringResource(R.string.de_fell_asleep), start) { start = it }
+    DateTimeField(stringResource(R.string.de_woke_up), end) { end = it }
+    if (valid) Text(stringResource(R.string.de_slept_total, formatDurationMinutes(ChronoUnit.MINUTES.between(start, end).toInt())), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    else Text(stringResource(R.string.de_sleep_invalid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     if (r.stages.size > 1) {
-        Text("Moving the ends stretches or trims the first and last sleep stage; the stages in between stay as they are.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.de_sleep_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     SaveButton(valid, isNew) {
         val s = resolve(r.startUtc, start); val e = resolve(r.endUtc, end)
@@ -246,14 +251,14 @@ private fun DeviceForm(r: Device, isNew: Boolean, onSave: (EditableRecord) -> Un
     val valid = duration.isBlank() || (d != null && d >= 0)
     var type by remember { mutableStateOf(r.e.eventType) }
     if (isNew) {
-        Text("Type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.de_type), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DEVICE_TYPES.forEach { t -> androidx.compose.material3.FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t) }) }
         }
     } else Text(r.e.eventType, style = MaterialTheme.typography.titleMedium)
-    DateTimeField("Time", time) { time = it }
-    OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-    NumberField("Duration (optional)", duration, "min", { duration = it }, decimal = true, error = !valid)
+    DateTimeField(stringResource(R.string.de_time), time) { time = it }
+    OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(R.string.de_notes)) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+    NumberField(stringResource(R.string.de_duration_optional), duration, "min", { duration = it }, decimal = true, error = !valid)
     SaveButton(valid, isNew) {
         onSave(Device(r.e.copy(eventType = type, timestampUtc = resolve(r.e.timestampUtc, time), notes = notes.trim().ifBlank { null }, durationMinutes = d)))
     }
@@ -265,8 +270,8 @@ private fun HeartRateForm(r: HeartRate, isNew: Boolean, onSave: (EditableRecord)
     var bpm by remember { mutableStateOf(if (isNew) "" else r.e.bpm.toString()) }
     val v = bpm.toIntOrNull()
     val valid = v != null && v in 20..260
-    DateTimeField("Time", time) { time = it }
-    NumberField("Heart rate", bpm, "bpm", { bpm = it }, error = bpm.isNotEmpty() && !valid, hint = "20–260")
+    DateTimeField(stringResource(R.string.de_time), time) { time = it }
+    NumberField(stringResource(R.string.datatype_heart_rate), bpm, "bpm", { bpm = it }, error = bpm.isNotEmpty() && !valid, hint = "20–260")
     SaveButton(valid, isNew) { onSave(HeartRate(r.e.copy(timestamp = resolve(r.e.timestamp, time), bpm = v!!))) }
 }
 
@@ -277,12 +282,12 @@ private fun StepsForm(r: Steps, isNew: Boolean, onSave: (EditableRecord) -> Unit
     val valid = v != null && v in 0..20_000
     var time by remember { mutableStateOf(r.e.startUtc.toLocal().truncatedTo(ChronoUnit.MINUTES)) }
     if (isNew) {
-        DateTimeField("Slot starting at", time) { time = it }
-        Text("Steps are stored in 15-minute slots; the time is rounded down to the slot.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DateTimeField(stringResource(R.string.de_slot_start), time) { time = it }
+        Text(stringResource(R.string.de_steps_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
-        Text("${clock(r.e.startUtc)}–${clock(r.e.startUtc + 15 * 60_000L)} (one 15-minute slot)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.de_slot_line, clock(r.e.startUtc), clock(r.e.startUtc + 15 * 60_000L)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    NumberField("Steps", count, "", { count = it }, error = count.isNotEmpty() && !valid, hint = "0–20,000")
+    NumberField(stringResource(R.string.datatype_steps), count, "", { count = it }, error = count.isNotEmpty() && !valid, hint = "0–20,000")
     SaveButton(valid, isNew) {
         val slot = uk.scimone.diafit.core.domain.model.StepsEntity.STEP_BUCKET_MS
         val start = if (isNew) time.toMs().let { it - Math.floorMod(it, slot) } else r.e.startUtc
@@ -319,7 +324,7 @@ private fun DateTimeField(label: String, value: LocalDateTime, onChange: (LocalD
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Pill(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.getDefault()).format(value), true) { pickDate = true }
+            Pill(formatStamp(value.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "EEEdMMMy"), true) { pickDate = true }
             Pill(java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(value), false) { pickTime = true }
         }
     }
@@ -337,9 +342,9 @@ private fun DateTimeField(label: String, value: LocalDateTime, onChange: (LocalD
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { onChange(value.with(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())) }
                     pickDate = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { pickDate = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { pickDate = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) { DatePicker(state, showModeToggle = false) }
     }
     if (pickTime) {
@@ -348,8 +353,8 @@ private fun DateTimeField(label: String, value: LocalDateTime, onChange: (LocalD
             onDismissRequest = { pickTime = false },
             title = { Text(label) },
             text = { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { TimePicker(state) } },
-            confirmButton = { TextButton(onClick = { onChange(value.withHour(state.hour).withMinute(state.minute)); pickTime = false }) { Text("OK") } },
-            dismissButton = { TextButton(onClick = { pickTime = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { onChange(value.withHour(state.hour).withMinute(state.minute)); pickTime = false }) { Text(stringResource(R.string.common_ok)) } },
+            dismissButton = { TextButton(onClick = { pickTime = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }

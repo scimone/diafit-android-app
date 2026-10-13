@@ -1,5 +1,6 @@
 package uk.scimone.diafit.dataeditor.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,7 @@ data class DataEditorState(
     /** A record that was just deleted, offered for undo. */
     val undo: List<EditableRecord> = emptyList(),
     /** One-off text for a snackbar (errors); cleared by [DataEditorViewModel.messageShown]. */
-    val message: String? = null
+    val message: UiText? = null
 )
 
 class DataEditorViewModel(private val userId: Int, private val repository: DataEditorRepository) : ViewModel() {

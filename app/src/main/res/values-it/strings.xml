@@ -903,4 +903,70 @@
         <item quantity="one">%1$d tratto modificato · linea tratteggiata = prima</item>
         <item quantity="other">%1$d tratti modificati · linea tratteggiata = prima</item>
     </plurals>
+
+    <!-- Data editor -->
+    <string name="de_kind_glucose">Glicemia</string>
+    <string name="de_kind_insulin">Insulina</string>
+    <string name="de_kind_workouts">Allenamenti</string>
+    <string name="de_new_record">Nuova voce · %1$s</string>
+    <string name="de_edit_record">Modifica voce · %1$s</string>
+    <string name="de_add">Aggiungi voce</string>
+    <string name="de_save_changes">Salva modifiche</string>
+    <string name="de_delete_this">Elimina questa voce</string>
+    <string name="de_delete_this_q">Eliminare questa voce?</string>
+    <string name="de_delete_text">Scompare da grafici, statistiche e pattern. Puoi annullare subito dopo.</string>
+    <string name="de_delete_text_many">Scompaiono da grafici, statistiche e pattern. Puoi annullare subito dopo.</string>
+    <string name="de_selected">%1$d selezionate</string>
+    <string name="de_cancel_sel">Annulla selezione</string>
+    <string name="de_select_all">Seleziona tutto</string>
+    <string name="de_delete_selected">Elimina selezionate</string>
+    <string name="de_empty">Nessuna voce in questo giorno.</string>
+    <string name="de_auto_smb">Automatico (SMB)</string>
+    <string name="de_manual">Manuale</string>
+    <string name="de_meal_line">%1$d g carboidrati · %2$d g proteine · %3$d g grassi</string>
+    <string name="de_slept">Dormito %1$s</string>
+    <string name="de_steps_n">%1$s passi</string>
+    <string name="de_imported">Importato da %1$s. Recuperare di nuovo quel periodo (recupero dei dati passati o reimportazione) può riportare l\'originale.</string>
+    <string name="de_src_pump">la tua app del microinfusore</string>
+    <string name="de_src_aaps_ns">AAPS o Nightscout</string>
+    <string name="de_time">Ora</string>
+    <string name="de_dose">Dose</string>
+    <string name="de_dose_hint">Fino a 100 U</string>
+    <string name="de_smb">Micro-bolo automatico (SMB)</string>
+    <string name="de_smb_sub">Erogato dal loop, non da te</string>
+    <string name="de_name">Nome</string>
+    <string name="de_meal_split_note">Questo pasto è stato suddiviso in alimenti. I totali modificati qui sostituiscono la somma degli alimenti; per cambiare gli alimenti usa l\'editor dei pasti nel Registro.</string>
+    <string name="de_start">Inizio</string>
+    <string name="de_duration">Durata</string>
+    <string name="de_ends_at">Termina alle %1$s · %2$s</string>
+    <string name="de_fell_asleep">Addormentato</string>
+    <string name="de_woke_up">Svegliato</string>
+    <string name="de_slept_total">Dormito %1$s in totale</string>
+    <string name="de_sleep_invalid">L\'ora del risveglio deve essere dopo l\'addormentamento ed entro 24 h.</string>
+    <string name="de_sleep_note">Spostando gli estremi si allunga o si accorcia la prima e l\'ultima fase del sonno; le fasi intermedie restano invariate.</string>
+    <string name="de_type">Tipo</string>
+    <string name="de_notes">Note</string>
+    <string name="de_duration_optional">Durata (facoltativa)</string>
+    <string name="de_slot_start">Fascia da</string>
+    <string name="de_steps_note">I passi sono salvati in fasce di 15 minuti; l\'ora viene arrotondata per difetto alla fascia.</string>
+    <string name="de_slot_line">%1$s–%2$s (una fascia di 15 minuti)</string>
+    <string name="de_err_time_taken">A quell\'ora esiste già una voce. Scegli un\'altra ora.</string>
+    <string name="de_err_save">Impossibile salvare</string>
+    <string name="de_err_add">Impossibile aggiungere</string>
+    <plurals name="de_delete_n">
+        <item quantity="one">Eliminare %1$d voce?</item>
+        <item quantity="other">Eliminare %1$d voci?</item>
+    </plurals>
+    <plurals name="de_deleted_n">
+        <item quantity="one">%1$d voce eliminata</item>
+        <item quantity="other">%1$d voci eliminate</item>
+    </plurals>
+    <plurals name="de_count">
+        <item quantity="one">%1$d voce · tocca per modificare, tieni premuto per selezionarne più</item>
+        <item quantity="other">%1$d voci · tocca per modificare, tieni premuto per selezionarne più</item>
+    </plurals>
+    <plurals name="de_stages">
+        <item quantity="one">%1$d fase</item>
+        <item quantity="other">%1$d fasi</item>
+    </plurals>
 </resources>

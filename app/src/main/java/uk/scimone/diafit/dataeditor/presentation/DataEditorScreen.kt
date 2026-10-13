@@ -1,5 +1,10 @@
 package uk.scimone.diafit.dataeditor.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -100,16 +105,17 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
     LaunchedEffect(state.kind, state.day) { selected = emptySet() }
     var pickDay by remember { mutableStateOf(false) }
 
+    val msgContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(state.undo) {
         val undo = state.undo
         if (undo.isEmpty()) return@LaunchedEffect
-        val text = if (undo.size == 1) "${undo.first().kind.label} record deleted" else "${undo.size} records deleted"
-        val result = snackbar.showSnackbar(text, actionLabel = "Undo", duration = SnackbarDuration.Long)
+        val text = AppStrings.plural(R.plurals.de_deleted_n, undo.size, undo.size)
+        val result = snackbar.showSnackbar(text, actionLabel = AppStrings.get(R.string.action_undo), duration = SnackbarDuration.Long)
         if (result == SnackbarResult.ActionPerformed) vm.undoDelete() else vm.undoShown()
     }
     LaunchedEffect(state.message) {
         val m = state.message ?: return@LaunchedEffect
-        snackbar.showSnackbar(m)
+        snackbar.showSnackbar(m.asString(msgContext))
         vm.messageShown()
     }
 
@@ -117,17 +123,17 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
         topBar = {
             if (selecting) {
                 TopAppBar(
-                    title = { Text("${selected.size} selected") },
-                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Cancel selection") } },
+                    title = { Text(stringResource(R.string.de_selected, selected.size)) },
+                    navigationIcon = { IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, stringResource(R.string.de_cancel_sel)) } },
                     actions = {
-                        IconButton(onClick = { selected = state.records.map { it.key }.toSet() }) { Icon(Icons.Filled.SelectAll, "Select all") }
-                        IconButton(onClick = { confirmBulkDelete = true }) { Icon(Icons.Filled.Delete, "Delete selected", tint = MaterialTheme.colorScheme.error) }
+                        IconButton(onClick = { selected = state.records.map { it.key }.toSet() }) { Icon(Icons.Filled.SelectAll, stringResource(R.string.de_select_all)) }
+                        IconButton(onClick = { confirmBulkDelete = true }) { Icon(Icons.Filled.Delete, stringResource(R.string.de_delete_selected), tint = MaterialTheme.colorScheme.error) }
                     }
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Data editor") },
-                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                    title = { Text(stringResource(R.string.menu_data_editor)) },
+                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
                 )
             }
         },
@@ -136,7 +142,7 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
                 ExtendedFloatingActionButton(
                     onClick = { adding = blankRecord(state.kind, state.day, userId) },
                     icon = { Icon(Icons.Filled.Add, null) },
-                    text = { Text("Add ${state.kind.single}") }
+                    text = { Text(stringResource(R.string.de_add)) }
                 )
             }
         },
@@ -145,7 +151,7 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(padding)) {
             LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(RecordKind.entries.toList()) { kind ->
-                    FilterChip(selected = kind == state.kind, onClick = { vm.selectKind(kind) }, label = { Text(kind.label) })
+                    FilterChip(selected = kind == state.kind, onClick = { vm.selectKind(kind) }, label = { Text(stringResource(kind.labelRes)) })
                 }
             }
             DayNavigator(
@@ -159,14 +165,14 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
                 state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 state.records.isEmpty() -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "No ${state.kind.plural} on this day.",
+                        stringResource(R.string.de_empty),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     item {
                         Text(
-                            "${state.records.size} ${state.kind.plural} · tap to edit, hold to select several",
+                            pluralStringResource(R.plurals.de_count, state.records.size, state.records.size),
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
@@ -210,16 +216,16 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
         val n = selected.size
         AlertDialog(
             onDismissRequest = { confirmBulkDelete = false },
-            title = { Text("Delete $n ${if (n == 1) "record" else "records"}?") },
-            text = { Text("They disappear from charts, statistics and patterns. You can undo right after.") },
+            title = { Text(pluralStringResource(R.plurals.de_delete_n, n, n)) },
+            text = { Text(if (n == 1) stringResource(R.string.de_delete_text) else stringResource(R.string.de_delete_text_many)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmBulkDelete = false
                     val doomed = state.records.filter { it.key in selected }
                     vm.delete(doomed) { selected = emptySet() }
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmBulkDelete = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { confirmBulkDelete = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 
@@ -237,9 +243,9 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
                 TextButton(onClick = {
                     picker.selectedDateMillis?.let { vm.selectDay(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
                     pickDay = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { pickDay = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { pickDay = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) { DatePicker(picker, showModeToggle = false) }
     }
 }
@@ -247,14 +253,14 @@ fun DataEditorScreen(userId: Int, onBack: () -> Unit) {
 @Composable
 private fun DayNavigator(day: LocalDate, onPrev: () -> Unit, onNext: () -> Unit, onPick: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onPrev) { Icon(Icons.Filled.ChevronLeft, "Previous day") }
+        IconButton(onClick = onPrev) { Icon(Icons.Filled.ChevronLeft, stringResource(R.string.hist_prev_day)) }
         TextButton(onClick = onPick, modifier = Modifier.weight(1f)) {
             val ms = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val label = friendlyDateString(ms)
-            val date = day.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault()))
+            val date = ms.let { formatStamp(it, "dMMMy") }
             Text(if (uk.scimone.diafit.core.domain.util.isRelativeDayLabel(label)) "$label · $date" else date, style = MaterialTheme.typography.titleMedium)
         }
-        IconButton(onClick = onNext, enabled = day.isBefore(LocalDate.now())) { Icon(Icons.Filled.ChevronRight, "Next day") }
+        IconButton(onClick = onNext, enabled = day.isBefore(LocalDate.now())) { Icon(Icons.Filled.ChevronRight, stringResource(R.string.hist_next_day)) }
     }
 }
 
@@ -290,16 +296,16 @@ private fun RecordRow(record: EditableRecord, selecting: Boolean, selected: Bool
 /** Title and a secondary line for a list row. */
 private fun summary(record: EditableRecord): Pair<String, String> = when (record) {
     is Glucose -> "${record.e.valueMgdl} mg/dL" to listOf(record.e.direction, record.e.source).filter { it.isNotBlank() && it != "Unknown" }.joinToString(" · ")
-    is Insulin -> "${trim(record.e.value)} U" to listOf(if (record.e.isSmb) "Automatic (SMB)" else "Manual", record.e.eventType).filter { it.isNotBlank() }.joinToString(" · ")
-    is Meal -> (record.e.description?.takeIf { it.isNotBlank() } ?: record.e.mealType.type) to
-        "${record.e.carbohydrates} g carbs · ${record.e.proteins ?: 0} g protein · ${record.e.fats ?: 0} g fat"
-    is Workout -> (record.e.title ?: "Exercise") to
+    is Insulin -> "${trim(record.e.value)} U" to listOf(AppStrings.get(if (record.e.isSmb) R.string.de_auto_smb else R.string.de_manual), record.e.eventType).filter { it.isNotBlank() }.joinToString(" · ")
+    is Meal -> (record.e.description?.takeIf { it.isNotBlank() } ?: record.e.mealType.displayName) to
+        AppStrings.get(R.string.de_meal_line, record.e.carbohydrates, record.e.proteins ?: 0, record.e.fats ?: 0)
+    is Workout -> (record.e.title ?: AppStrings.get(R.string.datatype_exercise)) to
         "${clock(record.e.startUtc)}–${clock(record.e.endUtc)} · ${formatDurationMinutes(((record.e.endUtc - record.e.startUtc) / 60_000).toInt())}"
-    is Sleep -> "Slept ${formatDurationMinutes(((record.endUtc - record.startUtc) / 60_000).toInt())}" to
-        "${clock(record.startUtc)} → ${clock(record.endUtc)}" + if (record.stages.size > 1) " · ${record.stages.size} stages" else ""
+    is Sleep -> AppStrings.get(R.string.de_slept, formatDurationMinutes(((record.endUtc - record.startUtc) / 60_000).toInt())) to
+        "${clock(record.startUtc)} → ${clock(record.endUtc)}" + if (record.stages.size > 1) " · " + AppStrings.plural(R.plurals.de_stages, record.stages.size, record.stages.size) else ""
     is Device -> record.e.eventType to (record.e.notes ?: "")
     is HeartRate -> "${record.e.bpm} bpm" to ""
-    is Steps -> "%,d steps".format(record.e.count) to "${clock(record.e.startUtc)}–${clock(record.e.startUtc + 15 * 60_000L)}"
+    is Steps -> AppStrings.get(R.string.de_steps_n, "%,d".format(record.e.count)) to "${clock(record.e.startUtc)}–${clock(record.e.startUtc + 15 * 60_000L)}"
 }
 
 internal fun trim(v: Float): String = if (v == v.toInt().toFloat()) v.toInt().toString() else "%.2f".format(Locale.US, v).trimEnd('0').trimEnd('.')

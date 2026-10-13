@@ -906,4 +906,70 @@
         <item quantity="one">%1$d changed stretch · dashed line = before</item>
         <item quantity="other">%1$d changed stretches · dashed line = before</item>
     </plurals>
+
+    <!-- Data editor -->
+    <string name="de_kind_glucose">Glucose</string>
+    <string name="de_kind_insulin">Insulin</string>
+    <string name="de_kind_workouts">Workouts</string>
+    <string name="de_new_record">New record · %1$s</string>
+    <string name="de_edit_record">Edit record · %1$s</string>
+    <string name="de_add">Add record</string>
+    <string name="de_save_changes">Save changes</string>
+    <string name="de_delete_this">Delete this record</string>
+    <string name="de_delete_this_q">Delete this record?</string>
+    <string name="de_delete_text">It disappears from charts, statistics and patterns. You can undo right after.</string>
+    <string name="de_delete_text_many">They disappear from charts, statistics and patterns. You can undo right after.</string>
+    <string name="de_selected">%1$d selected</string>
+    <string name="de_cancel_sel">Cancel selection</string>
+    <string name="de_select_all">Select all</string>
+    <string name="de_delete_selected">Delete selected</string>
+    <string name="de_empty">No records on this day.</string>
+    <string name="de_auto_smb">Automatic (SMB)</string>
+    <string name="de_manual">Manual</string>
+    <string name="de_meal_line">%1$d g carbs · %2$d g protein · %3$d g fat</string>
+    <string name="de_slept">Slept %1$s</string>
+    <string name="de_steps_n">%1$s steps</string>
+    <string name="de_imported">Imported from %1$s. Fetching that period again (a past-data fill-in or re-import) can bring the original back.</string>
+    <string name="de_src_pump">your pump app</string>
+    <string name="de_src_aaps_ns">AAPS or Nightscout</string>
+    <string name="de_time">Time</string>
+    <string name="de_dose">Dose</string>
+    <string name="de_dose_hint">Up to 100 U</string>
+    <string name="de_smb">Automatic micro-bolus (SMB)</string>
+    <string name="de_smb_sub">Given by the loop, not by you</string>
+    <string name="de_name">Name</string>
+    <string name="de_meal_split_note">This meal was split into foods. Totals edited here replace the sum of its foods; use the meal editor in the Logs to change the foods.</string>
+    <string name="de_start">Start</string>
+    <string name="de_duration">Duration</string>
+    <string name="de_ends_at">Ends at %1$s · %2$s</string>
+    <string name="de_fell_asleep">Fell asleep</string>
+    <string name="de_woke_up">Woke up</string>
+    <string name="de_slept_total">Slept %1$s in total</string>
+    <string name="de_sleep_invalid">Waking time must be after falling asleep, and within 24 h.</string>
+    <string name="de_sleep_note">Moving the ends stretches or trims the first and last sleep stage; the stages in between stay as they are.</string>
+    <string name="de_type">Type</string>
+    <string name="de_notes">Notes</string>
+    <string name="de_duration_optional">Duration (optional)</string>
+    <string name="de_slot_start">Slot starting at</string>
+    <string name="de_steps_note">Steps are stored in 15-minute slots; the time is rounded down to the slot.</string>
+    <string name="de_slot_line">%1$s–%2$s (one 15-minute slot)</string>
+    <string name="de_err_time_taken">A record already exists at that time. Pick a different time.</string>
+    <string name="de_err_save">Could not save</string>
+    <string name="de_err_add">Could not add</string>
+    <plurals name="de_delete_n">
+        <item quantity="one">Delete %1$d record?</item>
+        <item quantity="other">Delete %1$d records?</item>
+    </plurals>
+    <plurals name="de_deleted_n">
+        <item quantity="one">%1$d record deleted</item>
+        <item quantity="other">%1$d records deleted</item>
+    </plurals>
+    <plurals name="de_count">
+        <item quantity="one">%1$d record · tap to edit, hold to select several</item>
+        <item quantity="other">%1$d records · tap to edit, hold to select several</item>
+    </plurals>
+    <plurals name="de_stages">
+        <item quantity="one">%1$d stage</item>
+        <item quantity="other">%1$d stages</item>
+    </plurals>
 </resources>

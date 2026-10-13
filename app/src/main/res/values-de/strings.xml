@@ -903,4 +903,70 @@
         <item quantity="one">%1$d geänderter Abschnitt · gestrichelte Linie = vorher</item>
         <item quantity="other">%1$d geänderte Abschnitte · gestrichelte Linie = vorher</item>
     </plurals>
+
+    <!-- Data editor -->
+    <string name="de_kind_glucose">Glukose</string>
+    <string name="de_kind_insulin">Insulin</string>
+    <string name="de_kind_workouts">Workouts</string>
+    <string name="de_new_record">Neuer Eintrag · %1$s</string>
+    <string name="de_edit_record">Eintrag bearbeiten · %1$s</string>
+    <string name="de_add">Eintrag hinzufügen</string>
+    <string name="de_save_changes">Änderungen speichern</string>
+    <string name="de_delete_this">Diesen Eintrag löschen</string>
+    <string name="de_delete_this_q">Diesen Eintrag löschen?</string>
+    <string name="de_delete_text">Er verschwindet aus Diagrammen, Statistiken und Mustern. Du kannst direkt danach rückgängig machen.</string>
+    <string name="de_delete_text_many">Sie verschwinden aus Diagrammen, Statistiken und Mustern. Du kannst direkt danach rückgängig machen.</string>
+    <string name="de_selected">%1$d ausgewählt</string>
+    <string name="de_cancel_sel">Auswahl aufheben</string>
+    <string name="de_select_all">Alle auswählen</string>
+    <string name="de_delete_selected">Ausgewählte löschen</string>
+    <string name="de_empty">Keine Einträge an diesem Tag.</string>
+    <string name="de_auto_smb">Automatisch (SMB)</string>
+    <string name="de_manual">Manuell</string>
+    <string name="de_meal_line">%1$d g KH · %2$d g Eiweiß · %3$d g Fett</string>
+    <string name="de_slept">%1$s geschlafen</string>
+    <string name="de_steps_n">%1$s Schritte</string>
+    <string name="de_imported">Importiert aus %1$s. Wird dieser Zeitraum erneut abgerufen (Nachtrag oder Neuimport), kann das Original zurückkommen.</string>
+    <string name="de_src_pump">deine Pumpen-App</string>
+    <string name="de_src_aaps_ns">AAPS oder Nightscout</string>
+    <string name="de_time">Zeit</string>
+    <string name="de_dose">Dosis</string>
+    <string name="de_dose_hint">Bis zu 100 U</string>
+    <string name="de_smb">Automatischer Mikrobolus (SMB)</string>
+    <string name="de_smb_sub">Vom Loop abgegeben, nicht von dir</string>
+    <string name="de_name">Name</string>
+    <string name="de_meal_split_note">Diese Mahlzeit wurde in Lebensmittel aufgeteilt. Hier bearbeitete Summen ersetzen die Summe der Lebensmittel; ändere die Lebensmittel im Mahlzeiten-Editor im Protokoll.</string>
+    <string name="de_start">Beginn</string>
+    <string name="de_duration">Dauer</string>
+    <string name="de_ends_at">Endet um %1$s · %2$s</string>
+    <string name="de_fell_asleep">Eingeschlafen</string>
+    <string name="de_woke_up">Aufgewacht</string>
+    <string name="de_slept_total">Insgesamt %1$s geschlafen</string>
+    <string name="de_sleep_invalid">Die Aufwachzeit muss nach dem Einschlafen liegen und innerhalb von 24 Std.</string>
+    <string name="de_sleep_note">Beim Verschieben der Enden wird die erste und letzte Schlafphase gedehnt oder gekürzt; die Phasen dazwischen bleiben unverändert.</string>
+    <string name="de_type">Typ</string>
+    <string name="de_notes">Notizen</string>
+    <string name="de_duration_optional">Dauer (optional)</string>
+    <string name="de_slot_start">Zeitfenster ab</string>
+    <string name="de_steps_note">Schritte werden in 15-Minuten-Zeitfenstern gespeichert; die Zeit wird auf das Zeitfenster abgerundet.</string>
+    <string name="de_slot_line">%1$s–%2$s (ein 15-Minuten-Zeitfenster)</string>
+    <string name="de_err_time_taken">Zu dieser Zeit gibt es bereits einen Eintrag. Wähle eine andere Zeit.</string>
+    <string name="de_err_save">Speichern nicht möglich</string>
+    <string name="de_err_add">Hinzufügen nicht möglich</string>
+    <plurals name="de_delete_n">
+        <item quantity="one">%1$d Eintrag löschen?</item>
+        <item quantity="other">%1$d Einträge löschen?</item>
+    </plurals>
+    <plurals name="de_deleted_n">
+        <item quantity="one">%1$d Eintrag gelöscht</item>
+        <item quantity="other">%1$d Einträge gelöscht</item>
+    </plurals>
+    <plurals name="de_count">
+        <item quantity="one">%1$d Eintrag · tippen zum Bearbeiten, gedrückt halten zum Mehrfachauswählen</item>
+        <item quantity="other">%1$d Einträge · tippen zum Bearbeiten, gedrückt halten zum Mehrfachauswählen</item>
+    </plurals>
+    <plurals name="de_stages">
+        <item quantity="one">%1$d Phase</item>
+        <item quantity="other">%1$d Phasen</item>
+    </plurals>
 </resources>
