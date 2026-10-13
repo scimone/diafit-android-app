@@ -1,5 +1,9 @@
 package uk.scimone.diafit.history.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +22,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private const val MONTHS_LISTED = 24
-private val DAY_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy")
+private fun LocalDate.stamp(): String =
+    formatStamp(atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "dMMMy")
 
 /**
  * Picks a custom History period, either whole finished months (one run of up to three adjacent months) or any own
@@ -49,20 +54,20 @@ internal fun CustomPeriodDialog(current: CustomPeriod?, onDismiss: () -> Unit, o
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(enabled = valid, onClick = { onApply(picked!!) }) { Text("Apply") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        confirmButton = { TextButton(enabled = valid, onClick = { onApply(picked!!) }) { Text(stringResource(R.string.common_apply)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
     ) {
         Column(Modifier.height(540.dp)) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Months") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Dates") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.hist_cp_months)) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.hist_cp_dates)) })
             }
             if (tab == 0) {
                 val listed = remember { (1..MONTHS_LISTED).map { YearMonth.from(today).minusMonths(it.toLong()) } }
                 LazyColumn(Modifier.weight(1f)) {
                     item {
                         Text(
-                            "Pick up to ${CustomPeriod.MAX_MONTHS} adjacent months.",
+                            stringResource(R.string.hist_cp_pick, CustomPeriod.MAX_MONTHS),
                             Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -70,7 +75,7 @@ internal fun CustomPeriodDialog(current: CustomPeriod?, onDismiss: () -> Unit, o
                     items(listed) { m ->
                         val on = m in months
                         ListItem(
-                            headlineContent = { Text("${m.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${m.year}") },
+                            headlineContent = { Text(formatStamp(m.atDay(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "yMMMM")) },
                             leadingContent = { Checkbox(checked = on, onCheckedChange = null) },
                             modifier = Modifier.clickable { months = toggleMonth(months, m) }
                         )
@@ -80,9 +85,9 @@ internal fun CustomPeriodDialog(current: CustomPeriod?, onDismiss: () -> Unit, o
                 DateRangePicker(dates, Modifier.weight(1f), showModeToggle = false)
             }
             val note = when {
-                picked == null -> "Nothing selected"
-                !valid -> "Too long: at most ${CustomPeriod.MAX_MONTHS} months"
-                else -> "${picked.first.format(DAY_FORMAT)} – ${picked.last.format(DAY_FORMAT)}"
+                picked == null -> stringResource(R.string.hist_cp_none)
+                !valid -> stringResource(R.string.hist_cp_too_long, CustomPeriod.MAX_MONTHS)
+                else -> "${picked.first.stamp()} – ${picked.last.stamp()}"
             }
             Text(
                 note, Modifier.align(Alignment.CenterHorizontally).padding(8.dp), style = MaterialTheme.typography.labelLarge,

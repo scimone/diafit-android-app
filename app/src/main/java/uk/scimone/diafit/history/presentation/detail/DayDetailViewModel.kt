@@ -1,5 +1,7 @@
 package uk.scimone.diafit.history.presentation.detail
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -88,7 +90,7 @@ class DayDetailViewModel(
                 .flowOn(Dispatchers.IO)
                 .catch { e ->
                     Log.e(TAG, "Failed to load $date", e)
-                    _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load this day") }
+                    _state.update { it.copy(isLoading = false, errorMessage = e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.hist_load_failed_day)) }
                 }
                 .collect { _state.value = it }
         }
@@ -165,7 +167,7 @@ data class DayDetailState(
     val timelineMeals: List<TimelineMeal> = emptyList(),
     /** Logs tab: meal and low/high cards, oldest first. */
     val entries: List<LogsEntryUi> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 ) {
     val totalInsulin: Double get() = bolusUnits + smbUnits
     val isEmpty: Boolean get() = cgm.isEmpty() && totalInsulin == 0.0 && entries.isEmpty() && activity.isEmpty

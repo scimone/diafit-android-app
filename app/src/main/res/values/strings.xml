@@ -729,4 +729,53 @@
     <string name="cap_search_footer">Values are per 100 g; you set the portion on the next page. Results come from Open Food Facts and, with a key set in Settings, USDA FoodData Central.</string>
     <string name="cap_unbookmark_named">Remove %1$s from bookmarks</string>
     <string name="cap_bookmark_named">Bookmark %1$s</string>
+
+    <!-- History -->
+    <string name="hist_custom">Custom</string>
+    <string name="hist_custom_menu">Custom…</string>
+    <string name="hist_prev_period">Previous period</string>
+    <string name="hist_next_period">Next period</string>
+    <string name="hist_change_frame">Change time frame</string>
+    <string name="hist_filter_weekday">Filter by weekday</string>
+    <string name="hist_show">Show</string>
+    <string name="hist_layer_treatments">Meals and insulin</string>
+    <string name="hist_weekdays">Weekdays</string>
+    <string name="hist_workdays">Mon–Fri</string>
+    <string name="hist_weekend">Sat–Sun</string>
+    <string name="hist_no_history">No history yet</string>
+    <string name="hist_load_failed">Failed to load history</string>
+    <string name="hist_load_failed_day">Failed to load this day</string>
+    <string name="hist_agp_empty">No glucose readings in this period</string>
+    <string name="hist_hold_inspect">Hold a chart to inspect</string>
+    <string name="hist_no_meals_day">No meals on this day.</string>
+    <string name="hist_cp_months">Months</string>
+    <string name="hist_cp_dates">Dates</string>
+    <string name="hist_cp_pick">Pick up to %1$d adjacent months.</string>
+    <string name="hist_cp_none">Nothing selected</string>
+    <string name="hist_cp_too_long">Too long: at most %1$d months</string>
+    <string name="hist_go">Go</string>
+    <string name="hist_tab_charts">Charts</string>
+    <string name="hist_prev_day">Previous day</string>
+    <string name="hist_next_day">Next day</string>
+    <string name="hist_day_empty">No glucose readings, meals, insulin or activity on this day.</string>
+    <string name="hist_day_logs_empty">No meals, boluses, lows, highs, sleep or exercise on this day.</string>
+    <string name="hist_no_glucose_day">No glucose readings on this day</string>
+    <string name="hist_tir">Time in range</string>
+    <string name="hist_sensor_only">Only %1$s of sensor data</string>
+    <string name="hist_sensor_data">Sensor data %1$s</string>
+    <string name="hist_avg">Average</string>
+    <string name="hist_var">Variability</string>
+    <string name="hist_range">Range</string>
+    <string name="hist_exercise_n">Exercise · %1$d×</string>
+    <string name="hist_hr_avg">Heart rate · avg</string>
+    <string name="hist_hr_resting">Resting</string>
+    <string name="hist_hr_max">Max</string>
+    <plurals name="hist_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <plurals name="hist_months">
+        <item quantity="one">%1$d month</item>
+        <item quantity="other">%1$d months</item>
+    </plurals>
 </resources>

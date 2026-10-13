@@ -1,5 +1,8 @@
 package uk.scimone.diafit.history.presentation
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -72,7 +75,7 @@ internal fun AgpCard(
     ) {
         if (agp == null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("No glucose readings in this period", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.hist_agp_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else Column(Modifier.fillMaxSize()) {
             // The wash sits behind the plot only, not behind the lanes.

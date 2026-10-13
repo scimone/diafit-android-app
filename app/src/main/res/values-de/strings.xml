@@ -726,4 +726,53 @@
     <string name="cap_search_footer">Die Werte gelten pro 100 g; die Portion legst du auf der nächsten Seite fest. Die Ergebnisse stammen von Open Food Facts und, mit einem Schlüssel in den Einstellungen, von USDA FoodData Central.</string>
     <string name="cap_unbookmark_named">%1$s aus den Lesezeichen entfernen</string>
     <string name="cap_bookmark_named">%1$s als Lesezeichen speichern</string>
+
+    <!-- History -->
+    <string name="hist_custom">Benutzerdefiniert</string>
+    <string name="hist_custom_menu">Benutzerdefiniert…</string>
+    <string name="hist_prev_period">Voriger Zeitraum</string>
+    <string name="hist_next_period">Nächster Zeitraum</string>
+    <string name="hist_change_frame">Zeitraum ändern</string>
+    <string name="hist_filter_weekday">Nach Wochentag filtern</string>
+    <string name="hist_show">Anzeigen</string>
+    <string name="hist_layer_treatments">Mahlzeiten und Insulin</string>
+    <string name="hist_weekdays">Wochentage</string>
+    <string name="hist_workdays">Mo–Fr</string>
+    <string name="hist_weekend">Sa–So</string>
+    <string name="hist_no_history">Noch kein Verlauf</string>
+    <string name="hist_load_failed">Verlauf konnte nicht geladen werden</string>
+    <string name="hist_load_failed_day">Dieser Tag konnte nicht geladen werden</string>
+    <string name="hist_agp_empty">Keine Glukosewerte in diesem Zeitraum</string>
+    <string name="hist_hold_inspect">Halten zum Untersuchen</string>
+    <string name="hist_no_meals_day">Keine Mahlzeiten an diesem Tag.</string>
+    <string name="hist_cp_months">Monate</string>
+    <string name="hist_cp_dates">Daten</string>
+    <string name="hist_cp_pick">Wähle bis zu %1$d aufeinanderfolgende Monate.</string>
+    <string name="hist_cp_none">Nichts ausgewählt</string>
+    <string name="hist_cp_too_long">Zu lang: höchstens %1$d Monate</string>
+    <string name="hist_go">Los</string>
+    <string name="hist_tab_charts">Diagramme</string>
+    <string name="hist_prev_day">Voriger Tag</string>
+    <string name="hist_next_day">Nächster Tag</string>
+    <string name="hist_day_empty">Keine Glukosewerte, Mahlzeiten, Insulin oder Aktivität an diesem Tag.</string>
+    <string name="hist_day_logs_empty">Keine Mahlzeiten, Boli, Tiefs, Hochs, Schlaf oder Training an diesem Tag.</string>
+    <string name="hist_no_glucose_day">Keine Glukosewerte an diesem Tag</string>
+    <string name="hist_tir">Zeit im Zielbereich</string>
+    <string name="hist_sensor_only">Nur %1$s Sensordaten</string>
+    <string name="hist_sensor_data">Sensordaten %1$s</string>
+    <string name="hist_avg">Mittelwert</string>
+    <string name="hist_var">Variabilität</string>
+    <string name="hist_range">Spanne</string>
+    <string name="hist_exercise_n">Training · %1$d×</string>
+    <string name="hist_hr_avg">Herzfrequenz · Ø</string>
+    <string name="hist_hr_resting">Ruhe</string>
+    <string name="hist_hr_max">Max</string>
+    <plurals name="hist_weeks">
+        <item quantity="one">%1$d Woche</item>
+        <item quantity="other">%1$d Wochen</item>
+    </plurals>
+    <plurals name="hist_months">
+        <item quantity="one">%1$d Monat</item>
+        <item quantity="other">%1$d Monate</item>
+    </plurals>
 </resources>

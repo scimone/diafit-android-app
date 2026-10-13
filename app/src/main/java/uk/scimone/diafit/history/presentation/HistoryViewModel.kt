@@ -1,5 +1,9 @@
 package uk.scimone.diafit.history.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.annotation.PluralsRes
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -103,7 +107,7 @@ class HistoryViewModel(
                 .flowOn(Dispatchers.Default)
                 .catch { e ->
                     Log.e(TAG, "Failed to load history", e)
-                    _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load history") }
+                    _state.update { it.copy(isLoading = false, errorMessage = e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.hist_load_failed)) }
                 }
                 .collect { next -> _state.value = next }
         }
@@ -174,16 +178,18 @@ data class HistoryState(
     val periodFirstDay: Long? = null,
     val periodLastDay: Long? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )
 
 
 /** The selectable time frames of the History screen. */
-enum class HistoryRange(val days: Int, val label: String) {
-    WEEK(7, "1 week"),
-    TWO_WEEKS(14, "2 weeks"),
-    MONTH(30, "1 month"),
-    THREE_MONTHS(90, "3 months")
+enum class HistoryRange(val days: Int, @PluralsRes private val plural: Int, private val quantity: Int) {
+    WEEK(7, R.plurals.hist_weeks, 1),
+    TWO_WEEKS(14, R.plurals.hist_weeks, 2),
+    MONTH(30, R.plurals.hist_months, 1),
+    THREE_MONTHS(90, R.plurals.hist_months, 3);
+
+    val label: String get() = AppStrings.plural(plural, quantity, quantity)
 }
 
 /** A user-chosen History period: whole local days [first]..[last], at most three calendar months, not in the future. */

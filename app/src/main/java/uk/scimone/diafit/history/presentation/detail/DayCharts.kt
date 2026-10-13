@@ -1,5 +1,8 @@
 package uk.scimone.diafit.history.presentation.detail
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -98,7 +101,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
         Box(Modifier.fillMaxWidth().height(InspectBarHeight)) {
             if (selectedTime == null) {
                 Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Hold a chart to inspect", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.hist_hold_inspect), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     ChartZoomControls(zoomState = zoomState, scrollState = scrollState, futureHours = 0, scrollToEnd = false)
                 }
@@ -200,7 +203,7 @@ internal fun DayCharts(state: DayDetailState, onOpenMeal: (Int) -> Unit) {
             scrollState = scrollState,
             onGroupClick = { group -> onOpenMeal(group.meals.first().id) },
             modifier = Modifier.padding(top = 6.dp),
-            noMealsMessage = "No meals on this day."
+            noMealsMessage = stringResource(R.string.hist_no_meals_day)
         )
     }
 }

@@ -1,5 +1,9 @@
 package uk.scimone.diafit.history.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -73,7 +77,7 @@ fun HistoryScreen(
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 state.days.isEmpty() -> Text(
-                    state.errorMessage ?: "No history yet",
+                    state.errorMessage?.asString() ?: stringResource(R.string.hist_no_history),
                     Modifier.align(Alignment.Center),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -128,7 +132,8 @@ fun HistoryScreen(
 private val COLLAPSE_SCROLL_DISTANCE = 120.dp
 private val MIN_AGP_HEIGHT = 112.dp
 
-private val RANGE_FORMAT = DateTimeFormatter.ofPattern("d MMM")
+private fun LocalDate.short(): String =
+    formatStamp(atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "dMMM")
 
 /** Period selector: back/forward arrows around the date range; tapping the range opens the time frame menu (1 week to 3 months). */
 @Composable
@@ -151,14 +156,14 @@ private fun PeriodHeader(
     var customOpen by remember { mutableStateOf(false) }
     if (customOpen) CustomPeriodDialog(custom, onDismiss = { customOpen = false }, onApply = { customOpen = false; onCustom(it) })
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onOlder, Modifier.size(40.dp), enabled = custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous period") }
+        IconButton(onClick = onOlder, Modifier.size(40.dp), enabled = custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.hist_prev_period)) }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             val label = if (first == null || last == null) "" else
-                "${LocalDate.ofEpochDay(first).format(RANGE_FORMAT)} – ${LocalDate.ofEpochDay(last).format(RANGE_FORMAT)}"
+                "${LocalDate.ofEpochDay(first).short()} – ${LocalDate.ofEpochDay(last).short()}"
             TextButton(onClick = { menuOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text("  ${if (custom != null) "Custom" else range.label}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Icon(Icons.Filled.ArrowDropDown, "Change time frame", tint = MaterialTheme.colorScheme.primary)
+                Text("  " + if (custom != null) stringResource(R.string.hist_custom) else range.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.ArrowDropDown, stringResource(R.string.hist_change_frame), tint = MaterialTheme.colorScheme.primary)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 HistoryRange.entries.forEach { r ->
@@ -169,12 +174,12 @@ private fun PeriodHeader(
                 }
                 HorizontalDivider()
                 DropdownMenuItem(
-                    text = { Text("Custom…", fontWeight = if (custom != null) FontWeight.Bold else null) },
+                    text = { Text(stringResource(R.string.hist_custom_menu), fontWeight = if (custom != null) FontWeight.Bold else null) },
                     onClick = { menuOpen = false; customOpen = true }
                 )
             }
         }
-        IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest && custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next period") }
+        IconButton(onClick = onNewer, Modifier.size(40.dp), enabled = !isLatest && custom == null) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.hist_next_period)) }
         FilterButton(weekdays, onWeekdays, layers, onLayers)
     }
 }
@@ -213,18 +218,18 @@ private fun FilterButton(
                 onClick = { open = true },
                 modifier = Modifier.size(40.dp),
                 colors = if (active) IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary) else IconButtonDefaults.iconButtonColors()
-            ) { Icon(Icons.Outlined.FilterList, "Filter by weekday") }
+            ) { Icon(Icons.Outlined.FilterList, stringResource(R.string.hist_filter_weekday)) }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Show", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.hist_show), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Column {
-                    LayerItem("Meals and insulin", layers.treatments) { onLayers(layers.copy(treatments = !layers.treatments)) }
-                    LayerItem("Activity", layers.activity) { onLayers(layers.copy(activity = !layers.activity)) }
-                    LayerItem("Sleep", layers.sleep) { onLayers(layers.copy(sleep = !layers.sleep)) }
+                    LayerItem(stringResource(R.string.hist_layer_treatments), layers.treatments) { onLayers(layers.copy(treatments = !layers.treatments)) }
+                    LayerItem(stringResource(R.string.panel_activity), layers.activity) { onLayers(layers.copy(activity = !layers.activity)) }
+                    LayerItem(stringResource(R.string.datatype_sleep), layers.sleep) { onLayers(layers.copy(sleep = !layers.sleep)) }
                 }
                 HorizontalDivider()
-                Text("Weekdays", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.hist_weekdays), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DayOfWeek.entries.forEach { d ->
                         val on = d in selected
@@ -247,9 +252,9 @@ private fun FilterButton(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ShortcutChip("Mon–Fri", selected == WORK_DAYS) { onChange(if (selected == WORK_DAYS) emptySet() else WORK_DAYS) }
-                    ShortcutChip("Sat–Sun", selected == WEEKEND) { onChange(if (selected == WEEKEND) emptySet() else WEEKEND) }
-                    if (active) ShortcutChip("All", false) { onChange(emptySet()) }
+                    ShortcutChip(stringResource(R.string.hist_workdays), selected == WORK_DAYS) { onChange(if (selected == WORK_DAYS) emptySet() else WORK_DAYS) }
+                    ShortcutChip(stringResource(R.string.hist_weekend), selected == WEEKEND) { onChange(if (selected == WEEKEND) emptySet() else WEEKEND) }
+                    if (active) ShortcutChip(stringResource(R.string.logs_filter_all), false) { onChange(emptySet()) }
                 }
             }
         }

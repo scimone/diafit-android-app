@@ -1,5 +1,11 @@
 package uk.scimone.diafit.history.presentation.detail
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.AppStrings
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,7 +76,7 @@ private const val MIN_DAY_COVERAGE = 0.7
 private const val MAX_DAYS_BACK = 3650
 
 /** The three views of a day. */
-private enum class DayTab(val label: String) { CHARTS("Charts"), STATS("Stats"), LOGS("Logs") }
+private enum class DayTab(@StringRes val labelRes: Int) { CHARTS(R.string.hist_tab_charts), STATS(R.string.nav_stats), LOGS(R.string.nav_logs) }
 
 /**
  * One day in full, opened from a History row, in three tabs: stats, the Home-style charts with the
@@ -114,9 +120,9 @@ fun DayDetailScreen(
                         scope.launch { pagerState.scrollToPage((pageCount - 1 - (today - day)).toInt().coerceIn(0, pageCount - 1)) }
                     }
                     picking = false
-                }) { Text("Go") }
+                }) { Text(stringResource(R.string.hist_go)) }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) { DatePicker(state = pickerState) }
     }
 
@@ -128,22 +134,22 @@ fun DayDetailScreen(
                         Column(Modifier.clip(RoundedCornerShape(8.dp)).clickable { picking = true }) {
                             Text(relativeDayName(shown, LocalDate.ofEpochDay(today)))
                             Text(
-                                shown.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())),
+                                formatStamp(shown.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "EEEEdMMMMy"),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
-                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } },
                     actions = {
                         IconButton(
                             onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
                             enabled = pagerState.currentPage > 0
-                        ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day") }
+                        ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.hist_prev_day)) }
                         IconButton(
                             onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
                             enabled = pagerState.currentPage < pageCount - 1
-                        ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day") }
+                        ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.hist_next_day)) }
                     }
                 )
                 PrimaryTabRow(selectedTabIndex = tab.ordinal) {
@@ -151,7 +157,7 @@ fun DayDetailScreen(
                         Tab(
                             selected = tab == t,
                             onClick = { tab = t },
-                            text = { Text(t.label) },
+                            text = { Text(stringResource(t.labelRes)) },
                             selectedContentColor = MaterialTheme.colorScheme.primary,
                             unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -172,8 +178,8 @@ fun DayDetailScreen(
 }
 
 private fun relativeDayName(date: LocalDate, today: LocalDate): String = when (date) {
-    today -> "Today"
-    today.minusDays(1) -> "Yesterday"
+    today -> AppStrings.get(R.string.date_today)
+    today.minusDays(1) -> AppStrings.get(R.string.date_yesterday)
     else -> date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
 }
 
@@ -184,11 +190,11 @@ private fun DayPage(userId: Int, epochDay: Long, tab: DayTab, onOpenMeal: (Int) 
 
     when {
         state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        state.isEmpty -> EmptyNote(state.errorMessage ?: "No glucose readings, meals, insulin or activity on this day.")
+        state.isEmpty -> EmptyNote(state.errorMessage?.asString() ?: stringResource(R.string.hist_day_empty))
         else -> when (tab) {
             DayTab.STATS -> DayStatsTab(userId, epochDay)
             DayTab.CHARTS -> DayCharts(state, onOpenMeal)
-            DayTab.LOGS -> if (state.entries.isEmpty()) EmptyNote("No meals, boluses, lows, highs, sleep or exercise on this day.") else LazyColumn(
+            DayTab.LOGS -> if (state.entries.isEmpty()) EmptyNote(stringResource(R.string.hist_day_logs_empty)) else LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -244,11 +250,11 @@ private fun SummaryCard(state: DayDetailState) {
     val stats = state.stats
     Section {
         if (stats == null) {
-            Text("No glucose readings on this day", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.hist_no_glucose_day), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    Text("Time in range", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.hist_tir), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             "${percent(stats.inRangeShare)}",
@@ -269,7 +275,7 @@ private fun SummaryCard(state: DayDetailState) {
                     val elapsed = (minOf(System.currentTimeMillis(), state.dayEndUtc) - state.dayStartUtc).coerceAtLeast(1)
                     val sparse = stats.coveredMs < elapsed * MIN_DAY_COVERAGE
                     Text(
-                        if (sparse) "Only ${formatDuration(stats.coveredMs)} of sensor data" else "Sensor data ${formatDuration(stats.coveredMs)}",
+                        if (sparse) stringResource(R.string.hist_sensor_only, formatDuration(stats.coveredMs)) else stringResource(R.string.hist_sensor_data, formatDuration(stats.coveredMs)),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = if (sparse) FontWeight.SemiBold else null,
                         color = if (sparse) Carbs else MaterialTheme.colorScheme.onSurfaceVariant
@@ -280,15 +286,15 @@ private fun SummaryCard(state: DayDetailState) {
             ZoneBreakdown(stats, state.thresholds)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Row(Modifier.fillMaxWidth()) {
-                Metric("Average", "${stats.meanMgdl.toInt()}", "mg/dL", Modifier.weight(1f))
-                Metric("Variability", "${stats.cvPercent.toInt()}", "% CV", Modifier.weight(1f), valueColor = if (stats.cvPercent > 36) AboveRange else null)
-                Metric("Range", "${stats.minMgdl}–${stats.maxMgdl}", "mg/dL", Modifier.weight(1.3f))
+                Metric(stringResource(R.string.hist_avg), "${stats.meanMgdl.toInt()}", "mg/dL", Modifier.weight(1f))
+                Metric(stringResource(R.string.hist_var), "${stats.cvPercent.toInt()}", "% CV", Modifier.weight(1f), valueColor = if (stats.cvPercent > 36) AboveRange else null)
+                Metric(stringResource(R.string.hist_range), "${stats.minMgdl}–${stats.maxMgdl}", "mg/dL", Modifier.weight(1.3f))
             }
         }
         Row(Modifier.fillMaxWidth()) {
-            Metric("Carbs", "${state.totalCarbs}", "g", Modifier.weight(1f), valueColor = Carbs)
-            Metric("Bolus", formatUnits(state.bolusUnits), "U", Modifier.weight(1f), valueColor = Bolus)
-            Metric("Basal", formatUnits(state.basalUnits), "U", Modifier.weight(1f), valueColor = Basal)
+            Metric(stringResource(R.string.macro_carbs), "${state.totalCarbs}", "g", Modifier.weight(1f), valueColor = Carbs)
+            Metric(stringResource(R.string.panel_bolus), formatUnits(state.bolusUnits), "U", Modifier.weight(1f), valueColor = Bolus)
+            Metric(stringResource(R.string.panel_basal), formatUnits(state.basalUnits), "U", Modifier.weight(1f), valueColor = Basal)
             if (state.smbUnits > 0) Metric("SMB", formatUnits(state.smbUnits), "U", Modifier.weight(1f), valueColor = Bolus)
         }
     }
@@ -319,11 +325,11 @@ internal fun TimeInRangeBar(stats: DayGlucoseStats) {
 @Composable
 private fun ZoneBreakdown(stats: DayGlucoseStats, t: GlucoseThresholds) {
     val rows = listOf(
-        Triple(GlucoseZone.VERY_HIGH, "Very high", ">${t.veryHigh}"),
-        Triple(GlucoseZone.HIGH, "High", "${t.high + 1}–${t.veryHigh}"),
-        Triple(GlucoseZone.IN_RANGE, "In range", "${t.low}–${t.high}"),
-        Triple(GlucoseZone.LOW, "Low", "${t.veryLow}–${t.low - 1}"),
-        Triple(GlucoseZone.VERY_LOW, "Very low", "<${t.veryLow}")
+        Triple(GlucoseZone.VERY_HIGH, stringResource(R.string.logs_ep_very_high), ">${t.veryHigh}"),
+        Triple(GlucoseZone.HIGH, stringResource(R.string.logs_ep_high), "${t.high + 1}–${t.veryHigh}"),
+        Triple(GlucoseZone.IN_RANGE, stringResource(R.string.logs_legend_in_range), "${t.low}–${t.high}"),
+        Triple(GlucoseZone.LOW, stringResource(R.string.logs_ep_low), "${t.veryLow}–${t.low - 1}"),
+        Triple(GlucoseZone.VERY_LOW, stringResource(R.string.logs_ep_very_low), "<${t.veryLow}")
     )
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         rows.forEach { (zone, label, range) ->
@@ -388,18 +394,18 @@ internal fun percent(share: Double): Int = Math.round(share * 100).toInt()
 @Composable
 private fun ActivityCard(stats: ActivityDayStats) {
     Section {
-        Text("Activity", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.panel_activity), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth()) {
-            Metric("Steps", "%,d".format(stats.steps), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.steps > 0 })
-            Metric(if (stats.exerciseCount > 1) "Exercise · ${stats.exerciseCount}×" else "Exercise", if (stats.exerciseCount == 0) "–" else formatDuration(stats.exerciseMs), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.exerciseCount > 0 })
-            Metric("Sleep", if (stats.hasSleep) formatDuration(stats.sleepMs) else "–", "", Modifier.weight(1f), valueColor = Sleep.takeIf { stats.hasSleep })
+            Metric(stringResource(R.string.datatype_steps), "%,d".format(stats.steps), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.steps > 0 })
+            Metric(if (stats.exerciseCount > 1) stringResource(R.string.hist_exercise_n, stats.exerciseCount) else stringResource(R.string.datatype_exercise), if (stats.exerciseCount == 0) "–" else formatDuration(stats.exerciseMs), "", Modifier.weight(1f), valueColor = Activity.takeIf { stats.exerciseCount > 0 })
+            Metric(stringResource(R.string.datatype_sleep), if (stats.hasSleep) formatDuration(stats.sleepMs) else "–", "", Modifier.weight(1f), valueColor = Sleep.takeIf { stats.hasSleep })
         }
         if (stats.hasHeartRate) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Row(Modifier.fillMaxWidth()) {
-                Metric("Heart rate · avg", "${stats.avgBpm}", "bpm", Modifier.weight(1f))
-                Metric("Resting", "${stats.restingBpm}", "bpm", Modifier.weight(1f))
-                Metric("Max", "${stats.maxBpm}", "bpm", Modifier.weight(1f))
+                Metric(stringResource(R.string.hist_hr_avg), "${stats.avgBpm}", "bpm", Modifier.weight(1f))
+                Metric(stringResource(R.string.hist_hr_resting), "${stats.restingBpm}", "bpm", Modifier.weight(1f))
+                Metric(stringResource(R.string.hist_hr_max), "${stats.maxBpm}", "bpm", Modifier.weight(1f))
             }
         }
         if (stats.hasSleep && stats.stageMs.keys.any { it != SleepStage.SLEEPING }) {
