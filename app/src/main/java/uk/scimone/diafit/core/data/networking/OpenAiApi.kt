@@ -6,6 +6,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.json.JsonArray
@@ -19,6 +20,10 @@ import uk.scimone.diafit.core.domain.util.networking.NetworkError
 import uk.scimone.diafit.core.domain.util.networking.Result
 
 private const val AI_REQUEST_TIMEOUT_MS = 300_000L
+
+/** A 4xx answer from the AI endpoint, with its body so the log shows why it was refused. */
+class AiHttpException(val status: Int, val body: String) :
+    Exception("HTTP $status: ${body.replace(Regex("\\s+"), " ").take(400)}")
 
 /** Minimal client for the OpenAI-compatible `/chat/completions` endpoint, vision-capable. */
 class OpenAiApi(private val client: HttpClient) {
@@ -66,7 +71,7 @@ class OpenAiApi(private val client: HttpClient) {
         }
 
         return safeCall {
-            client.post(url) {
+            val response = client.post(url) {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "Bearer $apiKey")
                 // Vision requests with several photos (or a slow local model) can take minutes.
@@ -77,6 +82,11 @@ class OpenAiApi(private val client: HttpClient) {
                 }
                 setBody(requestBody.toString())
             }
+            // Keep the endpoint's own explanation (e.g. a 400 about the schema or model name).
+            if (response.status.value in 400..499 && response.status.value != 408 && response.status.value != 429) {
+                throw AiHttpException(response.status.value, response.bodyAsText())
+            }
+            response
         }
     }
 

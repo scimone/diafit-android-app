@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.io.ByteArrayOutputStream
+import uk.scimone.diafit.core.data.networking.AiHttpException
 import uk.scimone.diafit.core.data.networking.OpenAiApi
 import uk.scimone.diafit.core.domain.model.ImpactType
 import uk.scimone.diafit.core.domain.model.MealAnalysisResult
@@ -69,17 +70,24 @@ class MealAnalysisRepositoryImpl(
                 val model = mealSettings.model.ifBlank { DEFAULT_AI_MODEL }
                 val prompt = buildPrompt(mealSettings.effectivePrompt, userNotes)
                 val startedAt = System.currentTimeMillis()
-                val response = openAiApi.analyzeMealPhoto(
-                    baseUrl = connection.baseUrl,
-                    apiKey = connection.apiKey,
-                    model = model,
-                    prompt = prompt,
-                    imagesBase64 = images
-                )
+                var httpError: String? = null
+                val response = try {
+                    openAiApi.analyzeMealPhoto(
+                        baseUrl = connection.baseUrl,
+                        apiKey = connection.apiKey,
+                        model = model,
+                        prompt = prompt,
+                        imagesBase64 = images
+                    )
+                } catch (e: AiHttpException) {
+                    httpError = e.message
+                    NetResult.Error(uk.scimone.diafit.core.domain.util.networking.NetworkError.UNKNOWN)
+                }
                 val duration = System.currentTimeMillis() - startedAt
                 val content = (response as? NetResult.Success)?.data?.choices?.firstOrNull()?.message?.content
                 val usage = (response as? NetResult.Success)?.data?.usage
                 val error = when {
+                    httpError != null -> "request failed: $httpError"
                     response is NetResult.Error -> "request failed: ${response.error}"
                     content == null -> "returned an empty response"
                     else -> null
