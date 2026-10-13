@@ -90,10 +90,10 @@ internal fun applyPalette(dark: Boolean) { if (darkPalette != dark) darkPalette 
 
 val InRange: Color get() = if (darkPalette) Color(0xFF2ECC9B) else Color(0xFF14A077)
 val BelowRange: Color get() = if (darkPalette) Color(0xFFEF6C5B) else Color(0xFFDC4A3C)
-val AboveRange: Color get() = if (darkPalette) Color(0xFF7F8CF2) else Color(0xFF5662D8)
+val AboveRange: Color get() = if (darkPalette) Color(0xFF9AA5FF) else Color(0xFF5662D8)
 val Carbs: Color get() = if (darkPalette) Color(0xFFFFD54F) else Color(0xFFF0A30A)
 val Bolus: Color get() = if (darkPalette) Color(0xFF42A5F5) else Color(0xFF2B8CE6)
-val Basal: Color get() = if (darkPalette) Color(0xFF1565C0) else Color(0xFF0F4FA8)  // dark blue for basal insulin everywhere
+val Basal: Color get() = if (darkPalette) Color(0xFF3585E6) else Color(0xFF0F4FA8)  // dark blue for basal insulin everywhere
 val Activity: Color get() = if (darkPalette) Color(0xFFE0489E) else Color(0xFFD42E86)
 val Warning: Color get() = if (darkPalette) Color(0xFFF59E0B) else Color(0xFFD97706)
 val Device: Color get() = if (darkPalette) Color(0xFF90A4AE) else Color(0xFF6B8190)
@@ -112,7 +112,7 @@ val GlucoseNeutralColor: Color get() = if (darkPalette) Color(0xFF4DD0E1) else C
 val SleepAwake: Color get() = if (darkPalette) Color(0xFFFFB74D) else Color(0xFFF0A040)
 val SleepRem: Color get() = if (darkPalette) Color(0xFFB39DDB) else Color(0xFF9378CC)
 val SleepLight: Color get() = if (darkPalette) Color(0xFF7E8CE0) else Color(0xFF6672D4)
-val SleepDeep = Color(0xFF3949AB)
+val SleepDeep: Color get() = if (darkPalette) Color(0xFF5C6BC0) else Color(0xFF3949AB)
 val Sleep: Color get() = if (darkPalette) Color(0xFF7986CB) else Color(0xFF5E6BC0)         // generic sleep colour (wash, labels, sleep without stage data)
 
 // Additional Colors
