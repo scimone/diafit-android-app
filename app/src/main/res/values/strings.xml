@@ -1825,4 +1825,6 @@
     <string name="sync_cgm_title">CGM sync service</string>
     <string name="sync_cgm_text">Syncing CGM data in real time</string>
     <string name="sync_last_reading">Last reading %1$d min ago</string>
+    <string name="sync_expiry_sensor">Sensor %1$s</string>
+    <string name="sync_expiry_pump">Pump %1$s</string>
 </resources>

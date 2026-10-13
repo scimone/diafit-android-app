@@ -81,3 +81,20 @@ fun deviceAges(
     if (merged) ages.add(1.coerceAtMost(ages.size), age(DeviceKind.PATCH, minOf(lifetimes.hours(DeviceKind.SITE), lifetimes.hours(DeviceKind.INSULIN))))
     return ages.filter { it.kind != DeviceKind.BATTERY || deviceLayout(events, batteryReported, pumpType).showBattery }
 }
+
+/** Time left on the sensor and on the pump parts (site / insulin / patch / battery, the soonest), shown while below the limit. */
+data class ExpiryWarning(val sensorMs: Long?, val pumpMs: Long?) {
+    val any get() = sensorMs != null || pumpMs != null
+}
+
+const val SENSOR_WARNING_HOURS = 24
+const val PUMP_WARNING_HOURS = 10
+
+fun expiryWarning(ages: List<DeviceAge>): ExpiryWarning {
+    fun soonest(pred: (DeviceKind) -> Boolean, limitHours: Int) = ages.filter { pred(it.kind) }
+        .mapNotNull { it.remainingMs }.minOrNull()?.takeIf { it < limitHours * 3_600_000L }
+    return ExpiryWarning(
+        soonest({ it == DeviceKind.SENSOR }, SENSOR_WARNING_HOURS),
+        soonest({ it != DeviceKind.SENSOR }, PUMP_WARNING_HOURS)
+    )
+}
