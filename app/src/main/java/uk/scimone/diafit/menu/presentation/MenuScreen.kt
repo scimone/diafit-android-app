@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -99,6 +100,7 @@ fun MenuScreen(
     onOpenTreatmentPlan: () -> Unit,
     onOpenPatterns: () -> Unit,
     onOpenDataEditor: () -> Unit,
+    onOpenDailyRecap: () -> Unit,
     onOpenSettings: (SettingsPage) -> Unit
 ) {
     val settings: SettingsViewModel = koinViewModel()
@@ -137,6 +139,15 @@ fun MenuScreen(
 
             MenuGroup(stringResource(R.string.menu_group_therapy)) {
                 MenuRow(Icons.AutoMirrored.Filled.ReceiptLong, Basal, stringResource(R.string.menu_treatment_plan), stringResource(R.string.menu_treatment_plan_sub), onOpenTreatmentPlan)
+                if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+                    val recapStore: uk.scimone.diafit.dailyrecap.data.DailyRecapStore = koinInject()
+                    val recapConfig by recapStore.config.collectAsState()
+                    MenuRow(
+                        Icons.Filled.WbSunny, Warning, stringResource(R.string.recap_title),
+                        if (recapConfig.enabled) stringResource(R.string.recap_menu_on) else stringResource(R.string.recap_menu_sub),
+                        onOpenDailyRecap
+                    )
+                }
                 MenuRow(
                     Icons.Filled.Insights, MaterialTheme.colorScheme.tertiary, stringResource(R.string.patterns_title),
                     if (newPatterns > 0) stringResource(R.string.menu_patterns_new, newPatterns) else stringResource(R.string.menu_patterns_sub),

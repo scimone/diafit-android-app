@@ -49,7 +49,8 @@ class DiafitApp : Application() {
                     patternsModule,
                     uk.scimone.diafit.mealactivity.di.mealActivityModule,
                     uk.scimone.diafit.stats.di.statsModule
-                ) + if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()
+                ) + (if (BackendSyncFeature.ENABLED) listOf(backendSyncModule) else emptyList()) +
+                    (if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) listOf(uk.scimone.diafit.dailyrecap.di.dailyRecapModule) else emptyList())
             )
         }
 
@@ -71,6 +72,12 @@ class DiafitApp : Application() {
         // Optional upload to the user's Diafit backend; the worker is a no-op until one is configured.
         if (BackendSyncFeature.ENABLED) {
             org.koin.java.KoinJavaComponent.get<BackendSyncScheduler>(BackendSyncScheduler::class.java).schedulePeriodic()
+        }
+        // Optional LLM morning recap: keeps the next 07:00 job queued, but only for people who switched it on.
+        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED &&
+            org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.dailyrecap.data.DailyRecapStore>(uk.scimone.diafit.dailyrecap.data.DailyRecapStore::class.java).config.value.enabled
+        ) {
+            org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.dailyrecap.data.DailyRecapScheduler>(uk.scimone.diafit.dailyrecap.data.DailyRecapScheduler::class.java).scheduleNext()
         }
     }
 

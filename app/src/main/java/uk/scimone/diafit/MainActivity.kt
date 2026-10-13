@@ -194,8 +194,10 @@ class MainActivity : ComponentActivity() {
                 // What a notification opens: an pattern, the Patterns list, else the Devices page.
                 val openLink: (String?) -> Unit = { link ->
                     val patternId = uk.scimone.diafit.notifications.domain.parsePatternLink(link)
+                    val recapDay = if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) uk.scimone.diafit.dailyrecap.data.parseRecapLink(link) else null
                     overlays.add(
                         when {
+                            recapDay != null -> Overlay.DailyRecap
                             patternId != null -> Overlay.PatternDetail(patternId)
                             uk.scimone.diafit.notifications.domain.isPatternsListLink(link) -> Overlay.Patterns
                             else -> Overlay.Devices
@@ -324,7 +326,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings || overlay is Overlay.DataEditor)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings || overlay is Overlay.DataEditor || overlay is Overlay.DailyRecap)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -367,8 +369,10 @@ class MainActivity : ComponentActivity() {
                                     onOpenTreatmentPlan = { overlays.add(Overlay.Profile) },
                                     onOpenPatterns = { overlays.add(Overlay.Patterns) },
                                     onOpenDataEditor = { overlays.add(Overlay.DataEditor) },
+                                    onOpenDailyRecap = { overlays.add(Overlay.DailyRecap) },
                                     onOpenSettings = { overlays.add(Overlay.Settings(it)) }
                                 )
+                                is Overlay.DailyRecap -> uk.scimone.diafit.dailyrecap.presentation.DailyRecapScreen(onBack = { overlays.remove(overlay) })
                                 is Overlay.DataEditor -> uk.scimone.diafit.dataeditor.presentation.DataEditorScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Settings -> SettingsPageScreen(
                                     page = overlay.page,
@@ -428,6 +432,12 @@ class MainActivity : ComponentActivity() {
     private fun handlePatternDebug(intent: Intent?): Boolean {
         if (!BuildConfig.DEBUG || intent == null) return false
         if (intent.getBooleanExtra("pattern_reset", false)) { patternScheduler.reset(); return true }
+        // `--el recap_epoch_day <n>`: writes that day's recap now (today's = so far) and pushes it.
+        val recapDay = intent.getLongExtra("recap_epoch_day", Long.MIN_VALUE)
+        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED && recapDay != Long.MIN_VALUE) {
+            org.koin.java.KoinJavaComponent.get<uk.scimone.diafit.dailyrecap.data.DailyRecapScheduler>(uk.scimone.diafit.dailyrecap.data.DailyRecapScheduler::class.java).runNow(recapDay)
+            return true
+        }
         val asOf = intent.getLongExtra("pattern_as_of", 0L)
         if (asOf > 0) { patternScheduler.simulate(asOf); return true }
         return false
@@ -458,6 +468,8 @@ private sealed interface Overlay {
     data object Menu : Overlay
     /** Correct or delete any stored record. */
     data object DataEditor : Overlay
+    /** The optional LLM morning recap (see DailyRecapFeature). */
+    data object DailyRecap : Overlay
     data class Settings(val page: uk.scimone.diafit.settings.presentation.SettingsPage) : Overlay
     /** The pattern cards (recurring glucose patterns with tips). */
     data object Patterns : Overlay

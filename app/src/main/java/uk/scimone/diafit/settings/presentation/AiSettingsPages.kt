@@ -255,7 +255,7 @@ internal fun MealEstimationPage(state: SettingsState, viewModel: SettingsViewMod
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConnectionPicker(connections: List<AiConnection>, selectedId: String?, onSelect: (String) -> Unit) {
+internal fun ConnectionPicker(connections: List<AiConnection>, selectedId: String?, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val selected = connections.firstOrNull { it.id == selectedId }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {

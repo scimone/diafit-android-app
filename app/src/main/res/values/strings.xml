@@ -1833,4 +1833,34 @@
     <string name="sync_cgm_title">CGM sync service</string>
     <string name="sync_cgm_text">Syncing CGM data in real time</string>
     <string name="sync_last_reading">Last reading %1$d min ago</string>
+
+    <!-- Daily recap -->
+    <string name="recap_title">Daily recap</string>
+    <string name="recap_channel_name">Daily recap</string>
+    <string name="recap_channel_desc">A short look back at yesterday every morning</string>
+    <string name="recap_menu_sub">Yesterday in a nutshell, every morning</string>
+    <string name="recap_menu_off">Off</string>
+    <string name="recap_menu_on">Every morning at 07:00</string>
+    <string name="recap_empty_title">No recap yet</string>
+    <string name="recap_empty_body">Switch it on below and at 07:00 you get a short look back at yesterday: what went well, what didn\'t and what to try today. You can also write one right now.</string>
+    <string name="recap_section_well">Went well</string>
+    <string name="recap_section_wrong">To look at</string>
+    <string name="recap_section_today">Today</string>
+    <string name="recap_partial">day was still running</string>
+    <string name="recap_generated_at">Written %1$s</string>
+    <string name="recap_previous">Previous recap</string>
+    <string name="recap_next">Next recap</string>
+    <string name="recap_settings_title">Settings</string>
+    <string name="recap_switch_title">Morning recap at 07:00</string>
+    <string name="recap_switch_sub">An AI writes it from a summary of yesterday: glucose, meals (name and carbs), insulin and activity. Photos and notes are never sent.</string>
+    <string name="recap_ai_off">AI is switched off in the menu. Switch it on to get the recap.</string>
+    <string name="recap_no_connection">Add an AI connection first (Menu → AI).</string>
+    <string name="recap_model_hint">Any chat model works; a small, cheap one is enough.</string>
+    <string name="recap_try_title">Try it</string>
+    <string name="recap_try_yesterday">Write yesterday\'s</string>
+    <string name="recap_try_today">Try with today so far</string>
+    <string name="recap_writing">Writing…</string>
+    <string name="recap_show_data">Show what the AI sees</string>
+    <string name="recap_hide_data">Hide</string>
+    <string name="recap_data_caption">Yesterday\'s data exactly as sent, nothing else.</string>
 </resources>

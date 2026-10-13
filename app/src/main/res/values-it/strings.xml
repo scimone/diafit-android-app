@@ -1830,4 +1830,34 @@
     <string name="sync_cgm_title">Sincronizzazione CGM</string>
     <string name="sync_cgm_text">Sincronizzazione dei dati CGM in tempo reale</string>
     <string name="sync_last_reading">Ultima lettura %1$d min fa</string>
+
+    <!-- Daily recap -->
+    <string name="recap_title">Riepilogo giornaliero</string>
+    <string name="recap_channel_name">Riepilogo giornaliero</string>
+    <string name="recap_channel_desc">Ogni mattina uno sguardo breve a ieri</string>
+    <string name="recap_menu_sub">Ieri in breve, ogni mattina</string>
+    <string name="recap_menu_off">Disattivato</string>
+    <string name="recap_menu_on">Ogni mattina alle 07:00</string>
+    <string name="recap_empty_title">Ancora nessun riepilogo</string>
+    <string name="recap_empty_body">Attivalo qui sotto e alle 07:00 riceverai un breve sguardo a ieri: cosa è andato bene, cosa no e cosa provare oggi. Puoi anche crearne uno subito.</string>
+    <string name="recap_section_well">Andato bene</string>
+    <string name="recap_section_wrong">Da guardare</string>
+    <string name="recap_section_today">Oggi</string>
+    <string name="recap_partial">la giornata era ancora in corso</string>
+    <string name="recap_generated_at">Scritto %1$s</string>
+    <string name="recap_previous">Riepilogo precedente</string>
+    <string name="recap_next">Riepilogo successivo</string>
+    <string name="recap_settings_title">Impostazioni</string>
+    <string name="recap_switch_title">Riepilogo del mattino alle 07:00</string>
+    <string name="recap_switch_sub">Lo scrive un\'IA da un riassunto di ieri: glicemia, pasti (nome e carboidrati), insulina e attività. Foto e note non vengono mai inviate.</string>
+    <string name="recap_ai_off">L\'IA è disattivata nel menu. Attivala per ricevere il riepilogo.</string>
+    <string name="recap_no_connection">Aggiungi prima una connessione IA (Menu → IA).</string>
+    <string name="recap_model_hint">Va bene qualsiasi modello di chat; ne basta uno piccolo ed economico.</string>
+    <string name="recap_try_title">Provalo</string>
+    <string name="recap_try_yesterday">Scrivi quello di ieri</string>
+    <string name="recap_try_today">Prova con i dati di oggi</string>
+    <string name="recap_writing">Scrittura in corso…</string>
+    <string name="recap_show_data">Mostra cosa vede l\'IA</string>
+    <string name="recap_hide_data">Nascondi</string>
+    <string name="recap_data_caption">I dati di ieri esattamente come inviati, nient\'altro.</string>
 </resources>

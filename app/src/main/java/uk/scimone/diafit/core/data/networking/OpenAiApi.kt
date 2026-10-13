@@ -93,6 +93,55 @@ class OpenAiApi(private val client: HttpClient) {
         return result
     }
 
+    /**
+     * Text-only chat completion whose answer must match [schema] (structured outputs). Used by features that send
+     * data rather than photos, e.g. the daily recap.
+     */
+    suspend fun completeJson(
+        baseUrl: String,
+        apiKey: String,
+        model: String,
+        system: String,
+        user: String,
+        schemaName: String,
+        schema: kotlinx.serialization.json.JsonObject
+    ): Result<ChatCompletionResponseDto, NetworkError> {
+        val requestBody = buildJsonObject {
+            put("model", model)
+            put("messages", JsonArray(listOf(
+                buildJsonObject { put("role", "system"); put("content", system) },
+                buildJsonObject { put("role", "user"); put("content", user) }
+            )))
+            put("response_format", buildJsonObject {
+                put("type", "json_schema")
+                put("json_schema", buildJsonObject {
+                    put("name", schemaName)
+                    put("strict", true)
+                    put("schema", schema)
+                })
+            })
+        }
+        var refusal: AiHttpException? = null
+        val result = safeCall<ChatCompletionResponseDto> {
+            val response = client.post(baseUrl.trimEnd('/') + "/chat/completions") {
+                contentType(ContentType.Application.Json)
+                header("Authorization", "Bearer $apiKey")
+                timeout {
+                    requestTimeoutMillis = AI_REQUEST_TIMEOUT_MS
+                    socketTimeoutMillis = AI_REQUEST_TIMEOUT_MS
+                    connectTimeoutMillis = 30_000
+                }
+                setBody(requestBody.toString())
+            }
+            if (response.status.value in 400..499 && response.status.value != 408 && response.status.value != 429) {
+                refusal = AiHttpException(response.status.value, response.bodyAsText())
+            }
+            response
+        }
+        refusal?.let { throw it }
+        return result
+    }
+
     suspend fun listModels(baseUrl: String, apiKey: String): Result<ModelListResponseDto, NetworkError> =
         safeCall {
             client.get(baseUrl.trimEnd('/') + "/models") {
