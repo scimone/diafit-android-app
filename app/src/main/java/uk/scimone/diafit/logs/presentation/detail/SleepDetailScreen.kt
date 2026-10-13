@@ -1,5 +1,8 @@
 package uk.scimone.diafit.logs.presentation.detail
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -35,12 +38,12 @@ import java.util.Locale
 @Composable
 fun SleepDetailScreen(entry: SleepEntryUi, onBack: () -> Unit) {
     val clock = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val date = SimpleDateFormat("EEEE d MMMM", Locale.getDefault())
+    val date = uk.scimone.diafit.core.presentation.localizedFormat("EEEEdMMMM")
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sleep") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                title = { Text(stringResource(R.string.datatype_sleep)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -54,10 +57,10 @@ fun SleepDetailScreen(entry: SleepEntryUi, onBack: () -> Unit) {
             }
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(formatDuration(entry.asleepMs), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = Sleep)
-                Text(" asleep", style = MaterialTheme.typography.titleMedium, color = Sleep, modifier = Modifier.padding(bottom = 6.dp))
+                Text(" " + stringResource(R.string.logs_asleep), style = MaterialTheme.typography.titleMedium, color = Sleep, modifier = Modifier.padding(bottom = 6.dp))
             }
             if (!entry.hasStages) {
-                Text("No sleep stages were recorded for this night.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.logs_sleep_no_stages), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 val stages = listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).filter { (entry.stageMs[it] ?: 0L) > 0L }
                 val total = stages.sumOf { entry.stageMs[it] ?: 0L }.coerceAtLeast(1L)

@@ -1,5 +1,8 @@
 package uk.scimone.diafit.logs.presentation.components
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -56,19 +59,19 @@ fun NewEntrySheet(
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Add to logs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.logs_new_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             openMeal?.let {
                 AddCourseRow(it, onClick = { onAddCourse(it.anchorMealId) })
                 Text(
-                    "Or start something new",
+                    stringResource(R.string.logs_new_other),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp, start = 4.dp)
                 )
             }
             LogsEntryKind.creatableKinds.forEach { kind ->
-                KindRow(kind, onClick = { onPick(kind) }, labelOverride = if (kind == LogsEntryKind.MEAL && openMeal != null) "New meal" else null)
+                KindRow(kind, onClick = { onPick(kind) }, labelOverride = if (kind == LogsEntryKind.MEAL && openMeal != null) stringResource(R.string.logs_new_meal) else null)
             }
         }
     }
@@ -76,7 +79,7 @@ fun NewEntrySheet(
 
 @Composable
 private fun AddCourseRow(meal: OpenMealSummary, onClick: () -> Unit) {
-    val time = remember(meal.startTime) { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(meal.startTime)) }
+    val time = remember(meal.startTime) { formatStamp(meal.startTime, "Hm") }
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
@@ -94,15 +97,15 @@ private fun AddCourseRow(meal: OpenMealSummary, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Add a course", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.logs_new_add_course), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "to ${meal.title}",
+                    stringResource(R.string.logs_new_to_meal, meal.title),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "Since $time · ${meal.courseCount} ${if (meal.courseCount == 1) "course" else "courses"} · ${meal.totalCarbs} g",
+                    pluralStringResource(R.plurals.logs_new_since, meal.courseCount, time, meal.courseCount, meal.totalCarbs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -132,16 +135,16 @@ private fun KindRow(kind: LogsEntryKind, onClick: () -> Unit, labelOverride: Str
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(labelOverride ?: kind.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(labelOverride ?: stringResource(kind.labelResId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    kind.description(),
+                    stringResource(kind.subtitleRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (!kind.available) {
                 Text(
-                    "Soon",
+                    stringResource(R.string.logs_new_soon),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -155,11 +158,4 @@ private fun LogsEntryKind.vector(): ImageVector = when (this) {
     else -> Icons.AutoMirrored.Filled.DirectionsRun
 }
 
-private fun LogsEntryKind.description(): String = when (this) {
-    LogsEntryKind.MEAL -> "Photo, carbs and absorption speed"
-    LogsEntryKind.SLEEP -> "Bedtime, wake-up and quality"
-    LogsEntryKind.ACTIVITY -> "Workouts and how hard they were"
-    LogsEntryKind.GLUCOSE -> "Found in your CGM data"
-    LogsEntryKind.BOLUS -> "Found in your pump data"
-    LogsEntryKind.DEVICE -> "Pod and site changes from your pump"
-}
+

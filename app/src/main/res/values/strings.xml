@@ -393,4 +393,191 @@
     <string name="backend_last">Last sync %1$s</string>
     <string name="backend_connected_as">Connected as %1$s</string>
     <string name="backend_err_enter">Enter the address and the API token</string>
+
+    <!-- Meal types, absorption, entry kinds, day labels -->
+    <string name="meal_type_breakfast">Breakfast</string>
+    <string name="meal_type_lunch">Lunch</string>
+    <string name="meal_type_dinner">Dinner</string>
+    <string name="meal_type_snack">Snack</string>
+    <string name="absorption_fast">Fast</string>
+    <string name="absorption_medium">Medium</string>
+    <string name="absorption_slow">Slow</string>
+    <string name="absorption_fast_hint">Sugary or low-fat food. Glucose rises quickly and peaks early.</string>
+    <string name="absorption_medium_hint">Typical mixed meal. Glucose rises steadily over a few hours.</string>
+    <string name="absorption_slow_hint">High in fat and protein. A slow, extended rise, often delayed.</string>
+    <string name="sleep_stage_awake">Awake</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Light</string>
+    <string name="sleep_stage_deep">Deep</string>
+    <string name="sleep_stage_asleep">Asleep</string>
+    <string name="logs_kind_meal">Meal</string>
+    <string name="logs_kind_meal_plural">Meals</string>
+    <string name="logs_kind_glucose">Low or high</string>
+    <string name="logs_kind_glucose_plural">Lows &amp; highs</string>
+    <string name="logs_kind_bolus">Insulin</string>
+    <string name="logs_kind_device">Device</string>
+    <string name="logs_kind_device_plural">Device events</string>
+    <string name="logs_kind_sleep">Sleep</string>
+    <string name="logs_kind_activity">Exercise</string>
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
+    <string name="common_collapse">Collapse</string>
+    <string name="common_expand">Expand</string>
+
+    <!-- Logs: entry kinds (subtitles, empty states) -->
+    <string name="logs_kind_meal_sub">Photo, carbs and absorption speed</string>
+    <string name="logs_kind_sleep_sub">Bedtime, wake-up and quality</string>
+    <string name="logs_kind_activity_sub">Workouts and how hard they were</string>
+    <string name="logs_kind_glucose_sub">Found in your CGM data</string>
+    <string name="logs_kind_bolus_sub">Found in your pump data</string>
+    <string name="logs_kind_device_sub">Pod and site changes from your pump</string>
+    <string name="logs_empty_meal">No meals in this period</string>
+    <string name="logs_empty_glucose">No lows or highs in this period</string>
+    <string name="logs_empty_bolus">No insulin in this period</string>
+    <string name="logs_empty_device">No device events in this period</string>
+    <string name="logs_empty_sleep">No sleep in this period</string>
+    <string name="logs_empty_activity">No exercise in this period</string>
+
+    <!-- Logs: misc -->
+    <string name="logs_absorption_cd">%1$s absorption</string>
+
+    <!-- Logs: list, cards, sheet -->
+    <string name="logs_filter_all">All</string>
+    <string name="logs_device_imported_note">Imported from %1$s. Deleting only removes it from Diafit.</string>
+    <string name="logs_device_delete_note">Deleting only removes it from Diafit.</string>
+    <string name="logs_dup_text">Same meal? AAPS carbs %1$d g at %2$s</string>
+    <string name="logs_dup_separate">Separate</string>
+    <string name="logs_dup_merge">Merge</string>
+    <string name="logs_range_last_days">Last %1$d days</string>
+    <string name="logs_range_back">Back to last %1$d days</string>
+    <string name="logs_summary_carbs">%1$d g carbs</string>
+    <string name="logs_summary_smb">%1$s U SMB</string>
+    <string name="logs_summary_sleep">%1$s sleep</string>
+    <string name="logs_empty_title_period">Nothing in this period</string>
+    <string name="logs_empty_body_kind_custom">Nothing of this kind was recorded in the days you picked. Try all entries or a longer period.</string>
+    <string name="logs_empty_body_kind">Nothing of this kind was recorded in the last %1$d days.</string>
+    <string name="logs_empty_body_period">No entries were recorded in the days you picked.</string>
+    <string name="logs_show_all">Show all entries</string>
+    <string name="logs_empty_title">Your logs are empty</string>
+    <string name="logs_empty_body">Meals you log appear here with how they moved your glucose, together with boluses, lows and highs, device changes, sleep and workouts.</string>
+    <string name="logs_add_first">Add first entry</string>
+    <string name="logs_load_failed">Failed to load meals</string>
+    <string name="logs_card_add_photo">Add photo</string>
+    <string name="logs_ep_very_low">Very low</string>
+    <string name="logs_ep_low">Low</string>
+    <string name="logs_ep_very_high">Very high</string>
+    <string name="logs_ep_high">High</string>
+    <string name="logs_ep_for">%1$s for %2$s</string>
+    <string name="logs_ep_lowest">lowest mg/dL</string>
+    <string name="logs_ep_highest">highest mg/dL</string>
+    <string name="logs_bolus_auto_smb">Automatic · SMB</string>
+    <string name="logs_bolus_single">Insulin bolus</string>
+    <string name="logs_bolus_part_auto">%1$s · Automatic</string>
+    <string name="logs_bolus_part_bolus">%1$s · Bolus</string>
+    <string name="logs_unit_shift">h shift</string>
+    <string name="logs_ex_easy">Easy</string>
+    <string name="logs_ex_moderate">Moderate</string>
+    <string name="logs_ex_hard">Hard</string>
+    <string name="logs_asleep">asleep</string>
+    <string name="logs_pump_profile_switch">Profile Switch</string>
+    <string name="logs_pump_temp_target">Temporary Target</string>
+    <string name="logs_pump_warning">Warning</string>
+    <string name="logs_pump_site_insulin">Site &amp; insulin change</string>
+    <string name="logs_peak_arrow"> → peak </string>
+    <string name="logs_peak_only">peak </string>
+    <string name="logs_after_hm">%1$dh %2$dm</string>
+    <string name="logs_after_m">%1$dm</string>
+    <string name="logs_new_title">Add to logs</string>
+    <string name="logs_new_other">Or start something new</string>
+    <string name="logs_new_meal">New meal</string>
+    <string name="logs_new_add_course">Add a course</string>
+    <string name="logs_new_to_meal">to %1$s</string>
+    <string name="logs_new_soon">Soon</string>
+    <string name="logs_rel_at_event">at the event</string>
+    <string name="logs_resp_empty">No glucose readings for this period</string>
+    <string name="logs_resp_scrub">Drag across the graph for exact values</string>
+    <string name="logs_rel_after">%1$s after</string>
+    <string name="logs_rel_before">%1$s before</string>
+    <plurals name="logs_summary_meals">
+        <item quantity="one">%1$d meal</item>
+        <item quantity="other">%1$d meals</item>
+    </plurals>
+    <plurals name="logs_summary_boluses">
+        <item quantity="one">%1$d bolus</item>
+        <item quantity="other">%1$d boluses</item>
+    </plurals>
+    <plurals name="logs_summary_lows">
+        <item quantity="one">%1$d low</item>
+        <item quantity="other">%1$d lows</item>
+    </plurals>
+    <plurals name="logs_summary_highs">
+        <item quantity="one">%1$d high</item>
+        <item quantity="other">%1$d highs</item>
+    </plurals>
+    <plurals name="logs_summary_workouts">
+        <item quantity="one">%1$d workout</item>
+        <item quantity="other">%1$d workouts</item>
+    </plurals>
+    <plurals name="logs_bolus_smbs">
+        <item quantity="one">Automatic · %1$d SMB</item>
+        <item quantity="other">Automatic · %1$d SMBs</item>
+    </plurals>
+    <plurals name="logs_bolus_doses">
+        <item quantity="one">%1$d insulin dose</item>
+        <item quantity="other">%1$d insulin doses</item>
+    </plurals>
+    <plurals name="logs_new_since">
+        <item quantity="one">Since %1$s · %2$d course · %3$d g</item>
+        <item quantity="other">Since %1$s · %2$d courses · %3$d g</item>
+    </plurals>
+
+    <!-- Logs: meal detail and sleep detail -->
+    <string name="logs_detail_edit_meal">Edit meal</string>
+    <string name="logs_detail_add_another_course">Add another course</string>
+    <string name="logs_detail_add_course">Add a course (dessert, next plate…)</string>
+    <string name="logs_detail_delete_whole">Delete whole meal</string>
+    <string name="logs_detail_delete">Delete meal</string>
+    <string name="logs_detail_delete_title">Delete this meal?</string>
+    <string name="logs_detail_delete_text_multi">All %1$d courses will be removed from your logs and the Home graphs. You can undo right after.</string>
+    <string name="logs_detail_delete_text">It will be removed from your logs and the Home graphs. You can undo right after.</string>
+    <string name="logs_tl_title_multi">Courses &amp; insulin</string>
+    <string name="logs_tl_title">Insulin for this meal</string>
+    <string name="logs_tl_none">No insulin found</string>
+    <string name="logs_tl_summary">%1$d g carbs · %2$s U insulin</string>
+    <string name="logs_tl_summary_ratio">%1$d g carbs · %2$s U insulin · %3$s g per U</string>
+    <string name="logs_tl_empty_note">No insulin logged from 30 min before to 30 min after this meal.</string>
+    <string name="logs_tl_course">Course %1$d</string>
+    <string name="logs_tl_running_g">%1$d g total</string>
+    <string name="logs_tl_running_u">%1$s U total</string>
+    <string name="logs_edit_course">Edit course</string>
+    <string name="logs_dose_smb">%1$s U · SMB</string>
+    <string name="logs_dose_bolus">%1$s U bolus</string>
+    <string name="logs_resp_title">Glucose response</string>
+    <string name="logs_resp_multi">From the first course until the last one is absorbed</string>
+    <string name="logs_resp_absorption">%1$s absorption, about %2$d h</string>
+    <string name="logs_resp_error">Couldn\'t load glucose data.</string>
+    <string name="logs_legend_in_range">In range</string>
+    <string name="logs_stat_at_meal">At meal</string>
+    <string name="logs_stat_peak">Peak</string>
+    <string name="logs_stat_lowest">Lowest</string>
+    <string name="logs_insight_no_rise">Glucose didn\'t rise much after the meal.</string>
+    <string name="logs_insight_low_then_rise">Glucose then rose %1$d mg/dL from that low, peaking %2$s after the meal.</string>
+    <string name="logs_insight_rise">Glucose rose %1$d mg/dL, peaking %2$s after the meal.</string>
+    <string name="logs_insight_dip_first">Glucose first dropped to %1$d mg/dL, below range, %2$s after the meal.</string>
+    <string name="logs_insight_dip_then">It then dropped to %1$d mg/dL, below range, %2$s after the meal.</string>
+    <string name="logs_insight_absorbing">Still absorbing. This updates as new readings arrive.</string>
+    <string name="logs_aaps_title">Matched with AAPS</string>
+    <string name="logs_aaps_dosed">Dosed in AAPS: %1$d g</string>
+    <string name="logs_aaps_dosed_est">Dosed in AAPS: %1$d g (estimate was %2$d g)</string>
+    <string name="logs_aaps_unlink">Unlink</string>
+    <string name="logs_nutrition">Nutrition</string>
+    <string name="logs_nutrition_all">All courses together</string>
+    <string name="logs_whats_in">What\'s in it · %1$d</string>
+    <string name="logs_sleep_no_stages">No sleep stages were recorded for this night.</string>
+    <plurals name="logs_photos_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <string name="logs_legend_meal">Meal</string>
+    <string name="logs_stat_in_range">In range</string>
 </resources>

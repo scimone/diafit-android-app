@@ -252,7 +252,7 @@ private fun DayNavigator(day: LocalDate, onPrev: () -> Unit, onNext: () -> Unit,
             val ms = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val label = friendlyDateString(ms)
             val date = day.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault()))
-            Text(if (label == "Today" || label == "Yesterday") "$label · $date" else date, style = MaterialTheme.typography.titleMedium)
+            Text(if (uk.scimone.diafit.core.domain.util.isRelativeDayLabel(label)) "$label · $date" else date, style = MaterialTheme.typography.titleMedium)
         }
         IconButton(onClick = onNext, enabled = day.isBefore(LocalDate.now())) { Icon(Icons.Filled.ChevronRight, "Next day") }
     }

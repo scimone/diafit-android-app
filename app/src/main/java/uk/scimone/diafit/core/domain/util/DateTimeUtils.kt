@@ -8,6 +8,9 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.core.presentation.formatStamp
 
 private val formatter = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC)
 
@@ -41,17 +44,17 @@ fun friendlyDateString(epochMillis: Long, nowEpochMillis: Long = System.currentT
     val now = Instant.ofEpochMilli(nowEpochMillis).atZone(zoneId).toLocalDate()
     val yesterday = now.minusDays(1)
 
-    val formatterCurrentYear = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault())
-    val formatterPreviousYear = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())
-
     return when {
-        date.isEqual(now) -> "Today"
-        date.isEqual(yesterday) -> "Yesterday"
+        date.isEqual(now) -> AppStrings.get(R.string.date_today)
+        date.isEqual(yesterday) -> AppStrings.get(R.string.date_yesterday)
         isSameWeek(date, now) -> date.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault())
-        date.year == now.year -> date.format(formatterCurrentYear)
-        else -> date.format(formatterPreviousYear)
+        date.year == now.year -> formatStamp(epochMillis, "EEEEMMMMd")
+        else -> formatStamp(epochMillis, "EEEEMMMMdy")
     }
 }
+
+/** True for the two labels [friendlyDateString] writes in words instead of a date. */
+fun isRelativeDayLabel(label: String): Boolean = label == AppStrings.get(R.string.date_today) || label == AppStrings.get(R.string.date_yesterday)
 
 private fun isSameWeek(date1: java.time.LocalDate, date2: java.time.LocalDate): Boolean {
     val weekFields = WeekFields.of(Locale.getDefault())

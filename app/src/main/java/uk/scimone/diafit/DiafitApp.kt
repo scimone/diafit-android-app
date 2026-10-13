@@ -1,5 +1,6 @@
 package uk.scimone.diafit
 
+import uk.scimone.diafit.core.presentation.AppStrings
 import android.app.Application
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -31,6 +32,7 @@ class DiafitApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppStrings.init(this)
 
         startKoin {
             androidContext(this@DiafitApp)

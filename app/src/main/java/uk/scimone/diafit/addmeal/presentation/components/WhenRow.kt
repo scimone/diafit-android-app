@@ -49,14 +49,14 @@ fun WhenRow(
         if (mealType != null) {
             Box {
                 Pill(
-                    mealType.type,
+                    mealType.displayName,
                     { Icon(painterResource(mealType.iconRes), null, Modifier.size(16.dp), tint = mealType.accent) },
                     trailing = { Icon(Icons.Filled.ArrowDropDown, null, Modifier.size(18.dp)) }
                 ) { pickType = true }
                 DropdownMenu(expanded = pickType, onDismissRequest = { pickType = false }) {
                     MealType.entries.forEach { type ->
                         DropdownMenuItem(
-                            text = { Text(type.type, fontWeight = if (type == mealType) FontWeight.SemiBold else null) },
+                            text = { Text(type.displayName, fontWeight = if (type == mealType) FontWeight.SemiBold else null) },
                             leadingIcon = { Icon(painterResource(type.iconRes), null, Modifier.size(20.dp), tint = type.accent) },
                             trailingIcon = if (type == mealType) { { Icon(Icons.Filled.Check, null, Modifier.size(18.dp)) } } else null,
                             onClick = { onMealTypeChange(type); pickType = false }

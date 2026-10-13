@@ -62,7 +62,7 @@ data class MealEntityUi(
     override val timeUtc: Long get() = mealTimeUtc
 
     /** Headline for lists: the description, falling back to the meal type. */
-    val title: String get() = description?.removeSuffix(" (AAPS)")?.takeIf { it.isNotBlank() } ?: mealType.type
+    val title: String get() = description?.removeSuffix(" (AAPS)")?.takeIf { it.isNotBlank() } ?: mealType.displayName
 
     val courseCount: Int get() = courseIds.size
 }

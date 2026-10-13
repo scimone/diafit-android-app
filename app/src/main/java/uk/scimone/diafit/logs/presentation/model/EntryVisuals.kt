@@ -1,5 +1,7 @@
 package uk.scimone.diafit.logs.presentation.model
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import androidx.annotation.StringRes
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
 import uk.scimone.diafit.R
@@ -18,19 +20,24 @@ import uk.scimone.diafit.ui.theme.Sleep
  * To add a kind: add an editor + detail renderer for it and flip [available].
  */
 enum class LogsEntryKind(
-    val label: String,
-    val pluralLabel: String,
+    @StringRes val labelResId: Int,
+    @StringRes private val pluralRes: Int,
+    @StringRes val subtitleRes: Int,
+    @StringRes val emptyRes: Int,
     private val accentOf: () -> Color,
     val available: Boolean,
     /** Offered in the "new entry" chooser; false for entries derived from data (lows/highs). */
     val creatable: Boolean = true
 ) {
-    MEAL("Meal", "Meals", { Carbs }, available = true),
-    GLUCOSE("Low or high", "Lows & highs", { BelowRange }, available = true, creatable = false),
-    BOLUS("Insulin", "Insulin", { Bolus }, available = true, creatable = false),
-    DEVICE("Device", "Device events", { Device }, available = true, creatable = false),
-    SLEEP("Sleep", "Sleep", { Sleep }, available = true, creatable = false),
-    ACTIVITY("Exercise", "Exercise", { Activity }, available = true, creatable = false);
+    MEAL(R.string.logs_kind_meal, R.string.logs_kind_meal_plural, R.string.logs_kind_meal_sub, R.string.logs_empty_meal, { Carbs }, available = true),
+    GLUCOSE(R.string.logs_kind_glucose, R.string.logs_kind_glucose_plural, R.string.logs_kind_glucose_sub, R.string.logs_empty_glucose, { BelowRange }, available = true, creatable = false),
+    BOLUS(R.string.logs_kind_bolus, R.string.logs_kind_bolus, R.string.logs_kind_bolus_sub, R.string.logs_empty_bolus, { Bolus }, available = true, creatable = false),
+    DEVICE(R.string.logs_kind_device, R.string.logs_kind_device_plural, R.string.logs_kind_device_sub, R.string.logs_empty_device, { Device }, available = true, creatable = false),
+    SLEEP(R.string.logs_kind_sleep, R.string.logs_kind_sleep, R.string.logs_kind_sleep_sub, R.string.logs_empty_sleep, { Sleep }, available = true, creatable = false),
+    ACTIVITY(R.string.logs_kind_activity, R.string.logs_kind_activity, R.string.logs_kind_activity_sub, R.string.logs_empty_activity, { Activity }, available = true, creatable = false);
+
+    val label: String get() = AppStrings.get(labelResId)
+    val pluralLabel: String get() = AppStrings.get(pluralRes)
 
     /** Read live so it follows the light/dark palette. */
     val accent: Color get() = accentOf()
@@ -74,20 +81,26 @@ val ImpactType.iconRes: Int
         ImpactType.LONG -> R.drawable.ic_absorption_slow
     }
 
-val ImpactType.label: String
+@get:StringRes
+val ImpactType.labelRes: Int
     get() = when (this) {
-        ImpactType.SHORT -> "Fast"
-        ImpactType.MEDIUM -> "Medium"
-        ImpactType.LONG -> "Slow"
+        ImpactType.SHORT -> R.string.absorption_fast
+        ImpactType.MEDIUM -> R.string.absorption_medium
+        ImpactType.LONG -> R.string.absorption_slow
     }
+
+val ImpactType.label: String get() = AppStrings.get(labelRes)
 
 /** "~2 h" style duration of the carb absorption window. */
 val ImpactType.durationLabel: String
     get() = "~${durationMinutes / 60} h"
 
-val ImpactType.hint: String
+@get:StringRes
+val ImpactType.hintRes: Int
     get() = when (this) {
-        ImpactType.SHORT -> "Sugary or low-fat food. Glucose rises quickly and peaks early."
-        ImpactType.MEDIUM -> "Typical mixed meal. Glucose rises steadily over a few hours."
-        ImpactType.LONG -> "High in fat and protein. A slow, extended rise, often delayed."
+        ImpactType.SHORT -> R.string.absorption_fast_hint
+        ImpactType.MEDIUM -> R.string.absorption_medium_hint
+        ImpactType.LONG -> R.string.absorption_slow_hint
     }
+
+val ImpactType.hint: String get() = AppStrings.get(hintRes)

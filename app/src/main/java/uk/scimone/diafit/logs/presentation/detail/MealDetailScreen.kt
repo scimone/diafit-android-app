@@ -1,5 +1,8 @@
 package uk.scimone.diafit.logs.presentation.detail
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.core.presentation.components.MealComponentCard
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -68,15 +71,15 @@ fun MealDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Meal") },
+                title = { Text(stringResource(R.string.logs_kind_meal)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) }
                 },
                 actions = {
                     // A multi-course meal is edited course by course, from its timeline.
                     if (!state.isMultiCourse) {
                         IconButton(onClick = { onEdit(mealId) }, enabled = state.meal != null) {
-                            Icon(Icons.Filled.Edit, "Edit meal")
+                            Icon(Icons.Filled.Edit, stringResource(R.string.logs_detail_edit_meal))
                         }
                     }
                 }
@@ -102,7 +105,7 @@ fun MealDetailScreen(
                 FilledTonalButton(onClick = { onAddCourse(mealId) }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (state.isMultiCourse) "Add another course" else "Add a course (dessert, next plate…)")
+                    Text(if (state.isMultiCourse) stringResource(R.string.logs_detail_add_another_course) else stringResource(R.string.logs_detail_add_course))
                 }
             }
             if (meal.aapsLinked) AapsLinkCard(meal, onUnlink = viewModel::unlinkAaps)
@@ -118,7 +121,7 @@ fun MealDetailScreen(
             ) {
                 Icon(Icons.Filled.DeleteOutline, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (state.isMultiCourse) "Delete whole meal" else "Delete meal")
+                Text(if (state.isMultiCourse) stringResource(R.string.logs_detail_delete_whole) else stringResource(R.string.logs_detail_delete))
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -127,11 +130,10 @@ fun MealDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this meal?") },
+            title = { Text(stringResource(R.string.logs_detail_delete_title)) },
             text = {
                 Text(
-                    (if (state.isMultiCourse) "All ${state.courses.size} courses will be removed" else "It will be removed") +
-                        " from your logs and the Home graphs. You can undo right after."
+                    if (state.isMultiCourse) stringResource(R.string.logs_detail_delete_text_multi, state.courses.size) else stringResource(R.string.logs_detail_delete_text)
                 )
             },
             confirmButton = {
@@ -141,9 +143,9 @@ fun MealDetailScreen(
                         viewModel.delete(onDeleted)
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.common_delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
@@ -197,18 +199,18 @@ private fun Hero(meal: MealEntityUi) {
  */
 @Composable
 private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit) {
-    val fmt = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
+    val fmt = remember(java.util.Locale.getDefault()) { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
     val items = remember(state.courses, state.boluses) {
         (state.courses.map { TimelineItem.Course(it) } + state.boluses.map { TimelineItem.Dose(it) }).sortedBy { it.time }
     }
     val carbs = state.courses.sumOf { it.carbohydrates }
     val insulin = state.totalInsulin
     CardSection(
-        title = if (state.isMultiCourse) "Courses & insulin" else "Insulin for this meal",
-        subtitle = buildString {
-            if (state.boluses.isEmpty() && !state.isMultiCourse) append("No insulin found") else
-            append("$carbs g carbs · ${formatUnits(insulin)} U insulin")
-            if (insulin > 0.05 && carbs > 0) append(" · ${"%.0f".format(carbs / insulin)} g per U")
+        title = if (state.isMultiCourse) stringResource(R.string.logs_tl_title_multi) else stringResource(R.string.logs_tl_title),
+        subtitle = when {
+            state.boluses.isEmpty() && !state.isMultiCourse -> stringResource(R.string.logs_tl_none)
+            insulin > 0.05 && carbs > 0 -> stringResource(R.string.logs_tl_summary_ratio, carbs, formatUnits(insulin), "%.0f".format(carbs / insulin))
+            else -> stringResource(R.string.logs_tl_summary, carbs, formatUnits(insulin))
         }
     ) {
         var runningCarbs = 0
@@ -216,7 +218,7 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
         var courseNo = 0
         if (state.boluses.isEmpty()) {
             Text(
-                "No insulin logged from 30 min before to 30 min after this meal.",
+                stringResource(R.string.logs_tl_empty_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -231,9 +233,9 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
                         courseNo++
                         CourseRow(
                             meal = item.meal,
-                            label = if (state.isMultiCourse) "Course $courseNo" else null,
+                            label = if (state.isMultiCourse) stringResource(R.string.logs_tl_course, courseNo) else null,
                             time = fmt.format(java.util.Date(item.time)),
-                            running = if (state.isMultiCourse && courseNo > 1) "$runningCarbs g total" else null,
+                            running = if (state.isMultiCourse && courseNo > 1) stringResource(R.string.logs_tl_running_g, runningCarbs) else null,
                             isLast = index == shown.lastIndex,
                             onClick = if (state.isMultiCourse && !item.meal.isImported) ({ onEditCourse(item.meal.id) }) else null
                         )
@@ -244,7 +246,7 @@ private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit
                             units = item.bolus.value.toDouble(),
                             isSmb = item.bolus.isSmb,
                             time = fmt.format(java.util.Date(item.time)),
-                            running = "${formatUnits(runningUnits)} U total",
+                            running = stringResource(R.string.logs_tl_running_u, formatUnits(runningUnits)),
                             isLast = index == shown.lastIndex
                         )
                     }
@@ -296,7 +298,7 @@ private fun CourseRow(meal: MealEntityUi, label: String?, time: String, running:
             )
             Text(meal.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (meal.photoUris.size > 1) {
-                Text("${meal.photoUris.size} photos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(pluralStringResource(R.plurals.logs_photos_count, meal.photoUris.size, meal.photoUris.size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -306,7 +308,7 @@ private fun CourseRow(meal: MealEntityUi, label: String?, time: String, running:
             }
         }
         if (onClick != null) {
-            Icon(Icons.Filled.ChevronRight, "Edit course", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Filled.ChevronRight, stringResource(R.string.logs_edit_course), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -318,7 +320,7 @@ private fun DoseRow(units: Double, isSmb: Boolean, time: String, running: String
         Spacer(Modifier.width(6.dp))
         Text(time, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(48.dp))
         Text(
-            "${formatUnits(units)} U" + if (isSmb) " · SMB" else " bolus",
+            stringResource(if (isSmb) R.string.logs_dose_smb else R.string.logs_dose_bolus, formatUnits(units)),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = Bolus,
@@ -372,20 +374,21 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
     val effectEnd = state.effectEndUtc
     val stillAbsorbing = System.currentTimeMillis() < effectEnd
     CardSection(
-        title = "Glucose response",
-        subtitle = if (state.isMultiCourse) "From the first course until the last one is absorbed" else null,
+        title = stringResource(R.string.logs_resp_title),
+        subtitle = if (state.isMultiCourse) stringResource(R.string.logs_resp_multi) else null,
         subtitleContent = if (state.isMultiCourse) null else ({
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(meal.impactType.iconRes), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                 Text(
-                    " ${meal.impactType.label} absorption, about ${meal.impactType.durationMinutes / 60} h",
+                    stringResource(R.string.logs_resp_absorption, meal.impactType.label, meal.impactType.durationMinutes / 60),
+                    modifier = Modifier.padding(start = 4.dp),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         })
     ) {
         if (response == null) {
-            Text("Couldn't load glucose data.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.logs_resp_error), color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@CardSection
         }
         GlucoseResponseChart(
@@ -408,11 +411,11 @@ private fun GlucoseResponseCard(meal: MealEntityUi, state: MealDetailState) {
 @Composable
 private fun Legend() {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        LegendDot(InRange, "In range")
-        LegendDot(AboveRange, "High")
-        LegendDot(BelowRange, "Low")
-        LegendDot(Bolus, "Insulin")
-        LegendDot(Carbs, "Meal")
+        LegendDot(InRange, stringResource(R.string.logs_legend_in_range))
+        LegendDot(AboveRange, stringResource(R.string.logs_ep_high))
+        LegendDot(BelowRange, stringResource(R.string.logs_ep_low))
+        LegendDot(Bolus, stringResource(R.string.logs_kind_bolus))
+        LegendDot(Carbs, stringResource(R.string.logs_legend_meal))
     }
 }
 
@@ -431,14 +434,14 @@ private fun StatRow(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
     val atMeal = response.atEvent?.valueMgdl
     val peak = response.peak
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatTile("At meal", atMeal?.toString() ?: "–", null, Modifier.weight(1f), tint(atMeal))
+        StatTile(stringResource(R.string.logs_stat_at_meal), atMeal?.toString() ?: "–", null, Modifier.weight(1f), tint(atMeal))
         StatTile(
-            "Peak", peak?.valueMgdl?.toString() ?: "–",
+            stringResource(R.string.logs_stat_peak), peak?.valueMgdl?.toString() ?: "–",
             if (atMeal != null && peak != null && peak.valueMgdl > atMeal) "+${peak.valueMgdl - atMeal}" else null,
             Modifier.weight(1f), tint(peak?.valueMgdl)
         )
-        StatTile("Lowest", response.low?.valueMgdl?.toString() ?: "–", null, Modifier.weight(1f), tint(response.low?.valueMgdl))
-        StatTile("In range", if (meal.hasGlucoseData) "${meal.timeInRange.toInt()}%" else "–", null, Modifier.weight(1f),
+        StatTile(stringResource(R.string.logs_stat_lowest), response.low?.valueMgdl?.toString() ?: "–", null, Modifier.weight(1f), tint(response.low?.valueMgdl))
+        StatTile(stringResource(R.string.logs_stat_in_range), if (meal.hasGlucoseData) "${meal.timeInRange.toInt()}%" else "–", null, Modifier.weight(1f),
             if (meal.hasGlucoseData) InRange else null)
     }
 }
@@ -461,20 +464,20 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
     val atMeal = response.atEvent?.valueMgdl
     val peak = response.peak
     val low = response.low
-    fun after(t: Long) = relativeToEvent(t - meal.mealTimeUtc).removeSuffix(" after")
+    fun after(t: Long) = eventSpan(t - meal.mealTimeUtc)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val lowBelow = low?.takeIf { it.valueMgdl < target.lowerBound }
     val lowFirst = lowBelow != null && peak != null && lowBelow.timestamp < peak.timestamp
     val rise = when {
         atMeal == null || peak == null -> null
-        peak.valueMgdl <= atMeal + 10 -> "Glucose didn't rise much after the meal."
-        lowFirst -> "Glucose then rose ${peak.valueMgdl - lowBelow!!.valueMgdl} mg/dL from that low, peaking ${after(peak.timestamp)} after the meal."
-        else -> "Glucose rose ${peak.valueMgdl - atMeal} mg/dL, peaking ${after(peak.timestamp)} after the meal."
+        peak.valueMgdl <= atMeal + 10 -> ctx.getString(R.string.logs_insight_no_rise)
+        lowFirst -> ctx.getString(R.string.logs_insight_low_then_rise, peak.valueMgdl - lowBelow!!.valueMgdl, after(peak.timestamp))
+        else -> ctx.getString(R.string.logs_insight_rise, peak.valueMgdl - atMeal, after(peak.timestamp))
     }
     val dip = lowBelow?.let {
-        if (lowFirst) "Glucose first dropped to ${it.valueMgdl} mg/dL, below range, ${after(it.timestamp)} after the meal."
-        else "It then dropped to ${it.valueMgdl} mg/dL, below range, ${after(it.timestamp)} after the meal."
+        ctx.getString(if (lowFirst) R.string.logs_insight_dip_first else R.string.logs_insight_dip_then, it.valueMgdl, after(it.timestamp))
     }
-    val note = if (stillAbsorbing) "Still absorbing. This updates as new readings arrive." else null
+    val note = if (stillAbsorbing) ctx.getString(R.string.logs_insight_absorbing) else null
     (if (lowFirst) listOfNotNull(dip, rise, note) else listOfNotNull(rise, dip, note)).forEach {
         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -483,28 +486,25 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
 /** The meal's carbs were confirmed by an AAPS entry: shows the dosed amount and lets the user undo the merge. */
 @Composable
 private fun AapsLinkCard(meal: MealEntityUi, onUnlink: () -> Unit) {
-    CardSection("Matched with AAPS") {
+    CardSection(stringResource(R.string.logs_aaps_title)) {
         Text(
-            buildString {
-                append("Dosed in AAPS: ${meal.carbohydrates} g")
-                meal.estimatedCarbs?.let { append(" (estimate was $it g)") }
-            },
+            meal.estimatedCarbs?.let { stringResource(R.string.logs_aaps_dosed_est, meal.carbohydrates, it) } ?: stringResource(R.string.logs_aaps_dosed, meal.carbohydrates),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        TextButton(onClick = onUnlink) { Text("Unlink") }
+        TextButton(onClick = onUnlink) { Text(stringResource(R.string.logs_aaps_unlink)) }
     }
 }
 
 @Composable
 private fun NutritionCard(meal: MealEntityUi, wholeMeal: Boolean) {
     var expanded by remember { mutableStateOf(false) }
-    CardSection("Nutrition", subtitle = if (wholeMeal) "All courses together" else null) {
+    CardSection(stringResource(R.string.logs_nutrition), subtitle = if (wholeMeal) stringResource(R.string.logs_nutrition_all) else null) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MacroTile("Carbs", meal.carbohydrates.toString(), "g", Carbs, Modifier.weight(1f))
-            MacroTile("Protein", meal.proteins?.toString(), "g", null, Modifier.weight(1f))
-            MacroTile("Fat", meal.fats?.toString(), "g", null, Modifier.weight(1f))
-            MacroTile("Energy", meal.calories?.toString(), "kcal", null, Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_carbs), meal.carbohydrates.toString(), "g", Carbs, Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_protein), meal.proteins?.toString(), "g", null, Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_fat), meal.fats?.toString(), "g", null, Modifier.weight(1f))
+            MacroTile(stringResource(R.string.macro_energy), meal.calories?.toString(), "kcal", null, Modifier.weight(1f))
         }
         if (meal.components.isNotEmpty()) {
             Row(
@@ -516,13 +516,13 @@ private fun NutritionCard(meal: MealEntityUi, wholeMeal: Boolean) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "What's in it · ${meal.components.size}",
+                    stringResource(R.string.logs_whats_in, meal.components.size),
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                    if (expanded) "Collapse" else "Expand",
+                    stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

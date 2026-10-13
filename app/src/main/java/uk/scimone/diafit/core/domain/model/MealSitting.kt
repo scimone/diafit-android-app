@@ -27,7 +27,7 @@ data class MealSitting(val courses: List<MealEntity>) {
     val title: String
         get() = courses.firstNotNullOfOrNull { it.sittingName?.takeIf(String::isNotBlank) }
             ?: courses.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) }
-            ?: courses.first().mealType.type
+            ?: courses.first().mealType.displayName
 }
 
 /**

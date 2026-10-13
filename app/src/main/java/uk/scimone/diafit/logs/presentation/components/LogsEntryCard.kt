@@ -1,5 +1,9 @@
 package uk.scimone.diafit.logs.presentation.components
 
+import androidx.compose.ui.platform.LocalContext
+import uk.scimone.diafit.core.presentation.AppStrings
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.home.presentation.components.UriMosaic
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -112,7 +116,7 @@ fun MealCard(meal: MealEntityUi, target: GlucoseTargetRange, onClick: () -> Unit
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         // The start time only for multi-course meals: the full range doesn't fit next to the badge.
-                        (if (meal.courseCount > 1) meal.timeFormatted.substringBefore('–') else meal.timeFormatted) + " · " + meal.mealType.type,
+                        (if (meal.courseCount > 1) meal.timeFormatted.substringBefore('–') else meal.timeFormatted) + " · " + meal.mealType.displayName,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -147,13 +151,13 @@ private fun PhotolessMealCard(meal: MealEntityUi, onClick: () -> Unit, modifier:
         Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(Carbs.copy(alpha = 0.16f)).let {
-                    if (onAddPhoto != null) it.clickable(onClickLabel = "Add photo") {
+                    if (onAddPhoto != null) it.clickable(onClickLabel = stringResource(R.string.logs_card_add_photo)) {
                         picker.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
                     } else it
                 },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(if (onAddPhoto != null) Icons.Outlined.AddAPhoto else Icons.Outlined.Restaurant, if (onAddPhoto != null) "Add photo" else null, tint = Carbs, modifier = Modifier.size(24.dp))
+                Icon(if (onAddPhoto != null) Icons.Outlined.AddAPhoto else Icons.Outlined.Restaurant, if (onAddPhoto != null) stringResource(R.string.logs_card_add_photo) else null, tint = Carbs, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -245,11 +249,11 @@ fun mealPeakText(meal: MealEntityUi, target: GlucoseTargetRange): androidx.compo
         fun value(mgdl: Int) = withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = glucoseColor(mgdl, target))) { append("$mgdl") }
         start?.let { value(it) }
         if (peak != null && (start == null || peak > start)) {
-            append(if (start != null) " → peak " else "peak ")
+            append(AppStrings.get(if (start != null) R.string.logs_peak_arrow else R.string.logs_peak_only))
             value(peak)
             if (start != null) meal.peakTimeUtc?.let {
                 val mins = ((it - meal.mealTimeUtc) / 60_000).toInt().coerceAtLeast(0)
-                append(" · ${if (mins >= 60) "${mins / 60}h ${mins % 60}m" else "${mins}m"}")
+                append(" · " + if (mins >= 60) AppStrings.get(R.string.logs_after_hm, mins / 60, mins % 60) else AppStrings.get(R.string.logs_after_m, mins))
             }
         }
     }
@@ -260,12 +264,13 @@ fun mealPeakText(meal: MealEntityUi, target: GlucoseTargetRange): androidx.compo
 fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val color = if (episode.isLow) BelowRange else AboveRange
-    val title = when {
-        episode.isLow && episode.isSevere -> "Very low"
-        episode.isLow -> "Low"
-        episode.isSevere -> "Very high"
-        else -> "High"
-    }
+    val title = stringResource(when {
+        episode.isLow && episode.isSevere -> R.string.logs_ep_very_low
+        episode.isLow -> R.string.logs_ep_low
+        episode.isSevere -> R.string.logs_ep_very_high
+        else -> R.string.logs_ep_high
+    })
+    val context = LocalContext.current
     EntrySurface(onClick, modifier) {
         Row(Modifier.entryRow(), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -282,13 +287,13 @@ fun GlucoseEpisodeCard(episode: GlucoseEpisode, onClick: (() -> Unit)?, modifier
                     color = color
                 )
                 Text(
-                    "$title for ${formatDuration(episode.durationMs)}",
+                    stringResource(R.string.logs_ep_for, title, formatDuration(episode.durationMs)),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                BigValue("${episode.extremeMgdl}", if (episode.isLow) "lowest mg/dL" else "highest mg/dL", color, unitBelow = true)
+                BigValue("${episode.extremeMgdl}", stringResource(if (episode.isLow) R.string.logs_ep_lowest else R.string.logs_ep_highest), color, unitBelow = true)
             }
         }
     }
@@ -318,9 +323,9 @@ fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
                     )
                     Text(
                         when {
-                            !grouped -> if (entry.isSmb) "Automatic · SMB" else "Insulin bolus"
-                            entry.isSmb -> "Automatic · ${entry.count} SMBs"
-                            else -> "${entry.count} insulin doses"
+                            !grouped -> if (entry.isSmb) stringResource(R.string.logs_bolus_auto_smb) else stringResource(R.string.logs_bolus_single)
+                            entry.isSmb -> pluralStringResource(R.plurals.logs_bolus_smbs, entry.count, entry.count)
+                            else -> pluralStringResource(R.plurals.logs_bolus_doses, entry.count, entry.count)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
@@ -333,7 +338,7 @@ fun BolusCard(entry: BolusEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
                     entry.parts.forEach { part ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "${clock.format(Date(part.timeUtc))} · ${if (part.isSmb) "Automatic" else "Bolus"}",
+                                stringResource(if (part.isSmb) R.string.logs_bolus_part_auto else R.string.logs_bolus_part_bolus, clock.format(Date(part.timeUtc))),
                                 Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -359,9 +364,9 @@ fun formatDuration(ms: Long): String {
     val h = minutes / 60
     val m = minutes % 60
     return when {
-        h == 0 -> "$m min"
-        m == 0 -> "$h h"
-        else -> "$h h %02d".format(m)
+        h == 0 -> AppStrings.get(R.string.duration_m, m)
+        m == 0 -> AppStrings.get(R.string.duration_h, h)
+        else -> AppStrings.get(R.string.duration_hm, h, m)
     }
 }
 
@@ -389,7 +394,7 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                     clock.format(Date(entry.timeUtc)) + (entry.durationMinutes?.let { " · ${formatDurationMinutes(it)}" } ?: ""),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(entry.titleRes?.let { stringResource(it) } ?: entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (!entry.notes.isNullOrBlank()) {
                     Text(
                         entry.notes, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -406,7 +411,7 @@ fun PumpEventCard(entry: PumpEventUi, onClick: (() -> Unit)?, modifier: Modifier
                         BigValue(t.valueText.substringBefore(' '), t.unit, InRange, unitBelow = true)
                     }
                     entry.percentage?.let { BigValue("$it", "%", Basal) }
-                    entry.timeShiftHours?.let { BigValue("${if (it > 0) "+" else "−"}${kotlin.math.abs(it)}", "h shift", MaterialTheme.colorScheme.tertiary) }
+                    entry.timeShiftHours?.let { BigValue("${if (it > 0) "+" else "−"}${kotlin.math.abs(it)}", stringResource(R.string.logs_unit_shift), MaterialTheme.colorScheme.tertiary) }
                 }
             }
         }
@@ -438,9 +443,9 @@ fun SleepCard(entry: SleepEntryUi, onClick: (() -> Unit)?, modifier: Modifier = 
                         "${clock.format(Date(entry.startUtc))} – ${clock.format(Date(entry.endUtc))}",
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text("Sleep", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.datatype_sleep), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
-                BigValue(formatDuration(entry.asleepMs), "asleep", Sleep)
+                BigValue(formatDuration(entry.asleepMs), stringResource(R.string.logs_asleep), Sleep)
             }
         }
     }
@@ -462,13 +467,13 @@ fun ExerciseCard(entry: ExerciseEntryUi, onClick: (() -> Unit)?, modifier: Modif
                     "${clock.format(Date(entry.timeUtc))} – ${clock.format(Date(entry.endUtc))}",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(entry.title ?: stringResource(R.string.datatype_exercise), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 BigValue(formatDuration(entry.durationMs), "", Activity)
                 if (entry.avgBpm != null) {
                     Text(
-                        if (entry.avgBpm < 110) "Easy" else if (entry.avgBpm < 140) "Moderate" else "Hard",
+                        stringResource(if (entry.avgBpm < 110) R.string.logs_ex_easy else if (entry.avgBpm < 140) R.string.logs_ex_moderate else R.string.logs_ex_hard),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

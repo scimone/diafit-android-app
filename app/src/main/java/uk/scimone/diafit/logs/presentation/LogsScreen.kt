@@ -1,5 +1,10 @@
 package uk.scimone.diafit.logs.presentation
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,8 +86,9 @@ fun LogsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val errorContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+        uiState.errorMessage?.let { snackbarHostState.showSnackbar(it.asString(errorContext)) }
     }
 
     var filter by remember { mutableStateOf<LogsEntryKind?>(null) }
@@ -201,7 +207,7 @@ fun LogsScreen(
             ) {
                 // A kind filter only earns its space once there is more than one kind of entry to filter by.
                 if (kinds.size > 1) {
-                    FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
+                    FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text(stringResource(R.string.logs_filter_all)) })
                     kinds.forEach { kind ->
                         FilterChip(selected = filter == kind, onClick = { filter = kind }, label = { Text(kind.pluralLabel) })
                     }
@@ -340,12 +346,10 @@ private class FlatEntries(val entries: List<LogsEntryUi>, val rowIndex: IntArray
 /** Details of a device event, with the option to remove it from the logs. */
 @Composable
 private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelete: () -> Unit) {
-    val time = remember(event.timeUtc) {
-        java.text.SimpleDateFormat("EEE d MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(event.timeUtc))
-    }
+    val time = remember(event.timeUtc, java.util.Locale.getDefault()) { formatStamp(event.timeUtc, "EEEdMMMHm") }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(event.title) },
+        title = { Text(event.titleRes?.let { stringResource(it) } ?: event.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(time, style = MaterialTheme.typography.bodyMedium)
@@ -353,40 +357,41 @@ private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelet
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = if (event.icon == PumpEventIcon.WARNING) Warning else Color.Unspecified)
                 }
                 Text(
-                    (event.source?.let { "Imported from $it. " } ?: "") + "Deleting only removes it from Diafit.",
+                    event.source?.let { stringResource(R.string.logs_device_imported_note, it) } ?: stringResource(R.string.logs_device_delete_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Close") } }
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDelete) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } }
     )
 }
 
 /** Under a meal card: an AAPS carb entry that might be the same food, to merge or keep apart. */
 @Composable
 private fun PossibleDuplicateStrip(dup: PossibleDuplicateUi, onMerge: () -> Unit, onKeepSeparate: () -> Unit) {
-    val time = remember(dup.timeUtc) { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(dup.timeUtc)) }
+    val time = remember(dup.timeUtc) { formatStamp(dup.timeUtc, "Hm") }
     Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Same meal? AAPS carbs ${dup.carbohydrates} g at $time",
+                stringResource(R.string.logs_dup_text, dup.carbohydrates, time),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = onKeepSeparate) { Text("Separate") }
-            TextButton(onClick = onMerge) { Text("Merge") }
+            TextButton(onClick = onKeepSeparate) { Text(stringResource(R.string.logs_dup_separate)) }
+            TextButton(onClick = onMerge) { Text(stringResource(R.string.logs_dup_merge)) }
         }
     }
 }
 
-private val SHORT_DATE = DateTimeFormatter.ofPattern("d MMM")
+private fun LocalDate.short(): String =
+    formatStamp(atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), "dMMM")
 
 private fun LogsRange.label(): String = if (isCustom) {
     val (from, to) = days()
-    if (from == to) from.format(SHORT_DATE) else "${from.format(SHORT_DATE)} – ${to.format(SHORT_DATE)}"
-} else "Last $DEFAULT_RANGE_DAYS days"
+    if (from == to) from.short() else "${from.short()} – ${to.short()}"
+} else AppStrings.get(R.string.logs_range_last_days, DEFAULT_RANGE_DAYS)
 
 /** Time filter chip: opens the date range picker; a picked range can be cleared back to the default. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -400,7 +405,7 @@ private fun RangeChip(range: LogsRange, onRange: (LogsRange) -> Unit) {
         trailingIcon = {
             if (range.isCustom) {
                 Icon(
-                    Icons.Filled.Close, "Back to last $DEFAULT_RANGE_DAYS days",
+                    Icons.Filled.Close, stringResource(R.string.logs_range_back, DEFAULT_RANGE_DAYS),
                     Modifier.size(18.dp).clip(CircleShape).clickable { onRange(LogsRange()) }
                 )
             }
@@ -429,9 +434,9 @@ private fun RangeChip(range: LogsRange, onRange: (LogsRange) -> Unit) {
                         picking = false
                         onRange(LogsRange(start, end))
                     }
-                ) { Text("Apply") }
+                ) { Text(stringResource(R.string.common_apply)) }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DateRangePicker(state, Modifier.height(500.dp), showModeToggle = false)
         }
@@ -449,17 +454,17 @@ private fun daySummary(entries: List<LogsEntryUi>): String {
     val highs = episodes.size - lows
     val parts = buildList {
         if (meals.isNotEmpty()) {
-            add("${meals.size} ${if (meals.size == 1) "meal" else "meals"}")  // a multi-course meal counts once
-            add("${meals.sumOf { it.carbohydrates }} g carbs")
+            add(AppStrings.plural(R.plurals.logs_summary_meals, meals.size, meals.size))  // a multi-course meal counts once
+            add(AppStrings.get(R.string.logs_summary_carbs, meals.sumOf { it.carbohydrates }))
         }
-        if (boluses > 0) add("$boluses ${if (boluses == 1) "bolus" else "boluses"}")
-        if (smbUnits > 0) add("${formatUnits(smbUnits)} U SMB")
-        if (lows > 0) add("$lows ${if (lows == 1) "low" else "lows"}")
-        if (highs > 0) add("$highs ${if (highs == 1) "high" else "highs"}")
+        if (boluses > 0) add(AppStrings.plural(R.plurals.logs_summary_boluses, boluses, boluses))
+        if (smbUnits > 0) add(AppStrings.get(R.string.logs_summary_smb, formatUnits(smbUnits)))
+        if (lows > 0) add(AppStrings.plural(R.plurals.logs_summary_lows, lows, lows))
+        if (highs > 0) add(AppStrings.plural(R.plurals.logs_summary_highs, highs, highs))
         entries.filterIsInstance<uk.scimone.diafit.logs.presentation.model.SleepEntryUi>().firstOrNull()
-            ?.let { add("${formatDuration(it.asleepMs)} sleep") }
+            ?.let { add(AppStrings.get(R.string.logs_summary_sleep, formatDuration(it.asleepMs))) }
         val workouts = entries.count { it is uk.scimone.diafit.logs.presentation.model.ExerciseEntryUi }
-        if (workouts > 0) add("$workouts ${if (workouts == 1) "workout" else "workouts"}")
+        if (workouts > 0) add(AppStrings.plural(R.plurals.logs_summary_workouts, workouts, workouts))
     }
     return parts.joinToString(" · ")
 }
@@ -474,11 +479,11 @@ private fun EmptyLogs(
 ) {
     // Entries may exist, just not for this filter or period: say so instead of claiming the logs is empty.
     if (filter != null || range.isCustom) {
-        val title = if (filter != null) "No ${filter.pluralLabel.lowercase()} in this period" else "Nothing in this period"
+        val title = if (filter != null) stringResource(filter.emptyRes) else stringResource(R.string.logs_empty_title_period)
         val body = when {
-            filter != null && range.isCustom -> "Nothing of this kind was recorded in the days you picked. Try all entries or a longer period."
-            filter != null -> "Nothing of this kind was recorded in the last $DEFAULT_RANGE_DAYS days."
-            else -> "No entries were recorded in the days you picked."
+            filter != null && range.isCustom -> stringResource(R.string.logs_empty_body_kind_custom)
+            filter != null -> stringResource(R.string.logs_empty_body_kind, DEFAULT_RANGE_DAYS)
+            else -> stringResource(R.string.logs_empty_body_period)
         }
         Column(
             Modifier.fillMaxSize().padding(32.dp),
@@ -497,8 +502,8 @@ private fun EmptyLogs(
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (filter != null) FilledTonalButton(onClick = onClearFilter) { Text("Show all entries") }
-                if (range.isCustom) FilledTonalButton(onClick = onResetRange) { Text("Last $DEFAULT_RANGE_DAYS days") }
+                if (filter != null) FilledTonalButton(onClick = onClearFilter) { Text(stringResource(R.string.logs_show_all)) }
+                if (range.isCustom) FilledTonalButton(onClick = onResetRange) { Text(stringResource(R.string.logs_range_last_days, DEFAULT_RANGE_DAYS)) }
             }
         }
         return
@@ -515,15 +520,15 @@ private fun EmptyLogs(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
-        Text("Your logs is empty", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.logs_empty_title), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Meals you log appear here with how they moved your glucose, together with boluses, lows and highs, device changes, sleep and workouts.",
+            stringResource(R.string.logs_empty_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(20.dp))
-        FilledTonalButton(onClick = onAddEntry) { Text("Add first entry") }
+        FilledTonalButton(onClick = onAddEntry) { Text(stringResource(R.string.logs_add_first)) }
     }
 }

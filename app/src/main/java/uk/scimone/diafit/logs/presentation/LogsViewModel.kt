@@ -1,5 +1,7 @@
 package uk.scimone.diafit.logs.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -168,7 +170,7 @@ class LogsViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = e.message ?: "Failed to load meals"
+                            errorMessage = e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.logs_load_failed)
                         )
                     }
                 }
@@ -344,7 +346,7 @@ data class LogsUiState(
     val target: GlucoseTargetRange = GlucoseTargetRange(70, 180),
     val range: LogsRange = LogsRange(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )
 
 /** How far back the logs looks when no range was picked. */

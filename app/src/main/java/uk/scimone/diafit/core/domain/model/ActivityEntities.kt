@@ -1,5 +1,8 @@
 package uk.scimone.diafit.core.domain.model
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -61,13 +64,15 @@ data class ExerciseEntity(
 }
 
 /** Sleep stages, ordered from "most awake" to "deepest" (the order they are stacked in the hypnogram). */
-enum class SleepStage(val code: Int, val label: String) {
-    AWAKE(1, "Awake"),
-    REM(6, "REM"),
-    LIGHT(4, "Light"),
-    DEEP(5, "Deep"),
+enum class SleepStage(val code: Int, @StringRes val labelRes: Int) {
+    AWAKE(1, R.string.sleep_stage_awake),
+    REM(6, R.string.sleep_stage_rem),
+    LIGHT(4, R.string.sleep_stage_light),
+    DEEP(5, R.string.sleep_stage_deep),
     /** Asleep, stage unknown. */
-    SLEEPING(2, "Asleep");
+    SLEEPING(2, R.string.sleep_stage_asleep);
+
+    val label: String get() = AppStrings.get(labelRes)
 
     companion object {
         /** Maps Health Connect's `SleepSessionRecord.STAGE_TYPE_*` ints. */

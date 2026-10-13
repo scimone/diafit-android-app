@@ -1,5 +1,7 @@
 package uk.scimone.diafit.logs.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -40,7 +42,7 @@ fun MealTypeTile(mealType: MealType, size: Dp, modifier: Modifier = Modifier, sh
     ) {
         Icon(
             painter = painterResource(mealType.iconRes),
-            contentDescription = mealType.type,
+            contentDescription = mealType.displayName,
             tint = mealType.accent,
             modifier = Modifier.size(size * 0.5f)
         )
@@ -108,7 +110,7 @@ fun AbsorptionBadge(impact: ImpactType, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(impact.iconRes),
-            contentDescription = "${impact.label} absorption",
+            contentDescription = stringResource(R.string.logs_absorption_cd, impact.label),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp)
         )

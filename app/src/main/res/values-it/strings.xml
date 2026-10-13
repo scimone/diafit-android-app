@@ -390,4 +390,191 @@
     <string name="backend_last">Ultima sincronizzazione %1$s</string>
     <string name="backend_connected_as">Collegato come %1$s</string>
     <string name="backend_err_enter">Inserisci l\'indirizzo e il token API</string>
+
+    <!-- Meal types, absorption, entry kinds, day labels -->
+    <string name="meal_type_breakfast">Colazione</string>
+    <string name="meal_type_lunch">Pranzo</string>
+    <string name="meal_type_dinner">Cena</string>
+    <string name="meal_type_snack">Spuntino</string>
+    <string name="absorption_fast">Veloce</string>
+    <string name="absorption_medium">Medio</string>
+    <string name="absorption_slow">Lento</string>
+    <string name="absorption_fast_hint">Cibo zuccherino o povero di grassi. La glicemia sale rapidamente e raggiunge presto il picco.</string>
+    <string name="absorption_medium_hint">Tipico pasto misto. La glicemia sale gradualmente nell\'arco di alcune ore.</string>
+    <string name="absorption_slow_hint">Ricco di grassi e proteine. Un aumento lento e prolungato, spesso ritardato.</string>
+    <string name="sleep_stage_awake">Sveglio</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Leggero</string>
+    <string name="sleep_stage_deep">Profondo</string>
+    <string name="sleep_stage_asleep">Addormentato</string>
+    <string name="logs_kind_meal">Pasto</string>
+    <string name="logs_kind_meal_plural">Pasti</string>
+    <string name="logs_kind_glucose">Basso o alto</string>
+    <string name="logs_kind_glucose_plural">Bassi e alti</string>
+    <string name="logs_kind_bolus">Insulina</string>
+    <string name="logs_kind_device">Dispositivo</string>
+    <string name="logs_kind_device_plural">Eventi dei dispositivi</string>
+    <string name="logs_kind_sleep">Sonno</string>
+    <string name="logs_kind_activity">Esercizio</string>
+    <string name="date_today">Oggi</string>
+    <string name="date_yesterday">Ieri</string>
+    <string name="common_collapse">Comprimi</string>
+    <string name="common_expand">Espandi</string>
+
+    <!-- Logs: entry kinds (subtitles, empty states) -->
+    <string name="logs_kind_meal_sub">Foto, carboidrati e velocità di assorbimento</string>
+    <string name="logs_kind_sleep_sub">Ora di andare a letto, risveglio e qualità</string>
+    <string name="logs_kind_activity_sub">Allenamenti e quanto sono stati intensi</string>
+    <string name="logs_kind_glucose_sub">Rilevato dai tuoi dati CGM</string>
+    <string name="logs_kind_bolus_sub">Rilevato dai dati del microinfusore</string>
+    <string name="logs_kind_device_sub">Cambi di pod e sito dal microinfusore</string>
+    <string name="logs_empty_meal">Nessun pasto in questo periodo</string>
+    <string name="logs_empty_glucose">Nessun valore basso o alto in questo periodo</string>
+    <string name="logs_empty_bolus">Nessuna insulina in questo periodo</string>
+    <string name="logs_empty_device">Nessun evento dei dispositivi in questo periodo</string>
+    <string name="logs_empty_sleep">Nessun sonno in questo periodo</string>
+    <string name="logs_empty_activity">Nessun esercizio in questo periodo</string>
+
+    <!-- Logs: misc -->
+    <string name="logs_absorption_cd">Assorbimento %1$s</string>
+
+    <!-- Logs: list, cards, sheet -->
+    <string name="logs_filter_all">Tutti</string>
+    <string name="logs_device_imported_note">Importato da %1$s. L\'eliminazione lo rimuove solo da Diafit.</string>
+    <string name="logs_device_delete_note">L\'eliminazione lo rimuove solo da Diafit.</string>
+    <string name="logs_dup_text">Stesso pasto? Carboidrati AAPS %1$d g alle %2$s</string>
+    <string name="logs_dup_separate">Separati</string>
+    <string name="logs_dup_merge">Unisci</string>
+    <string name="logs_range_last_days">Ultimi %1$d giorni</string>
+    <string name="logs_range_back">Torna agli ultimi %1$d giorni</string>
+    <string name="logs_summary_carbs">%1$d g carboidrati</string>
+    <string name="logs_summary_smb">%1$s U SMB</string>
+    <string name="logs_summary_sleep">%1$s di sonno</string>
+    <string name="logs_empty_title_period">Nulla in questo periodo</string>
+    <string name="logs_empty_body_kind_custom">Nei giorni scelti non è stato registrato nulla di questo tipo. Prova con tutte le voci o un periodo più lungo.</string>
+    <string name="logs_empty_body_kind">Negli ultimi %1$d giorni non è stato registrato nulla di questo tipo.</string>
+    <string name="logs_empty_body_period">Nei giorni scelti non è stata registrata alcuna voce.</string>
+    <string name="logs_show_all">Mostra tutte le voci</string>
+    <string name="logs_empty_title">Il tuo registro è vuoto</string>
+    <string name="logs_empty_body">I pasti che registri compaiono qui con l\'effetto sulla glicemia, insieme a boli, ipo e iperglicemie, cambi dei dispositivi, sonno e allenamenti.</string>
+    <string name="logs_add_first">Aggiungi la prima voce</string>
+    <string name="logs_load_failed">Impossibile caricare i pasti</string>
+    <string name="logs_card_add_photo">Aggiungi foto</string>
+    <string name="logs_ep_very_low">Molto basso</string>
+    <string name="logs_ep_low">Basso</string>
+    <string name="logs_ep_very_high">Molto alto</string>
+    <string name="logs_ep_high">Alto</string>
+    <string name="logs_ep_for">%1$s per %2$s</string>
+    <string name="logs_ep_lowest">minimo mg/dL</string>
+    <string name="logs_ep_highest">massimo mg/dL</string>
+    <string name="logs_bolus_auto_smb">Automatico · SMB</string>
+    <string name="logs_bolus_single">Bolo di insulina</string>
+    <string name="logs_bolus_part_auto">%1$s · Automatico</string>
+    <string name="logs_bolus_part_bolus">%1$s · Bolo</string>
+    <string name="logs_unit_shift">h di shift</string>
+    <string name="logs_ex_easy">Leggero</string>
+    <string name="logs_ex_moderate">Moderato</string>
+    <string name="logs_ex_hard">Intenso</string>
+    <string name="logs_asleep">di sonno</string>
+    <string name="logs_pump_profile_switch">Cambio profilo</string>
+    <string name="logs_pump_temp_target">Target temporaneo</string>
+    <string name="logs_pump_warning">Avviso</string>
+    <string name="logs_pump_site_insulin">Cambio sito e insulina</string>
+    <string name="logs_peak_arrow"> → picco </string>
+    <string name="logs_peak_only">picco </string>
+    <string name="logs_after_hm">%1$dh %2$dmin</string>
+    <string name="logs_after_m">%1$dmin</string>
+    <string name="logs_new_title">Aggiungi al registro</string>
+    <string name="logs_new_other">Oppure inizia qualcosa di nuovo</string>
+    <string name="logs_new_meal">Nuovo pasto</string>
+    <string name="logs_new_add_course">Aggiungi una portata</string>
+    <string name="logs_new_to_meal">a %1$s</string>
+    <string name="logs_new_soon">Presto</string>
+    <string name="logs_rel_at_event">all\'evento</string>
+    <string name="logs_resp_empty">Nessuna lettura glicemica per questo periodo</string>
+    <string name="logs_resp_scrub">Trascina sul grafico per i valori esatti</string>
+    <string name="logs_rel_after">%1$s dopo</string>
+    <string name="logs_rel_before">%1$s prima</string>
+    <plurals name="logs_summary_meals">
+        <item quantity="one">%1$d pasto</item>
+        <item quantity="other">%1$d pasti</item>
+    </plurals>
+    <plurals name="logs_summary_boluses">
+        <item quantity="one">%1$d bolo</item>
+        <item quantity="other">%1$d boli</item>
+    </plurals>
+    <plurals name="logs_summary_lows">
+        <item quantity="one">%1$d ipoglicemia</item>
+        <item quantity="other">%1$d ipoglicemie</item>
+    </plurals>
+    <plurals name="logs_summary_highs">
+        <item quantity="one">%1$d iperglicemia</item>
+        <item quantity="other">%1$d iperglicemie</item>
+    </plurals>
+    <plurals name="logs_summary_workouts">
+        <item quantity="one">%1$d allenamento</item>
+        <item quantity="other">%1$d allenamenti</item>
+    </plurals>
+    <plurals name="logs_bolus_smbs">
+        <item quantity="one">Automatico · %1$d SMB</item>
+        <item quantity="other">Automatico · %1$d SMB</item>
+    </plurals>
+    <plurals name="logs_bolus_doses">
+        <item quantity="one">%1$d dose di insulina</item>
+        <item quantity="other">%1$d dosi di insulina</item>
+    </plurals>
+    <plurals name="logs_new_since">
+        <item quantity="one">Dalle %1$s · %2$d portata · %3$d g</item>
+        <item quantity="other">Dalle %1$s · %2$d portate · %3$d g</item>
+    </plurals>
+
+    <!-- Logs: meal detail and sleep detail -->
+    <string name="logs_detail_edit_meal">Modifica pasto</string>
+    <string name="logs_detail_add_another_course">Aggiungi un\'altra portata</string>
+    <string name="logs_detail_add_course">Aggiungi una portata (dolce, piatto successivo…)</string>
+    <string name="logs_detail_delete_whole">Elimina l\'intero pasto</string>
+    <string name="logs_detail_delete">Elimina pasto</string>
+    <string name="logs_detail_delete_title">Eliminare questo pasto?</string>
+    <string name="logs_detail_delete_text_multi">Tutte le %1$d portate verranno rimosse dal registro e dai grafici della Home. Puoi annullare subito dopo.</string>
+    <string name="logs_detail_delete_text">Verrà rimosso dal registro e dai grafici della Home. Puoi annullare subito dopo.</string>
+    <string name="logs_tl_title_multi">Portate e insulina</string>
+    <string name="logs_tl_title">Insulina per questo pasto</string>
+    <string name="logs_tl_none">Nessuna insulina trovata</string>
+    <string name="logs_tl_summary">%1$d g carboidrati · %2$s U di insulina</string>
+    <string name="logs_tl_summary_ratio">%1$d g carboidrati · %2$s U di insulina · %3$s g per U</string>
+    <string name="logs_tl_empty_note">Nessuna insulina registrata da 30 min prima a 30 min dopo questo pasto.</string>
+    <string name="logs_tl_course">Portata %1$d</string>
+    <string name="logs_tl_running_g">%1$d g in totale</string>
+    <string name="logs_tl_running_u">%1$s U in totale</string>
+    <string name="logs_edit_course">Modifica portata</string>
+    <string name="logs_dose_smb">%1$s U · SMB</string>
+    <string name="logs_dose_bolus">%1$s U bolo</string>
+    <string name="logs_resp_title">Risposta glicemica</string>
+    <string name="logs_resp_multi">Dalla prima portata fino all\'assorbimento dell\'ultima</string>
+    <string name="logs_resp_absorption">Assorbimento %1$s, circa %2$d h</string>
+    <string name="logs_resp_error">Impossibile caricare i dati glicemici.</string>
+    <string name="logs_legend_in_range">Nel range</string>
+    <string name="logs_stat_at_meal">Inizio</string>
+    <string name="logs_stat_peak">Picco</string>
+    <string name="logs_stat_lowest">Minimo</string>
+    <string name="logs_insight_no_rise">La glicemia non è salita molto dopo il pasto.</string>
+    <string name="logs_insight_low_then_rise">La glicemia è poi salita di %1$d mg/dL da quel minimo, raggiungendo il picco %2$s dopo il pasto.</string>
+    <string name="logs_insight_rise">La glicemia è salita di %1$d mg/dL, con picco %2$s dopo il pasto.</string>
+    <string name="logs_insight_dip_first">La glicemia è prima scesa a %1$d mg/dL, sotto il range, %2$s dopo il pasto.</string>
+    <string name="logs_insight_dip_then">Poi è scesa a %1$d mg/dL, sotto il range, %2$s dopo il pasto.</string>
+    <string name="logs_insight_absorbing">Ancora in assorbimento. Si aggiorna con le nuove letture.</string>
+    <string name="logs_aaps_title">Abbinato ad AAPS</string>
+    <string name="logs_aaps_dosed">Dosato in AAPS: %1$d g</string>
+    <string name="logs_aaps_dosed_est">Dosato in AAPS: %1$d g (la stima era %2$d g)</string>
+    <string name="logs_aaps_unlink">Scollega</string>
+    <string name="logs_nutrition">Nutrienti</string>
+    <string name="logs_nutrition_all">Tutte le portate insieme</string>
+    <string name="logs_whats_in">Cosa contiene · %1$d</string>
+    <string name="logs_sleep_no_stages">Per questa notte non sono state registrate fasi del sonno.</string>
+    <plurals name="logs_photos_count">
+        <item quantity="one">%1$d foto</item>
+        <item quantity="other">%1$d foto</item>
+    </plurals>
+    <string name="logs_legend_meal">Pasto</string>
+    <string name="logs_stat_in_range">Nel range</string>
 </resources>

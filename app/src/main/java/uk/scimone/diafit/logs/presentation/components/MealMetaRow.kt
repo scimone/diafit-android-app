@@ -22,7 +22,7 @@ import uk.scimone.diafit.logs.presentation.model.label
 fun MealMetaRow(timeText: String, mealType: MealType, impactType: ImpactType, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(timeText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        MetaPill(mealType.type, mealType.iconRes, mealType.accent, MaterialTheme.colorScheme.onSurface)
+        MetaPill(mealType.displayName, mealType.iconRes, mealType.accent, MaterialTheme.colorScheme.onSurface)
         MetaPill(impactType.label, impactType.iconRes, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onSurface)
     }
 }

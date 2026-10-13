@@ -25,7 +25,8 @@ data class ExerciseEntryUi(
     override val id: Int,
     override val timeUtc: Long,
     val endUtc: Long,
-    val title: String,
+    /** The workout type as Health Connect names it; null = a generic "Exercise". */
+    val title: String?,
     val avgBpm: Int?,
     val maxBpm: Int?
 ) : LogsEntryUi {
@@ -54,7 +55,7 @@ fun ExerciseEntity.toUi(heartRate: List<HeartRateEntity>): ExerciseEntryUi {
         id = id,
         timeUtc = startUtc,
         endUtc = endUtc,
-        title = title ?: "Exercise",
+        title = title,
         avgBpm = during.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it).toInt() },
         maxBpm = during.maxOrNull()
     )

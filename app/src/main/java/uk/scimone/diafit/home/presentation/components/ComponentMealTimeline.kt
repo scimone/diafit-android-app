@@ -103,7 +103,7 @@ private fun formatTime(millis: Long): String = SimpleDateFormat("HH:mm", Locale.
 
 private fun MealGroup.title(): String = meals.firstNotNullOfOrNull { it.sittingName?.takeIf(String::isNotBlank) }
     ?: meals.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) }
-    ?: meals.first().mealType.type
+    ?: meals.first().mealType.displayName
 
 /**
  * Every sitting a bubble under the cursor stands for: those near [time], plus any chained to them
@@ -507,7 +507,7 @@ private fun MealDetails(meal: MealEntityUi) {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = meal.description?.takeIf { it.isNotBlank() } ?: meal.mealType.type,
+            text = meal.description?.takeIf { it.isNotBlank() } ?: meal.mealType.displayName,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold
         )

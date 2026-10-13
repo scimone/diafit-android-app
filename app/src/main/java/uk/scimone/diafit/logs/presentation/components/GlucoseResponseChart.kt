@@ -1,5 +1,10 @@
 package uk.scimone.diafit.logs.presentation.components
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -62,7 +67,7 @@ fun GlucoseResponseChart(
     if (readings.isEmpty()) {
         Box(modifier.height(180.dp), contentAlignment = Alignment.Center) {
             Text(
-                "No glucose readings for this period",
+                stringResource(R.string.logs_resp_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -218,12 +223,12 @@ private fun ScrubReadout(reading: CgmEntity?, eventTimeUtc: Long) {
     Row(Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
         if (reading == null) {
             Text(
-                "Drag across the graph for exact values",
+                stringResource(R.string.logs_resp_scrub),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reading.timestamp))
+            val time = formatStamp(reading.timestamp, "Hm")
             Text("${reading.valueMgdl} mg/dL", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.width(8.dp))
             Text(
@@ -235,10 +240,15 @@ private fun ScrubReadout(reading: CgmEntity?, eventTimeUtc: Long) {
     }
 }
 
-/** "+1 h 05 min after" / "20 min before" / "at meal". */
+/** The length of time between an event and a moment, e.g. "1 h 5 min" / "20 min". */
+fun eventSpan(deltaMs: Long): String {
+    val minutes = (abs(deltaMs) / 60_000).toInt()
+    return if (minutes >= 60) AppStrings.get(R.string.duration_hm, minutes / 60, minutes % 60) else AppStrings.get(R.string.duration_m, minutes)
+}
+
+/** "1 h 5 min after" / "20 min before" / "at the event". */
 fun relativeToEvent(deltaMs: Long): String {
     val minutes = abs(deltaMs) / 60_000
-    if (minutes < 2) return "at the event"
-    val text = if (minutes >= 60) "${minutes / 60} h ${(minutes % 60).toString().padStart(2, '0')} min" else "$minutes min"
-    return if (deltaMs > 0) "$text after" else "$text before"
+    if (minutes < 2) return AppStrings.get(R.string.logs_rel_at_event)
+    return AppStrings.get(if (deltaMs > 0) R.string.logs_rel_after else R.string.logs_rel_before, eventSpan(deltaMs))
 }

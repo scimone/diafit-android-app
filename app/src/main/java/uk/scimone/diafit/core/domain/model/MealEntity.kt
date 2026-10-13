@@ -1,5 +1,8 @@
 package uk.scimone.diafit.core.domain.model
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.annotation.StringRes
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -100,11 +103,15 @@ enum class ImpactType(val durationMinutes: Int) {
     LONG(360)     // e.g. high fat + carbs like pizza
 }
 
-enum class MealType(val type: String) {
-    BREAKFAST("Breakfast"),
-    LUNCH("Lunch"),
-    DINNER("Dinner"),
-    SNACK("Snack");
+/** [type] is the persisted English name (parsed back by [fromString]); show [displayName] to the user. */
+enum class MealType(val type: String, @StringRes val labelRes: Int) {
+    BREAKFAST("Breakfast", R.string.meal_type_breakfast),
+    LUNCH("Lunch", R.string.meal_type_lunch),
+    DINNER("Dinner", R.string.meal_type_dinner),
+    SNACK("Snack", R.string.meal_type_snack);
+
+    val displayName: String get() = AppStrings.get(labelRes)
+
     companion object {
         fun fromString(type: String): MealType {
             return values().find { it.type.equals(type, ignoreCase = true) } ?: SNACK

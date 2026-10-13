@@ -1,5 +1,7 @@
 package uk.scimone.diafit.logs.presentation.model
 
+import uk.scimone.diafit.R
+import androidx.annotation.StringRes
 import uk.scimone.diafit.core.domain.model.PumpEventEntity
 import uk.scimone.diafit.core.domain.model.PumpEventNormalizer
 import uk.scimone.diafit.core.domain.model.TemporaryTarget
@@ -23,7 +25,9 @@ data class PumpEventUi(
     val ids: List<Int> = listOf(id),
     /** Where it was imported from ("AAPS", "Nightscout"), if known. */
     val source: String? = null,
-    val icon: PumpEventIcon = PumpEventIcon.GENERIC
+    val icon: PumpEventIcon = PumpEventIcon.GENERIC,
+    /** A translated title for the kinds the app names itself; [title] stays the raw event type for the rest. */
+    @StringRes val titleRes: Int? = null
 ) : LogsEntryUi {
     override val kind: LogsEntryKind get() = LogsEntryKind.DEVICE
 
@@ -52,7 +56,7 @@ fun List<PumpEventEntity>.toMergedChangeUi(): PumpEventUi {
     val first = minBy { it.timestampUtc }
     return PumpEventUi(
         first.id, first.timestampUtc, "Site & insulin change", null,
-        ids = map { it.id }, source = first.originOf(), icon = PumpEventIcon.PUMP
+        ids = map { it.id }, source = first.originOf(), icon = PumpEventIcon.PUMP, titleRes = R.string.logs_pump_site_insulin
     )
 }
 
@@ -65,16 +69,17 @@ fun PumpEventEntity.toUi(target: TemporaryTarget? = null): PumpEventUi {
             id, timestampUtc, "Profile Switch", sw.baseName, target,
             percentage = sw.percentage.takeIf { it != 100 },
             timeShiftHours = sw.timeShiftHours.takeIf { it != 0 },
-            durationMinutes = sw.durationMinutes.takeIf { it > 0 }, source = originOf()
+            durationMinutes = sw.durationMinutes.takeIf { it > 0 }, source = originOf(),
+            titleRes = R.string.logs_pump_profile_switch
         )
     }
     toTemporaryTarget()?.let { t ->
-        return PumpEventUi(id, timestampUtc, "Temporary Target", t.reason.ifEmpty { null }, t, durationMinutes = t.durationMinutes.takeIf { it > 0 })
+        return PumpEventUi(id, timestampUtc, "Temporary Target", t.reason.ifEmpty { null }, t, durationMinutes = t.durationMinutes.takeIf { it > 0 }, titleRes = R.string.logs_pump_temp_target)
     }
     val warning = eventType.equals("Announcement", ignoreCase = true)
     return PumpEventUi(
         id, timestampUtc, if (warning) "Warning" else eventType,
         summary()?.let { if (warning) prettyNote(it) else it }, target,
-        source = originOf(), icon = pumpEventIcon(eventType)
+        source = originOf(), icon = pumpEventIcon(eventType), titleRes = if (warning) R.string.logs_pump_warning else null
     )
 }

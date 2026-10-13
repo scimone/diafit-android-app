@@ -390,4 +390,191 @@
     <string name="backend_last">Letzte Synchronisierung %1$s</string>
     <string name="backend_connected_as">Verbunden als %1$s</string>
     <string name="backend_err_enter">Gib die Adresse und das API-Token ein</string>
+
+    <!-- Meal types, absorption, entry kinds, day labels -->
+    <string name="meal_type_breakfast">Frühstück</string>
+    <string name="meal_type_lunch">Mittagessen</string>
+    <string name="meal_type_dinner">Abendessen</string>
+    <string name="meal_type_snack">Snack</string>
+    <string name="absorption_fast">Schnell</string>
+    <string name="absorption_medium">Mittel</string>
+    <string name="absorption_slow">Langsam</string>
+    <string name="absorption_fast_hint">Zuckerhaltiges oder fettarmes Essen. Die Glukose steigt schnell und erreicht früh ihren Höhepunkt.</string>
+    <string name="absorption_medium_hint">Typische gemischte Mahlzeit. Die Glukose steigt über einige Stunden gleichmäßig an.</string>
+    <string name="absorption_slow_hint">Reich an Fett und Eiweiß. Ein langsamer, lang gestreckter Anstieg, oft verzögert.</string>
+    <string name="sleep_stage_awake">Wach</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Leicht</string>
+    <string name="sleep_stage_deep">Tief</string>
+    <string name="sleep_stage_asleep">Schlafend</string>
+    <string name="logs_kind_meal">Mahlzeit</string>
+    <string name="logs_kind_meal_plural">Mahlzeiten</string>
+    <string name="logs_kind_glucose">Niedrig oder hoch</string>
+    <string name="logs_kind_glucose_plural">Tiefs &amp; Hochs</string>
+    <string name="logs_kind_bolus">Insulin</string>
+    <string name="logs_kind_device">Gerät</string>
+    <string name="logs_kind_device_plural">Geräteereignisse</string>
+    <string name="logs_kind_sleep">Schlaf</string>
+    <string name="logs_kind_activity">Training</string>
+    <string name="date_today">Heute</string>
+    <string name="date_yesterday">Gestern</string>
+    <string name="common_collapse">Zuklappen</string>
+    <string name="common_expand">Aufklappen</string>
+
+    <!-- Logs: entry kinds (subtitles, empty states) -->
+    <string name="logs_kind_meal_sub">Foto, Kohlenhydrate und Absorptionsgeschwindigkeit</string>
+    <string name="logs_kind_sleep_sub">Schlafenszeit, Aufwachen und Qualität</string>
+    <string name="logs_kind_activity_sub">Workouts und wie intensiv sie waren</string>
+    <string name="logs_kind_glucose_sub">Aus deinen CGM-Daten erkannt</string>
+    <string name="logs_kind_bolus_sub">Aus deinen Pumpendaten erkannt</string>
+    <string name="logs_kind_device_sub">Pod- und Stellenwechsel deiner Pumpe</string>
+    <string name="logs_empty_meal">Keine Mahlzeiten in diesem Zeitraum</string>
+    <string name="logs_empty_glucose">Keine Tiefs oder Hochs in diesem Zeitraum</string>
+    <string name="logs_empty_bolus">Kein Insulin in diesem Zeitraum</string>
+    <string name="logs_empty_device">Keine Geräteereignisse in diesem Zeitraum</string>
+    <string name="logs_empty_sleep">Kein Schlaf in diesem Zeitraum</string>
+    <string name="logs_empty_activity">Kein Training in diesem Zeitraum</string>
+
+    <!-- Logs: misc -->
+    <string name="logs_absorption_cd">Absorption: %1$s</string>
+
+    <!-- Logs: list, cards, sheet -->
+    <string name="logs_filter_all">Alle</string>
+    <string name="logs_device_imported_note">Importiert aus %1$s. Beim Löschen wird es nur aus Diafit entfernt.</string>
+    <string name="logs_device_delete_note">Beim Löschen wird es nur aus Diafit entfernt.</string>
+    <string name="logs_dup_text">Gleiche Mahlzeit? AAPS-KH %1$d g um %2$s</string>
+    <string name="logs_dup_separate">Getrennt</string>
+    <string name="logs_dup_merge">Zusammenführen</string>
+    <string name="logs_range_last_days">Letzte %1$d Tage</string>
+    <string name="logs_range_back">Zurück zu den letzten %1$d Tagen</string>
+    <string name="logs_summary_carbs">%1$d g KH</string>
+    <string name="logs_summary_smb">%1$s U SMB</string>
+    <string name="logs_summary_sleep">%1$s Schlaf</string>
+    <string name="logs_empty_title_period">Nichts in diesem Zeitraum</string>
+    <string name="logs_empty_body_kind_custom">In den gewählten Tagen wurde nichts dieser Art erfasst. Probiere alle Einträge oder einen längeren Zeitraum.</string>
+    <string name="logs_empty_body_kind">In den letzten %1$d Tagen wurde nichts dieser Art erfasst.</string>
+    <string name="logs_empty_body_period">In den gewählten Tagen wurden keine Einträge erfasst.</string>
+    <string name="logs_show_all">Alle Einträge anzeigen</string>
+    <string name="logs_empty_title">Dein Protokoll ist leer</string>
+    <string name="logs_empty_body">Mahlzeiten, die du erfasst, erscheinen hier zusammen mit ihrer Wirkung auf deine Glukose, außerdem Boli, Unter- und Überzuckerungen, Gerätewechsel, Schlaf und Workouts.</string>
+    <string name="logs_add_first">Ersten Eintrag hinzufügen</string>
+    <string name="logs_load_failed">Mahlzeiten konnten nicht geladen werden</string>
+    <string name="logs_card_add_photo">Foto hinzufügen</string>
+    <string name="logs_ep_very_low">Sehr niedrig</string>
+    <string name="logs_ep_low">Niedrig</string>
+    <string name="logs_ep_very_high">Sehr hoch</string>
+    <string name="logs_ep_high">Hoch</string>
+    <string name="logs_ep_for">%1$s seit %2$s</string>
+    <string name="logs_ep_lowest">Tiefstwert mg/dL</string>
+    <string name="logs_ep_highest">Höchstwert mg/dL</string>
+    <string name="logs_bolus_auto_smb">Automatisch · SMB</string>
+    <string name="logs_bolus_single">Insulin-Bolus</string>
+    <string name="logs_bolus_part_auto">%1$s · Automatisch</string>
+    <string name="logs_bolus_part_bolus">%1$s · Bolus</string>
+    <string name="logs_unit_shift">Std. Versatz</string>
+    <string name="logs_ex_easy">Leicht</string>
+    <string name="logs_ex_moderate">Mittel</string>
+    <string name="logs_ex_hard">Intensiv</string>
+    <string name="logs_asleep">geschlafen</string>
+    <string name="logs_pump_profile_switch">Profilwechsel</string>
+    <string name="logs_pump_temp_target">Temporäres Ziel</string>
+    <string name="logs_pump_warning">Warnung</string>
+    <string name="logs_pump_site_insulin">Stellen- &amp; Insulinwechsel</string>
+    <string name="logs_peak_arrow"> → Spitze </string>
+    <string name="logs_peak_only">Spitze </string>
+    <string name="logs_after_hm">%1$d Std. %2$d min</string>
+    <string name="logs_after_m">%1$d min</string>
+    <string name="logs_new_title">Zum Protokoll hinzufügen</string>
+    <string name="logs_new_other">Oder etwas Neues beginnen</string>
+    <string name="logs_new_meal">Neue Mahlzeit</string>
+    <string name="logs_new_add_course">Gang hinzufügen</string>
+    <string name="logs_new_to_meal">zu %1$s</string>
+    <string name="logs_new_soon">Bald</string>
+    <string name="logs_rel_at_event">zum Zeitpunkt</string>
+    <string name="logs_resp_empty">Keine Glukosewerte für diesen Zeitraum</string>
+    <string name="logs_resp_scrub">Über das Diagramm wischen für genaue Werte</string>
+    <string name="logs_rel_after">%1$s danach</string>
+    <string name="logs_rel_before">%1$s zuvor</string>
+    <plurals name="logs_summary_meals">
+        <item quantity="one">%1$d Mahlzeit</item>
+        <item quantity="other">%1$d Mahlzeiten</item>
+    </plurals>
+    <plurals name="logs_summary_boluses">
+        <item quantity="one">%1$d Bolus</item>
+        <item quantity="other">%1$d Boli</item>
+    </plurals>
+    <plurals name="logs_summary_lows">
+        <item quantity="one">%1$d Unterzuckerung</item>
+        <item quantity="other">%1$d Unterzuckerungen</item>
+    </plurals>
+    <plurals name="logs_summary_highs">
+        <item quantity="one">%1$d Überzuckerung</item>
+        <item quantity="other">%1$d Überzuckerungen</item>
+    </plurals>
+    <plurals name="logs_summary_workouts">
+        <item quantity="one">%1$d Workout</item>
+        <item quantity="other">%1$d Workouts</item>
+    </plurals>
+    <plurals name="logs_bolus_smbs">
+        <item quantity="one">Automatisch · %1$d SMB</item>
+        <item quantity="other">Automatisch · %1$d SMBs</item>
+    </plurals>
+    <plurals name="logs_bolus_doses">
+        <item quantity="one">%1$d Insulindosis</item>
+        <item quantity="other">%1$d Insulindosen</item>
+    </plurals>
+    <plurals name="logs_new_since">
+        <item quantity="one">Seit %1$s · %2$d Gang · %3$d g</item>
+        <item quantity="other">Seit %1$s · %2$d Gänge · %3$d g</item>
+    </plurals>
+
+    <!-- Logs: meal detail and sleep detail -->
+    <string name="logs_detail_edit_meal">Mahlzeit bearbeiten</string>
+    <string name="logs_detail_add_another_course">Weiteren Gang hinzufügen</string>
+    <string name="logs_detail_add_course">Gang hinzufügen (Dessert, nächster Teller…)</string>
+    <string name="logs_detail_delete_whole">Ganze Mahlzeit löschen</string>
+    <string name="logs_detail_delete">Mahlzeit löschen</string>
+    <string name="logs_detail_delete_title">Diese Mahlzeit löschen?</string>
+    <string name="logs_detail_delete_text_multi">Alle %1$d Gänge werden aus deinem Protokoll und den Diagrammen auf Start entfernt. Du kannst direkt danach rückgängig machen.</string>
+    <string name="logs_detail_delete_text">Sie wird aus deinem Protokoll und den Diagrammen auf Start entfernt. Du kannst direkt danach rückgängig machen.</string>
+    <string name="logs_tl_title_multi">Gänge &amp; Insulin</string>
+    <string name="logs_tl_title">Insulin für diese Mahlzeit</string>
+    <string name="logs_tl_none">Kein Insulin gefunden</string>
+    <string name="logs_tl_summary">%1$d g KH · %2$s U Insulin</string>
+    <string name="logs_tl_summary_ratio">%1$d g KH · %2$s U Insulin · %3$s g pro U</string>
+    <string name="logs_tl_empty_note">Von 30 Min. vor bis 30 Min. nach dieser Mahlzeit wurde kein Insulin erfasst.</string>
+    <string name="logs_tl_course">Gang %1$d</string>
+    <string name="logs_tl_running_g">%1$d g gesamt</string>
+    <string name="logs_tl_running_u">%1$s U gesamt</string>
+    <string name="logs_edit_course">Gang bearbeiten</string>
+    <string name="logs_dose_smb">%1$s U · SMB</string>
+    <string name="logs_dose_bolus">%1$s U Bolus</string>
+    <string name="logs_resp_title">Glukoseverlauf</string>
+    <string name="logs_resp_multi">Vom ersten Gang bis zur Absorption des letzten</string>
+    <string name="logs_resp_absorption">Absorption %1$s, etwa %2$d Std.</string>
+    <string name="logs_resp_error">Glukosedaten konnten nicht geladen werden.</string>
+    <string name="logs_legend_in_range">Im Zielbereich</string>
+    <string name="logs_stat_at_meal">Start</string>
+    <string name="logs_stat_peak">Spitze</string>
+    <string name="logs_stat_lowest">Tiefster</string>
+    <string name="logs_insight_no_rise">Die Glukose stieg nach der Mahlzeit kaum an.</string>
+    <string name="logs_insight_low_then_rise">Die Glukose stieg danach um %1$d mg/dL von diesem Tiefpunkt an und erreichte ihren Höhepunkt %2$s nach der Mahlzeit.</string>
+    <string name="logs_insight_rise">Die Glukose stieg um %1$d mg/dL und erreichte ihren Höhepunkt %2$s nach der Mahlzeit.</string>
+    <string name="logs_insight_dip_first">Die Glukose fiel zuerst auf %1$d mg/dL, unter den Zielbereich, %2$s nach der Mahlzeit.</string>
+    <string name="logs_insight_dip_then">Danach fiel sie auf %1$d mg/dL, unter den Zielbereich, %2$s nach der Mahlzeit.</string>
+    <string name="logs_insight_absorbing">Wird noch absorbiert. Das aktualisiert sich mit neuen Messwerten.</string>
+    <string name="logs_aaps_title">Mit AAPS abgeglichen</string>
+    <string name="logs_aaps_dosed">In AAPS dosiert: %1$d g</string>
+    <string name="logs_aaps_dosed_est">In AAPS dosiert: %1$d g (Schätzung war %2$d g)</string>
+    <string name="logs_aaps_unlink">Trennen</string>
+    <string name="logs_nutrition">Nährwerte</string>
+    <string name="logs_nutrition_all">Alle Gänge zusammen</string>
+    <string name="logs_whats_in">Was drin ist · %1$d</string>
+    <string name="logs_sleep_no_stages">Für diese Nacht wurden keine Schlafphasen erfasst.</string>
+    <plurals name="logs_photos_count">
+        <item quantity="one">%1$d Foto</item>
+        <item quantity="other">%1$d Fotos</item>
+    </plurals>
+    <string name="logs_legend_meal">Essen</string>
+    <string name="logs_stat_in_range">Im Ziel</string>
 </resources>
