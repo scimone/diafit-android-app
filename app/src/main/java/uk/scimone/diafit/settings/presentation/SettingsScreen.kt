@@ -1,5 +1,8 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.UiText
+import androidx.compose.ui.res.pluralStringResource
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
@@ -103,7 +106,7 @@ fun SettingsPageScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(page.titleRes)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -150,9 +153,9 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
         )
     }
 
-    SettingsSection(title = "Connectors", icon = Icons.Filled.Hub) {
+    SettingsSection(title = stringResource(R.string.settings_connectors_title), icon = Icons.Filled.Hub) {
         Text(
-            "Connect the apps and services Diafit should get data from. You can connect as many as you like, then choose below which one feeds each kind of data.",
+            stringResource(R.string.settings_connectors_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -193,9 +196,9 @@ private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel
                 Spacer(Modifier.height(8.dp))
                 when (connector) {
                     Connector.NIGHTSCOUT -> NightscoutConnectorSetup(state, viewModel)
-                    Connector.AAPS -> SetupHint("In AAPS, turn on its data broadcast so Diafit receives treatments (Config Builder → Sync → NSClient, and the Data broadcaster plugin for temp basals). Diafit doesn't need a login.")
-                    Connector.XDRIP -> SetupHint("In xDrip+: Settings → Inter-app settings → Broadcast locally. Diafit then receives every reading; no login needed.")
-                    Connector.JUGGLUCO -> SetupHint("In Juggluco: Settings → Data exchange → Glucodata broadcast, then switch on Diafit in the list of apps. No login needed.")
+                    Connector.AAPS -> SetupHint(stringResource(R.string.settings_hint_aaps))
+                    Connector.XDRIP -> SetupHint(stringResource(R.string.settings_hint_xdrip))
+                    Connector.JUGGLUCO -> SetupHint(stringResource(R.string.settings_hint_juggluco))
                     else -> Unit
                 }
                 if (connector == Connector.NIGHTSCOUT && state.nightscoutConfig.baseUrl.isNotBlank()) {
@@ -213,13 +216,13 @@ private fun DataSourcesPage(state: SettingsState, viewModel: SettingsViewModel) 
     }
     if (state.enabledConnectors.isEmpty()) {
         Text(
-            "Nothing is connected yet. Connect Nightscout, AAPS, xDrip+, Juggluco or Health Connect under Connected apps first.",
+            stringResource(R.string.settings_sources_none),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    SettingsSection(title = "Which connector feeds what", icon = Icons.Filled.Tune) {
+    SettingsSection(title = stringResource(R.string.settings_sources_title), icon = Icons.Filled.Tune) {
         Text(
-            "Choose which connector feeds each kind of data, or switch it off if you don't want it in Diafit.",
+            stringResource(R.string.settings_sources_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -274,13 +277,13 @@ private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
 
 @Composable
 private fun FoodDatabasePage(state: SettingsState, viewModel: SettingsViewModel) {
-    SettingsSection(title = "Where products come from", icon = Icons.Filled.Search) {
+    SettingsSection(title = stringResource(R.string.settings_food_sources_title), icon = Icons.Filled.Search) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Column {
                 Text("Open Food Facts", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                Text("Always on, no account needed. Used for barcodes and for searching by name.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.settings_food_off_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -293,11 +296,11 @@ private fun FoodDatabasePage(state: SettingsState, viewModel: SettingsViewModel)
             Spacer(Modifier.width(8.dp))
             Column {
                 Text("USDA FoodData Central", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                Text("Optional second database, mostly US products. Needs a free key.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.settings_food_usda_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
-    SettingsSection(title = "USDA key", icon = Icons.Filled.Key) {
+    SettingsSection(title = stringResource(R.string.settings_food_key_title), icon = Icons.Filled.Key) {
         UsdaKeySetup(state, viewModel)
     }
 }
@@ -305,7 +308,7 @@ private fun FoodDatabasePage(state: SettingsState, viewModel: SettingsViewModel)
 @Composable
 private fun BackendPage() {
     if (uk.scimone.diafit.backendsync.BackendSyncFeature.ENABLED) {
-        SettingsSection(title = "Your Diafit server", icon = Icons.Filled.CloudUpload) {
+        SettingsSection(title = stringResource(R.string.settings_backend_section), icon = Icons.Filled.CloudUpload) {
             uk.scimone.diafit.backendsync.presentation.BackendSyncSettings()
         }
     }
@@ -315,25 +318,25 @@ private fun BackendPage() {
 private fun NotificationsPage(resumeTick: Int) {
     val context = LocalContext.current
     val granted = remember(resumeTick) { notificationsAllowed(context) }
-    SettingsSection(title = "Allowed on this phone", icon = Icons.Filled.Notifications) {
+    SettingsSection(title = stringResource(R.string.settings_notif_allowed_title), icon = Icons.Filled.Notifications) {
         PermissionRow(
-            title = "Notifications",
-            description = if (granted) "Diafit can alert you." else "Blocked, so expiry alerts and pattern alerts are silent. The bell inside the app still fills up.",
+            title = stringResource(R.string.notifications_title),
+            description = if (granted) stringResource(R.string.settings_notif_ok) else stringResource(R.string.settings_notif_blocked),
             granted = granted,
-            actionLabel = "Allow",
+            actionLabel = stringResource(R.string.common_allow),
             onAction = { openAppNotificationSettings(context) }
         )
     }
-    SettingsSection(title = "What Diafit sends", icon = Icons.Filled.Tune) {
+    SettingsSection(title = stringResource(R.string.settings_notif_sends_title), icon = Icons.Filled.Tune) {
         Text(
-            "Android lets you set sound, vibration and importance for each kind separately.",
+            stringResource(R.string.settings_notif_sends_hint),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ChannelRow(context, "DEVICE_EXPIRY_CHANNEL", "Device expiry", "Sensor, pod or site and battery: 24 h / 10 h and 1 h before they run out.")
+        ChannelRow(context, "DEVICE_EXPIRY_CHANNEL", stringResource(R.string.expiry_channel_name), stringResource(R.string.settings_channel_expiry_desc))
         HorizontalDivider()
-        ChannelRow(context, "GLUCOSE_PATTERNS_CHANNEL", "Glucose patterns", "A new or changed pattern worth a look.")
+        ChannelRow(context, "GLUCOSE_PATTERNS_CHANNEL", stringResource(R.string.settings_channel_patterns), stringResource(R.string.settings_channel_patterns_desc))
         HorizontalDivider()
-        ChannelRow(context, "GLUCOSE_SYNC_CHANNEL", "Sync status", "The permanent notification that keeps glucose readings coming. Keep it; hiding it can make Android stop the sync.")
+        ChannelRow(context, "GLUCOSE_SYNC_CHANNEL", stringResource(R.string.settings_channel_sync), stringResource(R.string.settings_channel_sync_desc))
     }
 }
 
@@ -362,7 +365,7 @@ private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgno
         if (!ok) openAppDetails(context)
     }
 
-    SettingsSection(title = "Background reliability", icon = Icons.Filled.BatteryChargingFull) {
+    SettingsSection(title = stringResource(R.string.settings_bg_title), icon = Icons.Filled.BatteryChargingFull) {
         BackgroundReliabilityStatus(
             isBatteryOptimizationIgnored = state.isBatteryOptimizationIgnored,
             onRequestIgnoreBatteryOptimizations = onRequestIgnoreBatteryOptimizations
@@ -373,7 +376,7 @@ private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgno
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "Xiaomi/MIUI devices can still kill background sync overnight even with battery optimization disabled. Enable Autostart for Diafit too:",
+                stringResource(R.string.settings_bg_xiaomi),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -381,25 +384,25 @@ private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgno
             OutlinedButton(onClick = { openXiaomiAutostartSettings(context) }) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Open Autostart settings")
+                Text(stringResource(R.string.settings_bg_open_autostart))
             }
         }
     }
 
-    SettingsSection(title = "Permissions", icon = Icons.Filled.Lock) {
+    SettingsSection(title = stringResource(R.string.settings_perm_title), icon = Icons.Filled.Lock) {
         PermissionRow(
-            title = "Notifications",
-            description = "Expiry and pattern alerts.",
+            title = stringResource(R.string.notifications_title),
+            description = stringResource(R.string.settings_perm_notif_desc),
             granted = notificationsGranted,
-            actionLabel = "Allow",
+            actionLabel = stringResource(R.string.common_allow),
             onAction = { openAppNotificationSettings(context) }
         )
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         PermissionRow(
-            title = "Camera",
-            description = "Scanning barcodes and photographing meals.",
+            title = stringResource(R.string.settings_perm_camera),
+            description = stringResource(R.string.settings_perm_camera_desc),
             granted = cameraGranted,
-            actionLabel = "Allow",
+            actionLabel = stringResource(R.string.common_allow),
             onAction = { cameraLauncher.launch(android.Manifest.permission.CAMERA) }
         )
         if (state.healthConnect.availability == HealthConnectAvailability.AVAILABLE) {
@@ -407,24 +410,25 @@ private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgno
             PermissionRow(
                 title = "Health Connect",
                 description = when {
-                    !state.healthConnect.enabled -> "Not connected. Connect it under Connected apps."
-                    state.healthConnect.activityGranted && state.healthConnect.backgroundGranted -> "Activity data and background access allowed."
-                    state.healthConnect.activityGranted -> "Activity data allowed; background access is not, so data only imports while Diafit is open."
-                    else -> "Permission was withdrawn."
+                    !state.healthConnect.enabled -> stringResource(R.string.settings_perm_hc_none)
+                    state.healthConnect.activityGranted && state.healthConnect.backgroundGranted -> stringResource(R.string.settings_perm_hc_ok)
+                    state.healthConnect.activityGranted -> stringResource(R.string.settings_perm_hc_nobg)
+                    else -> stringResource(R.string.settings_perm_hc_withdrawn)
                 },
                 granted = state.healthConnect.activityGranted && state.healthConnect.backgroundGranted,
-                actionLabel = "Manage",
+                actionLabel = stringResource(R.string.common_manage),
+                alwaysShowAction = true,
                 onAction = { healthConnectIntent().onSuccess { runCatching { context.startActivity(it) } } }
             )
         }
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = { openAppDetails(context) }) { Text("All Android permissions for Diafit") }
+        TextButton(onClick = { openAppDetails(context) }) { Text(stringResource(R.string.settings_perm_all_android)) }
     }
 }
 
 /** One permission: a status icon, what it is for, and a button while it is missing. */
 @Composable
-private fun PermissionRow(title: String, description: String, granted: Boolean, actionLabel: String, onAction: () -> Unit) {
+private fun PermissionRow(title: String, description: String, granted: Boolean, actionLabel: String, onAction: () -> Unit, alwaysShowAction: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             if (granted) Icons.Filled.CheckCircle else Icons.Filled.Warning, null,
@@ -436,7 +440,7 @@ private fun PermissionRow(title: String, description: String, granted: Boolean, 
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (!granted || actionLabel == "Manage") {
+        if (!granted || alwaysShowAction) {
             Spacer(Modifier.width(8.dp))
             OutlinedButton(onClick = onAction) { Text(actionLabel) }
         }
@@ -479,7 +483,7 @@ private fun openXiaomiAutostartSettings(context: Context) {
     } catch (e: ActivityNotFoundException) {
         Toast.makeText(
             context,
-            "Couldn't open Autostart settings automatically — look for \"Autostart\" under Settings > Apps > Diafit > Permissions instead.",
+            context.getString(R.string.settings_autostart_toast),
             Toast.LENGTH_LONG
         ).show()
     }
@@ -539,11 +543,11 @@ private fun HealthConnectCard(
         HealthConnectAvailability.UNAVAILABLE, HealthConnectAvailability.UPDATE_REQUIRED -> {
             val update = state.availability == HealthConnectAvailability.UPDATE_REQUIRED
             Text(
-                if (update) "Health Connect needs to be updated before Diafit can use it." else "Health Connect isn't available on this device.",
+                if (update) stringResource(R.string.hc_update_needed) else stringResource(R.string.hc_unavailable),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onInstall) { Text(if (update) "Update Health Connect" else "Get Health Connect") }
+            OutlinedButton(onClick = onInstall) { Text(if (update) stringResource(R.string.hc_update) else stringResource(R.string.hc_get)) }
         }
         HealthConnectAvailability.AVAILABLE -> {
             @OptIn(ExperimentalLayoutApi::class)
@@ -552,7 +556,7 @@ private fun HealthConnectCard(
                     AssistChip(
                         onClick = {},
                         enabled = false,
-                        label = { Text(type.label, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(stringResource(type.labelRes), style = MaterialTheme.typography.labelMedium) },
                         leadingIcon = if (state.connected && type in wanted) {
                             { Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary) }
                         } else null
@@ -563,15 +567,15 @@ private fun HealthConnectCard(
             if (!state.connected) {
                 if (state.enabled && !state.activityGranted) {
                     Text(
-                        "Permission was withdrawn in Health Connect. Allow it again to keep importing.",
+                        stringResource(R.string.hc_withdrawn_warn),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                Button(onClick = onConnect) { Text("Allow access") }
+                Button(onClick = onConnect) { Text(stringResource(R.string.hc_allow_access)) }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "The last 14 days are imported when you connect, then new data every 15 minutes.",
+                    stringResource(R.string.hc_connect_note),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -581,18 +585,18 @@ private fun HealthConnectCard(
                         is HealthConnectSyncStatus.Syncing -> {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(8.dp))
-                            Text("Importing… ${(sync.progress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.hc_importing, (sync.progress * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
                         }
                         is HealthConnectSyncStatus.Failed -> {
                             Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Import failed: ${sync.message}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(R.string.hc_failed, sync.message), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                         }
                         HealthConnectSyncStatus.Idle -> {
                             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                state.lastSync?.let { "Connected · last import ${formatSyncTime(it)}" } ?: "Connected · waiting for the first import",
+                                state.lastSync?.let { stringResource(R.string.hc_connected_last, formatSyncTime(it)) } ?: stringResource(R.string.hc_connected_waiting),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -601,20 +605,20 @@ private fun HealthConnectCard(
                 state.summary?.let { sum ->
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Found in Health Connect (last ${sum.days} days): ${"%,d".format(sum.heartRate)} heart-rate readings · ${"%,d".format(sum.steps)} step periods · ${sum.sleep} sleep sessions · ${sum.exercise} workouts",
+                        stringResource(R.string.hc_found, sum.days, "%,d".format(sum.heartRate), "%,d".format(sum.steps), sum.sleep, sum.exercise),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val missing = listOfNotNull(
-                        "heart rate".takeIf { DataType.HEART_RATE in wanted && sum.heartRate == 0 },
-                        "steps".takeIf { DataType.STEPS in wanted && sum.steps == 0 },
-                        "sleep".takeIf { DataType.SLEEP in wanted && sum.sleep == 0 },
-                        "workouts".takeIf { DataType.EXERCISE in wanted && sum.exercise == 0 }
+                        stringResource(R.string.hc_kind_heart_rate).takeIf { DataType.HEART_RATE in wanted && sum.heartRate == 0 },
+                        stringResource(R.string.hc_kind_steps).takeIf { DataType.STEPS in wanted && sum.steps == 0 },
+                        stringResource(R.string.hc_kind_sleep).takeIf { DataType.SLEEP in wanted && sum.sleep == 0 },
+                        stringResource(R.string.hc_kind_workouts).takeIf { DataType.EXERCISE in wanted && sum.exercise == 0 }
                     )
                     if (missing.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
                         // Red only when nothing at all came through; one missing type is often just "no such data" (no workouts logged).
                         Text(
-                            "No ${missing.joinToString(", ")} data found. Diafit shows what other apps (your watch or fitness app) write to Health Connect; see Manage in Health Connect → Data and access.",
+                            stringResource(R.string.hc_missing, missing.joinToString(", ")),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (missing.size == wanted.size) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -623,16 +627,16 @@ private fun HealthConnectCard(
                 if (!state.backgroundGranted) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Background access isn't allowed, so data is only imported while Diafit is open. You can allow it in Health Connect.",
+                        stringResource(R.string.hc_nobg),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onSyncNow, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Sync now") }
-                    OutlinedButton(onClick = onBackfill, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text("Re-import 2 weeks") }
+                    OutlinedButton(onClick = onSyncNow, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text(stringResource(R.string.common_sync_now)) }
+                    OutlinedButton(onClick = onBackfill, enabled = sync !is HealthConnectSyncStatus.Syncing) { Text(stringResource(R.string.hc_reimport)) }
                 }
-                TextButton(onClick = onOpenHealthConnect) { Text("Manage in Health Connect") }
+                TextButton(onClick = onOpenHealthConnect) { Text(stringResource(R.string.hc_manage)) }
             }
         }
     }
@@ -643,7 +647,7 @@ private fun ConnectorHeader(connector: Connector, enabled: Boolean, switchEnable
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(connector.displayName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Text(connector.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(connector.descriptionRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked = enabled, onCheckedChange = onToggle, enabled = switchEnabled)
@@ -654,7 +658,7 @@ private fun ConnectorHeader(connector: Connector, enabled: Boolean, switchEnable
 private fun SetupHint(text: String) {
     var shown by remember { mutableStateOf(false) }
     TextButton(onClick = { shown = !shown }, contentPadding = PaddingValues(horizontal = 0.dp)) {
-        Text(if (shown) "Hide setup tips" else "Setup tips", style = MaterialTheme.typography.labelMedium)
+        Text(if (shown) stringResource(R.string.settings_setup_tips_hide) else stringResource(R.string.settings_setup_tips), style = MaterialTheme.typography.labelMedium)
     }
     if (shown) Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
@@ -670,24 +674,24 @@ private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
     if (!open) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Key ••••" + state.usdaKey.takeLast(4),
+                stringResource(R.string.settings_usda_key_masked, state.usdaKey.takeLast(4)),
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
             when (check) {
-                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Key works", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.settings_usda_key_works), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                else -> TextButton(onClick = viewModel::testUsdaKey) { Text("Test") }
+                else -> TextButton(onClick = viewModel::testUsdaKey) { Text(stringResource(R.string.common_test)) }
             }
-            TextButton(onClick = { editing = true }) { Text("Edit") }
+            TextButton(onClick = { editing = true }) { Text(stringResource(R.string.common_edit)) }
         }
         if (check is NightscoutCheckState.Failed) {
-            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         return
     }
     Text(
-        "Barcodes are looked up in Open Food Facts first. Add a free USDA FoodData Central key to search that database too when a product isn't found (mostly US products). Get a key at fdc.nal.usda.gov/api-key-signup.",
+        stringResource(R.string.settings_usda_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -695,7 +699,7 @@ private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
     OutlinedTextField(
         value = state.usdaKey,
         onValueChange = viewModel::onUsdaKeyChanged,
-        label = { Text("USDA API key") },
+        label = { Text(stringResource(R.string.settings_usda_key_label)) },
         singleLine = true,
         visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
         modifier = Modifier.fillMaxWidth()
@@ -703,14 +707,14 @@ private fun UsdaKeySetup(state: SettingsState, viewModel: SettingsViewModel) {
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(onClick = viewModel::testUsdaKey, enabled = check != NightscoutCheckState.Checking && state.usdaKey.isNotBlank()) {
-            Text("Test connection")
+            Text(stringResource(R.string.settings_test_connection))
         }
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = { editing = false }, enabled = state.usdaKey.isNotBlank()) { Text("Done") }
+        TextButton(onClick = { editing = false }, enabled = state.usdaKey.isNotBlank()) { Text(stringResource(R.string.common_done)) }
         Spacer(Modifier.width(4.dp))
         when (check) {
             NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+            is NightscoutCheckState.Failed -> Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
             else -> Unit
         }
     }
@@ -732,35 +736,35 @@ private fun NightscoutConnectorSetup(state: SettingsState, viewModel: SettingsVi
                 modifier = Modifier.weight(1f)
             )
             when (check) {
-                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.settings_connected), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                else -> TextButton(onClick = viewModel::testNightscout) { Text("Test") }
+                else -> TextButton(onClick = viewModel::testNightscout) { Text(stringResource(R.string.common_test)) }
             }
-            TextButton(onClick = { editing = true }) { Text("Edit") }
+            TextButton(onClick = { editing = true }) { Text(stringResource(R.string.common_edit)) }
         }
         if (check is NightscoutCheckState.Failed) {
-            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         return
     }
     ServerConfigInput(
         baseUrl = state.nightscoutConfig.baseUrl,
         apiKey = state.nightscoutConfig.apiKey,
-        baseUrlLabel = "Address (https://…)",
-        apiKeyLabel = "API secret or access token",
+        baseUrlLabel = stringResource(R.string.nightscout_address_label),
+        apiKeyLabel = stringResource(R.string.nightscout_secret_label),
         onConfigChanged = { baseUrl, apiKey -> editing = true; viewModel.onNightscoutConfigChanged(baseUrl, apiKey) }
     )
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(onClick = viewModel::testNightscout, enabled = check != NightscoutCheckState.Checking) {
-            Text("Test connection")
+            Text(stringResource(R.string.settings_test_connection))
         }
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = { editing = false }, enabled = state.nightscoutConfig.baseUrl.isNotBlank()) { Text("Done") }
+        TextButton(onClick = { editing = false }, enabled = state.nightscoutConfig.baseUrl.isNotBlank()) { Text(stringResource(R.string.common_done)) }
         Spacer(Modifier.width(4.dp))
         when (check) {
             NightscoutCheckState.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            is NightscoutCheckState.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            is NightscoutCheckState.Failed -> Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             else -> Unit
         }
     }
@@ -768,7 +772,7 @@ private fun NightscoutConnectorSetup(state: SettingsState, viewModel: SettingsVi
 
 private fun formatSyncTime(time: Long): String {
     val sameDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).let { it.format(Date(time)) == it.format(Date()) }
-    return SimpleDateFormat(if (sameDay) "HH:mm" else "d MMM HH:mm", Locale.getDefault()).format(Date(time))
+    return formatStamp(time, if (sameDay) "Hm" else "dMMMHm")
 }
 
 @Composable
@@ -784,14 +788,14 @@ private fun BackgroundReliabilityStatus(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            if (isBatteryOptimizationIgnored) "Battery optimization excluded" else "Battery optimization is still restricting background sync",
+            if (isBatteryOptimizationIgnored) stringResource(R.string.settings_battery_ok) else stringResource(R.string.settings_battery_restricted),
             style = MaterialTheme.typography.bodyMedium
         )
     }
     if (!isBatteryOptimizationIgnored) {
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = onRequestIgnoreBatteryOptimizations) {
-            Text("Exclude from battery optimization")
+            Text(stringResource(R.string.settings_battery_exclude))
         }
     }
 }
@@ -803,7 +807,7 @@ fun ModelPicker(
     model: String,
     models: List<String>,
     isLoading: Boolean,
-    error: String?,
+    error: UiText?,
     onModelChanged: (String) -> Unit,
     onLoadModels: () -> Unit
 ) {
@@ -822,11 +826,11 @@ fun ModelPicker(
                 onModelChanged(it)
                 expanded = true
             },
-            label = { Text("Model") },
+            label = { Text(stringResource(R.string.settings_model_label)) },
             singleLine = true,
             isError = error != null,
             supportingText = {
-                Text(error ?: if (models.isEmpty()) "Open the dropdown to load available models, or type one." else "${models.size} models available")
+                Text(error?.asString() ?: if (models.isEmpty()) stringResource(R.string.settings_model_load_hint) else pluralStringResource(R.plurals.settings_models_available, models.size, models.size))
             },
             trailingIcon = {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -891,7 +895,7 @@ fun ServerConfigInput(
             IconButton(onClick = { apiKeyVisible = !apiKeyVisible }) {
                 Icon(
                     imageVector = if (apiKeyVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = if (apiKeyVisible) "Hide $apiKeyLabel" else "Show $apiKeyLabel"
+                    contentDescription = if (apiKeyVisible) stringResource(R.string.settings_field_hide, apiKeyLabel) else stringResource(R.string.settings_field_show, apiKeyLabel)
                 )
             }
         },
@@ -932,12 +936,12 @@ fun GlucoseTargetRangeInput(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Field(lowerText, "Low (below)") { lowerText = it }
-            Field(upperText, "High (above)") { upperText = it }
+            Field(lowerText, stringResource(R.string.settings_range_low)) { lowerText = it }
+            Field(upperText, stringResource(R.string.settings_range_high)) { upperText = it }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Field(veryLowText, "Very low (below)") { veryLowText = it }
-            Field(veryHighText, "Very high (above)") { veryHighText = it }
+            Field(veryLowText, stringResource(R.string.settings_range_very_low)) { veryLowText = it }
+            Field(veryHighText, stringResource(R.string.settings_range_very_high)) { veryHighText = it }
         }
     }
 }

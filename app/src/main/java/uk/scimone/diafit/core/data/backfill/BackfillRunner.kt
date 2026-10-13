@@ -58,7 +58,7 @@ class BackfillRunner(
 
     fun start(type: DataType, connector: Connector, range: TimeRange) {
         if (job?.isActive == true) return
-        require(type in connector.canBackfill) { "${connector.displayName} can't backfill ${type.label}" }
+        require(type in connector.canBackfill) { "${connector.displayName} can't backfill ${type.name}" }
         _status.value = BackfillStatus.Running(type, connector, 0f)
         job = scope.launch {
             try {

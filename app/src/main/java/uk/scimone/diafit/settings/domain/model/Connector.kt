@@ -1,19 +1,22 @@
 package uk.scimone.diafit.settings.domain.model
 
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+
 /** A kind of data the app shows. Each one is fed by exactly one selected [Connector] (or none). */
-enum class DataType(val label: String) {
-    CGM("Glucose (CGM)"),
-    FOOD("Food & carbs"),
-    BOLUS("Bolus insulin"),
-    BASAL("Basal insulin"),
-    HEART_RATE("Heart rate"),
-    STEPS("Steps"),
-    SLEEP("Sleep"),
-    EXERCISE("Exercise"),
+enum class DataType(@StringRes val labelRes: Int) {
+    CGM(R.string.datatype_cgm),
+    FOOD(R.string.datatype_food),
+    BOLUS(R.string.datatype_bolus),
+    BASAL(R.string.datatype_basal),
+    HEART_RATE(R.string.datatype_heart_rate),
+    STEPS(R.string.datatype_steps),
+    SLEEP(R.string.datatype_sleep),
+    EXERCISE(R.string.datatype_exercise),
     /** Profile switches and temporary targets (the insulin profile in force). */
-    PROFILE("Profile & targets"),
+    PROFILE(R.string.datatype_profile),
     /** Pump and sensor events: site / pod / insulin / sensor / battery changes, notes. */
-    DEVICE("Device status");
+    DEVICE(R.string.datatype_device);
 
     val isActivity: Boolean get() = this in ACTIVITY
 
@@ -30,32 +33,32 @@ enum class Connector(
     val displayName: String,
     val provides: Set<DataType>,
     val canBackfill: Set<DataType>,
-    val description: String
+    @StringRes val descriptionRes: Int
 ) {
     NIGHTSCOUT(
         "Nightscout",
         setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
         setOf(DataType.CGM, DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
-        "Your Nightscout site: glucose, insulin, carbs, temp basals, profile and sensor / pump changes, live and as history."
+        R.string.connector_nightscout_desc
     ),
     AAPS(
         "AndroidAPS", setOf(DataType.BOLUS, DataType.FOOD, DataType.BASAL, DataType.PROFILE, DataType.DEVICE),
         emptySet(),
-        "Boluses, carbs, temp basals and profile changes broadcast live by AAPS (no history)."
+        R.string.connector_aaps_desc
     ),
     XDRIP(
         "xDrip+", setOf(DataType.CGM), emptySet(),
-        "Glucose broadcast live by xDrip+ (no history)."
+        R.string.connector_xdrip_desc
     ),
     JUGGLUCO(
         "Juggluco", setOf(DataType.CGM), emptySet(),
-        "Glucose broadcast live by Juggluco (no history)."
+        R.string.connector_juggluco_desc
     ),
     HEALTH_CONNECT(
         "Health Connect",
         setOf(DataType.CGM, DataType.HEART_RATE, DataType.STEPS, DataType.SLEEP, DataType.EXERCISE),
         setOf(DataType.CGM, DataType.HEART_RATE, DataType.STEPS, DataType.SLEEP, DataType.EXERCISE),
-        "Heart rate, steps, sleep, exercise and glucose that other apps wrote to Health Connect."
+        R.string.connector_health_connect_desc
     );
 
     fun toCgmSource(): CgmSource? = when (this) {

@@ -1,5 +1,9 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import uk.scimone.diafit.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -48,13 +52,13 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
     // null = closed; a connection = editing it; a blank one = adding.
     var editing by remember { mutableStateOf<AiConnection?>(null) }
 
-    SettingsSection(title = "AI", icon = Icons.Filled.Psychology) {
+    SettingsSection(title = stringResource(R.string.settings_page_ai), icon = Icons.Filled.Psychology) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Use AI", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.ai_use), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 Text(
-                    if (state.aiEnabled) "Diafit may send data to the language-model connections below."
-                    else "Off. Nothing is sent to any language model, and features that need one are hidden. The barcode scanner, saved products and food search still work.",
+                    if (state.aiEnabled) stringResource(R.string.ai_on_desc)
+                    else stringResource(R.string.ai_off_desc),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -64,9 +68,9 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
     }
     if (!state.aiEnabled) return
 
-    SettingsSection(title = "Connections", icon = Icons.Filled.Hub) {
+    SettingsSection(title = stringResource(R.string.ai_connections_title), icon = Icons.Filled.Hub) {
         Text(
-            "Any OpenAI-compatible endpoint (OpenAI, Gemini's compatible API, a proxy or your own server). Add as many as you like and pick one per feature.",
+            stringResource(R.string.ai_connections_hint),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         state.aiConnections.forEach { connection ->
@@ -83,24 +87,24 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
         OutlinedButton(onClick = { editing = AiConnection(UUID.randomUUID().toString(), "", DEFAULT_AI_BASE_URL, "") }) {
             Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Add connection")
+            Text(stringResource(R.string.ai_add_connection))
         }
     }
 
-    SettingsSection(title = "Used for", icon = Icons.Filled.Restaurant) {
-        NavRow("Meal estimation", state.mealConnection?.let { "${it.name} · ${state.mealEstimation.model}" } ?: "No connection yet") {
+    SettingsSection(title = stringResource(R.string.ai_used_for), icon = Icons.Filled.Restaurant) {
+        NavRow(stringResource(R.string.settings_page_meal_estimation), state.mealConnection?.let { "${it.name} · ${state.mealEstimation.model}" } ?: stringResource(R.string.ai_no_connection_yet)) {
             onOpenPage(SettingsPage.MEAL_ESTIMATION)
         }
     }
 
-    SettingsSection(title = "Usage", icon = Icons.Filled.Timeline) {
+    SettingsSection(title = stringResource(R.string.ai_usage), icon = Icons.Filled.Timeline) {
         Text(
-            if (totals.requests == 0) "No requests yet."
-            else "${"%,d".format(totals.requests)} requests · ${"%,d".format(totals.inputTokens)} tokens in · ${"%,d".format(totals.outputTokens)} tokens out",
+            if (totals.requests == 0) stringResource(R.string.ai_no_requests)
+            else stringResource(R.string.ai_usage_line, "%,d".format(totals.requests), "%,d".format(totals.inputTokens), "%,d".format(totals.outputTokens)),
             style = MaterialTheme.typography.bodyMedium
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { onOpenPage(SettingsPage.AI_LOG) }) { Text("View request log") }
+        OutlinedButton(onClick = { onOpenPage(SettingsPage.AI_LOG) }) { Text(stringResource(R.string.ai_view_log)) }
     }
 
     editing?.let { connection ->
@@ -123,14 +127,14 @@ private fun ConnectionRow(connection: AiConnection, check: NightscoutCheckState,
                 Text(hostOf(connection.baseUrl), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             when (check) {
-                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, "Works", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                NightscoutCheckState.Ok -> Icon(Icons.Filled.CheckCircle, stringResource(R.string.ai_works), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 NightscoutCheckState.Checking -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else -> TextButton(onClick = onTest) { Text("Test") }
+                else -> TextButton(onClick = onTest) { Text(stringResource(R.string.common_test)) }
             }
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Edit ${connection.name}") }
+            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, stringResource(R.string.ai_edit_named, connection.name)) }
         }
         if (check is NightscoutCheckState.Failed) {
-            Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -142,14 +146,14 @@ private fun ConnectionDialog(initial: AiConnection, isNew: Boolean, onSave: (AiC
     var key by remember { mutableStateOf(initial.apiKey) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "New connection" else "Edit connection") },
+        title = { Text(if (isNew) stringResource(R.string.ai_new_connection) else stringResource(R.string.ai_edit_connection)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.ai_name_optional)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(12.dp))
                 ServerConfigInput(
                     baseUrl = url, apiKey = key,
-                    baseUrlLabel = "Base URL", apiKeyLabel = "API key",
+                    baseUrlLabel = stringResource(R.string.ai_base_url), apiKeyLabel = stringResource(R.string.ai_api_key),
                     onConfigChanged = { u, k -> url = u; key = k }
                 )
             }
@@ -158,12 +162,12 @@ private fun ConnectionDialog(initial: AiConnection, isNew: Boolean, onSave: (AiC
             TextButton(
                 enabled = url.isNotBlank() && key.isNotBlank(),
                 onClick = { onSave(initial.copy(name = name.trim().ifBlank { hostOf(url.trim()) }, baseUrl = url.trim(), apiKey = key.trim())) }
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
             Row {
-                if (!isNew) TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                if (!isNew) TextButton(onClick = onDelete) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
             }
         }
     )
@@ -179,7 +183,7 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text("Open", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.common_open), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -187,17 +191,17 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
 @Composable
 internal fun MealEstimationPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPage: (SettingsPage) -> Unit) {
     if (!state.aiEnabled) {
-        Text("AI is switched off. Turn it on under AI to estimate meals from photos.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(onClick = { onOpenPage(SettingsPage.AI) }) { Text("Open AI settings") }
+        Text(stringResource(R.string.ai_meal_off), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick = { onOpenPage(SettingsPage.AI) }) { Text(stringResource(R.string.ai_open_settings)) }
         return
     }
     val meal = state.mealEstimation
 
-    SettingsSection(title = "Connection and model", icon = Icons.Filled.Hub) {
+    SettingsSection(title = stringResource(R.string.ai_meal_conn_title), icon = Icons.Filled.Hub) {
         if (state.aiConnections.isEmpty()) {
-            Text("Add a connection under AI first.", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.ai_add_connection_first), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { onOpenPage(SettingsPage.AI) }) { Text("Open AI settings") }
+            OutlinedButton(onClick = { onOpenPage(SettingsPage.AI) }) { Text(stringResource(R.string.ai_open_settings)) }
         } else {
             ConnectionPicker(state.aiConnections, state.mealConnection?.id, viewModel::onMealConnectionChanged)
             Spacer(Modifier.height(12.dp))
@@ -210,16 +214,16 @@ internal fun MealEstimationPage(state: SettingsState, viewModel: SettingsViewMod
                 onLoadModels = viewModel::loadMealModels
             )
             Text(
-                "Needs a model that can read images.",
+                stringResource(R.string.ai_needs_vision),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 
-    SettingsSection(title = "Prompt", icon = Icons.Filled.Edit) {
+    SettingsSection(title = stringResource(R.string.ai_prompt_title), icon = Icons.Filled.Edit) {
         var text by remember(meal.prompt) { mutableStateOf(meal.effectivePrompt) }
         Text(
-            "The instructions the model gets with your photos. The answer format is fixed (foods with their nutrients, absorption, reasoning), so change how it should judge, not what it returns. Your note for a meal is added after this text.",
+            stringResource(R.string.ai_prompt_hint),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(12.dp))
@@ -239,10 +243,10 @@ internal fun MealEstimationPage(state: SettingsState, viewModel: SettingsViewMod
             OutlinedButton(
                 onClick = { text = DEFAULT_MEAL_ESTIMATION_PROMPT.trim(); viewModel.onMealPromptChanged("") },
                 enabled = meal.prompt.isNotBlank()
-            ) { Text("Reset to default") }
+            ) { Text(stringResource(R.string.ai_reset_prompt)) }
             Spacer(Modifier.width(12.dp))
             Text(
-                if (meal.prompt.isBlank()) "Using the built-in prompt" else "Customised",
+                if (meal.prompt.isBlank()) stringResource(R.string.ai_prompt_builtin) else stringResource(R.string.ai_prompt_custom),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -259,7 +263,7 @@ private fun ConnectionPicker(connections: List<AiConnection>, selectedId: String
             value = selected?.let { if (it.name == hostOf(it.baseUrl)) it.name else "${it.name} (${hostOf(it.baseUrl)})" } ?: "",
             onValueChange = {},
             readOnly = true,
-            label = { Text("Connection") },
+            label = { Text(stringResource(R.string.ai_connection_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
         )
@@ -282,10 +286,10 @@ internal fun AiLogPage() {
     val totals by log.totals.collectAsState()
     var confirmClear by remember { mutableStateOf(false) }
 
-    SettingsSection(title = "Total", icon = Icons.Filled.Timeline) {
+    SettingsSection(title = stringResource(R.string.ai_log_total), icon = Icons.Filled.Timeline) {
         Text(
-            if (totals.requests == 0) "No requests yet. They show up here when Diafit uses an LLM."
-            else "${"%,d".format(totals.requests)} requests",
+            if (totals.requests == 0) stringResource(R.string.ai_log_empty)
+            else pluralStringResource(R.plurals.ai_log_requests, totals.requests, "%,d".format(totals.requests)),
             style = MaterialTheme.typography.bodyMedium
         )
         if (totals.requests > 0) {
@@ -293,17 +297,17 @@ internal fun AiLogPage() {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column {
                     Text("%,d".format(totals.inputTokens), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("tokens in", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.ai_tokens_in), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column {
                     Text("%,d".format(totals.outputTokens), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("tokens out", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.ai_tokens_out), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Text("Only the newest 300 requests are kept. Photos are not stored, only how many were sent.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.ai_log_kept), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { confirmClear = true }) { Text("Clear log") }
+            OutlinedButton(onClick = { confirmClear = true }) { Text(stringResource(R.string.ai_log_clear)) }
         }
     }
     entries.forEach { LogCard(it) }
@@ -311,10 +315,10 @@ internal fun AiLogPage() {
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text("Clear the log?") },
-            text = { Text("The request history and token totals are deleted. This doesn't change anything else.") },
-            confirmButton = { TextButton(onClick = { log.clear(); confirmClear = false }) { Text("Clear") } },
-            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } }
+            title = { Text(stringResource(R.string.ai_log_clear_title)) },
+            text = { Text(stringResource(R.string.ai_log_clear_text)) },
+            confirmButton = { TextButton(onClick = { log.clear(); confirmClear = false }) { Text(stringResource(R.string.common_clear)) } },
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
@@ -338,7 +342,7 @@ private fun LogCard(entry: LlmRequestLogEntity) {
                 Column(Modifier.weight(1f)) {
                     Text(entry.purpose, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                     Text(
-                        SimpleDateFormat("d MMM HH:mm:ss", Locale.getDefault()).format(Date(entry.timestampUtc)) + " · ${entry.connectionName} · ${entry.model}",
+                        formatStamp(entry.timestampUtc, "dMMMHms") + " · ${entry.connectionName} · ${entry.model}",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
@@ -346,23 +350,28 @@ private fun LogCard(entry: LlmRequestLogEntity) {
                 Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(6.dp))
+            val inText = entry.inputTokens?.let { stringResource(R.string.ai_log_in, "%,d".format(it)) } ?: stringResource(R.string.ai_log_not_reported)
+            val outText = entry.outputTokens?.let { stringResource(R.string.ai_log_out, "%,d".format(it)) } ?: stringResource(R.string.ai_log_out_unknown)
             Text(
                 buildString {
-                    append(entry.inputTokens?.let { "%,d in".format(it) } ?: "tokens not reported")
-                    if (entry.inputTokens != null || entry.outputTokens != null) append(" · ${entry.outputTokens?.let { "%,d out".format(it) } ?: "? out"}")
+                    append(inText)
+                    if (entry.inputTokens != null || entry.outputTokens != null) append(" · $outText")
                     append(" · ${"%.1f".format(entry.durationMs / 1000.0)} s")
                 },
                 style = MaterialTheme.typography.bodyMedium
             )
             if (!entry.success) {
-                Text(entry.error ?: "Failed", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(entry.error ?: stringResource(R.string.common_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             if (open) {
                 Spacer(Modifier.height(10.dp))
-                LogText("Input" + if (entry.imageCount > 0) " (+ ${entry.imageCount} photo${if (entry.imageCount > 1) "s" else ""})" else "", entry.inputText)
+                LogText(
+                    if (entry.imageCount > 0) pluralStringResource(R.plurals.ai_log_input_photos, entry.imageCount, entry.imageCount) else stringResource(R.string.ai_log_input),
+                    entry.inputText
+                )
                 entry.outputText?.let {
                     Spacer(Modifier.height(10.dp))
-                    LogText("Output", it)
+                    LogText(stringResource(R.string.ai_log_output), it)
                 }
             }
         }

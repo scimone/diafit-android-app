@@ -1,5 +1,6 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
 import uk.scimone.diafit.core.data.backfill.BackfillStatus
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectAvailability
 import uk.scimone.diafit.core.data.healthconnect.HealthConnectImportSummary
@@ -26,7 +27,7 @@ data class SettingsState(
     val aiChecks: Map<String, NightscoutCheckState> = emptyMap(),
     val aiModels: List<String> = emptyList(),
     val isLoadingAiModels: Boolean = false,
-    val aiModelsError: String? = null,
+    val aiModelsError: UiText? = null,
     val aiEnabled: Boolean = true,
     val userName: String = "",
     val usdaKey: String = "",
@@ -62,5 +63,5 @@ sealed interface NightscoutCheckState {
     data object Idle : NightscoutCheckState
     data object Checking : NightscoutCheckState
     data object Ok : NightscoutCheckState
-    data class Failed(val message: String) : NightscoutCheckState
+    data class Failed(val message: UiText) : NightscoutCheckState
 }

@@ -1,5 +1,6 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -276,7 +277,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             listAiModels(connection)
                 .onSuccess { _state.update { s -> s.copy(aiChecks = s.aiChecks + (id to NightscoutCheckState.Ok)) } }
-                .onFailure { e -> _state.update { s -> s.copy(aiChecks = s.aiChecks + (id to NightscoutCheckState.Failed(e.message ?: "Failed"))) } }
+                .onFailure { e -> _state.update { s -> s.copy(aiChecks = s.aiChecks + (id to NightscoutCheckState.Failed(UiText.Raw(e.message ?: e.javaClass.simpleName)))) } }
         }
     }
 
@@ -302,7 +303,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             listAiModels(connection)
                 .onSuccess { models -> _state.update { it.copy(aiModels = models, isLoadingAiModels = false) } }
-                .onFailure { e -> _state.update { it.copy(aiModelsError = e.message ?: "Failed", isLoadingAiModels = false) } }
+                .onFailure { e -> _state.update { it.copy(aiModelsError = UiText.Raw(e.message ?: e.javaClass.simpleName), isLoadingAiModels = false) } }
         }
     }
 
@@ -329,7 +330,7 @@ class SettingsViewModel(
             settingsRepository.setUsdaApiKey(key)
             foodProducts.testUsdaKey(key)
                 .onSuccess { _state.update { it.copy(usdaCheck = NightscoutCheckState.Ok) } }
-                .onFailure { e -> _state.update { it.copy(usdaCheck = NightscoutCheckState.Failed(e.message ?: "Failed")) } }
+                .onFailure { e -> _state.update { it.copy(usdaCheck = NightscoutCheckState.Failed(UiText.Raw(e.message ?: e.javaClass.simpleName))) } }
         }
     }
 

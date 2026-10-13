@@ -1,5 +1,10 @@
 package uk.scimone.diafit.settings.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import uk.scimone.diafit.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -50,12 +55,10 @@ private fun BackfillSpan.toRange(): TimeRange {
     }
 }
 
-private val DAY_FORMAT = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+private fun LocalDate.stamp(): String =
+    formatStamp(atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), "dMMM")
 
-private fun BackfillSpan.label(): String = when (this) {
-    is BackfillSpan.LastDays -> "$days days"
-    is BackfillSpan.Custom -> "${from.format(DAY_FORMAT)} – ${to.format(DAY_FORMAT)}"
-}
+private fun BackfillSpan.Custom.label(): String = "${from.stamp()} – ${to.stamp()}"
 
 /** One collapsed row per data type: which connector feeds it, and (expanded) the choice plus "fill in past data". */
 @Composable
@@ -68,6 +71,7 @@ internal fun DataSourcesList(
     onAllowHistory: () -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf<String?>(null) }
+    val or = stringResource(R.string.common_or_sep)
     DataType.values().forEach { type ->
         HorizontalDivider()
         val open = expanded == type.name
@@ -80,11 +84,11 @@ internal fun DataSourcesList(
                 .clickable { expanded = if (open) null else type.name }
                 .padding(vertical = 10.dp)
         ) {
-            Text(type.label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(stringResource(type.labelRes), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Text(
                 when {
-                    available.isEmpty() -> "Not set up"
-                    selected == null -> "Off"
+                    available.isEmpty() -> stringResource(R.string.settings_sources_not_set_up)
+                    selected == null -> stringResource(R.string.common_off)
                     else -> selected.displayName
                 },
                 style = MaterialTheme.typography.bodyMedium,
@@ -96,7 +100,7 @@ internal fun DataSourcesList(
             Column(modifier = Modifier.padding(bottom = 12.dp)) {
                 if (available.isEmpty()) {
                     Text(
-                        "No connector set up for this. Connect ${connectorsProviding(type).joinToString(", ", transform = Connector::displayName)} above.",
+                        stringResource(R.string.backfill_no_connector, connectorsProviding(type).joinToString(", ", transform = Connector::displayName)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
@@ -118,7 +122,7 @@ internal fun DataSourcesList(
                 } else if (selected != null && connectorsBackfilling(type).isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "To fill in past data, connect ${connectorsBackfilling(type).joinToString(" or ", transform = Connector::displayName)} above.",
+                        stringResource(R.string.backfill_to_fill, connectorsBackfilling(type).joinToString(or, transform = Connector::displayName)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -160,43 +164,43 @@ private fun BackfillPanel(
         range.start < System.currentTimeMillis() - 29 * DAY_MS
 
     Spacer(Modifier.height(8.dp))
-    Text("Fill in past data", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.backfill_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (sources.size > 1) {
         Spacer(Modifier.height(4.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             sources.forEach { c ->
-                FilterChip(selected = c == source, onClick = { source = c }, label = { Text("From ${c.displayName}") })
+                FilterChip(selected = c == source, onClick = { source = c }, label = { Text(stringResource(R.string.backfill_from, c.displayName)) })
             }
         }
     } else {
-        Text("From ${source.displayName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.backfill_from, source.displayName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Spacer(Modifier.height(4.dp))
     SpanChooser(span) { span = it }
     Spacer(Modifier.height(4.dp))
     Text(
         when {
-            gaps == null -> "Checking what's already there…"
-            gaps!!.isEmpty() -> "Everything in this range is already in Diafit."
-            fetchDays != null && fetchDays < totalDays -> "Will fetch about $fetchDays of $totalDays days; the rest is already there."
-            else -> "Will fetch $totalDays days."
+            gaps == null -> stringResource(R.string.backfill_checking)
+            gaps!!.isEmpty() -> stringResource(R.string.backfill_all_there)
+            fetchDays != null && fetchDays < totalDays -> stringResource(R.string.backfill_will_fetch_some, fetchDays.toInt(), totalDays.toInt())
+            else -> pluralStringResource(R.plurals.backfill_will_fetch_all, totalDays.toInt(), totalDays.toInt())
         },
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     if (needsHistory) {
         Spacer(Modifier.height(4.dp))
         Text(
-            "Health Connect only shares the last 30 days until you allow access to older data.",
+            stringResource(R.string.backfill_hc_30),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error
         )
-        TextButton(onClick = onAllowHistory) { Text("Allow older data") }
+        TextButton(onClick = onAllowHistory) { Text(stringResource(R.string.backfill_allow_older)) }
     }
     Spacer(Modifier.height(4.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Button(
             onClick = { onBackfill(type, source, range) },
             enabled = !running && gaps?.isNotEmpty() == true && !needsHistory
-        ) { Text("Fill in") }
+        ) { Text(stringResource(R.string.backfill_fill_in)) }
         Spacer(Modifier.width(12.dp))
         when (mine) {
             is BackfillStatus.Running -> {
@@ -204,16 +208,16 @@ private fun BackfillPanel(
             }
             is BackfillStatus.Done -> {
                 Text(
-                    if (mine.nothingMissing) "Nothing was missing." else "Added ${"%,d".format(mine.added)} from ${mine.connector.displayName}.",
+                    if (mine.nothingMissing) stringResource(R.string.backfill_nothing_missing) else stringResource(R.string.backfill_added, "%,d".format(mine.added), mine.connector.displayName),
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)
                 )
-                TextButton(onClick = onDismiss) { Text("OK") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_ok)) }
             }
             is BackfillStatus.Failed -> {
                 Text(mine.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("OK") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_ok)) }
             }
-            else -> if (running) Text("Another fill-in is running…", style = MaterialTheme.typography.bodySmall)
+            else -> if (running) Text(stringResource(R.string.backfill_other_running), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -225,9 +229,9 @@ private fun SpanChooser(span: BackfillSpan, onSpan: (BackfillSpan) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(7, 14, 30, 90).forEach { d ->
-            FilterChip(selected = span == BackfillSpan.LastDays(d), onClick = { onSpan(BackfillSpan.LastDays(d)) }, label = { Text("$d days") })
+            FilterChip(selected = span == BackfillSpan.LastDays(d), onClick = { onSpan(BackfillSpan.LastDays(d)) }, label = { Text(pluralStringResource(R.plurals.backfill_span_days, d, d)) })
         }
-        FilterChip(selected = span is BackfillSpan.Custom, onClick = { picking = true }, label = { Text(if (span is BackfillSpan.Custom) span.label() else "Custom…") })
+        FilterChip(selected = span is BackfillSpan.Custom, onClick = { picking = true }, label = { Text(if (span is BackfillSpan.Custom) span.label() else stringResource(R.string.backfill_custom)) })
     }
     if (picking) {
         val today = remember { LocalDate.now() }
@@ -249,9 +253,9 @@ private fun SpanChooser(span: BackfillSpan, onSpan: (BackfillSpan) -> Unit) {
                         picking = false
                         onSpan(BackfillSpan.Custom(start, end))
                     }
-                ) { Text("Apply") }
+                ) { Text(stringResource(R.string.common_apply)) }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DateRangePicker(pickerState, Modifier.height(500.dp), showModeToggle = false)
         }
@@ -272,6 +276,7 @@ internal fun ConnectorBackfillPanel(
     missingRanges: suspend (DataType, TimeRange) -> List<TimeRange>,
     onAllowHistory: () -> Unit
 ) {
+    val context = LocalContext.current
     val types = remember(connector) { DataType.values().filter { it in connector.canBackfill } }
     var open by rememberSaveable(connector.name) { mutableStateOf(false) }
     var chosen by remember(connector) {
@@ -298,13 +303,13 @@ internal fun ConnectorBackfillPanel(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open = !open }.padding(vertical = 6.dp)
         ) {
-            Text("Fill in past data", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.backfill_title), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         AnimatedVisibility(open) {
             Column {
                 Text(
-                    "Fetches the history of every kind of data below from ${connector.displayName}, for the time range you pick. What Diafit already has is skipped.",
+                    stringResource(R.string.backfill_connector_hint, connector.displayName),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
@@ -313,7 +318,7 @@ internal fun ConnectorBackfillPanel(
                         FilterChip(
                             selected = type.name in chosen,
                             onClick = { chosen = if (type.name in chosen) chosen - type.name else chosen + type.name },
-                            label = { Text(type.label) }
+                            label = { Text(stringResource(type.labelRes)) }
                         )
                     }
                 }
@@ -322,10 +327,10 @@ internal fun ConnectorBackfillPanel(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     when {
-                        selected.isEmpty() -> "Pick at least one kind of data."
-                        gaps == null -> "Checking what's already there…"
-                        gaps!!.isEmpty() -> "Everything in this range is already in Diafit."
-                        else -> "Missing: ${gaps!!.keys.joinToString(", ") { it.label }}."
+                        selected.isEmpty() -> stringResource(R.string.backfill_pick_one)
+                        gaps == null -> stringResource(R.string.backfill_checking)
+                        gaps!!.isEmpty() -> stringResource(R.string.backfill_all_there)
+                        else -> stringResource(R.string.backfill_missing, gaps!!.keys.joinToString(", ") { context.getString(it.labelRes) })
                     },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -335,35 +340,35 @@ internal fun ConnectorBackfillPanel(
                         "Health Connect only shares the last 30 days until you allow access to older data.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error
                     )
-                    TextButton(onClick = onAllowHistory) { Text("Allow older data") }
+                    TextButton(onClick = onAllowHistory) { Text(stringResource(R.string.backfill_allow_older)) }
                 }
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = { onStart(connector, selected, range) },
                         enabled = !running && gaps?.isNotEmpty() == true && !needsHistory
-                    ) { Text("Fill in all") }
+                    ) { Text(stringResource(R.string.backfill_fill_all)) }
                     Spacer(Modifier.width(12.dp))
                     when (mine) {
                         is BackfillStatus.RunningAll -> Column(Modifier.weight(1f)) {
-                            Text("${mine.type.label} (${mine.index + 1} of ${mine.count})", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.backfill_progress, context.getString(mine.type.labelRes), mine.index + 1, mine.count), style = MaterialTheme.typography.bodySmall)
                             LinearProgressIndicator(progress = { mine.progress }, modifier = Modifier.fillMaxWidth())
                         }
                         is BackfillStatus.DoneAll -> {
                             Text(
-                                if (mine.nothingMissing) "Nothing was missing."
-                                else "Added " + mine.added.entries.joinToString(", ") { (t, n) -> "${"%,d".format(n)} ${t.label.lowercase()}" } + ".",
+                                if (mine.nothingMissing) stringResource(R.string.backfill_nothing_missing)
+                                else stringResource(R.string.backfill_added_all, mine.added.entries.joinToString(", ") { (t, n) -> "${context.getString(t.labelRes)}: ${"%,d".format(n)}" }),
                                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)
                             )
-                            TextButton(onClick = onDismiss) { Text("OK") }
+                            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_ok)) }
                         }
-                        else -> if (running) Text("Another fill-in is running…", style = MaterialTheme.typography.bodySmall)
+                        else -> if (running) Text(stringResource(R.string.backfill_other_running), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 (mine as? BackfillStatus.DoneAll)?.failed?.takeIf { it.isNotEmpty() }?.let { failed ->
                     Spacer(Modifier.height(4.dp))
                     failed.forEach { (t, msg) ->
-                        Text("${t.label} failed: $msg", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.backfill_failed, context.getString(t.labelRes), msg), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }

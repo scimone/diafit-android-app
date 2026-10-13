@@ -1,5 +1,7 @@
 package uk.scimone.diafit.core.data.networking
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -69,25 +71,25 @@ class NightscoutApi(
     /** Checks the saved URL and credentials: reachable, and the secret/token accepted (`/api/v1/verifyauth`). */
     suspend fun testConnection(): NightscoutCheck {
         val config = getNightscoutConfig()
-        if (config.baseUrl.isBlank()) return NightscoutCheck.Failed("Enter your Nightscout address first.")
+        if (config.baseUrl.isBlank()) return NightscoutCheck.Failed(UiText.of(R.string.nightscout_err_no_address))
         return try {
             val response = client.get(constructUrl("/api/v1/verifyauth", baseUrl = config.baseUrl, apiKey = null)) {
                 applyNightscoutAuth(config.apiKey)
             }
-            if (response.status.value !in 200..299) return NightscoutCheck.Failed("The server answered ${response.status.value}.")
+            if (response.status.value !in 200..299) return NightscoutCheck.Failed(UiText.of(R.string.nightscout_err_status, response.status.value))
             val body = response.bodyAsText()
             when {
                 body.contains("OK", ignoreCase = false) -> NightscoutCheck.Ok
-                config.apiKey.isBlank() -> NightscoutCheck.Failed("Reachable, but this site needs an API secret or access token.")
-                else -> NightscoutCheck.Failed("Reachable, but the API secret / token was rejected.")
+                config.apiKey.isBlank() -> NightscoutCheck.Failed(UiText.of(R.string.nightscout_err_needs_secret))
+                else -> NightscoutCheck.Failed(UiText.of(R.string.nightscout_err_rejected))
             }
         } catch (e: Exception) {
-            NightscoutCheck.Failed("Couldn't reach the server (${e.javaClass.simpleName}).")
+            NightscoutCheck.Failed(UiText.of(R.string.nightscout_err_unreachable, e.javaClass.simpleName))
         }
     }
 }
 
 sealed interface NightscoutCheck {
     data object Ok : NightscoutCheck
-    data class Failed(val message: String) : NightscoutCheck
+    data class Failed(val message: UiText) : NightscoutCheck
 }

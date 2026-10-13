@@ -1,5 +1,7 @@
 package uk.scimone.diafit.backendsync.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +19,7 @@ sealed interface BackendCheck {
     data object Idle : BackendCheck
     data object Checking : BackendCheck
     data class Ok(val username: String) : BackendCheck
-    data class Failed(val message: String) : BackendCheck
+    data class Failed(val message: UiText) : BackendCheck
 }
 
 class BackendSyncViewModel(
@@ -35,7 +37,7 @@ class BackendSyncViewModel(
     fun saveAndTest(baseUrl: String, token: String) {
         val candidate = BackendConfig(baseUrl.trim(), token.trim())
         if (!candidate.isConfigured) {
-            _check.value = BackendCheck.Failed("Enter the address and the API token")
+            _check.value = BackendCheck.Failed(UiText.of(R.string.backend_err_enter))
             return
         }
         _check.value = BackendCheck.Checking
@@ -47,7 +49,7 @@ class BackendSyncViewModel(
                     scheduler.schedulePeriodic()
                     scheduler.syncNow()
                 }
-                is BackendResult.Failed -> _check.value = BackendCheck.Failed(result.message)
+                is BackendResult.Failed -> _check.value = BackendCheck.Failed(UiText.Raw(result.message))
             }
         }
     }
@@ -59,7 +61,7 @@ class BackendSyncViewModel(
         viewModelScope.launch {
             _check.value = when (val result = api.me(current)) {
                 is BackendResult.Ok -> BackendCheck.Ok(result.data.username)
-                is BackendResult.Failed -> BackendCheck.Failed(result.message)
+                is BackendResult.Failed -> BackendCheck.Failed(UiText.Raw(result.message))
             }
         }
     }

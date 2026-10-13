@@ -130,7 +130,7 @@ class HealthConnectSyncer(
         check(manager.isAvailable) { "Health Connect isn't available." }
         val granted = manager.grantedPermissions()
         val needed = if (type == DataType.CGM) HealthConnectPermissions.glucose else HealthConnectPermissions.activity
-        check(needed.all { it in granted }) { "Health Connect access for ${type.label.lowercase()} hasn't been allowed." }
+        check(needed.all { it in granted }) { "Health Connect access for ${type.name.lowercase()} hasn't been allowed." }
         val dayMs = Duration.ofDays(1).toMillis()
         val chunks = generateSequence(range.start) { it + dayMs }.takeWhile { it < range.end }.toList()
         var found = 0

@@ -1,5 +1,8 @@
 package uk.scimone.diafit.backendsync.presentation
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import androidx.compose.ui.res.stringResource
+import uk.scimone.diafit.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +46,7 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
     LaunchedEffect(check) { if (check is BackendCheck.Ok) editing = false }
 
     Text(
-        "Optional: upload glucose, insulin, meals, heart rate, steps and sleep to your own Diafit server. Runs every 15 minutes while online.",
+        stringResource(R.string.backend_intro),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -55,18 +58,18 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
         ServerConfigInput(
             baseUrl = config.baseUrl,
             apiKey = config.token,
-            baseUrlLabel = "Server address (https://…)",
-            apiKeyLabel = "API token",
+            baseUrlLabel = stringResource(R.string.backend_address),
+            apiKeyLabel = stringResource(R.string.backend_token),
             onConfigChanged = { u, t -> url = u; token = t }
         )
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { viewModel.saveAndTest(url, token) }, enabled = check != BackendCheck.Checking) {
-                Text("Save & test")
+                Text(stringResource(R.string.backend_save_test))
             }
             if (config.isConfigured) {
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = { editing = false }) { Text("Cancel") }
+                TextButton(onClick = { editing = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         }
         CheckLine(check)
@@ -80,11 +83,11 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
             modifier = Modifier.weight(1f)
         )
         when (check) {
-            is BackendCheck.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = "Connected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            is BackendCheck.Ok -> Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.settings_connected), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             BackendCheck.Checking -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            else -> TextButton(onClick = viewModel::test) { Text("Test") }
+            else -> TextButton(onClick = viewModel::test) { Text(stringResource(R.string.common_test)) }
         }
-        TextButton(onClick = { editing = true }) { Text("Edit") }
+        TextButton(onClick = { editing = true }) { Text(stringResource(R.string.common_edit)) }
     }
     CheckLine(check)
     Spacer(Modifier.height(4.dp))
@@ -92,9 +95,9 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
         val last = status.lastSyncAt
         Text(
             when {
-                status.running -> "Syncing…"
-                last == null -> "Not synced yet"
-                else -> "Last sync ${formatTime(last)}"
+                status.running -> stringResource(R.string.backend_syncing)
+                last == null -> stringResource(R.string.backend_never)
+                else -> stringResource(R.string.backend_last, formatTime(last))
             },
             style = MaterialTheme.typography.bodySmall
         )
@@ -107,23 +110,23 @@ fun BackendSyncSettings(viewModel: BackendSyncViewModel = koinViewModel()) {
     }
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = viewModel::syncNow, enabled = !status.running) { Text("Sync now") }
+        OutlinedButton(onClick = viewModel::syncNow, enabled = !status.running) { Text(stringResource(R.string.common_sync_now)) }
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = viewModel::disconnect) { Text("Disconnect") }
+        TextButton(onClick = viewModel::disconnect) { Text(stringResource(R.string.common_disconnect)) }
     }
 }
 
 @Composable
 private fun CheckLine(check: BackendCheck) {
     when (check) {
-        is BackendCheck.Ok -> Text("Connected as ${check.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-        is BackendCheck.Failed -> Text(check.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-        BackendCheck.Checking -> Text("Checking…", style = MaterialTheme.typography.bodySmall)
+        is BackendCheck.Ok -> Text(stringResource(R.string.backend_connected_as, check.username), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        is BackendCheck.Failed -> Text(check.message.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        BackendCheck.Checking -> Text(stringResource(R.string.common_checking), style = MaterialTheme.typography.bodySmall)
         BackendCheck.Idle -> Unit
     }
 }
 
 private fun formatTime(time: Long): String {
     val sameDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).let { it.format(Date(time)) == it.format(Date()) }
-    return SimpleDateFormat(if (sameDay) "HH:mm" else "d MMM HH:mm", Locale.getDefault()).format(Date(time))
+    return formatStamp(time, if (sameDay) "Hm" else "dMMMHm")
 }
