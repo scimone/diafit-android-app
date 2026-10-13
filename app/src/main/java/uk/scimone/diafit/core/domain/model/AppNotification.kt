@@ -44,16 +44,26 @@ private const val HOUR_MS = 3_600_000L
  * rather than a stale "10 hours"), only while it hasn't expired yet. The key repeats for the same change, so
  * storing it with a unique index raises each alert once. Insulin alerts by units left when [reservoirUnits] is known.
  */
-fun expiryAlerts(ages: List<DeviceAge>, thresholds: WarnThresholds = WarnThresholds(), reservoirUnits: Double? = null): List<ExpiryAlert> = ages.mapNotNull { age ->
+fun expiryAlerts(ages: List<DeviceAge>, thresholds: WarnThresholds = WarnThresholds(), reservoirUnits: Double? = null): List<ExpiryAlert> =
+    ages.mapNotNull { expiryAlert(it, thresholds, reservoirUnits) } + patchInsulinAlert(ages, thresholds, reservoirUnits)
+
+/** A patch pump has no insulin row, but its reservoir can still run low before the patch expires. */
+private fun patchInsulinAlert(ages: List<DeviceAge>, thresholds: WarnThresholds, units: Double?): List<ExpiryAlert> {
+    val patch = ages.firstOrNull { it.kind == DeviceKind.PATCH } ?: return emptyList()
+    if (units == null) return emptyList()
+    return listOfNotNull(expiryAlert(patch.copy(kind = DeviceKind.INSULIN), thresholds, units))
+}
+
+private fun expiryAlert(age: DeviceAge, thresholds: WarnThresholds, reservoirUnits: Double?): ExpiryAlert? = age.let { age ->
     val lv = thresholds.of(age.kind)
     if (age.kind == DeviceKind.INSULIN && reservoirUnits != null) {
-        val threshold = listOf(lv.urgent, lv.initial).sorted().firstOrNull { reservoirUnits <= it } ?: return@mapNotNull null
-        return@mapNotNull ExpiryAlert("INSULIN-units-${age.changedAtUtc ?: 0}-$threshold", age.kind, 0, 0L, units = reservoirUnits.toInt())
+        val threshold = listOf(lv.urgent, lv.initial).sorted().firstOrNull { reservoirUnits <= it } ?: return null
+        return ExpiryAlert("INSULIN-units-${age.changedAtUtc ?: 0}-$threshold", age.kind, 0, 0L, units = reservoirUnits.toInt())
     }
-    val changed = age.changedAtUtc ?: return@mapNotNull null
-    val remaining = age.remainingMs ?: return@mapNotNull null
-    if (remaining <= 0) return@mapNotNull null
-    val threshold = listOf(lv.initial, lv.urgent).sorted().firstOrNull { remaining <= it * HOUR_MS } ?: return@mapNotNull null
+    val changed = age.changedAtUtc ?: return null
+    val remaining = age.remainingMs ?: return null
+    if (remaining <= 0) return null
+    val threshold = listOf(lv.initial, lv.urgent).sorted().firstOrNull { remaining <= it * HOUR_MS } ?: return null
     ExpiryAlert(
         key = "${age.kind.name}-$changed-$threshold",
         kind = age.kind,

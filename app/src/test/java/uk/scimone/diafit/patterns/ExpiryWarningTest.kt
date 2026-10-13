@@ -32,4 +32,13 @@ class ExpiryWarningTest {
         assertEquals(listOf("INSULIN-units-0-20"), expiryAlerts(a, reservoirUnits = 15.0).map { it.key })
         assertEquals(listOf("INSULIN-units-0-5"), expiryAlerts(a, reservoirUnits = 4.0).map { it.key })
     }
+
+    @Test fun patchPumpStillWarnsAboutLowInsulin() {
+        val a = listOf(age(DeviceKind.PATCH, 40))
+        assertTrue(warnItems(a, null).isEmpty())
+        assertTrue(warnItems(a, 50.0).isEmpty())
+        val item = warnItems(a, 12.0).single()
+        assertEquals(DeviceKind.INSULIN, item.kind)
+        assertEquals(listOf("INSULIN-units-0-20"), expiryAlerts(a, reservoirUnits = 12.0).map { it.key })
+    }
 }

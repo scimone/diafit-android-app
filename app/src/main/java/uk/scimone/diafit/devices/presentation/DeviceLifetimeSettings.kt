@@ -102,7 +102,7 @@ fun DeviceLifetimeSettings(userId: Int = 1) {
         val warnKinds = buildList {
             add(DeviceKind.SENSOR)
             add(if (layout.patch) DeviceKind.PATCH else DeviceKind.SITE)
-            if (!layout.patch) add(DeviceKind.INSULIN)
+            add(DeviceKind.INSULIN)
             if (layout.showBattery) add(DeviceKind.BATTERY)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

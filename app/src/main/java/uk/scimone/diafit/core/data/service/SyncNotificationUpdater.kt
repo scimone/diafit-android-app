@@ -62,10 +62,7 @@ fun syncNotificationTitle(latest: CgmEntity, previous: CgmEntity?): String {
 }
 
 /** One entry of the bottom row: what to print and whether it is the initial (yellow) or urgent (red) warning. */
-class ExpiryText(val text: String, val urgent: Boolean)
-
-/** The bottom-row entries per slot; null = that consumable is fine. */
-class ExpiryTexts(val sensor: ExpiryText?, val pump: ExpiryText?, val insulin: ExpiryText?, val battery: ExpiryText?)
+class ExpiryText(val kind: DeviceKind, val text: String, val urgent: Boolean)
 
 /**
  * Keeps the permanent sync notification (shared by both foreground services) up to date: the title shows the
@@ -135,7 +132,7 @@ class SyncNotificationUpdater(
     }
 
     /** The warning texts of what is about to run out, or null when nothing is. */
-    private suspend fun expiryLine(now: Long): ExpiryTexts? {
+    private suspend fun expiryLine(now: Long): List<ExpiryText>? {
         val items = try {
             val status = statusStore.status.value
             val inputs = deviceInputs.load(USER_ID, now)
@@ -148,17 +145,14 @@ class SyncNotificationUpdater(
                 status?.reservoirUnits, warnStore.thresholds.value
             )
         } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
-        fun text(item: WarnItem): ExpiryText {
+        return items.map { item ->
             val body = when (item.kind) {
                 DeviceKind.INSULIN -> item.units?.let { "${it.toInt()} U" } ?: shortLeft(item.remainingMs ?: 0, now)
                 DeviceKind.BATTERY -> context.getString(R.string.sync_battery_days, ((item.ageMs ?: 0) / (24 * HOUR)).toInt())
                 else -> shortLeft(item.remainingMs ?: 0, now)
             }
-            return ExpiryText(body, item.level == WarnLevel.URGENT)
-        }
-        fun of(vararg kinds: DeviceKind) = items.firstOrNull { it.kind in kinds }?.let(::text)
-        val texts = ExpiryTexts(of(DeviceKind.SENSOR), of(DeviceKind.SITE, DeviceKind.PATCH), of(DeviceKind.INSULIN), of(DeviceKind.BATTERY))
-        return texts.takeIf { it.sensor != null || it.pump != null || it.insulin != null || it.battery != null }
+            ExpiryText(item.kind, body, item.level == WarnLevel.URGENT)
+        }.takeIf { it.isNotEmpty() }
     }
 
     /** "20h · Wed 09:15": time left, then when it expires (weekday only when not today). */
@@ -189,34 +183,46 @@ class SyncNotificationUpdater(
         private const val TAG = "SyncNotification"
         private const val USER_ID = 1
         private const val HOUR = 3_600_000L
+        /** Rough characters that fit on one notification row next to their icons. */
+        private const val ROW_BUDGET = 40
         const val CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
 
-        private fun views(context: Context, title: String, text: String, warning: ExpiryTexts?, expanded: Boolean) =
+        private fun views(context: Context, title: String, text: String, warning: List<ExpiryText>?, expanded: Boolean) =
             RemoteViews(context.packageName, R.layout.notification_sync).apply {
                 setTextViewText(R.id.sync_title, title)
                 setTextViewText(R.id.sync_text, text)
-                val rowOne = warning != null && (warning.sensor != null || warning.pump != null)
-                val rowTwo = warning != null && (warning.insulin != null || warning.battery != null)
-                setViewVisibility(R.id.sync_warning, if (rowOne) View.VISIBLE else View.GONE)
-                setViewVisibility(R.id.sync_warning2, if (rowTwo) View.VISIBLE else View.GONE)
-                if (warning != null) {
-                    fun part(group: Int, icon: Int, text: Int, value: ExpiryText?) {
-                        setViewVisibility(group, if (value != null) View.VISIBLE else View.GONE)
-                        if (value == null) return
-                        val color = if (value.urgent) Color.rgb(0xE5, 0x39, 0x35) else Color.rgb(0xE0, 0x9A, 0x00)
-                        setTextViewText(text, value.text)
-                        setTextColor(text, color)
-                        setInt(icon, "setColorFilter", color)
+                setViewVisibility(R.id.sync_warning, View.GONE)
+                setViewVisibility(R.id.sync_warning2, View.GONE)
+                // No flow layout in a notification: fill rows greedily by an estimated width, so items share a row when they fit.
+                val rows = mutableListOf<MutableList<ExpiryText>>()
+                var used = 0
+                warning?.forEach { item ->
+                    val cost = item.text.length + 5
+                    if (rows.isEmpty() || used + cost > ROW_BUDGET) { rows.add(mutableListOf()); used = 0 }
+                    rows.last().add(item); used += cost
+                }
+                rows.take(2).forEachIndexed { i, row ->
+                    val container = if (i == 0) R.id.sync_warning else R.id.sync_warning2
+                    setViewVisibility(container, View.VISIBLE)
+                    row.forEach { item ->
+                        val color = if (item.urgent) Color.rgb(0xE5, 0x39, 0x35) else Color.rgb(0xE0, 0x9A, 0x00)
+                        val v = RemoteViews(context.packageName, R.layout.notification_sync_item)
+                        v.setImageViewResource(R.id.item_icon, when (item.kind) {
+                            DeviceKind.SENSOR -> R.drawable.ic_sensor
+                            DeviceKind.INSULIN -> R.drawable.ic_vial
+                            DeviceKind.BATTERY -> R.drawable.ic_battery
+                            else -> R.drawable.ic_insulin_pump
+                        })
+                        v.setInt(R.id.item_icon, "setColorFilter", color)
+                        v.setTextViewText(R.id.item_text, item.text)
+                        v.setTextColor(R.id.item_text, color)
+                        addView(container, v)
                     }
-                    part(R.id.sync_sensor_group, R.id.sync_sensor_icon, R.id.sync_sensor_text, warning.sensor)
-                    part(R.id.sync_pump_group, R.id.sync_pump_icon, R.id.sync_pump_text, warning.pump)
-                    part(R.id.sync_insulin_group, R.id.sync_insulin_icon, R.id.sync_insulin_text, warning.insulin)
-                    part(R.id.sync_battery_group, R.id.sync_battery_icon, R.id.sync_battery_text, warning.battery)
                 }
                 if (expanded) setInt(R.id.sync_text, "setMaxLines", 6)
             }
 
-        fun build(context: Context, title: String, text: String, warning: ExpiryTexts? = null): Notification {
+        fun build(context: Context, title: String, text: String, warning: List<ExpiryText>? = null): Notification {
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, Intent(context, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT

@@ -109,12 +109,23 @@ data class WarnItem(val kind: DeviceKind, val level: WarnLevel, val remainingMs:
  * What the sync notification warns about: sensor, site (or patch pump), insulin (units left when [reservoirUnits]
  * is known, else by time) and battery, each once it passes its initial threshold; urgent past the second one.
  */
-fun warnItems(ages: List<DeviceAge>, reservoirUnits: Double?, thresholds: WarnThresholds = WarnThresholds()): List<WarnItem> = ages.mapNotNull { age ->
+fun warnItems(ages: List<DeviceAge>, reservoirUnits: Double?, thresholds: WarnThresholds = WarnThresholds()): List<WarnItem> =
+    (ages.mapNotNull { warnItem(it, reservoirUnits, thresholds) } + patchInsulinItem(ages, reservoirUnits, thresholds))
+        .sortedBy { listOf(DeviceKind.SENSOR, DeviceKind.SITE, DeviceKind.PATCH, DeviceKind.INSULIN, DeviceKind.BATTERY).indexOf(it.kind) }
+
+/** A patch pump has no separate insulin row, but its reservoir can still run low before the patch expires. */
+private fun patchInsulinItem(ages: List<DeviceAge>, units: Double?, thresholds: WarnThresholds): List<WarnItem> {
+    if (units == null || ages.none { it.kind == DeviceKind.PATCH }) return emptyList()
+    val lv = thresholds.of(DeviceKind.INSULIN)
+    return if (units <= lv.initial) listOf(WarnItem(DeviceKind.INSULIN, if (units <= lv.urgent) WarnLevel.URGENT else WarnLevel.INITIAL, null, units = units)) else emptyList()
+}
+
+private fun warnItem(age: DeviceAge, reservoirUnits: Double?, thresholds: WarnThresholds): WarnItem? = age.let { age ->
     val lv = thresholds.of(age.kind)
     if (age.kind == DeviceKind.INSULIN && reservoirUnits != null) {
-        return@mapNotNull if (reservoirUnits <= lv.initial) WarnItem(age.kind, if (reservoirUnits <= lv.urgent) WarnLevel.URGENT else WarnLevel.INITIAL, age.remainingMs, units = reservoirUnits) else null
+        return if (reservoirUnits <= lv.initial) WarnItem(age.kind, if (reservoirUnits <= lv.urgent) WarnLevel.URGENT else WarnLevel.INITIAL, age.remainingMs, units = reservoirUnits) else null
     }
-    val left = age.remainingMs ?: return@mapNotNull null
+    val left = age.remainingMs ?: return null
     if (left >= lv.initial * 3_600_000L) null
     else WarnItem(age.kind, if (left < lv.urgent * 3_600_000L) WarnLevel.URGENT else WarnLevel.INITIAL, left, ageMs = age.ageMs)
 }
