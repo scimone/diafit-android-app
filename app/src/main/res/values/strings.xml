@@ -64,4 +64,114 @@
     <string name="common_ok">OK</string>
     <string name="common_done">Done</string>
     <string name="common_none">None</string>
+
+    <!-- Durations -->
+    <string name="duration_d">%1$d d</string>
+    <string name="duration_dh">%1$d d %2$d h</string>
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_hm">%1$d h %2$d min</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="unit_day_suffix">d</string>
+    <string name="unit_hour_suffix">h</string>
+    <string name="common_hide">Hide</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_see_all">See all</string>
+
+    <!-- Device kinds -->
+    <string name="device_kind_sensor">Sensor</string>
+    <string name="device_kind_site">Infusion site</string>
+    <string name="device_kind_insulin">Insulin / cartridge</string>
+    <string name="device_kind_battery">Pump battery</string>
+    <string name="device_kind_patch">Patch pump</string>
+    <string name="device_short_sensor">Sensor</string>
+    <string name="device_short_site">Site</string>
+    <string name="device_short_insulin">Insulin</string>
+    <string name="device_short_battery">Battery</string>
+    <string name="device_short_patch">Pod</string>
+    <string name="device_no_change">No change logged</string>
+    <string name="device_overdue_short">Overdue %1$s</string>
+    <string name="device_left_short">%1$s left</string>
+
+    <!-- Devices page -->
+    <string name="devices_title">Devices</string>
+    <string name="devices_due_in">Due in %1$s</string>
+    <string name="devices_overdue_by">Overdue by %1$s</string>
+    <string name="devices_age_line">Changed %1$s · %2$s ago · expires %3$s</string>
+    <string name="devices_lifetimes_title">Lifetimes</string>
+    <string name="devices_lifetimes_sub">How long each device lasts before it should be changed</string>
+    <string name="devices_lifetimes_hint">How long each lasts before it should be changed (Omnipod pods: about 3 days 8 hours). Used to estimate expiry on the Devices page.</string>
+    <string name="devices_levels">Levels</string>
+    <string name="devices_levels_empty">Nothing yet. Connect Nightscout or AAPS under Connected apps and select it for \"Device status\".</string>
+    <string name="devices_reservoir">Reservoir</string>
+    <string name="devices_pump_battery">Pump battery</string>
+    <string name="devices_phone_battery">Phone (uploader) battery</string>
+    <string name="devices_pump_status">Pump status</string>
+    <string name="devices_no_levels">Nightscout reports no pump or battery levels.</string>
+    <string name="devices_updated">Updated %1$s ago</string>
+
+    <!-- Expiry alerts -->
+    <string name="expiry_title_hours">%1$s expires in %2$d h</string>
+    <string name="expiry_title_soon">%1$s expires in under 1 h</string>
+    <string name="expiry_text">Devices · due %1$s</string>
+    <string name="expiry_channel_name">Device expiry</string>
+    <string name="expiry_channel_desc">Sensor, infusion site, insulin and battery nearing their expiry</string>
+
+    <!-- Notifications page -->
+    <string name="notifications_removed">Notification removed</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="notifications_see_all_patterns">See all patterns</string>
+    <string name="patterns_title">Patterns</string>
+
+    <!-- Menu -->
+    <string name="menu_back">Back</string>
+    <string name="menu_group_therapy">My therapy</string>
+    <string name="menu_group_data">Data</string>
+    <string name="menu_group_meal_logging">Meal logging</string>
+    <string name="menu_group_app">App</string>
+    <string name="menu_treatment_plan">Treatment plan</string>
+    <string name="menu_treatment_plan_sub">Basal, sensitivity, carb ratio and targets</string>
+    <string name="menu_patterns_new">%1$d new to look at</string>
+    <string name="menu_patterns_sub">Recurring trends in your glucose</string>
+    <string name="menu_data_sources_sub">Which app feeds glucose, insulin, food, activity</string>
+    <string name="menu_ai_no_connection">On · no connection yet</string>
+    <string name="menu_data_editor">Data editor</string>
+    <string name="menu_data_editor_sub">Correct or delete any stored record</string>
+    <string name="menu_backend_on">Uploading to your server</string>
+    <string name="menu_backend_off">Not set up</string>
+    <string name="menu_meal_estimation_set">Photo estimates · %1$s · %2$s</string>
+    <string name="menu_meal_estimation_none">Photo estimates · set a connection</string>
+    <string name="menu_display_sub">%1$d–%2$d mg/dL · Basal: %3$s</string>
+    <string name="menu_notifications_sub">Expiry alerts, pattern alerts, sync</string>
+    <string name="menu_permissions_ok">Background reliability, camera, Health Connect</string>
+    <string name="menu_permissions_restricted">Background sync is being restricted</string>
+    <string name="menu_name_title">Your name</string>
+    <string name="menu_name_label">Name</string>
+    <string name="menu_connected_none">Nothing connected yet</string>
+    <string name="menu_connected_more">%1$s and %2$d more</string>
+    <string name="menu_add_name">Add your name</string>
+    <string name="menu_tap_to_edit">Tap to edit</string>
+    <string name="menu_edit_name">Edit name</string>
+    <string name="menu_devices">Devices</string>
+    <string name="menu_details">Details</string>
+    <string name="menu_no_devices">No devices tracked yet</string>
+    <plurals name="menu_ai_connections">
+        <item quantity="one">On · %1$d connection</item>
+        <item quantity="other">On · %1$d connections</item>
+    </plurals>
+
+    <!-- Settings pages (titles) -->
+    <string name="settings_page_connected_apps">Connected apps</string>
+    <string name="settings_page_data_sources">Data sources</string>
+    <string name="settings_page_backend">Backend sync</string>
+    <string name="settings_page_ai">AI</string>
+    <string name="settings_page_ai_log">LLM request log</string>
+    <string name="settings_page_meal_estimation">Meal estimation</string>
+    <string name="settings_page_food_db">Food database</string>
+    <string name="settings_page_display">Display</string>
+    <string name="settings_page_notifications">Notifications</string>
+    <string name="settings_page_permissions">Phone permissions</string>
+    <string name="basal_style_rate">Rate</string>
+    <string name="basal_style_rate_desc">The delivered rate in U/h as a step line, the scheduled rate dashed.</string>
+    <string name="basal_style_deviation">Difference</string>
+    <string name="basal_style_deviation_desc">Bars above/below a zero line show how far the loop moved from the schedule; SMBs are triangles sized by dose.</string>
 </resources>

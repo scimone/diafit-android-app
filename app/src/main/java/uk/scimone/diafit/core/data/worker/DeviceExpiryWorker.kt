@@ -16,14 +16,14 @@ import uk.scimone.diafit.core.data.local.NotificationDao
 import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.data.nightscout.DeviceStatusStore
 import uk.scimone.diafit.core.domain.model.deviceAges
+import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.expiryAlerts
+import uk.scimone.diafit.notifications.presentation.expiryText
+import uk.scimone.diafit.notifications.presentation.expiryTitle
 import uk.scimone.diafit.devices.presentation.DeviceInputsSource
 import uk.scimone.diafit.notifications.data.AppNotifier
 import uk.scimone.diafit.notifications.data.NotificationChannelSpec
 import uk.scimone.diafit.notifications.domain.DEVICES_LINK
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -47,9 +47,13 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
                 batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true,
                 pumpType = inputs.pumpType
             )
-            val format = SimpleDateFormat("EEE d MMM HH:mm", Locale.getDefault())
-            for (alert in expiryAlerts(ages) { format.format(Date(it)) }) {
-                notifier.raise(CHANNEL, alert.key, alert.title, alert.text, DEVICES_LINK, now)
+            val context = applicationContext
+            for (alert in expiryAlerts(ages)) {
+                notifier.raise(
+                    channel(context), alert.key, alert.storedTitle, alert.storedText, DEVICES_LINK, now,
+                    pushTitle = expiryTitle(context, alert.kind, alert.leftHours),
+                    pushText = expiryText(context, alert.expiresAtUtc)
+                )
             }
             dao.deleteOlderThan(now - 30L * 24 * 3_600_000)
             Result.success()
@@ -61,9 +65,9 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
 
     private companion object {
         const val TAG = "DeviceExpiry"
-        val CHANNEL = NotificationChannelSpec(
-            "DEVICE_EXPIRY_CHANNEL", "Device expiry",
-            "Sensor, infusion site, insulin and battery nearing their expiry", NotificationManager.IMPORTANCE_HIGH
+        fun channel(context: Context) = NotificationChannelSpec(
+            "DEVICE_EXPIRY_CHANNEL", context.getString(R.string.expiry_channel_name),
+            context.getString(R.string.expiry_channel_desc), NotificationManager.IMPORTANCE_HIGH
         )
         const val USER_ID = 1
     }

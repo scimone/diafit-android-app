@@ -1,5 +1,7 @@
 package uk.scimone.diafit.core.domain.model
 
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
 import kotlin.math.abs
 
 /**
@@ -7,12 +9,12 @@ import kotlin.math.abs
  * expiry is the last matching change event plus a lifetime the user can set ([defaultHours] until then).
  * [PATCH] is not a setting: it stands for site + insulin when they are always changed together (patch pump).
  */
-enum class DeviceKind(val label: String, val defaultHours: Int, private val pattern: Regex) {
-    SENSOR("Sensor", 14 * 24, Regex("sensor (start|change)", RegexOption.IGNORE_CASE)),
-    SITE("Infusion site", 72, Regex("site change|pod change|cannula", RegexOption.IGNORE_CASE)),
-    INSULIN("Insulin / cartridge", 72, Regex("insulin change|reservoir|pod change", RegexOption.IGNORE_CASE)),
-    BATTERY("Pump battery", 30 * 24, Regex("battery", RegexOption.IGNORE_CASE)),
-    PATCH("Patch pump", 72, Regex("site change|pod change|cannula|insulin change|reservoir", RegexOption.IGNORE_CASE));
+enum class DeviceKind(@StringRes val labelRes: Int, val defaultHours: Int, private val pattern: Regex) {
+    SENSOR(R.string.device_kind_sensor, 14 * 24, Regex("sensor (start|change)", RegexOption.IGNORE_CASE)),
+    SITE(R.string.device_kind_site, 72, Regex("site change|pod change|cannula", RegexOption.IGNORE_CASE)),
+    INSULIN(R.string.device_kind_insulin, 72, Regex("insulin change|reservoir|pod change", RegexOption.IGNORE_CASE)),
+    BATTERY(R.string.device_kind_battery, 30 * 24, Regex("battery", RegexOption.IGNORE_CASE)),
+    PATCH(R.string.device_kind_patch, 72, Regex("site change|pod change|cannula|insulin change|reservoir", RegexOption.IGNORE_CASE));
 
     fun matches(eventType: String) = pattern.containsMatchIn(eventType)
 

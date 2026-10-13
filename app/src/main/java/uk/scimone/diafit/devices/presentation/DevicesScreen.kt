@@ -40,11 +40,12 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.core.domain.model.DeviceAge
 import uk.scimone.diafit.core.domain.model.DeviceStatus
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.duration
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.rememberResources
+import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.ui.theme.Warning
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,8 +55,8 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Devices") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                title = { Text(stringResource(R.string.devices_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -73,18 +74,19 @@ fun DevicesScreen(userId: Int, onBack: () -> Unit) {
 
 @Composable
 private fun AgeCard(age: DeviceAge) {
+    val resources = rememberResources()
     val remaining = age.remainingMs
     val overdue = remaining != null && remaining < 0
     val soon = remaining != null && remaining in 0..(12 * 3_600_000L)
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(age.kind.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                Text(stringResource(age.kind.labelRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                 Text(
                     when {
-                        remaining == null -> "No change logged"
-                        overdue -> "Overdue by ${duration(-remaining)}"
-                        else -> "Due in ${duration(remaining)}"
+                        remaining == null -> stringResource(R.string.device_no_change)
+                        overdue -> stringResource(R.string.devices_overdue_by, resources.duration(-remaining))
+                        else -> stringResource(R.string.devices_due_in, resources.duration(remaining))
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = if (overdue || soon) Warning else MaterialTheme.colorScheme.primary
@@ -100,7 +102,7 @@ private fun AgeCard(age: DeviceAge) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Changed ${stamp(age.changedAtUtc!!)} · ${duration(age.ageMs!!)} ago · expires ${stamp(age.expiresAtUtc!!)}",
+                    stringResource(R.string.devices_age_line, stamp(age.changedAtUtc!!), resources.duration(age.ageMs!!), stamp(age.expiresAtUtc!!)),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -116,10 +118,10 @@ private fun LifetimesCard(userId: Int) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Lifetimes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                    Text("How long each device lasts before it should be changed", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.devices_lifetimes_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.devices_lifetimes_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (open) "Hide" else "Edit")
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, stringResource(if (open) R.string.common_hide else R.string.common_edit))
             }
             if (open) {
                 Spacer(Modifier.height(12.dp))
@@ -133,21 +135,22 @@ private fun LifetimesCard(userId: Int) {
 private fun StatusCard(status: DeviceStatus?, now: Long, omnipod: Boolean) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Levels", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.devices_levels), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
             if (status == null) {
                 Text(
-                    "Nothing yet. Connect Nightscout or AAPS under Connected apps and select it for \"Device status\".",
+                    stringResource(R.string.devices_levels_empty),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                status.reservoirUnits?.let { LevelRow("Reservoir", if (omnipod && it >= 50) "50+ U" else "%.0f U".format(it)) }
-                status.pumpBatteryPercent?.let { LevelRow("Pump battery", "%.0f %%".format(it)) }
-                status.pumpBatteryVolt?.let { LevelRow("Pump battery", "%.2f V".format(it)) }
-                status.uploaderBatteryPercent?.let { LevelRow("Phone (uploader) battery", "%.0f %%".format(it)) }
-                status.pumpStatus?.lineSequence()?.firstOrNull()?.let { LevelRow("Pump status", it) }
+                val resources = rememberResources()
+                status.reservoirUnits?.let { LevelRow(stringResource(R.string.devices_reservoir), if (omnipod && it >= 50) "50+ U" else "%.0f U".format(it)) }
+                status.pumpBatteryPercent?.let { LevelRow(stringResource(R.string.devices_pump_battery), "%.0f %%".format(it)) }
+                status.pumpBatteryVolt?.let { LevelRow(stringResource(R.string.devices_pump_battery), "%.2f V".format(it)) }
+                status.uploaderBatteryPercent?.let { LevelRow(stringResource(R.string.devices_phone_battery), "%.0f %%".format(it)) }
+                status.pumpStatus?.lineSequence()?.firstOrNull()?.let { LevelRow(stringResource(R.string.devices_pump_status), it) }
                 if (!status.hasPump && status.uploaderBatteryPercent == null)
-                    Text("Nightscout reports no pump or battery levels.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Updated ${duration(now - status.timestampUtc)} ago", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.devices_no_levels), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.devices_updated, resources.duration(now - status.timestampUtc)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -161,15 +164,4 @@ private fun LevelRow(label: String, value: String) {
     }
 }
 
-private fun duration(ms: Long): String {
-    val minutes = abs(ms) / 60_000
-    val days = minutes / 1440
-    val hours = (minutes % 1440) / 60
-    return when {
-        days > 0 -> "${days}d ${hours}h"
-        hours > 0 -> "${hours}h ${minutes % 60}m"
-        else -> "${minutes}m"
-    }
-}
-
-private fun stamp(utc: Long) = SimpleDateFormat("d MMM HH:mm", Locale.getDefault()).format(Date(utc))
+private fun stamp(utc: Long) = formatStamp(utc, "dMMMHm")

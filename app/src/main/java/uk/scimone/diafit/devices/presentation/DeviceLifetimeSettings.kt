@@ -20,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import org.koin.compose.koinInject
+import uk.scimone.diafit.R
 import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.data.nightscout.DeviceStatusStore
 import uk.scimone.diafit.core.domain.model.DeviceKind
@@ -56,7 +58,7 @@ fun DeviceLifetimeSettings(userId: Int = 1) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "How long each lasts before it should be changed (Omnipod pods: about 3 days 8 hours). Used to estimate expiry on the Devices page.",
+            stringResource(R.string.devices_lifetimes_hint),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         rows.forEach { kind ->
@@ -69,15 +71,15 @@ fun DeviceLifetimeSettings(userId: Int = 1) {
                 if (kind == DeviceKind.PATCH) { store.set(DeviceKind.SITE, t); store.set(DeviceKind.INSULIN, t) } else store.set(kind, t)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(kind.label, modifier = Modifier.weight(1f))
+                Text(stringResource(kind.labelRes), modifier = Modifier.weight(1f))
                 OutlinedTextField(
                     value = days, onValueChange = { days = it.filter(Char::isDigit).take(3); save() },
-                    singleLine = true, suffix = { Text("d") },
+                    singleLine = true, suffix = { Text(stringResource(R.string.unit_day_suffix)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
                 )
                 OutlinedTextField(
                     value = hours, onValueChange = { hours = it.filter(Char::isDigit).take(2); save() },
-                    singleLine = true, suffix = { Text("h") },
+                    singleLine = true, suffix = { Text(stringResource(R.string.unit_hour_suffix)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
                 )
             }

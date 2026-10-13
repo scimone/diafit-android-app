@@ -61,6 +61,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import uk.scimone.diafit.core.presentation.rememberResources
+import uk.scimone.diafit.core.presentation.shortDuration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,7 +85,6 @@ import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Device
 import uk.scimone.diafit.ui.theme.Warning
-import kotlin.math.abs
 
 /**
  * The page behind the person icon: who you are and the status of your devices on top, then everything about
@@ -115,8 +118,8 @@ fun MenuScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Menu") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                title = { Text(stringResource(R.string.menu_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -132,76 +135,76 @@ fun MenuScreen(
                 onOpenDevices = onOpenDevices
             )
 
-            MenuGroup("My therapy") {
-                MenuRow(Icons.AutoMirrored.Filled.ReceiptLong, Basal, "Treatment plan", "Basal, sensitivity, carb ratio and targets", onOpenTreatmentPlan)
+            MenuGroup(stringResource(R.string.menu_group_therapy)) {
+                MenuRow(Icons.AutoMirrored.Filled.ReceiptLong, Basal, stringResource(R.string.menu_treatment_plan), stringResource(R.string.menu_treatment_plan_sub), onOpenTreatmentPlan)
                 MenuRow(
-                    Icons.Filled.Insights, MaterialTheme.colorScheme.tertiary, "Patterns",
-                    if (newPatterns > 0) "$newPatterns new to look at" else "Recurring trends in your glucose",
+                    Icons.Filled.Insights, MaterialTheme.colorScheme.tertiary, stringResource(R.string.patterns_title),
+                    if (newPatterns > 0) stringResource(R.string.menu_patterns_new, newPatterns) else stringResource(R.string.menu_patterns_sub),
                     onOpenPatterns, badge = newPatterns > 0
                 )
             }
 
-            MenuGroup("Data") {
+            MenuGroup(stringResource(R.string.menu_group_data)) {
                 MenuRow(
-                    Icons.Filled.Hub, Bolus, SettingsPage.CONNECTED_APPS.title,
+                    Icons.Filled.Hub, Bolus, stringResource(SettingsPage.CONNECTED_APPS.titleRes),
                     connectedSummary(state.enabledConnectors.map { it.displayName }),
                     { onOpenSettings(SettingsPage.CONNECTED_APPS) }
                 )
                 MenuRow(
-                    Icons.Filled.Tune, Basal, SettingsPage.DATA_SOURCES.title,
-                    "Which app feeds glucose, insulin, food, activity",
+                    Icons.Filled.Tune, Basal, stringResource(SettingsPage.DATA_SOURCES.titleRes),
+                    stringResource(R.string.menu_data_sources_sub),
                     { onOpenSettings(SettingsPage.DATA_SOURCES) }
                 )
                 MenuRow(
-                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, SettingsPage.AI.title,
-                    if (!state.aiEnabled) "Off" else if (state.aiConnections.isEmpty()) "On · no connection yet"
-                    else "On · ${state.aiConnections.size} connection${if (state.aiConnections.size > 1) "s" else ""}",
+                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.AI.titleRes),
+                    if (!state.aiEnabled) stringResource(R.string.common_off) else if (state.aiConnections.isEmpty()) stringResource(R.string.menu_ai_no_connection)
+                    else pluralStringResource(R.plurals.menu_ai_connections, state.aiConnections.size, state.aiConnections.size),
                     { onOpenSettings(SettingsPage.AI) }
                 )
                 MenuRow(
-                    Icons.Filled.EditNote, MaterialTheme.colorScheme.secondary, "Data editor",
-                    "Correct or delete any stored record",
+                    Icons.Filled.EditNote, MaterialTheme.colorScheme.secondary, stringResource(R.string.menu_data_editor),
+                    stringResource(R.string.menu_data_editor_sub),
                     onOpenDataEditor
                 )
                 if (BackendSyncFeature.ENABLED) {
                     MenuRow(
-                        Icons.Filled.CloudUpload, Device, SettingsPage.BACKEND.title,
-                        if (backendConfigured) "Uploading to your server" else "Not set up",
+                        Icons.Filled.CloudUpload, Device, stringResource(SettingsPage.BACKEND.titleRes),
+                        if (backendConfigured) stringResource(R.string.menu_backend_on) else stringResource(R.string.menu_backend_off),
                         { onOpenSettings(SettingsPage.BACKEND) }
                     )
                 }
             }
 
-            MenuGroup("Meal logging") {
+            MenuGroup(stringResource(R.string.menu_group_meal_logging)) {
                 if (state.aiEnabled) {
                     MenuRow(
-                        Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, SettingsPage.MEAL_ESTIMATION.title,
-                        state.mealConnection?.let { "Photo estimates · ${it.name} · ${state.mealEstimation.model}" } ?: "Photo estimates · set a connection",
+                        Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.MEAL_ESTIMATION.titleRes),
+                        state.mealConnection?.let { stringResource(R.string.menu_meal_estimation_set, it.name, state.mealEstimation.model) } ?: stringResource(R.string.menu_meal_estimation_none),
                         { onOpenSettings(SettingsPage.MEAL_ESTIMATION) }
                     )
                 }
                 MenuRow(
-                    Icons.Filled.Restaurant, uk.scimone.diafit.ui.theme.Activity, SettingsPage.FOOD_DB.title,
+                    Icons.Filled.Restaurant, uk.scimone.diafit.ui.theme.Activity, stringResource(SettingsPage.FOOD_DB.titleRes),
                     if (state.usdaKey.isNotBlank()) "Open Food Facts · USDA" else "Open Food Facts",
                     { onOpenSettings(SettingsPage.FOOD_DB) }
                 )
             }
 
-            MenuGroup("App") {
+            MenuGroup(stringResource(R.string.menu_group_app)) {
                 MenuRow(
-                    Icons.Filled.Palette, MaterialTheme.colorScheme.secondary, SettingsPage.DISPLAY.title,
-                    "${state.glucoseTargetRange.lowerBound}–${state.glucoseTargetRange.upperBound} mg/dL · ${state.basalStyle.label} basal",
+                    Icons.Filled.Palette, MaterialTheme.colorScheme.secondary, stringResource(SettingsPage.DISPLAY.titleRes),
+                    stringResource(R.string.menu_display_sub, state.glucoseTargetRange.lowerBound, state.glucoseTargetRange.upperBound, stringResource(state.basalStyle.labelRes)),
                     { onOpenSettings(SettingsPage.DISPLAY) }
                 )
                 MenuRow(
-                    Icons.Filled.Notifications, Warning, SettingsPage.NOTIFICATIONS.title,
-                    "Expiry alerts, pattern alerts, sync",
+                    Icons.Filled.Notifications, Warning, stringResource(SettingsPage.NOTIFICATIONS.titleRes),
+                    stringResource(R.string.menu_notifications_sub),
                     { onOpenSettings(SettingsPage.NOTIFICATIONS) }
                 )
                 MenuRow(
-                    Icons.Filled.Lock, MaterialTheme.colorScheme.error, SettingsPage.PERMISSIONS.title,
-                    if (state.isBatteryOptimizationIgnored) "Background reliability, camera, Health Connect"
-                    else "Background sync is being restricted",
+                    Icons.Filled.Lock, MaterialTheme.colorScheme.error, stringResource(SettingsPage.PERMISSIONS.titleRes),
+                    if (state.isBatteryOptimizationIgnored) stringResource(R.string.menu_permissions_ok)
+                    else stringResource(R.string.menu_permissions_restricted),
                     { onOpenSettings(SettingsPage.PERMISSIONS) },
                     subtitleColor = if (state.isBatteryOptimizationIgnored) null else Warning
                 )
@@ -220,20 +223,21 @@ fun MenuScreen(
         var text by remember { mutableStateOf(state.userName) }
         AlertDialog(
             onDismissRequest = { editingName = false },
-            title = { Text("Your name") },
+            title = { Text(stringResource(R.string.menu_name_title)) },
             text = {
-                OutlinedTextField(value = text, onValueChange = { text = it.take(40) }, singleLine = true, label = { Text("Name") })
+                OutlinedTextField(value = text, onValueChange = { text = it.take(40) }, singleLine = true, label = { Text(stringResource(R.string.menu_name_label)) })
             },
-            confirmButton = { TextButton(onClick = { settings.onUserNameChanged(text); editingName = false }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { editingName = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { settings.onUserNameChanged(text); editingName = false }) { Text(stringResource(R.string.common_save)) } },
+            dismissButton = { TextButton(onClick = { editingName = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
 
+@Composable
 private fun connectedSummary(names: List<String>) = when {
-    names.isEmpty() -> "Nothing connected yet"
+    names.isEmpty() -> stringResource(R.string.menu_connected_none)
     names.size <= 3 -> names.joinToString(", ")
-    else -> names.take(2).joinToString(", ") + " and ${names.size - 2} more"
+    else -> stringResource(R.string.menu_connected_more, names.take(2).joinToString(", "), names.size - 2)
 }
 
 /** Avatar + name, and below it one tile per device with its state; tapping a tile opens the Devices page. */
@@ -271,27 +275,27 @@ private fun ProfileHeader(
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        name.ifBlank { "Add your name" },
+                        name.ifBlank { stringResource(R.string.menu_add_name) },
                         style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
                         color = if (name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
-                    Text("Tap to edit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.menu_tap_to_edit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Icon(Icons.Filled.Edit, "Edit name", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Edit, stringResource(R.string.menu_edit_name), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onOpenDevices), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Devices", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                    Text("Details", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.menu_devices), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.menu_details), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
                 if (ages.isEmpty()) {
                     Text(
-                        if (loaded) "No devices tracked yet" else "…",
+                        if (loaded) stringResource(R.string.menu_no_devices) else "…",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
@@ -339,12 +343,13 @@ private fun DeviceTile(age: DeviceAge, modifier: Modifier) {
             ),
             null, tint = color, modifier = Modifier.size(26.dp)
         )
-        Text(shortName(age.kind), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(stringResource(shortName(age.kind)), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        val resources = rememberResources()
         Text(
             when {
-                remaining == null -> "No change logged"
-                remaining < 0 -> "Overdue ${shortDuration(-remaining)}"
-                else -> "${shortDuration(remaining)} left"
+                remaining == null -> stringResource(R.string.device_no_change)
+                remaining < 0 -> stringResource(R.string.device_overdue_short, resources.shortDuration(-remaining))
+                else -> stringResource(R.string.device_left_short, resources.shortDuration(remaining))
             },
             style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold,
             maxLines = 1, overflow = TextOverflow.Ellipsis
@@ -353,23 +358,11 @@ private fun DeviceTile(age: DeviceAge, modifier: Modifier) {
 }
 
 private fun shortName(kind: DeviceKind) = when (kind) {
-    DeviceKind.SENSOR -> "Sensor"
-    DeviceKind.SITE -> "Site"
-    DeviceKind.INSULIN -> "Insulin"
-    DeviceKind.BATTERY -> "Battery"
-    DeviceKind.PATCH -> "Pod"
-}
-
-private fun shortDuration(ms: Long): String {
-    val minutes = abs(ms) / 60_000
-    val days = minutes / 1440
-    val hours = (minutes % 1440) / 60
-    return when {
-        days >= 2 -> "$days d"
-        days == 1L -> "1 d ${hours} h"
-        hours >= 1 -> "$hours h"
-        else -> "${minutes} m"
-    }
+    DeviceKind.SENSOR -> R.string.device_short_sensor
+    DeviceKind.SITE -> R.string.device_short_site
+    DeviceKind.INSULIN -> R.string.device_short_insulin
+    DeviceKind.BATTERY -> R.string.device_short_battery
+    DeviceKind.PATCH -> R.string.device_short_patch
 }
 
 /** A captioned card holding rows separated by hairlines. */
@@ -414,7 +407,7 @@ private fun MenuRow(
             Text(
                 subtitle, style = MaterialTheme.typography.bodySmall,
                 color = subtitleColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
+                maxLines = 2, overflow = TextOverflow.Ellipsis
             )
         }
         if (badge) {

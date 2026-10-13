@@ -61,4 +61,114 @@
     <string name="common_ok">OK</string>
     <string name="common_done">Fatto</string>
     <string name="common_none">Nessuno</string>
+
+    <!-- Durations -->
+    <string name="duration_d">%1$d g</string>
+    <string name="duration_dh">%1$d g %2$d h</string>
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_hm">%1$d h %2$d min</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="unit_day_suffix">g</string>
+    <string name="unit_hour_suffix">h</string>
+    <string name="common_hide">Nascondi</string>
+    <string name="common_remove">Rimuovi</string>
+    <string name="common_see_all">Vedi tutto</string>
+
+    <!-- Device kinds -->
+    <string name="device_kind_sensor">Sensore</string>
+    <string name="device_kind_site">Sito di infusione</string>
+    <string name="device_kind_insulin">Insulina / cartuccia</string>
+    <string name="device_kind_battery">Batteria del microinfusore</string>
+    <string name="device_kind_patch">Micro a cerotto</string>
+    <string name="device_short_sensor">Sensore</string>
+    <string name="device_short_site">Sito</string>
+    <string name="device_short_insulin">Insulina</string>
+    <string name="device_short_battery">Batteria</string>
+    <string name="device_short_patch">Pod</string>
+    <string name="device_no_change">Nessun cambio registrato</string>
+    <string name="device_overdue_short">In ritardo di %1$s</string>
+    <string name="device_left_short">Ancora %1$s</string>
+
+    <!-- Devices page -->
+    <string name="devices_title">Dispositivi</string>
+    <string name="devices_due_in">Scade tra %1$s</string>
+    <string name="devices_overdue_by">In ritardo di %1$s</string>
+    <string name="devices_age_line">Cambiato %1$s · %2$s fa · scade %3$s</string>
+    <string name="devices_lifetimes_title">Durata</string>
+    <string name="devices_lifetimes_sub">Quanto dura ogni dispositivo prima di essere sostituito</string>
+    <string name="devices_lifetimes_hint">Quanto dura ogni parte prima di essere sostituita (pod Omnipod: circa 3 giorni e 8 ore). Serve a stimare la scadenza nella pagina Dispositivi.</string>
+    <string name="devices_levels">Livelli</string>
+    <string name="devices_levels_empty">Ancora nulla. Collega Nightscout o AAPS in App collegate e selezionalo per «Stato dei dispositivi».</string>
+    <string name="devices_reservoir">Serbatoio</string>
+    <string name="devices_pump_battery">Batteria del microinfusore</string>
+    <string name="devices_phone_battery">Batteria del telefono (uploader)</string>
+    <string name="devices_pump_status">Stato del microinfusore</string>
+    <string name="devices_no_levels">Nightscout non segnala livelli di microinfusore o batteria.</string>
+    <string name="devices_updated">Aggiornato %1$s fa</string>
+
+    <!-- Expiry alerts -->
+    <string name="expiry_title_hours">%1$s scade tra %2$d h</string>
+    <string name="expiry_title_soon">%1$s scade tra meno di 1 h</string>
+    <string name="expiry_text">Dispositivi · scadenza %1$s</string>
+    <string name="expiry_channel_name">Scadenza dei dispositivi</string>
+    <string name="expiry_channel_desc">Sensore, sito di infusione, insulina e batteria in scadenza</string>
+
+    <!-- Notifications page -->
+    <string name="notifications_removed">Notifica rimossa</string>
+    <string name="notifications_empty">Ancora nessuna notifica</string>
+    <string name="notifications_see_all_patterns">Vedi tutti i pattern</string>
+    <string name="patterns_title">Pattern</string>
+
+    <!-- Menu -->
+    <string name="menu_back">Indietro</string>
+    <string name="menu_group_therapy">La mia terapia</string>
+    <string name="menu_group_data">Dati</string>
+    <string name="menu_group_meal_logging">Registro pasti</string>
+    <string name="menu_group_app">App</string>
+    <string name="menu_treatment_plan">Piano terapeutico</string>
+    <string name="menu_treatment_plan_sub">Basale, sensibilità, rapporto carboidrati e target</string>
+    <string name="menu_patterns_new">%1$d nuovi da vedere</string>
+    <string name="menu_patterns_sub">Andamenti ricorrenti della tua glicemia</string>
+    <string name="menu_data_sources_sub">Quale app fornisce glicemia, insulina, cibo, attività</string>
+    <string name="menu_ai_no_connection">Attivo · nessuna connessione</string>
+    <string name="menu_data_editor">Editor dei dati</string>
+    <string name="menu_data_editor_sub">Correggi o elimina qualsiasi registrazione</string>
+    <string name="menu_backend_on">Invio al tuo server</string>
+    <string name="menu_backend_off">Non configurato</string>
+    <string name="menu_meal_estimation_set">Stime dalle foto · %1$s · %2$s</string>
+    <string name="menu_meal_estimation_none">Stime dalle foto · imposta una connessione</string>
+    <string name="menu_display_sub">%1$d–%2$d mg/dL · Basale: %3$s</string>
+    <string name="menu_notifications_sub">Avvisi di scadenza, avvisi sui pattern, sincronizzazione</string>
+    <string name="menu_permissions_ok">Affidabilità in background, fotocamera, Health Connect</string>
+    <string name="menu_permissions_restricted">La sincronizzazione in background è limitata</string>
+    <string name="menu_name_title">Il tuo nome</string>
+    <string name="menu_name_label">Nome</string>
+    <string name="menu_connected_none">Ancora nulla di collegato</string>
+    <string name="menu_connected_more">%1$s e altri %2$d</string>
+    <string name="menu_add_name">Aggiungi il tuo nome</string>
+    <string name="menu_tap_to_edit">Tocca per modificare</string>
+    <string name="menu_edit_name">Modifica nome</string>
+    <string name="menu_devices">Dispositivi</string>
+    <string name="menu_details">Dettagli</string>
+    <string name="menu_no_devices">Nessun dispositivo monitorato</string>
+    <plurals name="menu_ai_connections">
+        <item quantity="one">Attivo · %1$d connessione</item>
+        <item quantity="other">Attivo · %1$d connessioni</item>
+    </plurals>
+
+    <!-- Settings pages (titles) -->
+    <string name="settings_page_connected_apps">App collegate</string>
+    <string name="settings_page_data_sources">Fonti dei dati</string>
+    <string name="settings_page_backend">Sincronizzazione backend</string>
+    <string name="settings_page_ai">IA</string>
+    <string name="settings_page_ai_log">Registro richieste LLM</string>
+    <string name="settings_page_meal_estimation">Stima dei pasti</string>
+    <string name="settings_page_food_db">Database alimenti</string>
+    <string name="settings_page_display">Schermo</string>
+    <string name="settings_page_notifications">Notifiche</string>
+    <string name="settings_page_permissions">Permessi del telefono</string>
+    <string name="basal_style_rate">Velocità</string>
+    <string name="basal_style_rate_desc">La velocità erogata in U/h come linea a gradini, quella programmata tratteggiata.</string>
+    <string name="basal_style_deviation">Differenza</string>
+    <string name="basal_style_deviation_desc">Le barre sopra/sotto lo zero mostrano di quanto il loop si è discostato dal programma; gli SMB sono triangoli proporzionali alla dose.</string>
 </resources>

@@ -74,7 +74,7 @@ class DeviceStatusTest {
         fun age(kind: DeviceKind, remainingH: Double) =
             uk.scimone.diafit.core.domain.model.DeviceAge(kind, 0L, ((kind.defaultHours - remainingH) * h).toLong(), kind.defaultHours)
         fun alerts(kind: DeviceKind, remainingH: Double) =
-            uk.scimone.diafit.core.domain.model.expiryAlerts(listOf(age(kind, remainingH))) { "t" }.map { it.key }
+            uk.scimone.diafit.core.domain.model.expiryAlerts(listOf(age(kind, remainingH))).map { it.key }
         assertEquals(emptyList<String>(), alerts(DeviceKind.SITE, 11.0))
         assertEquals(listOf("SITE-0-10"), alerts(DeviceKind.SITE, 9.5))
         assertEquals(listOf("SITE-0-1"), alerts(DeviceKind.SITE, 0.5))
@@ -83,22 +83,25 @@ class DeviceStatusTest {
         assertEquals(listOf("SENSOR-0-1"), alerts(DeviceKind.SENSOR, 0.9))
     }
 
-    @Test fun expiryAlertsUseTheShortNamingAndOldOnesAreTidied() {
+    @Test fun expiryAlertsAreStoredLanguageNeutralAndOldOnesAreTidied() {
         val a = uk.scimone.diafit.core.domain.model.expiryAlerts(
             listOf(uk.scimone.diafit.core.domain.model.DeviceAge(DeviceKind.PATCH, 0L, (DeviceKind.PATCH.defaultHours - 9.0).let { (it * 3_600_000L).toLong() }, DeviceKind.PATCH.defaultHours))
-        ) { "Sat 10 Oct 15:25" }.single()
-        assertEquals("Patch pump expires in 9 h", a.title)
-        assertEquals("Devices · due Sat 10 Oct 15:25", a.text)
+        ).single()
+        assertEquals("@expiry|PATCH|9", a.storedTitle)
+        assertEquals("@due|${a.expiresAtUtc}", a.storedText)
+        val soon = uk.scimone.diafit.core.domain.model.expiryAlerts(
+            listOf(uk.scimone.diafit.core.domain.model.DeviceAge(DeviceKind.SENSOR, 0L, ((DeviceKind.SENSOR.defaultHours - 0.5) * 3_600_000L).toLong(), DeviceKind.SENSOR.defaultHours))
+        ).single()
+        assertEquals("@expiry|SENSOR|0", soon.storedTitle)
+        // Rows stored in English before the language-neutral form keep reading the same.
         val old = uk.scimone.diafit.core.domain.model.tidyNotificationText(
             "Patch pump (site & insulin) expires in about 9 hours", "Due Sat 10 Oct 15:25. Change it and log the change so the countdown restarts."
         )
-        assertEquals(a.title to a.text, old)
+        assertEquals("Patch pump expires in 9 h" to "Devices · due Sat 10 Oct 15:25", old)
         assertEquals(
             "Sensor expires in under 1 h" to "Devices · due Mon 12 Oct 08:00",
             uk.scimone.diafit.core.domain.model.tidyNotificationText("Sensor expires in less than 1 hour", "Due Mon 12 Oct 08:00. Change it and log the change so the countdown restarts.")
         )
-        // Already in the new form, or not an expiry alert: untouched.
-        assertEquals(a.title to a.text, uk.scimone.diafit.core.domain.model.tidyNotificationText(a.title, a.text))
         assertEquals("Glucose pattern" to "x", uk.scimone.diafit.core.domain.model.tidyNotificationText("Glucose pattern", "x"))
     }
 }

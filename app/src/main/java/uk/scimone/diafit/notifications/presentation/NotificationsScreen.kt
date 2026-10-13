@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
-import java.text.SimpleDateFormat
 import uk.scimone.diafit.patterns.presentation.PatternCardView
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
@@ -64,9 +63,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.DeviceKind
 import uk.scimone.diafit.patterns.presentation.GlyphTile
-import uk.scimone.diafit.core.domain.model.tidyNotificationText
+import uk.scimone.diafit.core.presentation.formatStamp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.ui.theme.Device
-import java.util.Date
 import java.util.Locale
 
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
@@ -80,11 +80,13 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
     DisposableEffect(Unit) { onDispose { markRead.value() } }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val removedText = stringResource(R.string.notifications_removed)
+    val undoText = stringResource(R.string.action_undo)
     val remove: (AppNotificationEntity) -> Unit = { n ->
         viewModel.remove(n)
         scope.launch {
             snackbar.currentSnackbarData?.dismiss()
-            if (snackbar.showSnackbar("Notification removed", actionLabel = "Undo", duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+            if (snackbar.showSnackbar(removedText, actionLabel = undoText, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
                 viewModel.restore(n)
             }
         }
@@ -93,16 +95,16 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Notifications") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                title = { Text(stringResource(R.string.notifications_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
         if (items.isEmpty() && patterns.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onOpenAllPatterns) { Text("See all patterns") }
+                    Text(stringResource(R.string.notifications_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.notifications_see_all_patterns)) }
                 }
             }
         } else {
@@ -114,13 +116,13 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 if (patterns.isNotEmpty()) {
                     item(key = "patterns-header") {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Patterns", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            TextButton(onClick = onOpenAllPatterns) { Text("See all") }
+                            Text(stringResource(R.string.patterns_title), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.common_see_all)) }
                         }
                     }
                     items(patterns, key = { "pattern-" + it.card.id }) { PatternCardView(it, onClick = { onOpenPattern(it.card.id) }) }
                 } else item(key = "patterns-link") {
-                    TextButton(onClick = onOpenAllPatterns) { Text("See all patterns") }
+                    TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.notifications_see_all_patterns)) }
                 }
                 items(items, key = { it.id }) { n ->
                     // Swipe either way, or tap the ✕, to remove.
@@ -152,7 +154,8 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
 @Composable
 private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRemove: () -> Unit) {
     val (icon, tint) = notificationVisual(n)
-    val (title, text) = remember(n.title, n.text) { tidyNotificationText(n.title, n.text) }
+    val context = LocalContext.current
+    val (title, text) = remember(n.title, n.text, Locale.getDefault()) { renderNotification(context, n.title, n.text) }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -168,12 +171,12 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
                     maxLines = 2, overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    SimpleDateFormat("EEE d MMM HH:mm", Locale.getDefault()).format(Date(n.timestampUtc)),
+                    formatStamp(n.timestampUtc, STAMP_SKELETON),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
             IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_remove), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

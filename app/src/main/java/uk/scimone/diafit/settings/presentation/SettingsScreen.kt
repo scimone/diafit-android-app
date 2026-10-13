@@ -102,7 +102,7 @@ fun SettingsPageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(page.title) },
+                title = { Text(stringResource(page.titleRes)) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
             )
         }
@@ -264,8 +264,8 @@ private fun DisplayPage(state: SettingsState, viewModel: SettingsViewModel) {
             ) {
                 RadioButton(selected = state.basalStyle == style, onClick = { viewModel.onBasalStyleChanged(style) })
                 Column(Modifier.weight(1f)) {
-                    Text(style.label, style = MaterialTheme.typography.bodyLarge)
-                    Text(style.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(style.labelRes), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(style.descriptionRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

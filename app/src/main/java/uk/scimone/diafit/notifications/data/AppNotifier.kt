@@ -26,10 +26,10 @@ class NotificationChannelSpec(val id: String, val name: String, val description:
 class AppNotifier(private val context: Context, private val dao: NotificationDao) {
 
     /** Returns true when the notification was new (and so was pushed). */
-    suspend fun raise(channel: NotificationChannelSpec, key: String, title: String, text: String, link: String, nowUtc: Long): Boolean {
+    suspend fun raise(channel: NotificationChannelSpec, key: String, title: String, text: String, link: String, nowUtc: Long, pushTitle: String = title, pushText: String = text): Boolean {
         val inserted = dao.insert(AppNotificationEntity(timestampUtc = nowUtc, title = title, text = text, dedupeKey = key, link = link))
         if (inserted == -1L) return false
-        push(channel, key.hashCode(), title, text, link)
+        push(channel, key.hashCode(), pushTitle, pushText, link)
         return true
     }
 

@@ -23,8 +23,17 @@ data class AppNotificationEntity(
     @ColumnInfo(defaultValue = "0") val isDeleted: Boolean = false
 )
 
-/** Which expiry alert to raise for one consumable, if any. */
-data class ExpiryAlert(val key: String, val title: String, val text: String)
+/**
+ * Which expiry alert to raise for one consumable. [leftHours] is 0 for "under 1 h". The bell stores [storedTitle] /
+ * [storedText] (language-neutral, rendered when shown by `renderNotification`), so alerts follow the app language.
+ */
+data class ExpiryAlert(val key: String, val kind: DeviceKind, val leftHours: Int, val expiresAtUtc: Long) {
+    val storedTitle get() = "$STORED_EXPIRY|${kind.name}|$leftHours"
+    val storedText get() = "$STORED_DUE|$expiresAtUtc"
+}
+
+const val STORED_EXPIRY = "@expiry"
+const val STORED_DUE = "@due"
 
 private const val HOUR_MS = 3_600_000L
 
@@ -36,17 +45,16 @@ fun alertHours(kind: DeviceKind): List<Int> = if (kind == DeviceKind.SENSOR) lis
  * rather than a stale "10 hours"), only while it hasn't expired yet. The key repeats for the same change, so
  * storing it with a unique index raises each alert once.
  */
-fun expiryAlerts(ages: List<DeviceAge>, formatTime: (Long) -> String): List<ExpiryAlert> = ages.mapNotNull { age ->
+fun expiryAlerts(ages: List<DeviceAge>): List<ExpiryAlert> = ages.mapNotNull { age ->
     val changed = age.changedAtUtc ?: return@mapNotNull null
     val remaining = age.remainingMs ?: return@mapNotNull null
     if (remaining <= 0) return@mapNotNull null
     val threshold = alertHours(age.kind).sorted().firstOrNull { remaining <= it * HOUR_MS } ?: return@mapNotNull null
-    val left = if (threshold == 1) "under 1 h" else "${(remaining + HOUR_MS / 2) / HOUR_MS} h"
     ExpiryAlert(
         key = "${age.kind.name}-$changed-$threshold",
-        // Same convention as the pattern cards: a short name, then "category · detail".
-        title = "${age.kind.label.substringBefore(" (")} expires in $left",
-        text = "Devices · due ${formatTime(age.expiresAtUtc!!)}"
+        kind = age.kind,
+        leftHours = if (threshold == 1) 0 else ((remaining + HOUR_MS / 2) / HOUR_MS).toInt(),
+        expiresAtUtc = age.expiresAtUtc!!
     )
 }
 
