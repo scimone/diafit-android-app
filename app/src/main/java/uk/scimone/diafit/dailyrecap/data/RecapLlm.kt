@@ -37,7 +37,7 @@ class RecapLlm(private val api: OpenAiApi, private val llmLog: LlmLogDao) {
 
     suspend fun write(connection: AiConnection, model: String, input: RecapInput, language: String?): kotlin.Result<RecapText> {
         val system = buildSystemPrompt(language)
-        val user = "Yesterday's data (JSON):\n" + inputJson(input)
+        val user = "Data for ${input.weekday} ${input.date} (JSON):\n" + inputJson(input)
         val startedAt = System.currentTimeMillis()
         var httpError: String? = null
         val response = try {
@@ -108,10 +108,11 @@ HOW TO READ THE DATA
 - Some fields can be missing (no sensor data, no activity tracker). Never mention missing data unless it is the main story, and never invent numbers.
 
 WRITE
-- headline: at most 45 characters, a plain verdict on the day, no emoji.
+- headline: at most 45 characters, a plain verdict on the day, no emoji. For a day that was not over, say "so far" rather than judging the whole day.
+- The recap is read the morning after, so write about "yesterday" unless partialDayUntil is set (then "today so far").
 - mood: "good" (mostly in range, no severe lows), "mixed", or "hard" (severe or repeated lows, or long highs).
 - went_well: 0 to 2 items, the genuinely good things (a stable night, a meal handled well, recovery after a high, more steps than usual). Skip it rather than flatter.
-- went_wrong: 0 to 2 items, the things that cost the most time out of range or were risky. Lows come before highs. Say what happened and, where the data shows it, the likely context (the meal, the workout, the hour); say "probably" when it is an inference.
+- went_wrong: 0 to 2 items (none at all on a good day: a single mild, short excursion of under about 30 minutes is not worth listing), the things that cost the most time out of range or were risky. Lows come before highs. Say what happened and, where the data shows it, the likely context (the meal, the workout, the hour); say "probably" when it is an inference.
 - do_today: exactly 2 or 3 concrete, small, doable actions for today that follow from the above, or from a device due soon. Behaviour only (when to eat, pre-bolus timing the person already uses, a walk after dinner, carrying fast carbs on a workout day, checking a sensor), phrased as suggestions.
 - Every item at most 95 characters, plain words, no jargon, no emoji, no markdown, no exclamation marks. Warm and matter-of-fact; never scolding.
 - For went_well and went_wrong items, "time" is the local time "HH:mm" of the moment it is about, taken from the data (an episode start or extreme, a meal time, a peak), so it can be marked on a chart. Use "" when it is about the whole day.
