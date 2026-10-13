@@ -137,16 +137,23 @@ class SyncNotificationUpdater(
             ))
         } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
         val parts = listOfNotNull(
-            warning.sensorMs?.let { context.getString(R.string.sync_expiry_sensor, shortLeft(it)) },
-            warning.pumpMs?.let { context.getString(R.string.sync_expiry_pump, shortLeft(it)) }
+            warning.sensorMs?.let { context.getString(R.string.sync_expiry_sensor, shortLeft(it, now)) },
+            warning.pumpMs?.let { context.getString(R.string.sync_expiry_pump, shortLeft(it, now)) }
         )
         return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
     }
 
-    private fun shortLeft(ms: Long): String = when {
-        ms <= 0 -> "0h"
-        ms < HOUR -> "${ms / 60_000}m"
-        else -> "${ms / HOUR}h"
+    /** "20h · Wed 09:15": time left, then when it expires (weekday only when not today). */
+    private fun shortLeft(ms: Long, now: Long): String {
+        val left = when {
+            ms <= 0 -> "0h"
+            ms < HOUR -> "${ms / 60_000}m"
+            else -> "${ms / HOUR}h"
+        }
+        val at = Instant.ofEpochMilli(now + ms).atZone(ZoneId.systemDefault())
+        val sameDay = at.toLocalDate() == Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate()
+        val pattern = if (sameDay) "HH:mm" else "EEE HH:mm"
+        return "$left (${DateTimeFormatter.ofPattern(pattern).format(at)})"
     }
 
     /** About 13 days of CGM thinned to one reading per 5 min, reloaded hourly (only the recurrence rules need it). */

@@ -12,6 +12,14 @@
         android:singleLine="true" />
 
     <TextView
+        android:id="@+id/sync_text"
+        style="@android:style/TextAppearance.Material.Notification"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1" />
+
+    <TextView
         android:id="@+id/sync_warning"
         style="@android:style/TextAppearance.Material.Notification"
         android:layout_width="match_parent"
@@ -19,12 +27,4 @@
         android:singleLine="true"
         android:textStyle="bold"
         android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/sync_text"
-        style="@android:style/TextAppearance.Material.Notification"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="1" />
 </LinearLayout>
