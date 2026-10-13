@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -85,9 +88,9 @@ fun WhenRow(
                         onValueChange(current.with(d))
                     }
                     pickDate = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { pickDate = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { pickDate = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DatePicker(state, showModeToggle = false)
         }
@@ -97,7 +100,7 @@ fun WhenRow(
         val state = rememberTimePickerState(initialHour = current.hour, initialMinute = current.minute, is24Hour = true)
         AlertDialog(
             onDismissRequest = { pickTime = false },
-            title = { Text("Meal time") },
+            title = { Text(stringResource(R.string.addmeal_meal_time)) },
             text = {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TimePicker(state) }
             },
@@ -105,9 +108,9 @@ fun WhenRow(
                 TextButton(onClick = {
                     onValueChange(current.withHour(state.hour).withMinute(state.minute))
                     pickTime = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { pickTime = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { pickTime = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }

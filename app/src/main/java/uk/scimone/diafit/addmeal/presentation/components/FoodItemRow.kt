@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,6 +53,8 @@ fun FoodItemRow(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val carbsText = stringResource(R.string.addmeal_food_carbs, component.carbsG.roundToInt())
+    val pfText = stringResource(R.string.addmeal_food_pf, component.proteinG.roundToInt(), component.fatG.roundToInt())
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "chevron")
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val uncertain = component.confidence == ComponentConfidence.LOW
@@ -70,7 +75,7 @@ fun FoodItemRow(
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClickLabel = if (expanded) "Hide nutrients" else "Edit nutrients") { expanded = !expanded }
+                    .clickable(onClickLabel = if (expanded) stringResource(R.string.addmeal_hide_nutrients) else stringResource(R.string.addmeal_edit_nutrients)) { expanded = !expanded }
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -83,13 +88,13 @@ fun FoodItemRow(
                     )
                     if (uncertain) {
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Outlined.ErrorOutline, "Uncertain estimate", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.ErrorOutline, stringResource(R.string.addmeal_uncertain_cd), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                     }
                 }
                 Text(
                     buildAnnotatedString {
-                        withStyle(SpanStyle(color = Carbs, fontWeight = FontWeight.SemiBold)) { append("${component.carbsG.roundToInt()} g carbs") }
-                        append(" · ${component.proteinG.roundToInt()} P · ${component.fatG.roundToInt()} F")
+                        withStyle(SpanStyle(color = Carbs, fontWeight = FontWeight.SemiBold)) { append(carbsText) }
+                        append(pfText)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = muted,
@@ -100,11 +105,11 @@ fun FoodItemRow(
             WeightField(component.weightG, onWeightChange)
             if (canRemove) {
                 IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.DeleteOutline, "Remove ${component.name}", tint = muted, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.addmeal_remove_named, component.name), tint = muted, modifier = Modifier.size(20.dp))
                 }
             }
             IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Filled.ExpandMore, if (expanded) "Hide nutrients" else "Edit nutrients", tint = muted, modifier = Modifier.rotate(rotation))
+                Icon(Icons.Filled.ExpandMore, if (expanded) stringResource(R.string.addmeal_hide_nutrients) else stringResource(R.string.addmeal_edit_nutrients), tint = muted, modifier = Modifier.rotate(rotation))
             }
         }
 
@@ -112,9 +117,9 @@ fun FoodItemRow(
             Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val small = MaterialTheme.typography.titleSmall
-                    MacroTile("Carbs", component.carbsG.roundToInt(), { onMacrosChange(it.toDoubleOrNull() ?: 0.0, null, null) }, "g", Modifier.weight(1f), Carbs, small)
-                    MacroTile("Protein", component.proteinG.roundToInt(), { onMacrosChange(null, it.toDoubleOrNull() ?: 0.0, null) }, "g", Modifier.weight(1f), style = small)
-                    MacroTile("Fat", component.fatG.roundToInt(), { onMacrosChange(null, null, it.toDoubleOrNull() ?: 0.0) }, "g", Modifier.weight(1f), style = small)
+                    MacroTile(stringResource(R.string.macro_carbs), component.carbsG.roundToInt(), { onMacrosChange(it.toDoubleOrNull() ?: 0.0, null, null) }, "g", Modifier.weight(1f), Carbs, small)
+                    MacroTile(stringResource(R.string.macro_protein), component.proteinG.roundToInt(), { onMacrosChange(null, it.toDoubleOrNull() ?: 0.0, null) }, "g", Modifier.weight(1f), style = small)
+                    MacroTile(stringResource(R.string.macro_fat), component.fatG.roundToInt(), { onMacrosChange(null, null, it.toDoubleOrNull() ?: 0.0) }, "g", Modifier.weight(1f), style = small)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -126,12 +131,12 @@ fun FoodItemRow(
                 }
                 when {
                     uncertain -> Text(
-                        "Low confidence: hidden or unclear content. Please check.",
+                        stringResource(R.string.addmeal_low_conf),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
                     component.confidence == ComponentConfidence.MEDIUM && component.carbsG >= 10 -> Text(
-                        "Portion or recipe uncertain.",
+                        stringResource(R.string.addmeal_medium_conf),
                         style = MaterialTheme.typography.labelSmall,
                         color = muted
                     )

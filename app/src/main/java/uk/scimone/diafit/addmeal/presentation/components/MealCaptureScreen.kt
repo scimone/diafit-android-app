@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -255,11 +258,11 @@ private fun PhotoChoiceScreen(
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent, Color(0xB3000000)))))
         }
         Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-            RoundIconButton(Icons.Filled.Close, "Close", onClose, Modifier.align(Alignment.CenterStart))
+            RoundIconButton(Icons.Filled.Close, stringResource(R.string.common_close), onClose, Modifier.align(Alignment.CenterStart))
             Surface(shape = CircleShape, color = Scrim, modifier = Modifier.align(Alignment.CenterEnd).clip(CircleShape).clickable(onClick = onRetake)) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Outlined.CameraAlt, null, tint = OnInk, modifier = Modifier.size(18.dp))
-                    Text("Retake", style = MaterialTheme.typography.labelLarge, color = OnInk)
+                    Text(stringResource(R.string.cap_retake), style = MaterialTheme.typography.labelLarge, color = OnInk)
                 }
             }
         }
@@ -273,16 +276,16 @@ private fun PhotoChoiceScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Column {
-                    Text("How should we fill in the nutrients?", style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
-                    Text("Your photo is kept with the meal either way.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
+                    Text(stringResource(R.string.cap_choice_title), style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.cap_choice_sub), style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
                 }
 
                 if (aiEnabled) {
-                    ChoiceCard(Icons.Outlined.AutoAwesome, "Estimate with AI", "Foods, portions and nutrients from your photo.") {
+                    ChoiceCard(Icons.Outlined.AutoAwesome, stringResource(R.string.cap_ai_card), stringResource(R.string.cap_ai_card_sub)) {
                         OutlinedTextField(
                             value = aiNotes,
                             onValueChange = onAiNotes,
-                            placeholder = { Text("Add a note for the AI (optional), e.g. I only ate half", color = OnInkMuted) },
+                            placeholder = { Text(stringResource(R.string.cap_ai_note_placeholder), color = OnInkMuted) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 1,
                             maxLines = 3,
@@ -295,15 +298,15 @@ private fun PhotoChoiceScreen(
                         Button(onClick = onEstimateWithAi, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                             Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Estimate with AI")
+                            Text(stringResource(R.string.cap_ai_card))
                         }
                     }
                 }
 
-                ChoiceCard(Icons.Outlined.Inventory2, "Choose a saved product", "Packaged foods you scanned before.") {
+                ChoiceCard(Icons.Outlined.Inventory2, stringResource(R.string.cap_saved_card), stringResource(R.string.cap_saved_card_sub)) {
                     if (savedProducts.isEmpty()) {
                         Text(
-                            "Nothing yet. Scan a barcode and save the meal; the product shows up here next time.",
+                            stringResource(R.string.cap_saved_none),
                             style = MaterialTheme.typography.bodySmall, color = OnInkMuted
                         )
                     } else {
@@ -311,7 +314,7 @@ private fun PhotoChoiceScreen(
                             OutlinedTextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Search all saved products", color = OnInkMuted) },
+                                placeholder = { Text(stringResource(R.string.cap_saved_search), color = OnInkMuted) },
                                 leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -324,17 +327,17 @@ private fun PhotoChoiceScreen(
                         }
                         if (q.isEmpty()) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilterChip(selected = !showAll, onClick = { showAll = false }, label = { Text("Favorites") }, shape = CircleShape)
-                                FilterChip(selected = showAll, onClick = { showAll = true }, label = { Text("All (${savedProducts.size})") }, shape = CircleShape)
+                                FilterChip(selected = !showAll, onClick = { showAll = false }, label = { Text(stringResource(R.string.cap_favorites)) }, shape = CircleShape)
+                                FilterChip(selected = showAll, onClick = { showAll = true }, label = { Text(stringResource(R.string.cap_all_count, savedProducts.size)) }, shape = CircleShape)
                             }
                         }
                         shown.forEach { p -> SavedProductRow(p, { onUseSaved(p) }, { onToggleFavorite(p) }, { onForgetSaved(p.barcode) }) }
                         if (shown.isEmpty()) {
                             Text(
                                 when {
-                                    q.isNotEmpty() -> "No match."
-                                    showAll -> "Nothing saved yet."
-                                    else -> "No favorites yet. Star a product to keep it here, or tap All."
+                                    q.isNotEmpty() -> stringResource(R.string.cap_no_match)
+                                    showAll -> stringResource(R.string.cap_nothing_saved)
+                                    else -> stringResource(R.string.cap_no_favorites)
                                 },
                                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted
                             )
@@ -342,18 +345,18 @@ private fun PhotoChoiceScreen(
                     }
                 }
 
-                ChoiceCard(Icons.Outlined.Search, "Search by name", "Find the product or food in the food databases.") {
+                ChoiceCard(Icons.Outlined.Search, stringResource(R.string.cap_search_card), stringResource(R.string.cap_search_card_sub)) {
                     Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                         Icon(Icons.Outlined.Search, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Search")
+                        Text(stringResource(R.string.cap_search))
                     }
                 }
 
                 TextButton(onClick = onTypeIt, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     Icon(Icons.Outlined.EditNote, null, tint = OnInkMuted, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Keep the photo and type it myself", color = OnInk)
+                    Text(stringResource(R.string.cap_type_myself), color = OnInk)
                 }
             }
         }
@@ -389,7 +392,7 @@ private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, on
             Text(
                 listOfNotNull(
                     product.brand,
-                    product.servingG?.let { "serving ${formatGrams(it)} · ${(product.carbs100 * it / 100).roundToInt()} g carbs" } ?: "${product.carbs100.roundToInt()} g carbs per 100 g"
+                    product.servingG?.let { stringResource(R.string.cap_serving_carbs, formatGrams(it), (product.carbs100 * it / 100).roundToInt()) } ?: stringResource(R.string.addmeal_carbs_per_100, product.carbs100.roundToInt())
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
@@ -397,11 +400,11 @@ private fun SavedProductRow(product: SavedProductEntity, onClick: () -> Unit, on
         IconButton(onClick = onToggleFavorite) {
             Icon(
                 if (product.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                if (product.isFavorite) "Remove ${product.name} from favorites" else "Add ${product.name} to favorites",
+                if (product.isFavorite) stringResource(R.string.cap_unfav_named, product.name) else stringResource(R.string.cap_fav_named, product.name),
                 tint = if (product.isFavorite) Color(0xFFFFC107) else OnInkMuted, modifier = Modifier.size(22.dp)
             )
         }
-        IconButton(onClick = onForget) { Icon(Icons.Outlined.DeleteOutline, "Forget ${product.name}", tint = OnInkMuted, modifier = Modifier.size(20.dp)) }
+        IconButton(onClick = onForget) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.cap_forget_named, product.name), tint = OnInkMuted, modifier = Modifier.size(20.dp)) }
     }
 }
 
@@ -503,14 +506,14 @@ private fun BoxScope.CameraLayer(
 
     // Top: close, progress, torch.
     Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        RoundIconButton(Icons.Filled.Close, "Close", onClose, Modifier.align(Alignment.CenterStart))
+        RoundIconButton(Icons.Filled.Close, stringResource(R.string.common_close), onClose, Modifier.align(Alignment.CenterStart))
         StepPill(phase, Modifier.align(Alignment.Center))
         Row(Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        RoundIconButton(Icons.Outlined.Search, "Search by name", onOpenSearch)
+        RoundIconButton(Icons.Outlined.Search, stringResource(R.string.cap_search_card), onOpenSearch)
         if (controller.cameraInfo?.hasFlashUnit() != false) {
             RoundIconButton(
                 if (torch) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                if (torch) "Turn flash off" else "Turn flash on",
+                if (torch) stringResource(R.string.cap_flash_off) else stringResource(R.string.cap_flash_on),
                 { torch = !torch },
                 Modifier,
                 active = torch
@@ -612,27 +615,27 @@ private fun ScanStatus(phase: CapturePhase, onRescan: () -> Unit, onSearch: () -
         ) {
             when (phase) {
                 is CapturePhase.Scanning -> {
-                    Text("Scan a barcode", style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.cap_scan_title), style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Hold it inside the frame. It's recognised automatically.",
+                        stringResource(R.string.cap_scan_hint),
                         style = MaterialTheme.typography.bodyMedium, color = OnInkMuted, textAlign = TextAlign.Center
                     )
                     Text(
-                        "No barcode? Photograph the meal below, or type it.",
+                        stringResource(R.string.cap_scan_alt),
                         style = MaterialTheme.typography.bodySmall, color = OnInkMuted.copy(alpha = 0.8f), textAlign = TextAlign.Center
                     )
                 }
                 is CapturePhase.LookingUp -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Good)
-                    Text("Looking up ${phase.barcode}…", style = MaterialTheme.typography.titleMedium, color = OnInk)
+                    Text(stringResource(R.string.cap_looking_up, phase.barcode), style = MaterialTheme.typography.titleMedium, color = OnInk)
                 }
                 is CapturePhase.NotFound -> NoticeCard(
-                    "Not in the food database",
-                    "We couldn't find ${phase.barcode}. Search by name, photograph the meal for an AI estimate, or type it.",
+                    stringResource(R.string.cap_not_found_title),
+                    stringResource(R.string.cap_not_found_text, phase.barcode),
                     onRescan,
                     onSearch
                 )
-                is CapturePhase.Failed -> NoticeCard("Couldn't look it up", phase.reason + ".", onRescan, onSearch)
+                is CapturePhase.Failed -> NoticeCard(stringResource(R.string.cap_failed_title), phase.reason + ".", onRescan, onSearch)
                 else -> Unit
             }
         }
@@ -647,10 +650,10 @@ private fun NoticeCard(title: String, text: String, onRescan: () -> Unit, onSear
             Text(text, style = MaterialTheme.typography.bodySmall, color = OnInkMuted, textAlign = TextAlign.Center)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onRescan, border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
-                    Text("Scan again", color = OnInk)
+                    Text(stringResource(R.string.cap_scan_again), color = OnInk)
                 }
                 OutlinedButton(onClick = onSearch, border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
-                    Text("Search by name", color = OnInk)
+                    Text(stringResource(R.string.cap_search_card), color = OnInk)
                 }
             }
         }
@@ -670,16 +673,16 @@ private fun ProductFoundPanel(product: FoodProduct, onRescan: () -> Unit) {
                 textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis
             )
             Text(
-                listOfNotNull(product.brand, "${product.per100.carbsG.roundToInt()} g carbs per 100 g").joinToString(" · "),
+                listOfNotNull(product.brand, stringResource(R.string.addmeal_carbs_per_100, product.per100.carbsG.roundToInt())).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium, color = OnInkMuted, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(6.dp))
-            Text("Next: photograph your meal", style = MaterialTheme.typography.titleMedium, color = Good, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.cap_next_photo), style = MaterialTheme.typography.titleMedium, color = Good, fontWeight = FontWeight.SemiBold)
             Text(
-                "So you remember how it looked. You can skip this.",
+                stringResource(R.string.cap_next_photo_sub),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted, textAlign = TextAlign.Center
             )
-            TextButton(onClick = onRescan) { Text("Wrong product? Scan again", color = OnInkMuted) }
+            TextButton(onClick = onRescan) { Text(stringResource(R.string.cap_wrong_product), color = OnInkMuted) }
         }
     }
 }
@@ -692,12 +695,12 @@ private fun StepPill(phase: CapturePhase, modifier: Modifier = Modifier) {
         Surface(shape = CircleShape, color = Scrim) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Check, null, tint = Good, modifier = Modifier.size(16.dp))
-                Text("Barcode", style = MaterialTheme.typography.labelLarge, color = OnInkMuted)
+                Text(stringResource(R.string.cap_step_barcode), style = MaterialTheme.typography.labelLarge, color = OnInkMuted)
                 Box(Modifier.width(14.dp).height(1.dp).background(OnInkMuted))
                 Box(Modifier.size(18.dp).clip(CircleShape).background(OnInk), contentAlignment = Alignment.Center) {
                     Text("2", style = MaterialTheme.typography.labelSmall, color = Ink, fontWeight = FontWeight.Bold)
                 }
-                Text("Meal photo", style = MaterialTheme.typography.labelLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.cap_step_photo), style = MaterialTheme.typography.labelLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -724,19 +727,19 @@ private fun ControlBar(
             .padding(top = 40.dp, bottom = 18.dp, start = 16.dp, end = 16.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
-            ControlButton(Icons.Outlined.PhotoLibrary, if (found) "Pick photo" else "Gallery", onGallery, Modifier.weight(1f))
+            ControlButton(Icons.Outlined.PhotoLibrary, if (found) stringResource(R.string.cap_pick_photo) else stringResource(R.string.meal_gallery), onGallery, Modifier.weight(1f))
             Column(Modifier.weight(1.3f), horizontalAlignment = Alignment.CenterHorizontally) {
                 ShutterButton(capturing, onShutter)
                 Spacer(Modifier.height(8.dp))
                 AnimatedContent(found, label = "shutterLabel") { isFound ->
                     Text(
-                        if (isFound) "Photo of your meal" else "Photo · AI estimates",
+                        if (isFound) stringResource(R.string.cap_photo_of_meal) else stringResource(R.string.cap_photo_ai),
                         style = MaterialTheme.typography.labelLarge, color = OnInk, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center
                     )
                 }
             }
-            if (found) ControlButton(Icons.Filled.Check, "Skip photo", onSkipPhoto, Modifier.weight(1f))
-            else ControlButton(Icons.Outlined.EditNote, "Type it", onManual, Modifier.weight(1f))
+            if (found) ControlButton(Icons.Filled.Check, stringResource(R.string.cap_skip_photo), onSkipPhoto, Modifier.weight(1f))
+            else ControlButton(Icons.Outlined.EditNote, stringResource(R.string.cap_type_it), onManual, Modifier.weight(1f))
         }
     }
 }
@@ -757,6 +760,7 @@ private fun ControlButton(icon: ImageVector, label: String, onClick: () -> Unit,
 
 @Composable
 private fun ShutterButton(busy: Boolean, onClick: () -> Unit) {
+    val takePhotoLabel = stringResource(R.string.meal_take_photo)
     Box(
         Modifier
             .size(76.dp)
@@ -764,8 +768,8 @@ private fun ShutterButton(busy: Boolean, onClick: () -> Unit) {
             .padding(7.dp)
             .clip(CircleShape)
             .background(OnInk)
-            .clickable(enabled = !busy, onClickLabel = "Take photo", onClick = onClick)
-            .semantics { contentDescription = "Take photo" },
+            .clickable(enabled = !busy, onClickLabel = stringResource(R.string.meal_take_photo), onClick = onClick)
+            .semantics { contentDescription = takePhotoLabel },
         contentAlignment = Alignment.Center
     ) {
         if (busy) CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp, color = Ink)
@@ -794,19 +798,19 @@ private fun NoCameraPanel(askedBefore: Boolean, onAllow: () -> Unit, onGallery: 
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(Icons.Outlined.NoPhotography, null, tint = OnInkMuted, modifier = Modifier.size(56.dp))
-            Text("Camera access needed", style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.cap_no_camera_title), style = MaterialTheme.typography.titleLarge, color = OnInk, fontWeight = FontWeight.SemiBold)
             Text(
-                "Allow the camera to scan barcodes and photograph meals. You can also pick a photo or type the meal.",
+                stringResource(R.string.cap_no_camera_text),
                 style = MaterialTheme.typography.bodyMedium, color = OnInkMuted, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(4.dp))
             Button(onClick = onAllow, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text(if (askedBefore) "Allow camera" else "Continue")
+                Text(if (askedBefore) stringResource(R.string.cap_allow_camera) else stringResource(R.string.cap_continue))
             }
             OutlinedButton(onClick = onGallery, modifier = Modifier.fillMaxWidth().height(52.dp), border = androidx.compose.foundation.BorderStroke(1.dp, OnInkMuted)) {
-                Text("Pick a photo", color = OnInk)
+                Text(stringResource(R.string.cap_pick_a_photo), color = OnInk)
             }
-            TextButton(onClick = onManual) { Text("Type it instead", color = OnInk) }
+            TextButton(onClick = onManual) { Text(stringResource(R.string.cap_type_instead), color = OnInk) }
         }
     }
 }
@@ -847,14 +851,14 @@ private fun FoodSearchScreen(
     }
     Column(Modifier.fillMaxSize().background(Ink).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RoundIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+            RoundIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back), onBack)
             OutlinedTextField(
                 value = phase.query,
                 onValueChange = onQuery,
-                placeholder = { Text("Search a food or product", color = OnInkMuted) },
+                placeholder = { Text(stringResource(R.string.cap_search_placeholder), color = OnInkMuted) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null, tint = OnInkMuted) },
                 trailingIcon = {
-                    if (phase.query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, "Clear", tint = OnInkMuted, modifier = Modifier.size(18.dp)) }
+                    if (phase.query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, stringResource(R.string.common_clear), tint = OnInkMuted, modifier = Modifier.size(18.dp)) }
                 },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
@@ -873,7 +877,7 @@ private fun FoodSearchScreen(
         ) {
             Icon(Icons.Outlined.Search, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Search")
+            Text(stringResource(R.string.cap_search))
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
@@ -881,16 +885,16 @@ private fun FoodSearchScreen(
                     CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = Good)
                 }
                 phase.searched -> {
-                    if (phase.error != null) Text(phase.error, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFF8A80))
-                    if (results.isEmpty() && phase.error == null) Text("Nothing found. Try fewer or other words.", style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
+                    if (phase.error != null) Text(phase.error.asString(), style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFF8A80))
+                    if (results.isEmpty() && phase.error == null) Text(stringResource(R.string.cap_nothing_found), style = MaterialTheme.typography.bodyMedium, color = OnInkMuted)
                     results.forEach { r -> SearchResultRow(r, savedByCode[r.barcode], { onPick(r) }, { savedByCode[r.barcode]?.let(onToggleFavorite) }) }
                 }
                 else -> {
                     val recentShown = recents.filter { q.isEmpty() || it.contains(q, true) }
                     if (recentShown.isNotEmpty()) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            SectionLabel("Recent searches", Modifier.weight(1f))
-                            if (q.isEmpty()) TextButton(onClick = onClearRecents) { Text("Clear", color = OnInkMuted) }
+                            SectionLabel(stringResource(R.string.cap_recent), Modifier.weight(1f))
+                            if (q.isEmpty()) TextButton(onClick = onClearRecents) { Text(stringResource(R.string.common_clear), color = OnInkMuted) }
                         }
                         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             recentShown.forEach { r ->
@@ -906,22 +910,22 @@ private fun FoodSearchScreen(
                     val bookmarks = savedMatches.filter { it.isFavorite }
                     val used = savedMatches.filter { !it.isFavorite }
                     if (bookmarks.isNotEmpty()) {
-                        SectionLabel("Bookmarks", tint = BookmarkGold)
+                        SectionLabel(stringResource(R.string.cap_bookmarks), tint = BookmarkGold)
                         bookmarks.forEach { p -> SearchResultRow(p.toProduct(), p, { onPick(p.toProduct()) }, { onToggleFavorite(p) }) }
                     }
                     if (used.isNotEmpty()) {
-                        SectionLabel("Used before")
+                        SectionLabel(stringResource(R.string.cap_used_before))
                         used.forEach { p -> SearchResultRow(p.toProduct(), p, { onPick(p.toProduct()) }, { onToggleFavorite(p) }) }
                     }
                     if (recentShown.isEmpty() && savedMatches.isEmpty()) Text(
-                        if (q.isEmpty()) "Type what you're looking for, then press Search. Products you use are kept here, star one to bookmark it."
-                        else "Nothing saved matches. Press Search to look in the food databases.",
+                        if (q.isEmpty()) stringResource(R.string.cap_search_empty_hint)
+                        else stringResource(R.string.cap_search_no_saved),
                         style = MaterialTheme.typography.bodyMedium, color = OnInkMuted
                     )
                 }
             }
             if (!phase.loading) Text(
-                "Values are per 100 g; you set the portion on the next page. Results come from Open Food Facts and, with a key set in Settings, USDA FoodData Central.",
+                stringResource(R.string.cap_search_footer),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -950,15 +954,15 @@ private fun SearchResultRow(product: FoodProduct, saved: SavedProductEntity?, on
         Column(Modifier.weight(1f)) {
             Text(product.name, style = MaterialTheme.typography.bodyLarge, color = OnInk, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(product.brand, "${product.per100.carbsG.roundToInt()} g carbs per 100 g", product.source).joinToString(" · "),
+                listOfNotNull(product.brand, stringResource(R.string.addmeal_carbs_per_100, product.per100.carbsG.roundToInt()), product.source).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis
             )
-            if (saved != null && !fav) Text("Used before", style = MaterialTheme.typography.labelSmall, color = Good, fontWeight = FontWeight.SemiBold)
+            if (saved != null && !fav) Text(stringResource(R.string.cap_used_before), style = MaterialTheme.typography.labelSmall, color = Good, fontWeight = FontWeight.SemiBold)
         }
         if (saved != null) IconButton(onClick = onToggleFavorite) {
             Icon(
                 if (fav) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                if (fav) "Remove ${product.name} from bookmarks" else "Bookmark ${product.name}",
+                if (fav) stringResource(R.string.cap_unbookmark_named, product.name) else stringResource(R.string.cap_bookmark_named, product.name),
                 tint = if (fav) BookmarkGold else OnInkMuted, modifier = Modifier.size(22.dp)
             )
         }

@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation.components
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,16 +70,16 @@ fun ProductPortionCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                SectionLabel("Product", Modifier.weight(1f))
+                SectionLabel(stringResource(R.string.addmeal_product), Modifier.weight(1f))
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                        if (isFavorite) "Remove from favorites" else "Add to favorites",
+                        if (isFavorite) stringResource(R.string.addmeal_fav_remove) else stringResource(R.string.addmeal_fav_add),
                         tint = if (isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 TextButton(onClick = onRescan, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
-                    Text("Scan another")
+                    Text(stringResource(R.string.addmeal_scan_another))
                 }
             }
 
@@ -84,7 +87,7 @@ fun ProductPortionCard(
                 Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
-                        "${(product.carbsG / weight.coerceAtLeast(1.0) * 100).roundToInt()} g carbs per 100 g",
+                        stringResource(R.string.addmeal_carbs_per_100, (product.carbsG / weight.coerceAtLeast(1.0) * 100).roundToInt()),
                         product.basis?.substringBefore(" · ")?.takeIf { it.isNotBlank() } ?: "Open Food Facts"
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
@@ -96,27 +99,27 @@ fun ProductPortionCard(
             val step = if (serving != null) serving * SERVING_STEP else GRAM_STEP
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 FilledTonalIconButton(onClick = { onWeightChange((weight - step).coerceAtLeast(step)) }, enabled = weight > step + 0.01) {
-                    Icon(Icons.Filled.Remove, "Smaller portion")
+                    Icon(Icons.Filled.Remove, stringResource(R.string.addmeal_smaller_portion))
                 }
                 Column(Modifier.weight(1f).padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Portion", style = MaterialTheme.typography.labelMedium, color = muted)
+                    Text(stringResource(R.string.addmeal_portion), style = MaterialTheme.typography.labelMedium, color = muted)
                     Text(
-                        if (serving != null) "${formatServings(weight / serving)} ${if (abs(weight / serving - 1.0) < 0.01) "serving" else "servings"}"
+                        if (serving != null) pluralStringResource(R.plurals.addmeal_servings, if (abs(weight / serving - 1.0) < 0.01) 1 else 2, formatServings(weight / serving))
                         else formatGrams(weight),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                 }
-                FilledTonalIconButton(onClick = { onWeightChange(weight + step) }) { Icon(Icons.Filled.Add, "Larger portion") }
+                FilledTonalIconButton(onClick = { onWeightChange(weight + step) }) { Icon(Icons.Filled.Add, stringResource(R.string.addmeal_larger_portion)) }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    if (serving != null) "1 serving = ${formatGrams(serving)}" else "No serving size on the pack",
+                    if (serving != null) stringResource(R.string.addmeal_serving_eq, formatGrams(serving)) else stringResource(R.string.addmeal_no_serving),
                     style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.weight(1f)
                 )
-                Text("Weight", style = MaterialTheme.typography.labelMedium, color = muted)
+                Text(stringResource(R.string.addmeal_weight), style = MaterialTheme.typography.labelMedium, color = muted)
                 WeightField(weight, onWeightChange)
             }
 
@@ -124,7 +127,7 @@ fun ProductPortionCard(
                 if (serving != null) {
                     listOf(0.5, 1.0, 2.0).forEach { n ->
                         PortionChip(
-                            label = if (n == 1.0) "1 serving" else "${formatServings(n)} serving${if (n > 1) "s" else ""}",
+                            label = pluralStringResource(R.plurals.addmeal_servings, if (n == 1.0) 1 else 2, formatServings(n)),
                             selected = abs(weight - serving * n) < 0.5,
                             onClick = { onWeightChange(serving * n) }
                         )
@@ -132,7 +135,7 @@ fun ProductPortionCard(
                 }
                 PortionChip("100 g", abs(weight - 100.0) < 0.5) { onWeightChange(100.0) }
                 product.packageG?.let { pack ->
-                    PortionChip("Whole pack · ${formatGrams(pack)}", abs(weight - pack) < 0.5) { onWeightChange(pack) }
+                    PortionChip(stringResource(R.string.addmeal_whole_pack, formatGrams(pack)), abs(weight - pack) < 0.5) { onWeightChange(pack) }
                 }
             }
         }

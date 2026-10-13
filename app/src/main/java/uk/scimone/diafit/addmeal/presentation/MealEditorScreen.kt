@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -55,7 +58,7 @@ import org.koin.core.parameter.parametersOf
 import uk.scimone.diafit.addmeal.presentation.components.*
 import uk.scimone.diafit.core.domain.model.MealPhoto
 import uk.scimone.diafit.logs.presentation.components.SectionLabel
-import uk.scimone.diafit.logs.presentation.model.hint
+import uk.scimone.diafit.logs.presentation.model.hintRes
 import uk.scimone.diafit.logs.presentation.model.label
 import uk.scimone.diafit.ui.theme.Carbs
 import java.text.SimpleDateFormat
@@ -113,9 +116,10 @@ fun MealEditorScreen(
     val pickPhoto = { galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) }
     val extendedCourse = uiState.sitting != null
 
+    val msgContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.asString(msgContext))
             viewModel.resetSnackbar()
         }
     }
@@ -133,24 +137,26 @@ fun MealEditorScreen(
                 // The entry's name is the title, typed in place; the small line above says what is being done.
                 title = {
                     TitleField(
-                        overline = when {
-                            uiState.isAddingCourse -> "Add course"
-                            uiState.isEditing && extendedCourse -> "Edit course"
-                            uiState.isEditing -> "Edit meal"
-                            else -> "New meal"
-                        } + if (!uiState.dishName.isNullOrBlank() && uiState.description == uiState.dishName) " · named by AI" else "",
+                        overline = stringResource(when {
+                            uiState.isAddingCourse -> R.string.addmeal_overline_add_course
+                            uiState.isEditing && extendedCourse -> R.string.addmeal_overline_edit_course
+                            uiState.isEditing -> R.string.logs_detail_edit_meal
+                            else -> R.string.logs_new_meal
+                        }).let { base ->
+                            if (!uiState.dishName.isNullOrBlank() && uiState.description == uiState.dishName) stringResource(R.string.addmeal_overline_named_by_ai, base) else base
+                        },
                         value = uiState.description.orEmpty(),
-                        placeholder = if (uiState.isAddingCourse) "What arrived?" else "What did you eat?",
+                        placeholder = if (uiState.isAddingCourse) stringResource(R.string.addmeal_placeholder_course) else stringResource(R.string.addmeal_placeholder_meal),
                         onValueChange = viewModel::onDescriptionChanged
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = requestClose) { Icon(Icons.Filled.Close, "Close") }
+                    IconButton(onClick = requestClose) { Icon(Icons.Filled.Close, stringResource(R.string.common_close)) }
                 },
                 actions = {
                     if (uiState.isEditing) {
                         IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Outlined.DeleteOutline, if (extendedCourse) "Delete course" else "Delete meal")
+                            Icon(Icons.Outlined.DeleteOutline, if (extendedCourse) stringResource(R.string.addmeal_delete_course_cd) else stringResource(R.string.logs_detail_delete))
                         }
                     }
                 }
@@ -223,12 +229,12 @@ fun MealEditorScreen(
             }
 
             EditorCard(
-                "Absorption",
-                trailing = if (uiState.impactAuto) { { SuggestedTag("Suggested") } } else null
+                stringResource(R.string.addmeal_absorption),
+                trailing = if (uiState.impactAuto) { { SuggestedTag(stringResource(R.string.addmeal_suggested)) } } else null
             ) {
                 AbsorptionSelector(uiState.impactType, viewModel::onImpactTypeChanged)
                 Text(
-                    uiState.impactType.hint + if (uiState.impactAuto) " Follows the macros until you pick one." else "",
+                    if (uiState.impactAuto) stringResource(R.string.addmeal_absorption_hint_auto, stringResource(uiState.impactType.hintRes)) else stringResource(uiState.impactType.hintRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -272,26 +278,26 @@ fun MealEditorScreen(
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            text = { Text("What you entered won't be saved.") },
+            title = { Text(stringResource(R.string.addmeal_discard_title)) },
+            text = { Text(stringResource(R.string.addmeal_discard_text)) },
             confirmButton = {
-                TextButton(onClick = { confirmDiscard = false; viewModel.discard(); onClose() }) { Text("Discard") }
+                TextButton(onClick = { confirmDiscard = false; viewModel.discard(); onClose() }) { Text(stringResource(R.string.addmeal_discard)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } }
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.addmeal_keep_editing)) } }
         )
     }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (extendedCourse) "Delete this course?" else "Delete this meal?") },
-            text = { Text("It will be removed from your logs and the Home graphs. You can undo right after.") },
+            title = { Text(if (extendedCourse) stringResource(R.string.addmeal_delete_course_title) else stringResource(R.string.logs_detail_delete_title)) },
+            text = { Text(stringResource(R.string.addmeal_delete_text)) },
             confirmButton = {
                 TextButton(
                     onClick = { confirmDelete = false; viewModel.deleteMeal() },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.common_delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
@@ -342,12 +348,12 @@ private fun SaveBar(state: AddMealState, onSave: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("${state.carbohydrates ?: 0}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Carbs)
-                    Text(" g carbs", style = MaterialTheme.typography.labelLarge, color = Carbs, modifier = Modifier.padding(bottom = 3.dp))
+                    Text(" " + stringResource(R.string.addmeal_g_carbs), style = MaterialTheme.typography.labelLarge, color = Carbs, modifier = Modifier.padding(bottom = 3.dp))
                 }
                 Text(
                     listOfNotNull(
                         state.mealTime?.let { fmt.format(Date(it)) },
-                        "${state.impactType.label} absorption"
+                        stringResource(R.string.logs_absorption_cd, state.impactType.label)
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -365,9 +371,9 @@ private fun SaveBar(state: AddMealState, onSave: () -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     Text(
                         when {
-                            state.isEditing -> "Save"
-                            state.isAddingCourse -> "Add course"
-                            else -> "Save meal"
+                            state.isEditing -> stringResource(R.string.common_save)
+                            state.isAddingCourse -> stringResource(R.string.addmeal_overline_add_course)
+                            else -> stringResource(R.string.addmeal_save_meal)
                         },
                         style = MaterialTheme.typography.titleSmall
                     )
@@ -393,10 +399,10 @@ private fun CourseContextCard(sitting: SittingContext, isAddingCourse: Boolean, 
             OutlinedTextField(
                 value = mealName,
                 onValueChange = onMealNameChanged,
-                label = { Text(if (isAddingCourse) "Adding a course to" else "Part of the meal") },
+                label = { Text(if (isAddingCourse) stringResource(R.string.addmeal_ctx_adding) else stringResource(R.string.addmeal_ctx_part)) },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                trailingIcon = { Icon(Icons.Outlined.Edit, "Rename meal", Modifier.size(18.dp)) },
+                trailingIcon = { Icon(Icons.Outlined.Edit, stringResource(R.string.addmeal_rename_cd), Modifier.size(18.dp)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
             )
@@ -415,7 +421,7 @@ private fun CourseContextCard(sitting: SittingContext, isAddingCourse: Boolean, 
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "so far, since ${fmt.format(Date(sitting.startTime))}",
+                        stringResource(R.string.addmeal_ctx_so_far, fmt.format(Date(sitting.startTime))),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -423,7 +429,7 @@ private fun CourseContextCard(sitting: SittingContext, isAddingCourse: Boolean, 
             }
             if (isAddingCourse) {
                 Text(
-                    "Log only what just arrived. Its carbs are what to dose for now.",
+                    stringResource(R.string.addmeal_ctx_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -477,13 +483,13 @@ private fun TotalsCard(
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionLabel(if (state.sitting != null) "This course" else "Total", Modifier.weight(1f))
+                SectionLabel(if (state.sitting != null) stringResource(R.string.addmeal_this_course) else stringResource(R.string.addmeal_total), Modifier.weight(1f))
                 Text(state.totalCalories?.let { "$it kcal" } ?: "– kcal", style = MaterialTheme.typography.labelMedium, color = muted)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MacroTile("Carbs", state.carbohydrates, onCarbs, "g", Modifier.weight(1.3f), Carbs, MaterialTheme.typography.headlineMedium)
-                MacroTile("Protein", state.proteins, onProtein, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
-                MacroTile("Fat", state.fats, onFat, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+                MacroTile(stringResource(R.string.macro_carbs), state.carbohydrates, onCarbs, "g", Modifier.weight(1.3f), Carbs, MaterialTheme.typography.headlineMedium)
+                MacroTile(stringResource(R.string.macro_protein), state.proteins, onProtein, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+                MacroTile(stringResource(R.string.macro_fat), state.fats, onFat, "g", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
             }
             val foods = state.foodTotals
             when {
@@ -491,17 +497,17 @@ private fun TotalsCard(
                     Icon(Icons.Outlined.Info, null, tint = muted, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "Your values replace the foods' sum (${foods.carbs} g carbs · ${foods.protein} P · ${foods.fat} F).",
+                        stringResource(R.string.addmeal_override_note, foods.carbs, foods.protein, foods.fat),
                         style = MaterialTheme.typography.bodySmall,
                         color = muted,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onUseFoodTotals, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Use sum") }
+                    TextButton(onClick = onUseFoodTotals, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(stringResource(R.string.addmeal_use_sum)) }
                 }
-                foods != null -> Text("Sum of the foods below. Type here to override it.", style = MaterialTheme.typography.bodySmall, color = muted)
+                foods != null -> Text(stringResource(R.string.addmeal_sum_hint), style = MaterialTheme.typography.bodySmall, color = muted)
             }
             state.sitting?.let {
-                Text("Meal total ${it.otherCarbs + (state.carbohydrates ?: 0)} g carbs", style = MaterialTheme.typography.bodySmall, color = muted)
+                Text(stringResource(R.string.addmeal_meal_total, it.otherCarbs + (state.carbohydrates ?: 0)), style = MaterialTheme.typography.bodySmall, color = muted)
             }
         }
     }
@@ -548,10 +554,10 @@ private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit,
                 Icon(Icons.Filled.AutoAwesome, null, tint = primary, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("AI estimate", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.addmeal_ai_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
-                        if (state.isAnalyzing) { if (n > 1) "Looking at $n photos…" else "Looking at your photo…" }
-                        else "Finds each food in your ${if (n > 1) "$n photos" else "photo"} and estimates its nutrients",
+                        if (state.isAnalyzing) pluralStringResource(R.plurals.addmeal_ai_looking, n, n)
+                        else pluralStringResource(R.plurals.addmeal_ai_finds, n, n),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -564,22 +570,22 @@ private fun AiRequestCard(state: AddMealState, onNotesChanged: (String) -> Unit,
                     OutlinedTextField(
                         value = state.aiNotes,
                         onValueChange = onNotesChanged,
-                        label = { Text("Note for the AI") },
-                        placeholder = { Text("e.g. I only ate half") },
+                        label = { Text(stringResource(R.string.addmeal_ai_note_label)) },
+                        placeholder = { Text(stringResource(R.string.addmeal_ai_note_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     )
                 } else {
                     AssistChip(
                         onClick = { showNotes = true },
-                        label = { Text("Add a note for the AI") },
+                        label = { Text(stringResource(R.string.addmeal_ai_note_add)) },
                         leadingIcon = { Icon(Icons.Outlined.EditNote, null, Modifier.size(18.dp)) }
                     )
                 }
                 Button(onClick = { onAnalyze() }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                     Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (state.components.isEmpty()) "Estimate nutrition" else "Estimate again")
+                    Text(if (state.components.isEmpty()) stringResource(R.string.addmeal_ai_estimate) else stringResource(R.string.addmeal_ai_estimate_again))
                 }
             }
         }
@@ -598,12 +604,12 @@ private fun FoodsCard(
 ) {
     val primary = MaterialTheme.colorScheme.primary
     EditorCard(
-        "Foods · AI estimate",
+        stringResource(R.string.addmeal_foods_title),
         trailing = {
             if (canRedo) TextButton(onClick = onRedo, contentPadding = PaddingValues(horizontal = 8.dp)) {
                 Icon(Icons.Filled.Refresh, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Redo")
+                Text(stringResource(R.string.addmeal_redo))
             }
         }
     ) {
@@ -626,7 +632,7 @@ private fun FoodsCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.AutoAwesome, null, tint = primary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("How the AI estimated this", style = MaterialTheme.typography.labelLarge, color = primary)
+                        Text(stringResource(R.string.addmeal_ai_how), style = MaterialTheme.typography.labelLarge, color = primary)
                     }
                     Text(reasoning, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -651,11 +657,11 @@ private fun PhotoSection(
     if (photos.isEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PhotoSourceTile(Icons.Outlined.CameraAlt, "Take photo", onTakePhoto, Modifier.weight(1f))
-                PhotoSourceTile(Icons.Outlined.PhotoLibrary, "Gallery", onPickPhoto, Modifier.weight(1f))
+                PhotoSourceTile(Icons.Outlined.CameraAlt, stringResource(R.string.meal_take_photo), onTakePhoto, Modifier.weight(1f))
+                PhotoSourceTile(Icons.Outlined.PhotoLibrary, stringResource(R.string.meal_gallery), onPickPhoto, Modifier.weight(1f))
             }
             Text(
-                if (aiEnabled) "Optional. With photos, AI can estimate the nutrients for you." else "Optional. The photo is kept with the meal.",
+                if (aiEnabled) stringResource(R.string.addmeal_photo_hint_ai) else stringResource(R.string.addmeal_photo_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -693,8 +699,8 @@ private fun PhotoSection(
         }
         if (canAddPhoto) {
             Row(Modifier.align(Alignment.BottomEnd).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ScrimButton(Icons.Outlined.CameraAlt, "Add another photo", onTakePhoto)
-                ScrimButton(Icons.Outlined.PhotoLibrary, "Add photos from gallery", onPickPhoto)
+                ScrimButton(Icons.Outlined.CameraAlt, stringResource(R.string.addmeal_add_another_photo), onTakePhoto)
+                ScrimButton(Icons.Outlined.PhotoLibrary, stringResource(R.string.addmeal_add_gallery), onPickPhoto)
             }
         }
     }
@@ -703,14 +709,14 @@ private fun PhotoSection(
 @Composable
 private fun PhotoTile(photo: MealPhoto, modifier: Modifier, more: Int, onRemove: () -> Unit) {
     Box(modifier) {
-        AsyncImage(model = photo.uri, contentDescription = "Meal photo", contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        AsyncImage(model = photo.uri, contentDescription = stringResource(R.string.addmeal_meal_photo), contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
         if (more > 0) {
             Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
                 Text("+$more", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
         }
         Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            ScrimButton(Icons.Filled.Close, "Remove photo", onRemove, size = 30.dp)
+            ScrimButton(Icons.Filled.Close, stringResource(R.string.addmeal_remove_photo), onRemove, size = 30.dp)
         }
     }
 }

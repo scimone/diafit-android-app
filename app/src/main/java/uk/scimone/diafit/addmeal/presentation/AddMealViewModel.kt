@@ -1,5 +1,8 @@
 package uk.scimone.diafit.addmeal.presentation
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.app.Application
 import android.net.Uri
 import android.util.Log
@@ -142,7 +145,7 @@ class AddMealViewModel(
         viewModelScope.launch {
             val meal = mealRepository.getMealById(mealId)
             if (meal == null) {
-                _uiState.update { it.copy(snackbarMessage = "This meal no longer exists", finished = EditorResult.Deleted(mealId)) }
+                _uiState.update { it.copy(snackbarMessage = UiText.of(R.string.addmeal_msg_gone), finished = EditorResult.Deleted(mealId)) }
                 return@launch
             }
             editing = meal
@@ -182,7 +185,7 @@ class AddMealViewModel(
                     id = c.id,
                     time = c.mealTimeUtc,
                     carbs = c.carbohydrates,
-                    title = c.description?.takeIf { it.isNotBlank() } ?: "Course ${i + 1}",
+                    title = c.description?.takeIf { it.isNotBlank() } ?: AppStrings.get(R.string.logs_tl_course, i + 1),
                     photo = c.photoIds.firstOrNull()?.let { fileStorageRepository.getFileProviderUri(it) }
                 )
             },
@@ -236,8 +239,8 @@ class AddMealViewModel(
             }
             addPhotos(copied)
             when {
-                copied.size < sourceUris.take(room).size -> _uiState.update { it.copy(snackbarMessage = "Some photos couldn't be added") }
-                sourceUris.size > room -> _uiState.update { it.copy(snackbarMessage = "A course holds up to $MAX_PHOTOS_PER_COURSE photos") }
+                copied.size < sourceUris.take(room).size -> _uiState.update { it.copy(snackbarMessage = UiText.of(R.string.addmeal_msg_photos_failed)) }
+                sourceUris.size > room -> _uiState.update { it.copy(snackbarMessage = UiText.of(R.string.addmeal_msg_photos_limit, MAX_PHOTOS_PER_COURSE)) }
             }
         }
     }
@@ -352,7 +355,7 @@ class AddMealViewModel(
             setPhase(
                 result.fold(
                     onSuccess = { now.copy(loading = false, results = it, error = null, searched = true) },
-                    onFailure = { now.copy(loading = false, results = emptyList(), error = "Couldn't reach the food databases", searched = true) }
+                    onFailure = { now.copy(loading = false, results = emptyList(), error = UiText.of(R.string.addmeal_msg_search_failed), searched = true) }
                 )
             )
         }
@@ -401,7 +404,7 @@ class AddMealViewModel(
                     .also { if (source.scheme == "file") source.path?.let { path -> java.io.File(path).delete() } }
             }
             if (copied.isEmpty()) {
-                _uiState.update { it.copy(snackbarMessage = "Couldn't save the photo") }
+                _uiState.update { it.copy(snackbarMessage = UiText.of(R.string.addmeal_msg_photo_save_failed)) }
                 return@launch
             }
             addPhotos(copied)
@@ -499,7 +502,7 @@ class AddMealViewModel(
                 .onSuccess { analysis ->
                     if (analysis.components.isEmpty()) {
                         // Nothing usable: leave the form as it was instead of filling in "No food detected".
-                        _uiState.update { it.copy(isAnalyzing = false, aiRequestOpen = true, snackbarMessage = "The AI found no food in the photos") }
+                        _uiState.update { it.copy(isAnalyzing = false, aiRequestOpen = true, snackbarMessage = UiText.of(R.string.addmeal_msg_ai_no_food)) }
                         return@onSuccess
                     }
                     val totals = analysis.totals
@@ -519,7 +522,7 @@ class AddMealViewModel(
                             reasoning = analysis.reasoning,
                             isAnalyzing = false,
                             aiRequestOpen = false,
-                            snackbarMessage = "AI estimate ready. Check the values before saving"
+                            snackbarMessage = UiText.of(R.string.addmeal_msg_ai_ready)
                         ).withSuggestedType()
                     }
                 }
@@ -529,7 +532,7 @@ class AddMealViewModel(
                         it.copy(
                             isAnalyzing = false,
                             aiRequestOpen = true,
-                            snackbarMessage = "AI analysis failed: ${error.message}"
+                            snackbarMessage = UiText.of(R.string.addmeal_msg_ai_failed, error.message ?: error.javaClass.simpleName)
                         )
                     }
                 }
@@ -630,7 +633,7 @@ class AddMealViewModel(
                 }
             } else {
                 Log.e(TAG, "Saving meal failed", result.exceptionOrNull())
-                _uiState.update { it.copy(isLoading = false, snackbarMessage = "Couldn't save the meal") }
+                _uiState.update { it.copy(isLoading = false, snackbarMessage = UiText.of(R.string.addmeal_msg_save_failed)) }
             }
         }
     }
@@ -649,7 +652,7 @@ class AddMealViewModel(
         viewModelScope.launch {
             setMealValidUseCase(id, false)
                 .onSuccess { _uiState.update { it.copy(finished = EditorResult.Deleted(id)) } }
-                .onFailure { _uiState.update { s -> s.copy(snackbarMessage = "Couldn't delete the meal") } }
+                .onFailure { _uiState.update { s -> s.copy(snackbarMessage = UiText.of(R.string.addmeal_msg_delete_failed)) } }
         }
     }
 

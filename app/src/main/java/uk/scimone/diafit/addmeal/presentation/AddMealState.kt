@@ -1,5 +1,6 @@
 package uk.scimone.diafit.addmeal.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
 import android.net.Uri
 import uk.scimone.diafit.core.domain.model.FoodProduct
 import uk.scimone.diafit.core.domain.model.ImpactType
@@ -48,7 +49,7 @@ data class AddMealState(
     val isLoading: Boolean = false,
     /** Non-null while the camera stage (barcode scan / meal photo) is shown in front of the form. */
     val capture: CaptureState? = null,
-    val snackbarMessage: String? = null,
+    val snackbarMessage: UiText? = null,
     /** Set once a save/delete finished; the screen consumes it and closes. */
     val finished: EditorResult? = null
 ) {
@@ -98,7 +99,7 @@ sealed interface CapturePhase {
         val query: String = "",
         val loading: Boolean = false,
         val results: List<FoodProduct> = emptyList(),
-        val error: String? = null,
+        val error: UiText? = null,
         val fromPhoto: Boolean = false,
         /** [results] belong to the current [query] (editing the text clears this; nothing is sent until the user presses Search). */
         val searched: Boolean = false
