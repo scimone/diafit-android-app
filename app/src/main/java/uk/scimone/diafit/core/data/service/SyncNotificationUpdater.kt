@@ -59,6 +59,9 @@ fun syncNotificationTitle(latest: CgmEntity, previous: CgmEntity?): String {
     return "${latest.valueMgdl}$d mg/dL"
 }
 
+/** What the red bottom row says: sensor and pump expiry, null when that part is fine. */
+class ExpiryTexts(val sensor: String?, val pump: String?)
+
 /**
  * Keeps the permanent sync notification (shared by both foreground services) up to date: the title shows the
  * latest glucose and its change, the text the current situation from [GlucoseSituation].
@@ -125,8 +128,8 @@ class SyncNotificationUpdater(
         NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text, warning))
     }
 
-    /** The red "Sensor 20h · Pump 6h" line (only what is about to expire), or null. */
-    private suspend fun expiryLine(now: Long): String? {
+    /** The red expiry texts ("20h (Wed 09:15)") of what is about to expire, or null. */
+    private suspend fun expiryLine(now: Long): ExpiryTexts? {
         val warning = try {
             val status = statusStore.status.value
             val inputs = deviceInputs.load(USER_ID, now)
@@ -136,11 +139,8 @@ class SyncNotificationUpdater(
                 pumpType = inputs.pumpType
             ))
         } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
-        val parts = listOfNotNull(
-            warning.sensorMs?.let { context.getString(R.string.sync_expiry_sensor, shortLeft(it, now)) },
-            warning.pumpMs?.let { context.getString(R.string.sync_expiry_pump, shortLeft(it, now)) }
-        )
-        return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+        val texts = ExpiryTexts(warning.sensorMs?.let { shortLeft(it, now) }, warning.pumpMs?.let { shortLeft(it, now) })
+        return texts.takeIf { it.sensor != null || it.pump != null }
     }
 
     /** "20h · Wed 09:15": time left, then when it expires (weekday only when not today). */
@@ -173,19 +173,27 @@ class SyncNotificationUpdater(
         private const val HOUR = 3_600_000L
         const val CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
 
-        private fun views(context: Context, title: String, text: String, warning: String?, expanded: Boolean) =
+        private fun views(context: Context, title: String, text: String, warning: ExpiryTexts?, expanded: Boolean) =
             RemoteViews(context.packageName, R.layout.notification_sync).apply {
                 setTextViewText(R.id.sync_title, title)
                 setTextViewText(R.id.sync_text, text)
+                setViewVisibility(R.id.sync_warning, if (warning != null) View.VISIBLE else View.GONE)
                 if (warning != null) {
-                    setTextViewText(R.id.sync_warning, warning)
-                    setTextColor(R.id.sync_warning, Color.rgb(0xE5, 0x39, 0x35))
-                    setViewVisibility(R.id.sync_warning, View.VISIBLE)
-                } else setViewVisibility(R.id.sync_warning, View.GONE)
+                    val red = Color.rgb(0xE5, 0x39, 0x35)
+                    fun part(group: Int, icon: Int, text: Int, value: String?) {
+                        setViewVisibility(group, if (value != null) View.VISIBLE else View.GONE)
+                        if (value == null) return
+                        setTextViewText(text, value)
+                        setTextColor(text, red)
+                        setInt(icon, "setColorFilter", red)
+                    }
+                    part(R.id.sync_sensor_group, R.id.sync_sensor_icon, R.id.sync_sensor_text, warning.sensor)
+                    part(R.id.sync_pump_group, R.id.sync_pump_icon, R.id.sync_pump_text, warning.pump)
+                }
                 if (expanded) setInt(R.id.sync_text, "setMaxLines", 6)
             }
 
-        fun build(context: Context, title: String, text: String, warning: String? = null): Notification {
+        fun build(context: Context, title: String, text: String, warning: ExpiryTexts? = null): Notification {
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, Intent(context, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT

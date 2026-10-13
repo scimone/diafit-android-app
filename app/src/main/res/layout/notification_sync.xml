@@ -19,12 +19,61 @@
         android:ellipsize="end"
         android:maxLines="1" />
 
-    <TextView
+    <LinearLayout
         android:id="@+id/sync_warning"
-        style="@android:style/TextAppearance.Material.Notification"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:singleLine="true"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/sync_sensor_group"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="top"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/sync_sensor_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_sensor" />
+
+            <TextView
+                android:id="@+id/sync_sensor_text"
+                style="@android:style/TextAppearance.Material.Notification"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/sync_pump_group"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="top"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/sync_pump_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_insulin_pump" />
+
+            <TextView
+                android:id="@+id/sync_pump_text"
+                style="@android:style/TextAppearance.Material.Notification"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

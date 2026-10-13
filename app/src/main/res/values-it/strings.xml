@@ -1822,6 +1822,4 @@
     <string name="sync_cgm_title">Sincronizzazione CGM</string>
     <string name="sync_cgm_text">Sincronizzazione dei dati CGM in tempo reale</string>
     <string name="sync_last_reading">Ultima lettura %1$d min fa</string>
-    <string name="sync_expiry_sensor">Sensore %1$s</string>
-    <string name="sync_expiry_pump">Pompa %1$s</string>
 </resources>
