@@ -110,6 +110,14 @@
     <string name="expiry_title_hours">%1$s läuft in %2$d Std. ab</string>
     <string name="expiry_title_soon">%1$s läuft in unter 1 Std. ab</string>
     <string name="expiry_text">Geräte · fällig %1$s</string>
+    <string name="sync_battery_days">%1$d Tg.</string>
+    <string name="expiry_title_units">Insulin knapp: noch %1$d E</string>
+    <string name="expiry_text_units">Geräte · Reservoir bald wechseln</string>
+    <string name="devices_warn_title">Warnungen</string>
+    <string name="devices_warn_hint">Wann die Benachrichtigung warnt: zuerst gelb, rot wenn es dringend wird. Stunden vor Ablauf; Insulin in verbleibenden Einheiten.</string>
+    <string name="devices_warn_initial">Gelb</string>
+    <string name="devices_warn_urgent">Rot</string>
+    <string name="unit_insulin_suffix">E</string>
     <string name="expiry_channel_name">Geräteablauf</string>
     <string name="expiry_channel_desc">Sensor, Infusionsstelle, Insulin und Batterie kurz vor dem Ablauf</string>
 

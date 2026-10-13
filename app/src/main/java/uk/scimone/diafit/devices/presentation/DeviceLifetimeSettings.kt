@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,6 +28,8 @@ import org.koin.compose.koinInject
 import uk.scimone.diafit.R
 import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.data.nightscout.DeviceStatusStore
+import uk.scimone.diafit.core.data.nightscout.DeviceWarnStore
+import uk.scimone.diafit.core.domain.model.WarnLevels
 import uk.scimone.diafit.core.domain.model.DeviceKind
 import uk.scimone.diafit.core.domain.model.DeviceLayout
 import uk.scimone.diafit.core.domain.model.deviceLayout
@@ -39,6 +44,8 @@ fun DeviceLifetimeSettings(userId: Int = 1) {
     val store: DeviceLifetimeStore = koinInject()
     val inputsSource: DeviceInputsSource = koinInject()
     val statusStore: DeviceStatusStore = koinInject()
+    val warnStore: DeviceWarnStore = koinInject()
+    val warn by warnStore.thresholds.collectAsState()
     val lifetimes by store.lifetimes.collectAsState()
     val status by statusStore.status.collectAsState()
     var layout by remember { mutableStateOf(DeviceLayout(patch = false, showBattery = false)) }
@@ -80,6 +87,49 @@ fun DeviceLifetimeSettings(userId: Int = 1) {
                 OutlinedTextField(
                     value = hours, onValueChange = { hours = it.filter(Char::isDigit).take(2); save() },
                     singleLine = true, suffix = { Text(stringResource(R.string.unit_hour_suffix)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
+                )
+            }
+        }
+        Text(
+            stringResource(R.string.devices_warn_title), style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            stringResource(R.string.devices_warn_hint),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        val warnKinds = buildList {
+            add(DeviceKind.SENSOR)
+            add(if (layout.patch) DeviceKind.PATCH else DeviceKind.SITE)
+            if (!layout.patch) add(DeviceKind.INSULIN)
+            if (layout.showBattery) add(DeviceKind.BATTERY)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.weight(1f))
+            Text(stringResource(R.string.devices_warn_initial), Modifier.width(88.dp), color = Color(0xFFE09A00), style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.devices_warn_urgent), Modifier.width(88.dp), color = Color(0xFFE53935), style = MaterialTheme.typography.labelMedium)
+        }
+        warnKinds.forEach { kind ->
+            val lv = warn.of(kind)
+            var initial by remember(kind, lv) { mutableStateOf(lv.initial.toString()) }
+            var urgent by remember(kind, lv) { mutableStateOf(lv.urgent.toString()) }
+            val unit = stringResource(if (kind == DeviceKind.INSULIN) R.string.unit_insulin_suffix else R.string.unit_hour_suffix)
+            fun save() {
+                val i = initial.toIntOrNull() ?: return
+                val u = urgent.toIntOrNull() ?: return
+                if (i > 0 && u in 0..i) warnStore.set(kind, WarnLevels(i, u))
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(kind.labelRes), modifier = Modifier.weight(1f))
+                OutlinedTextField(
+                    value = initial, onValueChange = { initial = it.filter(Char::isDigit).take(4); save() },
+                    singleLine = true, suffix = { Text(unit) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
+                )
+                OutlinedTextField(
+                    value = urgent, onValueChange = { urgent = it.filter(Char::isDigit).take(4); save() },
+                    singleLine = true, suffix = { Text(unit) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(88.dp)
                 )
             }

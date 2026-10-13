@@ -5,6 +5,7 @@ import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.DeviceKind
 import uk.scimone.diafit.core.domain.model.STORED_DUE
 import uk.scimone.diafit.core.domain.model.STORED_EXPIRY
+import uk.scimone.diafit.core.domain.model.STORED_LOW_UNITS
 import uk.scimone.diafit.core.domain.model.tidyNotificationText
 import uk.scimone.diafit.core.presentation.formatStamp
 
@@ -17,12 +18,18 @@ fun expiryTitle(context: Context, kind: DeviceKind, leftHours: Int): String {
     else context.getString(R.string.expiry_title_hours, name, leftHours)
 }
 
+fun expiryUnitsTitle(context: Context, units: Int): String = context.getString(R.string.expiry_title_units, units)
+
 fun expiryText(context: Context, expiresAtUtc: Long): String =
     context.getString(R.string.expiry_text, formatStamp(expiresAtUtc, STAMP_SKELETON))
 
 /** Title and text of a stored notification: language-neutral ones are rendered now, older English ones are shown as stored. */
 fun renderNotification(context: Context, title: String, text: String): Pair<String, String> {
     val t = title.split('|')
+    if (t.firstOrNull() == STORED_LOW_UNITS && t.size == 2) {
+        val units = t[1].toIntOrNull()
+        if (units != null) return expiryUnitsTitle(context, units) to context.getString(R.string.expiry_text_units)
+    }
     if (t.firstOrNull() == STORED_EXPIRY && t.size == 3) {
         val kind = DeviceKind.entries.firstOrNull { it.name == t[1] }
         val hours = t[2].toIntOrNull()

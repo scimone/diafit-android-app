@@ -110,6 +110,14 @@
     <string name="expiry_title_hours">%1$s scade tra %2$d h</string>
     <string name="expiry_title_soon">%1$s scade tra meno di 1 h</string>
     <string name="expiry_text">Dispositivi · scadenza %1$s</string>
+    <string name="sync_battery_days">%1$d g</string>
+    <string name="expiry_title_units">Insulina bassa: restano %1$d U</string>
+    <string name="expiry_text_units">Dispositivi · cambia presto il serbatoio</string>
+    <string name="devices_warn_title">Avvisi</string>
+    <string name="devices_warn_hint">Quando la notifica avvisa: prima giallo, rosso quando diventa urgente. Ore prima della scadenza; insulina in unità rimaste.</string>
+    <string name="devices_warn_initial">Giallo</string>
+    <string name="devices_warn_urgent">Rosso</string>
+    <string name="unit_insulin_suffix">U</string>
     <string name="expiry_channel_name">Scadenza dei dispositivi</string>
     <string name="expiry_channel_desc">Sensore, sito di infusione, insulina e batteria in scadenza</string>
 

@@ -82,19 +82,39 @@ fun deviceAges(
     return ages.filter { it.kind != DeviceKind.BATTERY || deviceLayout(events, batteryReported, pumpType).showBattery }
 }
 
-/** Time left on the sensor and on the pump parts (site / insulin / patch / battery, the soonest), shown while below the limit. */
-data class ExpiryWarning(val sensorMs: Long?, val pumpMs: Long?) {
-    val any get() = sensorMs != null || pumpMs != null
+/** Warning levels for one consumable: [initial] (yellow) and [urgent] (red). Hours before expiry, or units left for insulin. */
+data class WarnLevels(val initial: Int, val urgent: Int)
+
+/**
+ * User-set warning thresholds. [DeviceKind.PATCH] shares the site's. Defaults: sensor 24 h / 1 h, site and patch
+ * 10 h / 1 h, insulin 20 U / 5 U left, battery 72 h / 24 h before its lifetime ends.
+ */
+class WarnThresholds(private val levels: Map<DeviceKind, WarnLevels> = emptyMap()) {
+    fun of(kind: DeviceKind): WarnLevels = levels[if (kind == DeviceKind.PATCH) DeviceKind.SITE else kind] ?: defaults.getValue(if (kind == DeviceKind.PATCH) DeviceKind.SITE else kind)
+
+    companion object {
+        val defaults = mapOf(
+            DeviceKind.SENSOR to WarnLevels(24, 1), DeviceKind.SITE to WarnLevels(10, 1),
+            DeviceKind.INSULIN to WarnLevels(20, 5), DeviceKind.BATTERY to WarnLevels(72, 24)
+        )
+    }
 }
 
-const val SENSOR_WARNING_HOURS = 24
-const val PUMP_WARNING_HOURS = 10
+enum class WarnLevel { INITIAL, URGENT }
 
-fun expiryWarning(ages: List<DeviceAge>): ExpiryWarning {
-    fun soonest(pred: (DeviceKind) -> Boolean, limitHours: Int) = ages.filter { pred(it.kind) }
-        .mapNotNull { it.remainingMs }.minOrNull()?.takeIf { it < limitHours * 3_600_000L }
-    return ExpiryWarning(
-        soonest({ it == DeviceKind.SENSOR }, SENSOR_WARNING_HOURS),
-        soonest({ it != DeviceKind.SENSOR }, PUMP_WARNING_HOURS)
-    )
+/** One thing about to run out, for the bottom row of the sync notification. */
+data class WarnItem(val kind: DeviceKind, val level: WarnLevel, val remainingMs: Long?, val units: Double? = null, val ageMs: Long? = null)
+
+/**
+ * What the sync notification warns about: sensor, site (or patch pump), insulin (units left when [reservoirUnits]
+ * is known, else by time) and battery, each once it passes its initial threshold; urgent past the second one.
+ */
+fun warnItems(ages: List<DeviceAge>, reservoirUnits: Double?, thresholds: WarnThresholds = WarnThresholds()): List<WarnItem> = ages.mapNotNull { age ->
+    val lv = thresholds.of(age.kind)
+    if (age.kind == DeviceKind.INSULIN && reservoirUnits != null) {
+        return@mapNotNull if (reservoirUnits <= lv.initial) WarnItem(age.kind, if (reservoirUnits <= lv.urgent) WarnLevel.URGENT else WarnLevel.INITIAL, age.remainingMs, units = reservoirUnits) else null
+    }
+    val left = age.remainingMs ?: return@mapNotNull null
+    if (left >= lv.initial * 3_600_000L) null
+    else WarnItem(age.kind, if (left < lv.urgent * 3_600_000L) WarnLevel.URGENT else WarnLevel.INITIAL, left, ageMs = age.ageMs)
 }

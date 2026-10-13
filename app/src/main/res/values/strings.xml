@@ -113,6 +113,14 @@
     <string name="expiry_title_hours">%1$s expires in %2$d h</string>
     <string name="expiry_title_soon">%1$s expires in under 1 h</string>
     <string name="expiry_text">Devices · due %1$s</string>
+    <string name="sync_battery_days">%1$d d</string>
+    <string name="expiry_title_units">Insulin low: %1$d U left</string>
+    <string name="expiry_text_units">Devices · change the reservoir soon</string>
+    <string name="devices_warn_title">Warnings</string>
+    <string name="devices_warn_hint">When the notification shows a warning: yellow first, red when it becomes urgent. Hours before expiry; insulin in units left.</string>
+    <string name="devices_warn_initial">Yellow</string>
+    <string name="devices_warn_urgent">Red</string>
+    <string name="unit_insulin_suffix">U</string>
     <string name="expiry_channel_name">Device expiry</string>
     <string name="expiry_channel_desc">Sensor, infusion site, insulin and battery nearing their expiry</string>
 

@@ -38,9 +38,11 @@ import android.view.View
 import android.widget.RemoteViews
 import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.data.nightscout.DeviceStatusStore
-import uk.scimone.diafit.core.domain.model.ExpiryWarning
+import uk.scimone.diafit.core.domain.model.DeviceKind
+import uk.scimone.diafit.core.domain.model.WarnItem
+import uk.scimone.diafit.core.domain.model.WarnLevel
+import uk.scimone.diafit.core.domain.model.warnItems
 import uk.scimone.diafit.core.domain.model.deviceAges
-import uk.scimone.diafit.core.domain.model.expiryWarning
 import uk.scimone.diafit.devices.presentation.DeviceInputsSource
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -59,8 +61,11 @@ fun syncNotificationTitle(latest: CgmEntity, previous: CgmEntity?): String {
     return "${latest.valueMgdl}$d mg/dL"
 }
 
-/** What the red bottom row says: sensor and pump expiry, null when that part is fine. */
-class ExpiryTexts(val sensor: String?, val pump: String?)
+/** One entry of the bottom row: what to print and whether it is the initial (yellow) or urgent (red) warning. */
+class ExpiryText(val text: String, val urgent: Boolean)
+
+/** The bottom-row entries per slot; null = that consumable is fine. */
+class ExpiryTexts(val sensor: ExpiryText?, val pump: ExpiryText?, val insulin: ExpiryText?, val battery: ExpiryText?)
 
 /**
  * Keeps the permanent sync notification (shared by both foreground services) up to date: the title shows the
@@ -75,7 +80,8 @@ class SyncNotificationUpdater(
     private val targetRange: GetTargetRangeUseCase,
     private val deviceInputs: DeviceInputsSource,
     private val lifetimeStore: DeviceLifetimeStore,
-    private val statusStore: DeviceStatusStore
+    private val statusStore: DeviceStatusStore,
+    private val warnStore: uk.scimone.diafit.core.data.nightscout.DeviceWarnStore
 ) {
 
     private var scope: CoroutineScope? = null
@@ -128,19 +134,31 @@ class SyncNotificationUpdater(
         NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text, warning))
     }
 
-    /** The red expiry texts ("20h (Wed 09:15)") of what is about to expire, or null. */
+    /** The warning texts of what is about to run out, or null when nothing is. */
     private suspend fun expiryLine(now: Long): ExpiryTexts? {
-        val warning = try {
+        val items = try {
             val status = statusStore.status.value
             val inputs = deviceInputs.load(USER_ID, now)
-            expiryWarning(deviceAges(
-                inputs.events, now, lifetimeStore.lifetimes.value,
-                batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true,
-                pumpType = inputs.pumpType
-            ))
+            warnItems(
+                deviceAges(
+                    inputs.events, now, lifetimeStore.lifetimes.value,
+                    batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true,
+                    pumpType = inputs.pumpType
+                ),
+                status?.reservoirUnits, warnStore.thresholds.value
+            )
         } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
-        val texts = ExpiryTexts(warning.sensorMs?.let { shortLeft(it, now) }, warning.pumpMs?.let { shortLeft(it, now) })
-        return texts.takeIf { it.sensor != null || it.pump != null }
+        fun text(item: WarnItem): ExpiryText {
+            val body = when (item.kind) {
+                DeviceKind.INSULIN -> item.units?.let { "${it.toInt()} U" } ?: shortLeft(item.remainingMs ?: 0, now)
+                DeviceKind.BATTERY -> context.getString(R.string.sync_battery_days, ((item.ageMs ?: 0) / (24 * HOUR)).toInt())
+                else -> shortLeft(item.remainingMs ?: 0, now)
+            }
+            return ExpiryText(body, item.level == WarnLevel.URGENT)
+        }
+        fun of(vararg kinds: DeviceKind) = items.firstOrNull { it.kind in kinds }?.let(::text)
+        val texts = ExpiryTexts(of(DeviceKind.SENSOR), of(DeviceKind.SITE, DeviceKind.PATCH), of(DeviceKind.INSULIN), of(DeviceKind.BATTERY))
+        return texts.takeIf { it.sensor != null || it.pump != null || it.insulin != null || it.battery != null }
     }
 
     /** "20h · Wed 09:15": time left, then when it expires (weekday only when not today). */
@@ -177,18 +195,23 @@ class SyncNotificationUpdater(
             RemoteViews(context.packageName, R.layout.notification_sync).apply {
                 setTextViewText(R.id.sync_title, title)
                 setTextViewText(R.id.sync_text, text)
-                setViewVisibility(R.id.sync_warning, if (warning != null) View.VISIBLE else View.GONE)
+                val rowOne = warning != null && (warning.sensor != null || warning.pump != null)
+                val rowTwo = warning != null && (warning.insulin != null || warning.battery != null)
+                setViewVisibility(R.id.sync_warning, if (rowOne) View.VISIBLE else View.GONE)
+                setViewVisibility(R.id.sync_warning2, if (rowTwo) View.VISIBLE else View.GONE)
                 if (warning != null) {
-                    val red = Color.rgb(0xE5, 0x39, 0x35)
-                    fun part(group: Int, icon: Int, text: Int, value: String?) {
+                    fun part(group: Int, icon: Int, text: Int, value: ExpiryText?) {
                         setViewVisibility(group, if (value != null) View.VISIBLE else View.GONE)
                         if (value == null) return
-                        setTextViewText(text, value)
-                        setTextColor(text, red)
-                        setInt(icon, "setColorFilter", red)
+                        val color = if (value.urgent) Color.rgb(0xE5, 0x39, 0x35) else Color.rgb(0xE0, 0x9A, 0x00)
+                        setTextViewText(text, value.text)
+                        setTextColor(text, color)
+                        setInt(icon, "setColorFilter", color)
                     }
                     part(R.id.sync_sensor_group, R.id.sync_sensor_icon, R.id.sync_sensor_text, warning.sensor)
                     part(R.id.sync_pump_group, R.id.sync_pump_icon, R.id.sync_pump_text, warning.pump)
+                    part(R.id.sync_insulin_group, R.id.sync_insulin_icon, R.id.sync_insulin_text, warning.insulin)
+                    part(R.id.sync_battery_group, R.id.sync_battery_icon, R.id.sync_battery_text, warning.battery)
                 }
                 if (expanded) setInt(R.id.sync_text, "setMaxLines", 6)
             }

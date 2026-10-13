@@ -74,9 +74,10 @@ val syncModule = module {
     single { uk.scimone.diafit.core.data.nightscout.NightscoutSyncScheduler(androidContext()) }
     single { uk.scimone.diafit.core.data.nightscout.DeviceStatusStore(androidContext()) }
     single { uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore(androidContext()) }
+    single { uk.scimone.diafit.core.data.nightscout.DeviceWarnStore(androidContext()) }
 
     single { CgmServiceManager(androidContext()) }
-    single { uk.scimone.diafit.core.data.service.SyncNotificationUpdater(androidContext(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    single { uk.scimone.diafit.core.data.service.SyncNotificationUpdater(androidContext(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 
     factory {
         CgmRemotePoller(get()) // no qualifier, gets unqualified SyncCgmDataUseCase

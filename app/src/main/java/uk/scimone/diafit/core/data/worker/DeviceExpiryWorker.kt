@@ -20,6 +20,7 @@ import uk.scimone.diafit.R
 import uk.scimone.diafit.core.domain.model.expiryAlerts
 import uk.scimone.diafit.notifications.presentation.expiryText
 import uk.scimone.diafit.notifications.presentation.expiryTitle
+import uk.scimone.diafit.notifications.presentation.expiryUnitsTitle
 import uk.scimone.diafit.devices.presentation.DeviceInputsSource
 import uk.scimone.diafit.notifications.data.AppNotifier
 import uk.scimone.diafit.notifications.data.NotificationChannelSpec
@@ -34,6 +35,7 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
     private val inputsSource: DeviceInputsSource by inject()
     private val lifetimeStore: DeviceLifetimeStore by inject()
     private val statusStore: DeviceStatusStore by inject()
+    private val warnStore: uk.scimone.diafit.core.data.nightscout.DeviceWarnStore by inject()
     private val dao: NotificationDao by inject()
     private val notifier: AppNotifier by inject()
 
@@ -48,11 +50,11 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
                 pumpType = inputs.pumpType
             )
             val context = applicationContext
-            for (alert in expiryAlerts(ages)) {
+            for (alert in expiryAlerts(ages, warnStore.thresholds.value, status?.reservoirUnits)) {
                 notifier.raise(
                     channel(context), alert.key, alert.storedTitle, alert.storedText, DEVICES_LINK, now,
-                    pushTitle = expiryTitle(context, alert.kind, alert.leftHours),
-                    pushText = expiryText(context, alert.expiresAtUtc)
+                    pushTitle = if (alert.units != null) expiryUnitsTitle(context, alert.units) else expiryTitle(context, alert.kind, alert.leftHours),
+                    pushText = if (alert.units != null) context.getString(R.string.expiry_text_units) else expiryText(context, alert.expiresAtUtc)
                 )
             }
             dao.deleteOlderThan(now - 30L * 24 * 3_600_000)
