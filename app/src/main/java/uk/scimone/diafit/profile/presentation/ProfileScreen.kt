@@ -1,5 +1,8 @@
 package uk.scimone.diafit.profile.presentation
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -69,8 +72,8 @@ fun ProfileScreen(userId: Int, onBack: () -> Unit, viewModel: ProfileViewModel =
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Treatment plan") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                title = { Text(stringResource(R.string.menu_treatment_plan)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -108,31 +111,31 @@ private fun ProfileContent(current: ProfileSwitch) {
         ) {
             item {
                 ScheduleCard(
-                    title = "Basal",
-                    subtitle = "Background insulin, ${fmt(shown.totalDailyBasal, 2)} U per day",
+                    title = stringResource(R.string.panel_basal),
+                    subtitle = stringResource(R.string.profile_basal_sub, fmt(shown.totalDailyBasal, 2)),
                     color = Basal
                 ) { StepChart(shown.basal, Basal, nowSecond, { fmt(it, 2) }, "U/h", scrubState = scrub) }
             }
             item {
                 ScheduleCard(
-                    title = "Insulin sensitivity",
-                    subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}",
+                    title = stringResource(R.string.profile_isf),
+                    subtitle = stringResource(if (mmol) R.string.profile_isf_sub_mmol else R.string.profile_isf_sub_mgdl),
                     color = IsfColor
-                ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U", scrubState = scrub) }
+                ) { StepChart(shown.isf, IsfColor, nowSecond, { fmt(it, if (mmol) 1 else 0) }, stringResource(if (mmol) R.string.profile_unit_isf_mmol else R.string.profile_unit_isf_mgdl), scrubState = scrub) }
             }
             item {
                 ScheduleCard(
-                    title = "Carb ratio",
-                    subtitle = "1 U covers this many grams of carbs",
+                    title = stringResource(R.string.profile_carb_ratio),
+                    subtitle = stringResource(R.string.profile_carb_ratio_sub),
                     color = Carbs
-                ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }, "g per U", scrubState = scrub) }
+                ) { StepChart(shown.carbRatio, Carbs, nowSecond, { fmt(it, 1) }, stringResource(R.string.profile_unit_carbs), scrubState = scrub) }
             }
             item { TargetCard(shown, nowSecond) }
 
             shown.diaHours?.let { dia ->
                 item {
                     Text(
-                        "Insulin action time (DIA): ${fmt(dia, 1)} h",
+                        stringResource(R.string.profile_dia, fmt(dia, 1)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -142,7 +145,7 @@ private fun ProfileContent(current: ProfileSwitch) {
 
             item {
                 Text(
-                    "Read-only. This is imported from AAPS whenever you do a profile switch there; change it in AAPS.",
+                    stringResource(R.string.profile_readonly),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
@@ -173,12 +176,12 @@ private fun NowRow(profile: AapsProfile, nowSecond: Int) {
         if (high != low) "${fmt(low, 0)}–${fmt(high, 0)}" else fmt(low, 0)
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Right now", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.profile_right_now), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NowTile("Basal", profile.basal.valueAt(nowSecond)?.let { fmt(it, 2) }, "U/h", Basal, Modifier.weight(1f))
-            NowTile("Sensitivity", profile.isf.valueAt(nowSecond)?.let { fmt(it, if (mmol) 1 else 0) }, if (mmol) "mmol/L per U" else "mg/dL per U", IsfColor, Modifier.weight(1f))
-            NowTile("Carb ratio", profile.carbRatio.valueAt(nowSecond)?.let { fmt(it, 1) }, "g per U", Carbs, Modifier.weight(1f))
-            NowTile("Target", target, if (mmol) "mmol/L" else "mg/dL", TargetColor, Modifier.weight(1f))
+            NowTile(stringResource(R.string.panel_basal), profile.basal.valueAt(nowSecond)?.let { fmt(it, 2) }, "U/h", Basal, Modifier.weight(1f))
+            NowTile(stringResource(R.string.profile_tile_sens), profile.isf.valueAt(nowSecond)?.let { fmt(it, if (mmol) 1 else 0) }, stringResource(if (mmol) R.string.profile_unit_isf_mmol else R.string.profile_unit_isf_mgdl), IsfColor, Modifier.weight(1f))
+            NowTile(stringResource(R.string.profile_carb_ratio), profile.carbRatio.valueAt(nowSecond)?.let { fmt(it, 1) }, stringResource(R.string.profile_unit_carbs), Carbs, Modifier.weight(1f))
+            NowTile(stringResource(R.string.profile_tile_target), target, if (mmol) "mmol/L" else "mg/dL", TargetColor, Modifier.weight(1f))
         }
     }
 }
@@ -193,7 +196,7 @@ private fun NowTile(label: String, value: String?, unit: String, color: Color, m
         Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             Text(value ?: "–", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
-            Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }
@@ -219,7 +222,7 @@ private fun TargetCard(profile: AapsProfile, nowSecond: Int) {
     val lows = profile.targetLow.sortedBy { it.startSeconds }
     if (lows.isEmpty()) return
     val unit = if (profile.isMmol) "mmol/L" else "mg/dL"
-    ScheduleCard("Glucose target", "AAPS aims for this $unit", TargetColor) {
+    ScheduleCard(stringResource(R.string.profile_target), stringResource(R.string.profile_target_sub, unit), TargetColor) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             lows.forEachIndexed { i, step ->
                 val end = lows.getOrNull(i + 1)?.startSeconds ?: AapsProfile.SECONDS_PER_DAY
@@ -233,7 +236,7 @@ private fun TargetCard(profile: AapsProfile, nowSecond: Int) {
                         color = if (isNow) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = if (isNow) FontWeight.SemiBold else FontWeight.Normal
                     )
-                    if (isNow) Text("now  ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (isNow) Text(stringResource(R.string.profile_now) + "  ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         if (high != step.value) "${fmt(step.value, 0)}–${fmt(high, 0)}" else fmt(step.value, 0),
                         style = MaterialTheme.typography.bodyMedium,
@@ -251,10 +254,10 @@ private fun EmptyProfile() {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Filled.Person, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.size(12.dp))
-        Text("No profile received yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.profile_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.size(4.dp))
         Text(
-            "Diafit gets your profile from AAPS when you do a profile switch there. Do one (for example the same profile at 100%) and it appears here.",
+            stringResource(R.string.profile_empty_text),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

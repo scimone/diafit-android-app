@@ -1,5 +1,9 @@
 package uk.scimone.diafit.profile.presentation
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,11 +87,11 @@ fun ProfileSwitchDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile switch") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                title = { Text(stringResource(R.string.logs_pump_profile_switch)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } },
                 actions = {
                     if (state.current != null || state.target != null) {
-                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Delete") }
+                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, stringResource(R.string.common_delete)) }
                     }
                 }
             )
@@ -99,7 +103,7 @@ fun ProfileSwitchDetailScreen(
                 !state.loaded -> Unit
                 current != null -> DiffContent(current, state.previous, state.target)
                 state.target != null -> TargetOnlyContent(state.target!!, state.previous)
-                else -> Text("This event is no longer available.", Modifier.padding(24.dp))
+                else -> Text(stringResource(R.string.profile_gone), Modifier.padding(24.dp))
             }
         }
     }
@@ -107,14 +111,14 @@ fun ProfileSwitchDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this profile switch?") },
-            text = { Text("Imported from AAPS. Deleting only removes it from Diafit.") },
+            title = { Text(stringResource(R.string.profile_delete_title)) },
+            text = { Text(stringResource(R.string.profile_delete_text)) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; viewModel.delete(onDeleted) }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
@@ -130,7 +134,7 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
     val beforeName = previous?.baseName ?: current.baseName
     val nowSecond = remember { LocalTime.now().toSecondOfDay() }
     val scrub = rememberScrubState()
-    val day = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val day = remember(Locale.getDefault()) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
 
     // A switch is always temporary (max 168 h). Only the stretch it was in force is compared; a day or longer shows one day.
     val lengthSeconds = (if (current.durationMinutes > 0) current.durationMinutes * 60 else AapsProfile.SECONDS_PER_DAY)
@@ -152,17 +156,16 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
                     Text(current.baseName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                         if (current.percentage != 100) TypeChip("${current.percentage}%")
-                        if (current.timeShiftHours != 0) TypeChip("Shift ${if (current.timeShiftHours > 0) "+" else "−"}${abs(current.timeShiftHours)} h")
-                        if (target != null) TypeChip("Target ${target.valueText}")
-                        if (current.percentage == 100 && current.timeShiftHours == 0 && target == null) TypeChip("Profile only")
+                        if (current.timeShiftHours != 0) TypeChip(stringResource(R.string.profile_chip_shift, "${if (current.timeShiftHours > 0) "+" else "−"}${abs(current.timeShiftHours)}"))
+                        if (target != null) TypeChip(stringResource(R.string.profile_chip_target, target.valueText))
+                        if (current.percentage == 100 && current.timeShiftHours == 0 && target == null) TypeChip(stringResource(R.string.profile_chip_profile_only))
                     }
                     Text(
-                        if (current.durationMinutes > 0) "In force for ${formatDurationMinutes(current.durationMinutes)}" else "No end time recorded",
+                        if (current.durationMinutes > 0) stringResource(R.string.profile_in_force, formatDurationMinutes(current.durationMinutes)) else stringResource(R.string.profile_no_end),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Compared with $beforeName at $beforePercentage%, which was running before" +
-                            if (window.isFullDay && current.durationMinutes > 24 * 60) ". Shown as one day." else ".",
+                        if (window.isFullDay && current.durationMinutes > 24 * 60) stringResource(R.string.profile_compared_day, beforeName, beforePercentage) else stringResource(R.string.profile_compared, beforeName, beforePercentage),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -171,7 +174,7 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
         }
 
         if (after == null || before == null) {
-            item { Text("This switch carried no profile values.", style = MaterialTheme.typography.bodyMedium) }
+            item { Text(stringResource(R.string.profile_no_values), style = MaterialTheme.typography.bodyMedium) }
             return@LazyColumn
         }
 
@@ -190,9 +193,9 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
         if (basalChanges.isNotEmpty()) {
             item {
                 ScheduleDiffCard(
-                    title = "Basal", color = Basal, unit = "U/h", decimals = 2,
+                    title = stringResource(R.string.panel_basal), color = Basal, unit = "U/h", decimals = 2,
                     after = after.basal, before = before.basal, changes = basalChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                    subtitle = "Rate in force; the shaded part is when this switch applied"
+                    subtitle = stringResource(R.string.profile_basal_diff_sub)
                 )
             }
         }
@@ -200,18 +203,18 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
             item {
                 val mmol = after.isMmol
                 ScheduleDiffCard(
-                    title = "Insulin sensitivity", color = IsfColor, unit = if (mmol) "mmol/L per U" else "mg/dL per U", decimals = if (mmol) 1 else 0,
+                    title = stringResource(R.string.profile_isf), color = IsfColor, unit = stringResource(if (mmol) R.string.profile_unit_isf_mmol else R.string.profile_unit_isf_mgdl), decimals = if (mmol) 1 else 0,
                     after = after.isf, before = before.isf, changes = isfChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                    subtitle = "1 U lowers glucose by this many ${if (mmol) "mmol/L" else "mg/dL"}"
+                    subtitle = stringResource(if (mmol) R.string.profile_isf_sub_mmol else R.string.profile_isf_sub_mgdl)
                 )
             }
         }
         if (carbChanges.isNotEmpty()) {
             item {
                 ScheduleDiffCard(
-                    title = "Carb ratio", color = Carbs, unit = "g per U", decimals = 1,
+                    title = stringResource(R.string.profile_carb_ratio), color = Carbs, unit = stringResource(R.string.profile_unit_carbs), decimals = 1,
                     after = after.carbRatio, before = before.carbRatio, changes = carbChanges, nowSecond = nowSecond, scrub = scrub, highlight = highlight,
-                    subtitle = "1 U covers this many grams of carbs"
+                    subtitle = stringResource(R.string.profile_carb_ratio_sub)
                 )
             }
         }
@@ -222,20 +225,20 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
 /** A temporary target on its own: the same page, with only the target card (and what AAPS was running at the time for the "before" value). */
 @Composable
 private fun TargetOnlyContent(target: TemporaryTarget, context: ProfileSwitch?) {
-    val day = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val day = remember(Locale.getDefault()) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
     val before = context?.effectiveProfileAt(target.startUtc)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Card(Device.copy(alpha = 0.12f)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(day.format(Date(target.startUtc)), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(context?.baseName ?: "Profile switch", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Row(Modifier.padding(vertical = 4.dp)) { TypeChip("Target ${target.valueText}") }
+                    Text(context?.baseName ?: stringResource(R.string.logs_pump_profile_switch), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Row(Modifier.padding(vertical = 4.dp)) { TypeChip(stringResource(R.string.profile_chip_target, target.valueText)) }
                     Text(
-                        if (target.durationMinutes > 0) "In force for ${formatDurationMinutes(target.durationMinutes)}" else "No end time recorded",
+                        if (target.durationMinutes > 0) stringResource(R.string.profile_in_force, formatDurationMinutes(target.durationMinutes)) else stringResource(R.string.profile_no_end),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text("Only the glucose target changed; percentage and schedules stay as they were.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.profile_only_target), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -254,18 +257,18 @@ private fun TemporaryTargetCard(target: TemporaryTarget, before: AapsProfile?, s
     val delta = profileLow?.let { target.low - it }
     val fmtClock = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     val end = start.plusSeconds((if (target.durationMinutes > 0) target.durationMinutes * 60 else lengthSeconds).toLong())
-    ScheduleCard("Temporary target", "Replaces the profile's glucose target while it runs", TargetColor) {
+    ScheduleCard(stringResource(R.string.logs_pump_temp_target), stringResource(R.string.profile_temp_target_sub), TargetColor) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Surface(Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
                 Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Profile target", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.profile_profile_target), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(profileText ?: "–", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Surface(Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = TargetColor.copy(alpha = 0.16f)) {
                 Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Temporary", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.profile_temporary), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(target.valueText.substringBefore(' '), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TargetColor)
                 }
             }
@@ -296,12 +299,12 @@ private fun SummaryCard(
     current: ProfileSwitch, before: AapsProfile, after: AapsProfile, window: DayWindow, lengthSeconds: Int, showInsulin: Boolean
 ) {
     val rows = buildList {
-        if (beforeName != current.baseName) add("Profile" to "$beforeName → ${current.baseName}")
-        if (beforePercentage != current.percentage) add("Percentage" to "$beforePercentage% → ${current.percentage}%")
-        if (beforeShift != current.timeShiftHours) add("Time shift" to "${signedHours(beforeShift)} → ${signedHours(current.timeShiftHours)}")
+        if (beforeName != current.baseName) add(stringResource(R.string.profile_sum_profile) to "$beforeName → ${current.baseName}")
+        if (beforePercentage != current.percentage) add(stringResource(R.string.profile_sum_percentage) to "$beforePercentage% → ${current.percentage}%")
+        if (beforeShift != current.timeShiftHours) add(stringResource(R.string.profile_sum_time_shift) to "${signedHours(beforeShift)} → ${signedHours(current.timeShiftHours)}")
         val dBefore = before.diaHours
         val dAfter = after.diaHours
-        if (dBefore != null && dAfter != null && abs(dBefore - dAfter) > 1e-6) add("Insulin action time" to "${fmt(dBefore, 1)} h → ${fmt(dAfter, 1)} h")
+        if (dBefore != null && dAfter != null && abs(dBefore - dAfter) > 1e-6) add(stringResource(R.string.profile_sum_dia) to "${fmt(dBefore, 1)} h → ${fmt(dAfter, 1)} h")
     }
     val total = lengthSeconds.coerceAtMost(7 * 24 * 3600)
     val insulinBefore = basalInsulin(before.basal, window.startSeconds, total)
@@ -309,9 +312,9 @@ private fun SummaryCard(
     val delta = insulinAfter - insulinBefore
     Card {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("What changed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.profile_what_changed), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             if (rows.isEmpty()) {
-                Text("Same profile settings as before.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.profile_same), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             rows.forEach { (label, change) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -320,15 +323,15 @@ private fun SummaryCard(
                 }
             }
             if (showInsulin) Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Basal insulin over ${formatDurationMinutes(total / 60)}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.profile_basal_over, formatDurationMinutes(total / 60)), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    if (abs(delta) < 0.005) "${fmt(insulinAfter, 2)} U, unchanged"
+                    if (abs(delta) < 0.005) stringResource(R.string.profile_unchanged, fmt(insulinAfter, 2))
                     else "${fmt(insulinBefore, 2)} → ${fmt(insulinAfter, 2)} U (${if (delta > 0) "+" else "−"}${fmt(abs(delta), 2)})",
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Basal
                 )
             }
             if (showInsulin) Text(
-                "Compares what AAPS actually runs, with percentage and time shift applied, only for the time the switch was in force. Temporary basals and boluses are not included.",
+                stringResource(R.string.profile_basal_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -336,7 +339,7 @@ private fun SummaryCard(
     }
 }
 
-private fun signedHours(h: Int) = if (h == 0) "none" else "${if (h > 0) "+" else "−"}${abs(h)} h"
+private fun signedHours(h: Int) = if (h == 0) AppStrings.get(R.string.profile_shift_none) else "${if (h > 0) "+" else "−"}${abs(h)} h"
 
 @Composable
 private fun ScheduleDiffCard(
@@ -354,7 +357,7 @@ private fun ScheduleDiffCard(
 ) {
     val unchanged = before != null && changes.isEmpty()
     var expanded by remember { mutableStateOf(false) }
-    ScheduleCard(title + if (unchanged) " · no change" else "", subtitle, color) {
+    ScheduleCard(if (unchanged) stringResource(R.string.profile_card_no_change, title) else title, subtitle, color) {
         StepChart(after, color, nowSecond, { fmt(it, decimals) }, unit, previous = before.takeIf { !unchanged }, scrubState = scrub, highlight = highlight)
         if (changes.isNotEmpty()) {
             Row(
@@ -362,10 +365,10 @@ private fun ScheduleDiffCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "${changes.size} changed ${if (changes.size == 1) "stretch" else "stretches"} · dashed line = before",
+                    pluralStringResource(R.plurals.profile_changed_stretches, changes.size, changes.size),
                     Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (expanded) "Hide" else "Show", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, stringResource(if (expanded) R.string.common_hide else R.string.hist_show), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AnimatedVisibility(expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -383,7 +386,7 @@ private fun TargetDiffCard(before: AapsProfile, after: AapsProfile, window: DayW
     val high = clipChanges(diffSchedules(before.targetHigh, after.targetHigh), window)
     val unit = if (after.isMmol) "mmol/L" else "mg/dL"
     val unchanged = low.isEmpty() && high.isEmpty()
-    ScheduleCard("Glucose target" + if (unchanged) " · no change" else "", "AAPS aims for this $unit", TargetColor) {
+    ScheduleCard(if (unchanged) stringResource(R.string.profile_card_no_change, stringResource(R.string.profile_target)) else stringResource(R.string.profile_target), stringResource(R.string.profile_target_sub, unit), TargetColor) {
         if (unchanged) {
             val sorted = after.targetLow.sortedBy { it.startSeconds }
             sorted.forEachIndexed { i, s ->
@@ -396,8 +399,8 @@ private fun TargetDiffCard(before: AapsProfile, after: AapsProfile, window: DayW
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 val same = low == high
-                low.forEach { c -> ChangeRow("${clock(c.startSeconds)}–${clock(c.endSeconds)}", c.before, c.after, 0, unit, TargetColor, if (same) null else "Low") }
-                if (!same) high.forEach { c -> ChangeRow("${clock(c.startSeconds)}–${clock(c.endSeconds)}", c.before, c.after, 0, unit, TargetColor, "High") }
+                low.forEach { c -> ChangeRow("${clock(c.startSeconds)}–${clock(c.endSeconds)}", c.before, c.after, 0, unit, TargetColor, if (same) null else stringResource(R.string.logs_ep_low)) }
+                if (!same) high.forEach { c -> ChangeRow("${clock(c.startSeconds)}–${clock(c.endSeconds)}", c.before, c.after, 0, unit, TargetColor, stringResource(R.string.logs_ep_high)) }
             }
         }
     }

@@ -851,4 +851,56 @@
         <item quantity="other">Tagesdurchschnitt der letzten %1$d Jahre</item>
     </plurals>
     <string name="stats_coverage_short">Abdeckung</string>
+
+    <!-- Profile / treatment plan -->
+    <string name="profile_basal_sub">Hintergrundinsulin, %1$s U pro Tag</string>
+    <string name="profile_isf">Insulinempfindlichkeit</string>
+    <string name="profile_isf_sub_mmol">1 U senkt die Glukose um so viele mmol/L</string>
+    <string name="profile_isf_sub_mgdl">1 U senkt die Glukose um so viele mg/dL</string>
+    <string name="profile_carb_ratio">KH-Faktor</string>
+    <string name="profile_carb_ratio_sub">1 U deckt so viele Gramm Kohlenhydrate ab</string>
+    <string name="profile_unit_isf_mmol">mmol/L pro U</string>
+    <string name="profile_unit_isf_mgdl">mg/dL pro U</string>
+    <string name="profile_unit_carbs">g pro U</string>
+    <string name="profile_dia">Insulinwirkdauer (DIA): %1$s Std.</string>
+    <string name="profile_readonly">Nur lesbar. Das wird aus AAPS importiert, sobald du dort einen Profilwechsel machst; ändere es in AAPS.</string>
+    <string name="profile_right_now">Gerade jetzt</string>
+    <string name="profile_tile_sens">Korrektur</string>
+    <string name="profile_tile_target">Zielwert</string>
+    <string name="profile_target">Glukose-Zielwert</string>
+    <string name="profile_target_sub">AAPS strebt diesen Wert an (%1$s)</string>
+    <string name="profile_now">jetzt</string>
+    <string name="profile_empty_title">Noch kein Profil empfangen</string>
+    <string name="profile_empty_text">Diafit erhält dein Profil von AAPS, wenn du dort einen Profilwechsel machst. Mache einen (zum Beispiel dasselbe Profil mit 100 %) und es erscheint hier.</string>
+    <string name="profile_gone">Dieses Ereignis ist nicht mehr verfügbar.</string>
+    <string name="profile_delete_title">Diesen Profilwechsel löschen?</string>
+    <string name="profile_delete_text">Aus AAPS importiert. Beim Löschen wird er nur aus Diafit entfernt.</string>
+    <string name="profile_chip_shift">Versatz %1$s Std.</string>
+    <string name="profile_chip_target">Ziel %1$s</string>
+    <string name="profile_chip_profile_only">Nur Profil</string>
+    <string name="profile_in_force">Gültig für %1$s</string>
+    <string name="profile_no_end">Kein Ende erfasst</string>
+    <string name="profile_compared">Verglichen mit %1$s bei %2$d %%, das vorher lief.</string>
+    <string name="profile_compared_day">Verglichen mit %1$s bei %2$d %%, das vorher lief. Als ein Tag dargestellt.</string>
+    <string name="profile_no_values">Dieser Wechsel enthielt keine Profilwerte.</string>
+    <string name="profile_basal_diff_sub">Geltende Rate; der schattierte Bereich zeigt, wann dieser Wechsel galt</string>
+    <string name="profile_only_target">Nur der Glukose-Zielwert hat sich geändert; Prozentsatz und Zeitpläne bleiben wie sie waren.</string>
+    <string name="profile_temp_target_sub">Ersetzt den Glukose-Zielwert des Profils, solange er läuft</string>
+    <string name="profile_profile_target">Profil-Ziel</string>
+    <string name="profile_temporary">Temporär</string>
+    <string name="profile_sum_profile">Profil</string>
+    <string name="profile_sum_percentage">Prozentsatz</string>
+    <string name="profile_sum_time_shift">Zeitversatz</string>
+    <string name="profile_sum_dia">Insulinwirkdauer</string>
+    <string name="profile_shift_none">keiner</string>
+    <string name="profile_what_changed">Was sich geändert hat</string>
+    <string name="profile_same">Dieselben Profileinstellungen wie zuvor.</string>
+    <string name="profile_basal_over">Basalinsulin über %1$s</string>
+    <string name="profile_unchanged">%1$s U, unverändert</string>
+    <string name="profile_basal_note">Vergleicht, was AAPS tatsächlich ausführt, mit angewandtem Prozentsatz und Zeitversatz, nur für die Zeit, in der der Wechsel galt. Temporäre Basalraten und Boli sind nicht enthalten.</string>
+    <string name="profile_card_no_change">%1$s · keine Änderung</string>
+    <plurals name="profile_changed_stretches">
+        <item quantity="one">%1$d geänderter Abschnitt · gestrichelte Linie = vorher</item>
+        <item quantity="other">%1$d geänderte Abschnitte · gestrichelte Linie = vorher</item>
+    </plurals>
 </resources>

@@ -851,4 +851,56 @@
         <item quantity="other">Media giornaliera degli ultimi %1$d anni</item>
     </plurals>
     <string name="stats_coverage_short">Copertura</string>
+
+    <!-- Profile / treatment plan -->
+    <string name="profile_basal_sub">Insulina di fondo, %1$s U al giorno</string>
+    <string name="profile_isf">Sensibilità all\'insulina</string>
+    <string name="profile_isf_sub_mmol">1 U abbassa la glicemia di questi mmol/L</string>
+    <string name="profile_isf_sub_mgdl">1 U abbassa la glicemia di questi mg/dL</string>
+    <string name="profile_carb_ratio">Rapporto carboidrati</string>
+    <string name="profile_carb_ratio_sub">1 U copre questi grammi di carboidrati</string>
+    <string name="profile_unit_isf_mmol">mmol/L per U</string>
+    <string name="profile_unit_isf_mgdl">mg/dL per U</string>
+    <string name="profile_unit_carbs">g per U</string>
+    <string name="profile_dia">Durata d\'azione dell\'insulina (DIA): %1$s h</string>
+    <string name="profile_readonly">Sola lettura. Viene importato da AAPS ogni volta che fai un cambio profilo lì; modificalo in AAPS.</string>
+    <string name="profile_right_now">Adesso</string>
+    <string name="profile_tile_sens">Sensib.</string>
+    <string name="profile_tile_target">Target</string>
+    <string name="profile_target">Target glicemico</string>
+    <string name="profile_target_sub">AAPS punta a questo valore (%1$s)</string>
+    <string name="profile_now">ora</string>
+    <string name="profile_empty_title">Nessun profilo ricevuto</string>
+    <string name="profile_empty_text">Diafit riceve il tuo profilo da AAPS quando fai lì un cambio profilo. Falne uno (ad esempio lo stesso profilo al 100%) e comparirà qui.</string>
+    <string name="profile_gone">Questo evento non è più disponibile.</string>
+    <string name="profile_delete_title">Eliminare questo cambio profilo?</string>
+    <string name="profile_delete_text">Importato da AAPS. L\'eliminazione lo rimuove solo da Diafit.</string>
+    <string name="profile_chip_shift">Shift %1$s h</string>
+    <string name="profile_chip_target">Target %1$s</string>
+    <string name="profile_chip_profile_only">Solo profilo</string>
+    <string name="profile_in_force">In vigore per %1$s</string>
+    <string name="profile_no_end">Nessuna fine registrata</string>
+    <string name="profile_compared">Confrontato con %1$s al %2$d%%, in uso prima.</string>
+    <string name="profile_compared_day">Confrontato con %1$s al %2$d%%, in uso prima. Mostrato come un giorno.</string>
+    <string name="profile_no_values">Questo cambio non conteneva valori di profilo.</string>
+    <string name="profile_basal_diff_sub">Velocità in vigore; la parte ombreggiata indica quando si è applicato questo cambio</string>
+    <string name="profile_only_target">È cambiato solo il target glicemico; percentuale e programmi restano come erano.</string>
+    <string name="profile_temp_target_sub">Sostituisce il target glicemico del profilo mentre è attivo</string>
+    <string name="profile_profile_target">Target del profilo</string>
+    <string name="profile_temporary">Temporaneo</string>
+    <string name="profile_sum_profile">Profilo</string>
+    <string name="profile_sum_percentage">Percentuale</string>
+    <string name="profile_sum_time_shift">Spostamento orario</string>
+    <string name="profile_sum_dia">Durata d\'azione dell\'insulina</string>
+    <string name="profile_shift_none">nessuno</string>
+    <string name="profile_what_changed">Cosa è cambiato</string>
+    <string name="profile_same">Stesse impostazioni di profilo di prima.</string>
+    <string name="profile_basal_over">Insulina basale in %1$s</string>
+    <string name="profile_unchanged">%1$s U, invariato</string>
+    <string name="profile_basal_note">Confronta ciò che AAPS esegue davvero, con percentuale e spostamento orario applicati, solo per il periodo in cui il cambio era in vigore. Basali temporanee e boli non sono inclusi.</string>
+    <string name="profile_card_no_change">%1$s · nessuna modifica</string>
+    <plurals name="profile_changed_stretches">
+        <item quantity="one">%1$d tratto modificato · linea tratteggiata = prima</item>
+        <item quantity="other">%1$d tratti modificati · linea tratteggiata = prima</item>
+    </plurals>
 </resources>

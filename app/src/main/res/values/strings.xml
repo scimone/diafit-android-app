@@ -854,4 +854,56 @@
         <item quantity="other">Daily average over the last %1$d years</item>
     </plurals>
     <string name="stats_coverage_short">Coverage</string>
+
+    <!-- Profile / treatment plan -->
+    <string name="profile_basal_sub">Background insulin, %1$s U per day</string>
+    <string name="profile_isf">Insulin sensitivity</string>
+    <string name="profile_isf_sub_mmol">1 U lowers glucose by this many mmol/L</string>
+    <string name="profile_isf_sub_mgdl">1 U lowers glucose by this many mg/dL</string>
+    <string name="profile_carb_ratio">Carb ratio</string>
+    <string name="profile_carb_ratio_sub">1 U covers this many grams of carbs</string>
+    <string name="profile_unit_isf_mmol">mmol/L per U</string>
+    <string name="profile_unit_isf_mgdl">mg/dL per U</string>
+    <string name="profile_unit_carbs">g per U</string>
+    <string name="profile_dia">Insulin action time (DIA): %1$s h</string>
+    <string name="profile_readonly">Read-only. This is imported from AAPS whenever you do a profile switch there; change it in AAPS.</string>
+    <string name="profile_right_now">Right now</string>
+    <string name="profile_tile_sens">Sensitivity</string>
+    <string name="profile_tile_target">Target</string>
+    <string name="profile_target">Glucose target</string>
+    <string name="profile_target_sub">AAPS aims for this %1$s</string>
+    <string name="profile_now">now</string>
+    <string name="profile_empty_title">No profile received yet</string>
+    <string name="profile_empty_text">Diafit gets your profile from AAPS when you do a profile switch there. Do one (for example the same profile at 100%) and it appears here.</string>
+    <string name="profile_gone">This event is no longer available.</string>
+    <string name="profile_delete_title">Delete this profile switch?</string>
+    <string name="profile_delete_text">Imported from AAPS. Deleting only removes it from Diafit.</string>
+    <string name="profile_chip_shift">Shift %1$s h</string>
+    <string name="profile_chip_target">Target %1$s</string>
+    <string name="profile_chip_profile_only">Profile only</string>
+    <string name="profile_in_force">In force for %1$s</string>
+    <string name="profile_no_end">No end time recorded</string>
+    <string name="profile_compared">Compared with %1$s at %2$d%%, which was running before.</string>
+    <string name="profile_compared_day">Compared with %1$s at %2$d%%, which was running before. Shown as one day.</string>
+    <string name="profile_no_values">This switch carried no profile values.</string>
+    <string name="profile_basal_diff_sub">Rate in force; the shaded part is when this switch applied</string>
+    <string name="profile_only_target">Only the glucose target changed; percentage and schedules stay as they were.</string>
+    <string name="profile_temp_target_sub">Replaces the profile\'s glucose target while it runs</string>
+    <string name="profile_profile_target">Profile target</string>
+    <string name="profile_temporary">Temporary</string>
+    <string name="profile_sum_profile">Profile</string>
+    <string name="profile_sum_percentage">Percentage</string>
+    <string name="profile_sum_time_shift">Time shift</string>
+    <string name="profile_sum_dia">Insulin action time</string>
+    <string name="profile_shift_none">none</string>
+    <string name="profile_what_changed">What changed</string>
+    <string name="profile_same">Same profile settings as before.</string>
+    <string name="profile_basal_over">Basal insulin over %1$s</string>
+    <string name="profile_unchanged">%1$s U, unchanged</string>
+    <string name="profile_basal_note">Compares what AAPS actually runs, with percentage and time shift applied, only for the time the switch was in force. Temporary basals and boluses are not included.</string>
+    <string name="profile_card_no_change">%1$s · no change</string>
+    <plurals name="profile_changed_stretches">
+        <item quantity="one">%1$d changed stretch · dashed line = before</item>
+        <item quantity="other">%1$d changed stretches · dashed line = before</item>
+    </plurals>
 </resources>
