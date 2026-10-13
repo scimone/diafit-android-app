@@ -34,9 +34,8 @@ import uk.scimone.diafit.patterns.domain.GlucoseSituation
 import uk.scimone.diafit.patterns.domain.SituationInput
 import uk.scimone.diafit.settings.domain.usecase.GetTargetRangeUseCase
 import android.graphics.Color
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
+import android.view.View
+import android.widget.RemoteViews
 import uk.scimone.diafit.core.data.nightscout.DeviceLifetimeStore
 import uk.scimone.diafit.core.data.nightscout.DeviceStatusStore
 import uk.scimone.diafit.core.domain.model.ExpiryWarning
@@ -104,7 +103,8 @@ class SyncNotificationUpdater(
         val now = System.currentTimeMillis()
         val readings = cgm.getEntriesBetween(now - 26 * HOUR, now, USER_ID)
         val latest = readings.lastOrNull() ?: return
-        val title = withExpiry(syncNotificationTitle(latest, readings.getOrNull(readings.size - 2)), now)
+        val title = syncNotificationTitle(latest, readings.getOrNull(readings.size - 2))
+        val warning = expiryLine(now)
         val ageMin = ((now - latest.timestamp) / 60_000).toInt()
 
         val text = if (ageMin > 15) context.getString(R.string.sync_last_reading, ageMin) else {
@@ -122,11 +122,11 @@ class SyncNotificationUpdater(
             val situation = GlucoseSituation.classify(input) ?: GlucoseSituation.trendFallback(input)
             situation?.text() ?: AppStrings.byName("sit_updated_at", listOf(formatStamp(latest.timestamp, "Hm")))
         }
-        NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text))
+        NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text, warning))
     }
 
-    /** Appends the red "Sensor 20h · Pump 6h" warning (only what is about to expire) to the first notification row. */
-    private suspend fun withExpiry(title: String, now: Long): CharSequence {
+    /** The red "Sensor 20h · Pump 6h" line (only what is about to expire), or null. */
+    private suspend fun expiryLine(now: Long): String? {
         val warning = try {
             val status = statusStore.status.value
             val inputs = deviceInputs.load(USER_ID, now)
@@ -135,17 +135,12 @@ class SyncNotificationUpdater(
                 batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true,
                 pumpType = inputs.pumpType
             ))
-        } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return title }
+        } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
         val parts = listOfNotNull(
             warning.sensorMs?.let { context.getString(R.string.sync_expiry_sensor, shortLeft(it)) },
             warning.pumpMs?.let { context.getString(R.string.sync_expiry_pump, shortLeft(it)) }
         )
-        if (parts.isEmpty()) return title
-        val sb = SpannableStringBuilder(title).append("  ")
-        val start = sb.length
-        sb.append(parts.joinToString(" · "))
-        sb.setSpan(ForegroundColorSpan(Color.RED), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        return sb
+        return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
     }
 
     private fun shortLeft(ms: Long): String = when {
@@ -171,7 +166,19 @@ class SyncNotificationUpdater(
         private const val HOUR = 3_600_000L
         const val CHANNEL_ID = "GLUCOSE_SYNC_CHANNEL"
 
-        fun build(context: Context, title: CharSequence, text: String): Notification {
+        private fun views(context: Context, title: String, text: String, warning: String?, expanded: Boolean) =
+            RemoteViews(context.packageName, R.layout.notification_sync).apply {
+                setTextViewText(R.id.sync_title, title)
+                setTextViewText(R.id.sync_text, text)
+                if (warning != null) {
+                    setTextViewText(R.id.sync_warning, warning)
+                    setTextColor(R.id.sync_warning, Color.rgb(0xE5, 0x39, 0x35))
+                    setViewVisibility(R.id.sync_warning, View.VISIBLE)
+                } else setViewVisibility(R.id.sync_warning, View.GONE)
+                if (expanded) setInt(R.id.sync_text, "setMaxLines", 6)
+            }
+
+        fun build(context: Context, title: String, text: String, warning: String? = null): Notification {
             val pendingIntent = PendingIntent.getActivity(
                 context, 0, Intent(context, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -179,7 +186,9 @@ class SyncNotificationUpdater(
             return NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+                .setCustomContentView(views(context, title, text, warning, false))
+                .setCustomBigContentView(views(context, title, text, warning, true))
                 .setSmallIcon(R.drawable.ic_stat_diafit)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
