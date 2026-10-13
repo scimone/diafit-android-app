@@ -12,8 +12,15 @@ import java.util.Locale
 import kotlin.math.abs
 
 /** A date/time format for the current locale from a skeleton (`"EEEdMMMHm"`), so month and weekday names follow the language. */
-fun localizedFormat(skeleton: String, locale: Locale = Locale.getDefault()): SimpleDateFormat =
-    SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+fun localizedFormat(skeleton: String, locale: Locale = Locale.getDefault()): SimpleDateFormat {
+    // Falls back to a medium date/time pattern where the Android helper isn't available (plain JVM unit tests).
+    val pattern = try {
+        DateFormat.getBestDateTimePattern(locale, skeleton)
+    } catch (e: Throwable) {
+        (java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, locale) as SimpleDateFormat).toPattern()
+    }
+    return SimpleDateFormat(pattern, locale)
+}
 
 fun formatStamp(utc: Long, skeleton: String): String = localizedFormat(skeleton).format(Date(utc))
 
@@ -46,3 +53,7 @@ fun Resources.duration(ms: Long): String {
 fun rememberResources(): Resources = LocalContext.current.resources
 @Composable
 fun rememberLocalizedFormat(skeleton: String) = remember(skeleton, Locale.getDefault()) { localizedFormat(skeleton) }
+
+/** A date in the current locale from a skeleton (`"EEEdMMM"`). */
+fun java.time.LocalDate.formatLocalized(skeleton: String): String =
+    formatStamp(atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), skeleton)

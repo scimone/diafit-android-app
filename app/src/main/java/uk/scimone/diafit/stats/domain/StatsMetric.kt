@@ -1,40 +1,47 @@
 package uk.scimone.diafit.stats.domain
 
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.core.presentation.formatLocalized
+
 /**
  * What a W/M/Y card shows: one number per day. Everything is single-valued (a stacked quantity such as glucose zones
  * or macros is several metrics, each with its own card) except [SLEEP_SCHEDULE], whose two values are bedtime and
  * wake-up. [segments] is the value list of one day's bar, null when the day has no data.
  */
 enum class StatsMetric(
-    val title: String,
+    @StringRes val titleRes: Int,
     /** Whole days add up (steps, insulin...): the detail page also shows a total. Others only average. */
     val additive: Boolean = false,
     /** Shown only on these pages (A1c is meaningless over a week); null = every W/M/Y page. */
     val periods: Set<StatsPeriod>? = null
 ) {
-    GLUCOSE_IN_RANGE("In range"),
-    GLUCOSE_BELOW("Below range"),
-    GLUCOSE_ABOVE("Above range"),
-    GLUCOSE_CV("Glucose variability (CV)"),
-    GLUCOSE_A1C("A1c (GMI)", periods = setOf(StatsPeriod.MONTH, StatsPeriod.YEAR)),
-    GLUCOSE_COVERAGE("Data coverage"),
-    CARBS("Carbs", additive = true),
-    PROTEIN("Protein", additive = true),
-    FAT("Fat", additive = true),
-    BOLUS("Bolus insulin", additive = true),
-    BASAL("Basal insulin", additive = true),
-    SLEEP("Sleep"),
-    DEEP_SLEEP("Deep sleep"),
-    REM_SLEEP("REM sleep"),
-    LIGHT_SLEEP("Light sleep"),
-    SLEEP_SCHEDULE("Sleep schedule"),
-    HEART_RATE("Heart rate"),
-    RESTING_HEART_RATE("Resting heart rate"),
-    HEART_RATE_VARIABILITY("Heart rate variability"),
-    CALORIES("Calories burned", additive = true),
-    ACTIVE_CALORIES("Active calories", additive = true),
-    STEPS("Steps", additive = true),
-    ACTIVITY("Active time", additive = true);
+    GLUCOSE_IN_RANGE(R.string.stats_m_in_range),
+    GLUCOSE_BELOW(R.string.stats_m_below),
+    GLUCOSE_ABOVE(R.string.stats_m_above),
+    GLUCOSE_CV(R.string.stats_m_cv),
+    GLUCOSE_A1C(R.string.stats_m_a1c, periods = setOf(StatsPeriod.MONTH, StatsPeriod.YEAR)),
+    GLUCOSE_COVERAGE(R.string.stats_m_coverage),
+    CARBS(R.string.macro_carbs, additive = true),
+    PROTEIN(R.string.macro_protein, additive = true),
+    FAT(R.string.macro_fat, additive = true),
+    BOLUS(R.string.datatype_bolus, additive = true),
+    BASAL(R.string.datatype_basal, additive = true),
+    SLEEP(R.string.datatype_sleep),
+    DEEP_SLEEP(R.string.stats_m_deep_sleep),
+    REM_SLEEP(R.string.stats_m_rem_sleep),
+    LIGHT_SLEEP(R.string.stats_m_light_sleep),
+    SLEEP_SCHEDULE(R.string.stats_m_sleep_schedule),
+    HEART_RATE(R.string.datatype_heart_rate),
+    RESTING_HEART_RATE(R.string.stats_m_resting_hr),
+    HEART_RATE_VARIABILITY(R.string.stats_m_hrv),
+    CALORIES(R.string.stats_m_calories, additive = true),
+    ACTIVE_CALORIES(R.string.stats_m_active_calories, additive = true),
+    STEPS(R.string.datatype_steps, additive = true),
+    ACTIVITY(R.string.stats_m_active_time, additive = true);
+
+    val title: String get() = AppStrings.get(titleRes)
 
     /** The values of one day's bar, or null when the day has no data for this metric. */
     fun segments(day: StatsDay): List<Double>? {
@@ -113,7 +120,7 @@ fun trendPoints(metric: StatsMetric, days: List<StatsDay>, windows: List<StatsWi
         val inWindow = days.filter { it.date >= w.first && it.date < w.lastExclusive }
         val label = when (w.period) {
             StatsPeriod.YEAR -> w.first.year.toString()
-            StatsPeriod.MONTH -> w.first.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+            StatsPeriod.MONTH -> w.first.formatLocalized("MMM")
             else -> "${w.first.dayOfMonth}/${w.first.monthValue}"
         }
         StatsTrendPoint(label, metric.average(inWindow), isCurrent = i == windows.lastIndex)

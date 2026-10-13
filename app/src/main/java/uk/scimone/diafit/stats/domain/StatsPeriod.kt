@@ -6,13 +6,20 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import androidx.annotation.StringRes
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.core.presentation.formatLocalized
 
 /** The time frames of the Stats tab: a day, and a week / month / year drawn as bars. */
-enum class StatsPeriod(val label: String, val title: String) {
-    DAY("D", "Day"),
-    WEEK("W", "Week"),
-    MONTH("M", "Month"),
-    YEAR("Y", "Year");
+enum class StatsPeriod(@StringRes private val labelRes: Int, @StringRes private val titleRes: Int) {
+    DAY(R.string.stats_p_day_short, R.string.stats_p_day),
+    WEEK(R.string.stats_p_week_short, R.string.stats_p_week),
+    MONTH(R.string.stats_p_month_short, R.string.stats_p_month),
+    YEAR(R.string.stats_p_year_short, R.string.stats_p_year);
+
+    val label: String get() = AppStrings.get(labelRes)
+    val title: String get() = AppStrings.get(titleRes)
 
     /** Bars of the W/M/Y charts: per day, except a year, which is per month. */
     val barsPerMonth: Boolean get() = this == YEAR
@@ -35,16 +42,16 @@ data class StatsWindow(val period: StatsPeriod, val first: LocalDate, val lastEx
     /** The bars: one per day for a week or month, one per month for a year, one for a day. */
     val buckets: List<StatsBucket> by lazy {
         when (period) {
-            StatsPeriod.DAY -> listOf(StatsBucket(first, lastExclusive, "", dayFormat.format(first)))
+            StatsPeriod.DAY -> listOf(StatsBucket(first, lastExclusive, "", first.formatLocalized(DAY_SKELETON)))
             StatsPeriod.WEEK -> days.map {
-                StatsBucket(it, it.plusDays(1), it.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()), dayFormat.format(it))
+                StatsBucket(it, it.plusDays(1), it.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()), it.formatLocalized(DAY_SKELETON))
             }
-            StatsPeriod.MONTH -> days.map { StatsBucket(it, it.plusDays(1), it.dayOfMonth.toString(), dayFormat.format(it)) }
+            StatsPeriod.MONTH -> days.map { StatsBucket(it, it.plusDays(1), it.dayOfMonth.toString(), it.formatLocalized(DAY_SKELETON)) }
             StatsPeriod.YEAR -> generateSequence(first) { it.plusMonths(1) }.takeWhile { it < lastExclusive }.map {
                 StatsBucket(
                     it, it.plusMonths(1),
                     it.month.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                    it.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.year
+                    it.formatLocalized("yMMMM")
                 )
             }.toList()
         }
@@ -52,17 +59,17 @@ data class StatsWindow(val period: StatsPeriod, val first: LocalDate, val lastEx
 
     fun label(today: LocalDate): String = when (period) {
         StatsPeriod.DAY -> when (first) {
-            today -> "Today"
-            today.minusDays(1) -> "Yesterday"
-            else -> dayFormat.format(first)
+            today -> AppStrings.get(R.string.date_today)
+            today.minusDays(1) -> AppStrings.get(R.string.date_yesterday)
+            else -> first.formatLocalized(DAY_SKELETON)
         }
         StatsPeriod.WEEK -> {
             val last = lastExclusive.minusDays(1)
             val sameMonth = first.month == last.month
-            if (sameMonth) "${first.dayOfMonth} – ${last.dayOfMonth} ${monthFormat.format(last)}"
-            else "${first.dayOfMonth} ${shortMonthFormat.format(first)} – ${last.dayOfMonth} ${shortMonthFormat.format(last)} ${last.year}"
+            if (sameMonth) "${first.formatLocalized("d")} – ${last.formatLocalized("dMMMM")}"
+            else "${first.formatLocalized("dMMM")} – ${last.formatLocalized("dMMMy")}"
         }
-        StatsPeriod.MONTH -> monthFormat.format(first)
+        StatsPeriod.MONTH -> first.formatLocalized("yMMMM")
         StatsPeriod.YEAR -> first.year.toString()
     }
 
@@ -91,8 +98,6 @@ data class StatsWindow(val period: StatsPeriod, val first: LocalDate, val lastEx
             }.toInt().coerceAtMost(0)
         }
 
-        private val dayFormat = DateTimeFormatter.ofPattern("EEE d MMM")
-        private val monthFormat = DateTimeFormatter.ofPattern("MMMM yyyy")
-        private val shortMonthFormat = DateTimeFormatter.ofPattern("MMM")
+        private const val DAY_SKELETON = "EEEdMMM"
     }
 }

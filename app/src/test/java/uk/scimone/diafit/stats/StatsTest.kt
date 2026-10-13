@@ -13,6 +13,8 @@ import uk.scimone.diafit.stats.domain.StatsMetric
 import uk.scimone.diafit.stats.domain.StatsPeriod
 import uk.scimone.diafit.stats.domain.StatsWindow
 import java.time.LocalDate
+import uk.scimone.diafit.R
+import uk.scimone.diafit.core.presentation.AppStrings
 import java.time.ZoneId
 
 class StatsTest {
@@ -46,8 +48,9 @@ class StatsTest {
     }
 
     @Test fun dayWindowLabels() {
-        assertEquals("Today", StatsWindow.of(StatsPeriod.DAY, today).label(today))
-        assertEquals("Yesterday", StatsWindow.of(StatsPeriod.DAY, today, -1).label(today))
+        // Resolved through AppStrings, which has no Android resources in a JVM test: both sides read the same placeholder.
+        assertEquals(AppStrings.get(R.string.date_today), StatsWindow.of(StatsPeriod.DAY, today).label(today))
+        assertEquals(AppStrings.get(R.string.date_yesterday), StatsWindow.of(StatsPeriod.DAY, today, -1).label(today))
     }
 
     @Test fun barAveragesOnlyDaysWithData() {

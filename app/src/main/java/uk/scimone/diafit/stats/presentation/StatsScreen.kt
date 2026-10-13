@@ -1,5 +1,8 @@
 package uk.scimone.diafit.stats.presentation
 
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -124,7 +127,7 @@ fun StatsScreen(userId: Int, onOpenMetric: (StatsMetric, StatsPeriod, Int) -> Un
                         VitalsPermissionCard(onAllow = { vitalsPermission.launch(HealthConnectPermissions.vitals) })
                     }
                 }
-                state.errorMessage?.let { item(key = "error") { Text(it, color = MaterialTheme.colorScheme.error) } }
+                state.errorMessage?.let { item(key = "error") { Text(it.asString(), color = MaterialTheme.colorScheme.error) } }
                 if (state.period == StatsPeriod.DAY) {
                     dayCardItems(state.days.firstOrNull(), state.isLoading)
                 } else {
@@ -174,16 +177,16 @@ private fun PeriodHeader(
 internal fun PagerRow(label: String, canGoNewer: Boolean, current: LocalDate, onOlder: () -> Unit, onNewer: () -> Unit, onPick: (LocalDate) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Earlier") }
+        IconButton(onClick = onOlder) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.stats_earlier)) }
         Row(
             Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { picking = true }.padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.width(6.dp))
-            Icon(Icons.Filled.CalendarMonth, "Pick a date", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.CalendarMonth, stringResource(R.string.stats_pick_date), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
         }
-        IconButton(onClick = onNewer, enabled = canGoNewer) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Later") }
+        IconButton(onClick = onNewer, enabled = canGoNewer) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.stats_later)) }
     }
     if (picking) {
         val zone = java.time.ZoneId.systemDefault()
@@ -200,9 +203,9 @@ internal fun PagerRow(label: String, canGoNewer: Boolean, current: LocalDate, on
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate()) }
                     picking = false
-                }) { Text("Go") }
+                }) { Text(stringResource(R.string.hist_go)) }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } }
         ) { DatePicker(state = state) }
     }
 }
@@ -211,12 +214,12 @@ internal fun PagerRow(label: String, canGoNewer: Boolean, current: LocalDate, on
 private fun VitalsPermissionCard(onAllow: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("More from Health Connect", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.stats_more_hc), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "Allow resting heart rate, heart rate variability and calories burned to fill those cards.",
+                stringResource(R.string.stats_more_hc_text),
                 style = MaterialTheme.typography.bodySmall
             )
-            Button(onClick = onAllow) { Text("Allow access") }
+            Button(onClick = onAllow) { Text(stringResource(R.string.hc_allow_access)) }
         }
     }
 }
@@ -276,7 +279,7 @@ internal fun CardHeader(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
         }
         trailing?.invoke()
     }
@@ -324,9 +327,9 @@ private fun EmptyState() {
     Column(Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Filled.Insights, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
-        Text("Nothing recorded in this period", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.stats_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(
-            "Try an earlier period, or connect more data sources in Settings.",
+            stringResource(R.string.stats_empty_text),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
         )
     }
@@ -357,7 +360,7 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
         StatsCards.DayCard.GLUCOSE -> StatsSurface {
             val g = day.glucose!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.GLUCOSE_IN_RANGE, "Glucose", null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "%", InRange, caption = "in range") }
+                CardHeader(StatsMetric.GLUCOSE_IN_RANGE, stringResource(R.string.panel_glucose), null) { FigureBlock("${(g.inRangeShare * 100).roundToInt()}", "%", InRange, caption = stringResource(R.string.stats_in_range_caption)) }
                 GlucoseDayContent(g)
             }
         }
@@ -366,11 +369,11 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
             // Without protein and fat (both 0) the meals are only carbs: nothing else to show.
             val carbsOnly = (day.protein ?: 0.0) <= 0.0 && (day.fat ?: 0.0) <= 0.0
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.CARBS, if (carbsOnly) "Carbohydrates" else "Meals", if (carbsOnly) null else "Carbohydrates") { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
+                CardHeader(StatsMetric.CARBS, if (carbsOnly) stringResource(R.string.panel_carbs) else stringResource(R.string.logs_kind_meal_plural), if (carbsOnly) null else stringResource(R.string.panel_carbs)) { FigureBlock("${day.carbs!!.roundToInt()}", "g", StatsMetric.CARBS.accent()) }
                 if (!carbsOnly) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    LabeledValue("Protein", "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), centered = true)
-                    LabeledValue("Fat", "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), centered = true)
-                    LabeledValue("Energy", "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, centered = true)
+                    LabeledValue(stringResource(R.string.macro_protein), "${(day.protein ?: 0.0).roundToInt()}", "g", StatsMetric.PROTEIN.accent(), centered = true)
+                    LabeledValue(stringResource(R.string.macro_fat), "${(day.fat ?: 0.0).roundToInt()}", "g", StatsMetric.FAT.accent(), centered = true)
+                    LabeledValue(stringResource(R.string.macro_energy), "${(day.mealKcal ?: 0.0).roundToInt()}", "kcal", ink, centered = true)
                 }
             }
         }
@@ -378,8 +381,8 @@ private fun DayCard(card: StatsCards.DayCard, day: StatsDay) {
         StatsCards.DayCard.SLEEP -> StatsSurface {
             val night = day.sleep!!
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CardHeader(StatsMetric.SLEEP, "Sleep", sleepRange(night)) {
-                    FigureBlock(formatDurationHM(night.asleepMs / 3_600_000.0), "asleep", SleepLight)
+                CardHeader(StatsMetric.SLEEP, stringResource(R.string.datatype_sleep), sleepRange(night)) {
+                    FigureBlock(formatDurationHM(night.asleepMs / 3_600_000.0), stringResource(R.string.logs_asleep), SleepLight)
                 }
                 SleepStages(night)
             }
@@ -397,7 +400,7 @@ private fun InsulinDayCard(day: StatsDay) {
     val basalColor = StatsMetric.BASAL.accent()
     StatsSurface {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CardHeader(StatsMetric.BOLUS, "Insulin", "Total daily dose") {
+            CardHeader(StatsMetric.BOLUS, stringResource(R.string.logs_kind_bolus), stringResource(R.string.stats_total_daily_dose)) {
                 val f = StatsMetric.BOLUS.format(total)
                 FigureBlock(f.value, f.unit, bolusColor)
             }
@@ -407,10 +410,10 @@ private fun InsulinDayCard(day: StatsDay) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Both are shown even when one is zero.
                 StatsMetric.BASAL.format(basal).let {
-                    LabeledValue("Basal · ${(basal / total * 100).roundToInt()}%", it.value, it.unit, basalColor, Modifier.weight(1f))
+                    LabeledValue(stringResource(R.string.stats_basal_pct, (basal / total * 100).roundToInt()), it.value, it.unit, basalColor, Modifier.weight(1f))
                 }
                 StatsMetric.BOLUS.format(bolus).let {
-                    LabeledValue("Bolus · ${(bolus / total * 100).roundToInt()}%", it.value, it.unit, bolusColor, Modifier.weight(1f), end = true)
+                    LabeledValue(stringResource(R.string.stats_bolus_pct, (bolus / total * 100).roundToInt()), it.value, it.unit, bolusColor, Modifier.weight(1f), end = true)
                 }
             }
         }
@@ -424,39 +427,39 @@ private fun ActivityDayCard(day: StatsDay) {
     val hasHeart = day.restingBpm != null || day.avgBpm != null || day.hrvMs != null
     StatsSurface {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CardHeader(StatsMetric.ACTIVITY, "Activity", null) {
+            CardHeader(StatsMetric.ACTIVITY, stringResource(R.string.panel_activity), null) {
                 Column(horizontalAlignment = Alignment.End) {
                     day.steps?.let {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(StatsMetric.STEPS.format(it.toDouble()).value, Modifier.alignByBaseline(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = accent, maxLines = 1, softWrap = false)
-                            Text(" steps", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = accent, maxLines = 1, softWrap = false)
+                            Text(" " + stringResource(R.string.stats_unit_steps), Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = accent, maxLines = 1, softWrap = false)
                         }
                     }
                     day.totalKcal?.let {
                         val f = StatsMetric.CALORIES.format(it)
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text("Burned ", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.stats_burned) + " ", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(f.value, Modifier.alignByBaseline(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = accent)
                             Text(" ${f.unit}", Modifier.alignByBaseline(), style = MaterialTheme.typography.labelMedium, color = accent)
                         }
                     }
                 }
             }
-            day.activeMinutes?.let { val f = StatsMetric.ACTIVITY.format(it); LabeledValue("Active time", f.value, f.unit, accent) }
+            day.activeMinutes?.let { val f = StatsMetric.ACTIVITY.format(it); LabeledValue(stringResource(R.string.stats_m_active_time), f.value, f.unit, accent) }
             if (day.activeKcal != null && day.totalKcal != null && day.totalKcal > 0) {
                 val active = day.activeKcal.coerceIn(0.0, day.totalKcal)
                 val resting = day.totalKcal - active
                 SegmentedBar(listOf((resting / day.totalKcal).toFloat() to accent.copy(alpha = 0.4f), (active / day.totalKcal).toFloat() to accent), height = 14.dp)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledValue("Resting", grouped(resting), "kcal", accent.copy(alpha = 0.6f), Modifier.weight(1f))
-                    LabeledValue("Active", grouped(active), "kcal", accent, Modifier.weight(1f), end = true)
+                    LabeledValue(stringResource(R.string.stats_cal_resting), grouped(resting), "kcal", accent.copy(alpha = 0.6f), Modifier.weight(1f))
+                    LabeledValue(stringResource(R.string.stats_cal_active), grouped(active), "kcal", accent, Modifier.weight(1f), end = true)
                 }
             }
             if (hasHeart) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    LabeledValue("Resting HR", day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
-                    LabeledValue("Average HR", day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
+                    LabeledValue(stringResource(R.string.stats_rhr), day.restingBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
+                    LabeledValue(stringResource(R.string.stats_avg_hr), day.avgBpm?.roundToInt()?.toString() ?: "–", "bpm", accent, centered = true)
                     LabeledValue("HRV", day.hrvMs?.roundToInt()?.toString() ?: "–", "ms", accent, centered = true)
                 }
             }
@@ -482,10 +485,10 @@ private fun SleepStages(night: SleepNight) {
         val from = night.spans.minOf { it.startUtc }
         val total = (night.spans.maxOf { it.endUtc } - from).coerceAtLeast(1L).toFloat()
         val rows = listOfNotNull(
-            Triple("Awake", SleepStage.AWAKE, night.awakeMs to SleepAwake).takeIf { night.awakeMs > 0 },
-            Triple("REM", SleepStage.REM, night.remMs to SleepRem),
-            Triple("Light", SleepStage.LIGHT, night.lightMs to SleepLight),
-            Triple("Deep", SleepStage.DEEP, night.deepMs to SleepDeep)
+            Triple(stringResource(R.string.sleep_stage_awake), SleepStage.AWAKE, night.awakeMs to SleepAwake).takeIf { night.awakeMs > 0 },
+            Triple(stringResource(R.string.sleep_stage_rem), SleepStage.REM, night.remMs to SleepRem),
+            Triple(stringResource(R.string.sleep_stage_light), SleepStage.LIGHT, night.lightMs to SleepLight),
+            Triple(stringResource(R.string.sleep_stage_deep), SleepStage.DEEP, night.deepMs to SleepDeep)
         )
         Column {
             rows.forEach { (label, stage, ms) ->
@@ -509,7 +512,7 @@ private fun SleepStages(night: SleepNight) {
             }
         }
     } else {
-        Text("No sleep stages were recorded for this night.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.logs_sleep_no_stages), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -539,23 +542,23 @@ private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            ZoneValue("Very low", g.veryLowShare, BelowRange)
-            ZoneValue("Low", lowOnly, lowColor)
+            ZoneValue(stringResource(R.string.logs_ep_very_low), g.veryLowShare, BelowRange)
+            ZoneValue(stringResource(R.string.logs_ep_low), lowOnly, lowColor)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            ZoneValue("Very high", g.veryHighShare, AboveRange, end = true)
-            ZoneValue("High", highOnly, highColor, end = true)
+            ZoneValue(stringResource(R.string.logs_ep_very_high), g.veryHighShare, AboveRange, end = true)
+            ZoneValue(stringResource(R.string.logs_ep_high), highOnly, highColor, end = true)
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        LabeledValue("Mean", g.meanMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
-        LabeledValue("Std dev", g.sdMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
+        LabeledValue(stringResource(R.string.stats_mean), g.meanMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
+        LabeledValue(stringResource(R.string.stats_std_dev), g.sdMgdl.roundToInt().toString(), "mg/dL", MaterialTheme.colorScheme.onSurface, centered = true)
         LabeledValue("CV", "${g.cvPercent.roundToInt()}", "%", MaterialTheme.colorScheme.onSurface, centered = true)
         LabeledValue("GMI", String.format("%.1f", g.gmi), "% A1c", MaterialTheme.colorScheme.onSurface, centered = true)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LabeledValue("Data coverage", "${(g.coverage * 100).roundToInt()}", "%", StatsMetric.GLUCOSE_COVERAGE.accent(), Modifier.weight(1f))
-        LabeledValue("Readings", g.readingCount.toString(), "", MaterialTheme.colorScheme.onSurface, Modifier.weight(3f))
+        LabeledValue(stringResource(R.string.stats_coverage_short), "${(g.coverage * 100).roundToInt()}", "%", StatsMetric.GLUCOSE_COVERAGE.accent(), Modifier.weight(1f))
+        LabeledValue(stringResource(R.string.stats_readings), g.readingCount.toString(), "", MaterialTheme.colorScheme.onSurface, Modifier.weight(3f))
     }
 }
 
@@ -622,14 +625,14 @@ internal fun Headline(metric: StatsMetric, days: List<StatsDay>, period: StatsPe
         val nights = days.mapNotNull { metric.segments(it) }
         val bed = nights.map { it[0] }.average(); val wake = nights.map { it[1] }.average()
         Column {
-            Text("Average", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.hist_avg), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             BigValue("${metric.format(bed).value} – ${metric.format(wake).value}", "", accent)
         }
         return
     }
     val avg = metric.average(days) ?: return
     Column {
-        Text("Daily average", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.stats_sub_daily), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         metric.format(avg).let { BigValue(it.value, it.unit, accent) }
     }
 }

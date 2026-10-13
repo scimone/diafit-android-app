@@ -1,5 +1,7 @@
 package uk.scimone.diafit.stats.presentation
 
+import uk.scimone.diafit.core.presentation.AppStrings
+import uk.scimone.diafit.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -80,7 +82,7 @@ fun formatClock(clockMinutes: Int): String {
 private fun grouped(v: Double) = String.format(Locale.getDefault(), "%,d", v.roundToInt())
 
 fun StatsMetric.format(value: Double): Formatted = when (this) {
-    StatsMetric.STEPS -> Formatted(grouped(value), "steps")
+    StatsMetric.STEPS -> Formatted(grouped(value), AppStrings.get(R.string.stats_unit_steps))
     StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE -> Formatted(value.roundToInt().toString(), "bpm")
     StatsMetric.HEART_RATE_VARIABILITY -> Formatted(value.roundToInt().toString(), "ms")
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> Formatted(formatDurationHM(value), "")
@@ -127,13 +129,13 @@ fun StatsMetric.icon(): ImageVector = when (this) {
 
 /** Line under the title of a W/M/Y card. */
 fun StatsMetric.subtitle(): String = when (this) {
-    StatsMetric.GLUCOSE_IN_RANGE -> "Time in range, daily average"
-    StatsMetric.GLUCOSE_BELOW -> "Time below range, daily average (very low darker)"
-    StatsMetric.GLUCOSE_ABOVE -> "Time above range, daily average (very high darker)"
-    StatsMetric.GLUCOSE_COVERAGE -> "Share of sensor readings received, daily average"
-    StatsMetric.SLEEP_SCHEDULE -> "Average bedtime and wake-up"
-    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> "Per night, average"
-    else -> "Daily average"
+    StatsMetric.GLUCOSE_IN_RANGE -> AppStrings.get(R.string.stats_sub_tir)
+    StatsMetric.GLUCOSE_BELOW -> AppStrings.get(R.string.stats_sub_below)
+    StatsMetric.GLUCOSE_ABOVE -> AppStrings.get(R.string.stats_sub_above)
+    StatsMetric.GLUCOSE_COVERAGE -> AppStrings.get(R.string.stats_sub_coverage)
+    StatsMetric.SLEEP_SCHEDULE -> AppStrings.get(R.string.stats_sub_schedule)
+    StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> AppStrings.get(R.string.stats_sub_per_night)
+    else -> AppStrings.get(R.string.stats_sub_daily)
 }
 
 /** The y axis labels of a metric's chart. */

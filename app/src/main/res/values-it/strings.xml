@@ -775,4 +775,80 @@
         <item quantity="one">%1$d mese</item>
         <item quantity="other">%1$d mesi</item>
     </plurals>
+
+    <!-- Stats -->
+    <string name="stats_m_in_range">Nel range</string>
+    <string name="stats_m_below">Sotto il range</string>
+    <string name="stats_m_above">Sopra il range</string>
+    <string name="stats_m_cv">Variabilità glicemica (CV)</string>
+    <string name="stats_m_a1c">A1c (GMI)</string>
+    <string name="stats_m_coverage">Copertura dei dati</string>
+    <string name="stats_m_deep_sleep">Sonno profondo</string>
+    <string name="stats_m_rem_sleep">Sonno REM</string>
+    <string name="stats_m_light_sleep">Sonno leggero</string>
+    <string name="stats_m_sleep_schedule">Orari del sonno</string>
+    <string name="stats_m_resting_hr">Frequenza cardiaca a riposo</string>
+    <string name="stats_m_hrv">Variabilità della frequenza cardiaca</string>
+    <string name="stats_m_calories">Calorie bruciate</string>
+    <string name="stats_m_active_calories">Calorie attive</string>
+    <string name="stats_m_active_time">Tempo attivo</string>
+    <string name="stats_p_day_short">G</string>
+    <string name="stats_p_week_short">S</string>
+    <string name="stats_p_month_short">M</string>
+    <string name="stats_p_year_short">A</string>
+    <string name="stats_p_day">Giorno</string>
+    <string name="stats_p_week">Settimana</string>
+    <string name="stats_p_month">Mese</string>
+    <string name="stats_p_year">Anno</string>
+    <string name="stats_unit_steps">passi</string>
+    <string name="stats_sub_tir">Tempo nel range, media giornaliera</string>
+    <string name="stats_sub_below">Tempo sotto il range, media giornaliera (molto basso più scuro)</string>
+    <string name="stats_sub_above">Tempo sopra il range, media giornaliera (molto alto più scuro)</string>
+    <string name="stats_sub_coverage">Quota di letture del sensore ricevute, media giornaliera</string>
+    <string name="stats_sub_schedule">Orario medio di addormentamento e risveglio</string>
+    <string name="stats_sub_per_night">Per notte, media</string>
+    <string name="stats_sub_daily">Media giornaliera</string>
+    <string name="stats_earlier">Prima</string>
+    <string name="stats_later">Dopo</string>
+    <string name="stats_pick_date">Scegli una data</string>
+    <string name="stats_more_hc">Altro da Health Connect</string>
+    <string name="stats_more_hc_text">Consenti frequenza cardiaca a riposo, variabilità della frequenza cardiaca e calorie bruciate per riempire queste schede.</string>
+    <string name="stats_empty_title">Nulla registrato in questo periodo</string>
+    <string name="stats_empty_text">Prova un periodo precedente o collega altre fonti di dati nelle Impostazioni.</string>
+    <string name="stats_in_range_caption">nel range</string>
+    <string name="stats_total_daily_dose">Dose giornaliera totale</string>
+    <string name="stats_basal_pct">Basale · %1$d%%</string>
+    <string name="stats_bolus_pct">Bolo · %1$d%%</string>
+    <string name="stats_burned">Bruciate</string>
+    <string name="stats_cal_resting">Riposo</string>
+    <string name="stats_cal_active">Attivo</string>
+    <string name="stats_rhr">FC a riposo</string>
+    <string name="stats_avg_hr">FC media</string>
+    <string name="stats_mean">Media</string>
+    <string name="stats_std_dev">Dev. std</string>
+    <string name="stats_readings">Letture</string>
+    <string name="stats_no_data">Nessun dato in questo periodo</string>
+    <string name="stats_days_with_data">Giorni con dati</string>
+    <string name="stats_highest_day">Giorno più alto</string>
+    <string name="stats_lowest_day">Giorno più basso</string>
+    <string name="stats_year_note">Le barre mostrano la media giornaliera di ogni mese.</string>
+    <string name="stats_trend">Andamento</string>
+    <string name="stats_trend_no_data">Dati non ancora sufficienti per mostrare un andamento.</string>
+    <string name="stats_vs_week">%1$s%2$d%% rispetto alla settimana scorsa</string>
+    <string name="stats_vs_month">%1$s%2$d%% rispetto al mese scorso</string>
+    <string name="stats_vs_year">%1$s%2$d%% rispetto all\'anno scorso</string>
+    <string name="stats_load_failed">Impossibile caricare le statistiche</string>
+    <plurals name="stats_trend_weeks">
+        <item quantity="one">Media giornaliera dell\'ultima settimana</item>
+        <item quantity="other">Media giornaliera delle ultime %1$d settimane</item>
+    </plurals>
+    <plurals name="stats_trend_months">
+        <item quantity="one">Media giornaliera dell\'ultimo mese</item>
+        <item quantity="other">Media giornaliera degli ultimi %1$d mesi</item>
+    </plurals>
+    <plurals name="stats_trend_years">
+        <item quantity="one">Media giornaliera dell\'ultimo anno</item>
+        <item quantity="other">Media giornaliera degli ultimi %1$d anni</item>
+    </plurals>
+    <string name="stats_coverage_short">Copertura</string>
 </resources>

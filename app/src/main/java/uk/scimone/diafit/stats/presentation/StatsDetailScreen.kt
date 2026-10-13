@@ -1,5 +1,9 @@
 package uk.scimone.diafit.stats.presentation
 
+import uk.scimone.diafit.core.presentation.formatLocalized
+import uk.scimone.diafit.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,7 +62,7 @@ fun StatsDetailScreen(userId: Int, metric: StatsMetric, period: StatsPeriod, off
         topBar = {
             TopAppBar(
                 title = { Text(title) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
             )
         }
     ) { padding ->
@@ -68,7 +72,7 @@ fun StatsDetailScreen(userId: Int, metric: StatsMetric, period: StatsPeriod, off
                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 return@Column
             }
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MetricSection(metric, state)
                 TrendSection(metric, state)
@@ -87,7 +91,7 @@ private fun MetricSection(metric: StatsMetric, state: StatsDetailState) {
 
     StatsCardFrame(metric, metric.title) {
         if (!hasData) {
-            Text("No data in this period", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.stats_no_data), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@StatsCardFrame
         }
         // The readout above the chart: the tapped bar, else the period's daily average.
@@ -122,16 +126,15 @@ private fun Summary(metric: StatsMetric, days: List<StatsDay>, period: StatsPeri
     val withData = days.filter { metric.primary(it) != null }
     val high = withData.maxByOrNull { metric.primary(it)!! }
     val low = withData.minByOrNull { metric.primary(it)!! }
-    val dateFmt = java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SummaryRow("Days with data", "${withData.size}")
+        SummaryRow(stringResource(R.string.stats_days_with_data), "${withData.size}")
         if (metric.additive) metric.total(days)?.let { total ->
-            SummaryRow("Total", metric.formatInline(total))
+            SummaryRow(stringResource(R.string.addmeal_total), metric.formatInline(total))
         }
-        high?.let { SummaryRow("Highest day", "${metric.formatInline(metric.primary(it)!!)} · ${dateFmt.format(it.date)}") }
-        low?.let { SummaryRow("Lowest day", "${metric.formatInline(metric.primary(it)!!)} · ${dateFmt.format(it.date)}") }
+        high?.let { SummaryRow(stringResource(R.string.stats_highest_day), "${metric.formatInline(metric.primary(it)!!)} · ${it.date.formatLocalized("EEEdMMM")}") }
+        low?.let { SummaryRow(stringResource(R.string.stats_lowest_day), "${metric.formatInline(metric.primary(it)!!)} · ${it.date.formatLocalized("EEEdMMM")}") }
         if (period == StatsPeriod.YEAR) {
-            Text("Bars show the daily average of each month.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.stats_year_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -146,10 +149,9 @@ private fun SummaryRow(label: String, value: String) {
 
 @Composable
 private fun TrendSection(metric: StatsMetric, state: StatsDetailState) {
-    val unitWord = when (state.period) { StatsPeriod.WEEK -> "weeks"; StatsPeriod.MONTH -> "months"; else -> "years" }
     // The sleep schedule has no single number to trend, so it trends sleep duration.
     val trendMetric = if (metric == StatsMetric.SLEEP_SCHEDULE) StatsMetric.SLEEP else metric
-    StatsCardFrame(trendMetric, "Trend") {
+    StatsCardFrame(trendMetric, stringResource(R.string.stats_trend)) {
         if (state.trend.isEmpty()) {
             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp)) }
             return@StatsCardFrame
@@ -157,20 +159,23 @@ private fun TrendSection(metric: StatsMetric, state: StatsDetailState) {
         val points = state.trend
         val values = points.mapNotNull { it.value }
         if (values.size < 2) {
-            Text("Not enough data yet to show a trend.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.stats_trend_no_data), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@StatsCardFrame
         }
         val current = points.last().value
         val previous = points.getOrNull(points.lastIndex - 1)?.value
         val change = changePercent(current, previous)
         Text(
-            "Daily average over the last ${points.size} $unitWord",
+            pluralStringResource(
+                when (state.period) { StatsPeriod.WEEK -> R.plurals.stats_trend_weeks; StatsPeriod.MONTH -> R.plurals.stats_trend_months; else -> R.plurals.stats_trend_years },
+                points.size, points.size
+            ),
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (change != null) {
-            val word = when (state.period) { StatsPeriod.WEEK -> "last week"; StatsPeriod.MONTH -> "last month"; else -> "last year" }
             val sign = if (change > 0) "+" else ""
-            Text("$sign$change% vs $word", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = trendMetric.accent())
+            val vs = when (state.period) { StatsPeriod.WEEK -> R.string.stats_vs_week; StatsPeriod.MONTH -> R.string.stats_vs_month; else -> R.string.stats_vs_year }
+            Text(stringResource(vs, sign, change), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = trendMetric.accent())
         }
         StatsTrendChart(points, trendMetric.accent())
     }

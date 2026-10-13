@@ -1,5 +1,7 @@
 package uk.scimone.diafit.stats.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,7 +30,7 @@ data class StatsDetailState(
     /** Averages of the last few periods ending with this one; empty until loaded. */
     val trend: List<StatsTrendPoint> = emptyList(),
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 ) {
     val canGoNewer: Boolean get() = offset < 0
 }
@@ -83,7 +85,7 @@ class StatsDetailViewModel(
                 _state.update { if (it.window == s.window) it.copy(trend = trendPoints(if (s.metric == StatsMetric.SLEEP_SCHEDULE) StatsMetric.SLEEP else s.metric, trendDays, windows)) else it }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load stats detail", e)
-                _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Couldn't load stats") }
+                _state.update { it.copy(isLoading = false, errorMessage = e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.stats_load_failed)) }
             }
         }
     }

@@ -778,4 +778,80 @@
         <item quantity="one">%1$d month</item>
         <item quantity="other">%1$d months</item>
     </plurals>
+
+    <!-- Stats -->
+    <string name="stats_m_in_range">In range</string>
+    <string name="stats_m_below">Below range</string>
+    <string name="stats_m_above">Above range</string>
+    <string name="stats_m_cv">Glucose variability (CV)</string>
+    <string name="stats_m_a1c">A1c (GMI)</string>
+    <string name="stats_m_coverage">Data coverage</string>
+    <string name="stats_m_deep_sleep">Deep sleep</string>
+    <string name="stats_m_rem_sleep">REM sleep</string>
+    <string name="stats_m_light_sleep">Light sleep</string>
+    <string name="stats_m_sleep_schedule">Sleep schedule</string>
+    <string name="stats_m_resting_hr">Resting heart rate</string>
+    <string name="stats_m_hrv">Heart rate variability</string>
+    <string name="stats_m_calories">Calories burned</string>
+    <string name="stats_m_active_calories">Active calories</string>
+    <string name="stats_m_active_time">Active time</string>
+    <string name="stats_p_day_short">D</string>
+    <string name="stats_p_week_short">W</string>
+    <string name="stats_p_month_short">M</string>
+    <string name="stats_p_year_short">Y</string>
+    <string name="stats_p_day">Day</string>
+    <string name="stats_p_week">Week</string>
+    <string name="stats_p_month">Month</string>
+    <string name="stats_p_year">Year</string>
+    <string name="stats_unit_steps">steps</string>
+    <string name="stats_sub_tir">Time in range, daily average</string>
+    <string name="stats_sub_below">Time below range, daily average (very low darker)</string>
+    <string name="stats_sub_above">Time above range, daily average (very high darker)</string>
+    <string name="stats_sub_coverage">Share of sensor readings received, daily average</string>
+    <string name="stats_sub_schedule">Average bedtime and wake-up</string>
+    <string name="stats_sub_per_night">Per night, average</string>
+    <string name="stats_sub_daily">Daily average</string>
+    <string name="stats_earlier">Earlier</string>
+    <string name="stats_later">Later</string>
+    <string name="stats_pick_date">Pick a date</string>
+    <string name="stats_more_hc">More from Health Connect</string>
+    <string name="stats_more_hc_text">Allow resting heart rate, heart rate variability and calories burned to fill those cards.</string>
+    <string name="stats_empty_title">Nothing recorded in this period</string>
+    <string name="stats_empty_text">Try an earlier period, or connect more data sources in Settings.</string>
+    <string name="stats_in_range_caption">in range</string>
+    <string name="stats_total_daily_dose">Total daily dose</string>
+    <string name="stats_basal_pct">Basal · %1$d%%</string>
+    <string name="stats_bolus_pct">Bolus · %1$d%%</string>
+    <string name="stats_burned">Burned</string>
+    <string name="stats_cal_resting">Resting</string>
+    <string name="stats_cal_active">Active</string>
+    <string name="stats_rhr">Resting HR</string>
+    <string name="stats_avg_hr">Average HR</string>
+    <string name="stats_mean">Mean</string>
+    <string name="stats_std_dev">Std dev</string>
+    <string name="stats_readings">Readings</string>
+    <string name="stats_no_data">No data in this period</string>
+    <string name="stats_days_with_data">Days with data</string>
+    <string name="stats_highest_day">Highest day</string>
+    <string name="stats_lowest_day">Lowest day</string>
+    <string name="stats_year_note">Bars show the daily average of each month.</string>
+    <string name="stats_trend">Trend</string>
+    <string name="stats_trend_no_data">Not enough data yet to show a trend.</string>
+    <string name="stats_vs_week">%1$s%2$d%% vs last week</string>
+    <string name="stats_vs_month">%1$s%2$d%% vs last month</string>
+    <string name="stats_vs_year">%1$s%2$d%% vs last year</string>
+    <string name="stats_load_failed">Couldn\'t load stats</string>
+    <plurals name="stats_trend_weeks">
+        <item quantity="one">Daily average over the last week</item>
+        <item quantity="other">Daily average over the last %1$d weeks</item>
+    </plurals>
+    <plurals name="stats_trend_months">
+        <item quantity="one">Daily average over the last month</item>
+        <item quantity="other">Daily average over the last %1$d months</item>
+    </plurals>
+    <plurals name="stats_trend_years">
+        <item quantity="one">Daily average over the last year</item>
+        <item quantity="other">Daily average over the last %1$d years</item>
+    </plurals>
+    <string name="stats_coverage_short">Coverage</string>
 </resources>

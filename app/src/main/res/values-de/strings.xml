@@ -775,4 +775,80 @@
         <item quantity="one">%1$d Monat</item>
         <item quantity="other">%1$d Monate</item>
     </plurals>
+
+    <!-- Stats -->
+    <string name="stats_m_in_range">Im Zielbereich</string>
+    <string name="stats_m_below">Unter dem Zielbereich</string>
+    <string name="stats_m_above">Über dem Zielbereich</string>
+    <string name="stats_m_cv">Glukosevariabilität (CV)</string>
+    <string name="stats_m_a1c">A1c (GMI)</string>
+    <string name="stats_m_coverage">Datenabdeckung</string>
+    <string name="stats_m_deep_sleep">Tiefschlaf</string>
+    <string name="stats_m_rem_sleep">REM-Schlaf</string>
+    <string name="stats_m_light_sleep">Leichtschlaf</string>
+    <string name="stats_m_sleep_schedule">Schlafzeiten</string>
+    <string name="stats_m_resting_hr">Ruheherzfrequenz</string>
+    <string name="stats_m_hrv">Herzfrequenzvariabilität</string>
+    <string name="stats_m_calories">Verbrannte Kalorien</string>
+    <string name="stats_m_active_calories">Aktive Kalorien</string>
+    <string name="stats_m_active_time">Aktive Zeit</string>
+    <string name="stats_p_day_short">T</string>
+    <string name="stats_p_week_short">W</string>
+    <string name="stats_p_month_short">M</string>
+    <string name="stats_p_year_short">J</string>
+    <string name="stats_p_day">Tag</string>
+    <string name="stats_p_week">Woche</string>
+    <string name="stats_p_month">Monat</string>
+    <string name="stats_p_year">Jahr</string>
+    <string name="stats_unit_steps">Schritte</string>
+    <string name="stats_sub_tir">Zeit im Zielbereich, Tagesdurchschnitt</string>
+    <string name="stats_sub_below">Zeit unter dem Zielbereich, Tagesdurchschnitt (sehr niedrig dunkler)</string>
+    <string name="stats_sub_above">Zeit über dem Zielbereich, Tagesdurchschnitt (sehr hoch dunkler)</string>
+    <string name="stats_sub_coverage">Anteil der empfangenen Sensorwerte, Tagesdurchschnitt</string>
+    <string name="stats_sub_schedule">Durchschnittliche Schlafens- und Aufwachzeit</string>
+    <string name="stats_sub_per_night">Pro Nacht, Durchschnitt</string>
+    <string name="stats_sub_daily">Tagesdurchschnitt</string>
+    <string name="stats_earlier">Früher</string>
+    <string name="stats_later">Später</string>
+    <string name="stats_pick_date">Datum wählen</string>
+    <string name="stats_more_hc">Mehr aus Health Connect</string>
+    <string name="stats_more_hc_text">Erlaube Ruheherzfrequenz, Herzfrequenzvariabilität und verbrannte Kalorien, um diese Karten zu füllen.</string>
+    <string name="stats_empty_title">In diesem Zeitraum wurde nichts erfasst</string>
+    <string name="stats_empty_text">Probiere einen früheren Zeitraum oder verbinde in den Einstellungen weitere Datenquellen.</string>
+    <string name="stats_in_range_caption">im Zielbereich</string>
+    <string name="stats_total_daily_dose">Tagesgesamtdosis</string>
+    <string name="stats_basal_pct">Basal · %1$d %%</string>
+    <string name="stats_bolus_pct">Bolus · %1$d %%</string>
+    <string name="stats_burned">Verbrannt</string>
+    <string name="stats_cal_resting">Ruhe</string>
+    <string name="stats_cal_active">Aktiv</string>
+    <string name="stats_rhr">Ruhepuls</string>
+    <string name="stats_avg_hr">Ø Puls</string>
+    <string name="stats_mean">Mittel</string>
+    <string name="stats_std_dev">Std.-Abw.</string>
+    <string name="stats_readings">Messwerte</string>
+    <string name="stats_no_data">Keine Daten in diesem Zeitraum</string>
+    <string name="stats_days_with_data">Tage mit Daten</string>
+    <string name="stats_highest_day">Höchster Tag</string>
+    <string name="stats_lowest_day">Niedrigster Tag</string>
+    <string name="stats_year_note">Die Balken zeigen den Tagesdurchschnitt jedes Monats.</string>
+    <string name="stats_trend">Trend</string>
+    <string name="stats_trend_no_data">Noch nicht genug Daten für einen Trend.</string>
+    <string name="stats_vs_week">%1$s%2$d %% ggü. letzter Woche</string>
+    <string name="stats_vs_month">%1$s%2$d %% ggü. letztem Monat</string>
+    <string name="stats_vs_year">%1$s%2$d %% ggü. letztem Jahr</string>
+    <string name="stats_load_failed">Statistik konnte nicht geladen werden</string>
+    <plurals name="stats_trend_weeks">
+        <item quantity="one">Tagesdurchschnitt der letzten Woche</item>
+        <item quantity="other">Tagesdurchschnitt der letzten %1$d Wochen</item>
+    </plurals>
+    <plurals name="stats_trend_months">
+        <item quantity="one">Tagesdurchschnitt des letzten Monats</item>
+        <item quantity="other">Tagesdurchschnitt der letzten %1$d Monate</item>
+    </plurals>
+    <plurals name="stats_trend_years">
+        <item quantity="one">Tagesdurchschnitt des letzten Jahres</item>
+        <item quantity="other">Tagesdurchschnitt der letzten %1$d Jahre</item>
+    </plurals>
+    <string name="stats_coverage_short">Abdeckung</string>
 </resources>

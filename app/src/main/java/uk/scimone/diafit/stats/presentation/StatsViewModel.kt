@@ -1,5 +1,7 @@
 package uk.scimone.diafit.stats.presentation
 
+import uk.scimone.diafit.core.presentation.UiText
+import uk.scimone.diafit.R
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,7 +33,7 @@ data class StatsState(
     val window: StatsWindow = StatsWindow.of(StatsPeriod.DAY, LocalDate.now()),
     val days: List<StatsDay> = emptyList(),
     val isLoading: Boolean = true,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     /** Health Connect is on but the heart-rate variability / calories permissions haven't been granted yet. */
     val needsVitalsPermission: Boolean = false
 ) {
@@ -96,7 +98,7 @@ class StatsViewModel(
                     _state.update { if (it.window == window) it.copy(days = days, isLoading = false, errorMessage = null) else it }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to load stats", e)
-                    _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Couldn't load stats") }
+                    _state.update { it.copy(isLoading = false, errorMessage = e.message?.let { UiText.Raw(it) } ?: UiText.of(R.string.stats_load_failed)) }
                 }
                 if (window.lastExclusive <= LocalDate.now()) break
                 delay(REFRESH_MS)
