@@ -37,7 +37,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepDetailScreen(entry: SleepEntryUi, onBack: () -> Unit) {
-    val clock = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val clock = uk.scimone.diafit.core.presentation.rememberLocalizedFormat("Hm")
     val date = uk.scimone.diafit.core.presentation.localizedFormat("EEEEdMMMM")
     Scaffold(
         topBar = {

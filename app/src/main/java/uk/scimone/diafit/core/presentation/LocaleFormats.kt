@@ -52,7 +52,10 @@ fun Resources.duration(ms: Long): String {
 @Composable
 fun rememberResources(): Resources = LocalContext.current.resources
 @Composable
-fun rememberLocalizedFormat(skeleton: String) = remember(skeleton, Locale.getDefault()) { localizedFormat(skeleton) }
+fun rememberLocalizedFormat(skeleton: String): SimpleDateFormat {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    return remember(skeleton, locale) { localizedFormat(skeleton, locale) }
+}
 
 /** A date in the current locale from a skeleton (`"EEEdMMM"`). */
 fun java.time.LocalDate.formatLocalized(skeleton: String): String =

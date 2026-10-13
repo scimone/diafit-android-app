@@ -1,5 +1,6 @@
 package uk.scimone.diafit.core.data.service
 
+import uk.scimone.diafit.R
 import android.app.Notification
 import android.app.Service
 import android.content.Intent
@@ -44,6 +45,6 @@ class BroadcastIntentHealthSyncService : Service() {
 
     private fun createNotification(): Notification {
         Log.d("BroadcastIntentHealthSyncService", "Creating notification")
-        return SyncNotificationUpdater.build(this, "Health Sync Service", "Listening for health data broadcasts")
+        return SyncNotificationUpdater.build(this, getString(R.string.sync_health_title), getString(R.string.sync_health_text))
     }
 }

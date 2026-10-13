@@ -1,5 +1,7 @@
 package uk.scimone.diafit.core.data.service
 
+import uk.scimone.diafit.core.presentation.formatStamp
+import uk.scimone.diafit.core.presentation.AppStrings
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
@@ -92,7 +94,7 @@ class SyncNotificationUpdater(
         val title = syncNotificationTitle(latest, readings.getOrNull(readings.size - 2))
         val ageMin = ((now - latest.timestamp) / 60_000).toInt()
 
-        val text = if (ageMin > 15) "Last reading $ageMin min ago" else {
+        val text = if (ageMin > 15) context.getString(R.string.sync_last_reading, ageMin) else {
             val range = targetRange()
             val since = now - 8 * HOUR
             val data = activity.getBetween(since, now, USER_ID)
@@ -104,8 +106,8 @@ class SyncNotificationUpdater(
                 asleepNow = data.sleep.any { it.startUtc <= now && it.endUtc >= now },
                 history = loadHistory(now), targetLow = range.lowerBound, targetHigh = range.upperBound
             )
-            val situation = GlucoseSituation.classify(input)
-            situation ?: GlucoseSituation.trendFallback(input) ?: "Updated ${DateTimeFormatter.ofPattern("HH:mm").format(Instant.ofEpochMilli(latest.timestamp).atZone(ZoneId.systemDefault()))}"
+            val situation = GlucoseSituation.classify(input) ?: GlucoseSituation.trendFallback(input)
+            situation?.text() ?: AppStrings.byName("sit_updated_at", listOf(formatStamp(latest.timestamp, "Hm")))
         }
         NotificationManagerCompat.from(context).notify(CgmServiceManager.CGM_SYNC_NOTIFICATION_ID, build(context, title, text))
     }

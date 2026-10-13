@@ -244,7 +244,7 @@ private fun FilterButton(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                d.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
+                                d.getDisplayName(java.time.format.TextStyle.NARROW, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )

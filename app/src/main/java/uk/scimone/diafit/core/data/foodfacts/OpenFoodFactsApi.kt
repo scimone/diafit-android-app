@@ -24,6 +24,9 @@ private const val TAG = "OpenFoodFacts"
 private const val BASE_URL = "https://world.openfoodfacts.org/api/v2/product"
 private const val FIELDS = "code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,product_quantity"
 
+/** The app language (en/de/it), so Open Food Facts returns product names in it where it has them. */
+private fun appLanguageCode(): String = java.util.Locale.getDefault().language.takeIf { it in setOf("de", "it") } ?: "en"
+
 /** Looks a barcode up in the Open Food Facts database (https://openfoodfacts.github.io/openfoodfacts-server/api/). */
 class OpenFoodFactsApi(private val client: HttpClient) {
 
@@ -42,6 +45,7 @@ class OpenFoodFactsApi(private val client: HttpClient) {
         return try {
             val response = if (legacy) client.get("https://world.openfoodfacts.org/cgi/search.pl") {
                 parameter("search_terms", query)
+                parameter("lc", appLanguageCode())
                 parameter("search_simple", 1)
                 parameter("action", "process")
                 parameter("json", 1)
@@ -51,6 +55,7 @@ class OpenFoodFactsApi(private val client: HttpClient) {
                 timeout { requestTimeoutMillis = 10_000; connectTimeoutMillis = 6_000; socketTimeoutMillis = 10_000 }
             } else client.get("https://search.openfoodfacts.org/search") {
                 parameter("q", query)
+                parameter("lang", appLanguageCode())
                 parameter("page_size", 12)
                 parameter("fields", FIELDS)
                 header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
@@ -74,6 +79,7 @@ class OpenFoodFactsApi(private val client: HttpClient) {
         try {
             val response = client.get("$BASE_URL/$barcode.json") {
                 parameter("fields", FIELDS)
+                parameter("lc", appLanguageCode())
                 // Open Food Facts asks every app to identify itself.
                 header("User-Agent", "Diafit/1.0 (Android; scimone.mail@gmail.com)")
                 timeout { requestTimeoutMillis = 12_000; connectTimeoutMillis = 8_000; socketTimeoutMillis = 12_000 }

@@ -122,9 +122,9 @@ class PatternWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         private const val USER_ID = 1
         private const val MIN_DAYS_TO_SCAN = 7
         private val RUN_LOCK = Mutex()
-        private val CHANNEL = NotificationChannelSpec(
-            "GLUCOSE_PATTERNS_CHANNEL", "Glucose patterns",
-            "New patterns found in your glucose data", NotificationManager.IMPORTANCE_DEFAULT
+        private val CHANNEL get() = NotificationChannelSpec(
+            "GLUCOSE_PATTERNS_CHANNEL", AppStrings.byName("pat_channel_name"),
+            AppStrings.byName("pat_channel_desc"), NotificationManager.IMPORTANCE_DEFAULT
         )
     }
 }

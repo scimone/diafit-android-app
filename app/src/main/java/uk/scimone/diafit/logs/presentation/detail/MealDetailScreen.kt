@@ -199,7 +199,7 @@ private fun Hero(meal: MealEntityUi) {
  */
 @Composable
 private fun MealTimelineCard(state: MealDetailState, onEditCourse: (Int) -> Unit) {
-    val fmt = remember(java.util.Locale.getDefault()) { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
+    val fmt = remember(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]) { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
     val items = remember(state.courses, state.boluses) {
         (state.courses.map { TimelineItem.Course(it) } + state.boluses.map { TimelineItem.Dose(it) }).sortedBy { it.time }
     }

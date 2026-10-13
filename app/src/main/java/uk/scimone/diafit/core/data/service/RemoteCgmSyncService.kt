@@ -1,5 +1,6 @@
 package uk.scimone.diafit.core.data.service
 
+import uk.scimone.diafit.R
 import android.app.Notification
 import android.app.Service
 import android.content.Intent
@@ -45,6 +46,6 @@ class RemoteCgmSyncService : Service() {
 
     private fun createNotification(): Notification {
         Log.d("RemoteCgmSyncService", "Creating notification")
-        return SyncNotificationUpdater.build(this, "CGM Sync Service", "Syncing CGM data in real-time")
+        return SyncNotificationUpdater.build(this, getString(R.string.sync_cgm_title), getString(R.string.sync_cgm_text))
     }
 }

@@ -9,10 +9,13 @@ import uk.scimone.diafit.core.domain.model.CgmEntity
 import uk.scimone.diafit.core.domain.model.MealEntity
 import uk.scimone.diafit.patterns.domain.GlucoseSituation
 import uk.scimone.diafit.patterns.domain.SituationInput
+import uk.scimone.diafit.patterns.domain.msg
+import uk.scimone.diafit.patterns.domain.ref
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
 class GlucoseSituationTest {
+    private fun sit(key: String, vararg args: Any) = msg("sit_$key", *args)
     private val zone = ZoneId.of("UTC")
     private val min = 60_000L
     private fun at(h: Int, m: Int = 0) = ZonedDateTime.of(2026, 10, 9, h, m, 0, 0, zone).toInstant().toEpochMilli()
@@ -50,84 +53,84 @@ class GlucoseSituationTest {
     @Test fun rapidRiseAfterMeal() {
         val now = at(13)
         val r = series(now, 60) { 100 + (60 - it) * 3 }
-        assertEquals("Rapid glucose rise after lunch", classify(now, r, listOf(meal(now - 40 * min)), listOf(bolus(now - 40 * min))))
+        assertEquals(sit("rapid_rise_meal", ref("sit_after_lunch")), classify(now, r, listOf(meal(now - 40 * min)), listOf(bolus(now - 40 * min))))
     }
 
     @Test fun missedBolus() {
         val now = at(13)
         val r = series(now, 60) { 100 + (60 - it) * 1 }
-        assertEquals("Glucose rise after missed or delayed bolus", classify(now, r, listOf(meal(now - 50 * min))))
+        assertEquals(sit("missed_bolus"), classify(now, r, listOf(meal(now - 50 * min))))
     }
 
     @Test fun gentleRiseRightAfterMeal() {
         val now = at(13)
         val r = series(now, 30) { 110 + (30 - it) / 2 }
-        assertEquals("Glucose rise after lunch", classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
+        assertEquals(sit("rise_meal", ref("sit_after_lunch")), classify(now, r, listOf(meal(now - 10 * min)), listOf(bolus(now - 10 * min))))
     }
 
     @Test fun steadyButHighSaysHigh() {
         val now = at(15)
         val input = SituationInput(now, zone, series(now, 30) { 190 + (it % 2) }, emptyList(), listOf(meal(now - 100 * min)))
         assertNull(GlucoseSituation.classify(input))
-        assertEquals("High glucose, steady", GlucoseSituation.trendFallback(input))
+        assertEquals(msg("sit_level_trend", ref("sit_level_high"), ref("sit_trend_steady")), GlucoseSituation.trendFallback(input))
     }
 
     @Test fun fastingHypo() {
         val now = at(14)
         val r = series(now, 40) { 62 + it / 10 }
-        assertEquals("Fasting hypoglycemia", classify(now, r))
+        assertEquals(sit("fasting_hypo"), classify(now, r))
     }
 
     @Test fun nocturnalHypo() {
         val now = at(3)
-        assertEquals("Nocturnal hypoglycemia", classify(now, series(now, 40) { 60 + it / 10 }))
+        assertEquals(sit("nocturnal_hypo"), classify(now, series(now, 40) { 60 + it / 10 }))
     }
 
     @Test fun postMealHypo() {
         val now = at(14)
-        assertEquals("Post-lunch hypoglycemia", classify(now, series(now, 40) { 60 + it / 10 }, listOf(meal(now - 120 * min))))
+        assertEquals(sit("hypo_meal", ref("sit_after_lunch")), classify(now, series(now, 40) { 60 + it / 10 }, listOf(meal(now - 120 * min))))
     }
 
     @Test fun reboundAfterLow() {
         val now = at(14)
         val r = series(now, 150) { m -> if (m > 90) 55 else 190 }
-        assertEquals("Rebound hyperglycemia after hypoglycemia", classify(now, r))
+        assertEquals(sit("rebound_hyper"), classify(now, r))
     }
 
     @Test fun stableBetweenMeals() {
         val now = at(15)
-        assertEquals("Stable glucose levels between meals", classify(now, series(now, 200) { 110 + (it % 3) }))
+        assertEquals(sit("stable_between"), classify(now, series(now, 200) { 110 + (it % 3) }))
     }
 
     @Test fun stableInTheMorning() {
         val now = at(9)
         val r = series(now, 200) { 110 + (it % 3) }
-        assertEquals("Stable glucose levels in the morning", classify(now, r, listOf(meal(now - 120 * min, 15))))
+        assertEquals(sit("stable_part", ref("sit_in_morning")), classify(now, r, listOf(meal(now - 120 * min, 15))))
     }
 
     @Test fun stableOvernight() {
         val now = at(2)
-        assertEquals("Stable glucose levels overnight", classify(now, series(now, 200) { 110 + (it % 3) }))
+        assertEquals(sit("night_stable"), classify(now, series(now, 200) { 110 + (it % 3) }))
     }
 
     @Test fun gradualOvernightRise() {
         val now = at(2)
-        assertEquals("Gradual overnight glucose rise", classify(now, series(now, 200) { 140 - it / 3 }))
+        assertEquals(sit("night_rise"), classify(now, series(now, 200) { 140 - it / 3 }))
     }
 
     @Test fun persistentHyper() {
         val now = at(15)
-        assertEquals("Persistent hyperglycemia", classify(now, series(now, 400) { 230 + (it % 3) }))
+        assertEquals(sit("persistent_hyper"), classify(now, series(now, 400) { 230 + (it % 3) }))
     }
 
     @Test fun prolongedAboveTarget() {
         val now = at(15)
-        assertEquals("Prolonged high glucose", classify(now, series(now, 150) { 230 + (it % 3) }))
+        assertEquals(sit("prolonged_high"), classify(now, series(now, 150) { 230 + (it % 3) }))
     }
 
     @Test fun correctionDecline() {
         val now = at(15)
         val r = series(now, 100) { 200 - (100 - it) * 1 }
-        assertEquals("Glucose decline after correction insulin", classify(now, r, boluses = listOf(bolus(now - 60 * min, 2f))))
+        assertEquals(sit("decline_correction"), classify(now, r, boluses = listOf(bolus(now - 60 * min, 2f))))
     }
 }

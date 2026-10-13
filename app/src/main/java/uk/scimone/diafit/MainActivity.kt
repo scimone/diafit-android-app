@@ -425,10 +425,10 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "GLUCOSE_SYNC_CHANNEL",
-                "CGM Sync Service",
+                getString(R.string.sync_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Channel for CGM sync service notifications"
+                description = getString(R.string.sync_channel_desc)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)

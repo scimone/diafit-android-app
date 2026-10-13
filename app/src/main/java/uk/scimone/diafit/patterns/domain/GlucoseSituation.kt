@@ -52,105 +52,107 @@ object GlucoseSituation {
     private const val FASTING_AFTER_MIN = 300
     private const val MEAL_MIN_CARBS = 15
     private const val MAX_READING_AGE_MIN = 15
+    private fun sit(key: String, vararg args: Any) = msg("sit_$key", *args)
+
     private const val MAX_GAP_MS = 10 * MIN
     private const val HIGH_CV = 36.0
 
     /** Phrase for the situation, or null when nothing fits or the newest reading is stale. */
-    fun classify(input: SituationInput): String? {
+    fun classify(input: SituationInput): Msg? {
         val c = Context(input)
         if (c.g == null || c.stale || c.r == null) return null
         return rules.firstNotNullOfOrNull { it(c) }
     }
 
     /** Plain description of the trend for moments no named situation fits (null when there are no fresh readings). */
-    fun trendFallback(input: SituationInput): String? {
+    fun trendFallback(input: SituationInput): Msg? {
         val c = Context(input)
         val r = c.r ?: return null
         if (c.g == null || c.stale) return null
         val trend = when {
-            r >= RAPID -> "rising rapidly"
-            r >= FLAT -> "rising"
-            r <= -RAPID -> "falling rapidly"
-            r <= -FLAT -> "falling"
-            else -> "steady"
+            r >= RAPID -> "trend_rising_fast"
+            r >= FLAT -> "trend_rising"
+            r <= -RAPID -> "trend_falling_fast"
+            r <= -FLAT -> "trend_falling"
+            else -> "trend_steady"
         }
         val g = c.g
         val level = when {
-            g > 250 -> "Very high glucose"
-            g > c.high -> "High glucose"
-            g < 54 -> "Very low glucose"
-            g < c.low -> "Low glucose"
-            else -> "Glucose"
+            g > 250 -> "level_very_high"
+            g > c.high -> "level_high"
+            g < 54 -> "level_very_low"
+            g < c.low -> "level_low"
+            else -> "level_normal"
         }
-        return "$level, $trend"
+        return sit("level_trend", ref("sit_$level"), ref("sit_$trend"))
     }
 
-    private val rules: List<(Context) -> String?> = listOf(
+    private val rules: List<(Context) -> Msg?> = listOf(
         ::hypoNow, ::afterLow, ::overcorrection, ::exercise, ::insulin, ::meal, ::dawn, ::overnight,
         ::longHigh, ::fastingHigh, ::stress, ::variability, ::recurrent, ::calm
     )
 
     // ---- safety ---------------------------------------------------------------------------------------------
 
-    private fun hypoNow(c: Context): String? {
+    private fun hypoNow(c: Context): Msg? {
         val g = c.g!!
         if (g >= HYPO) return null
         val lowMin = c.streakMin { it < HYPO }
-        if (lowMin >= 90) return "Persistent hypoglycemia"
+        if (lowMin >= 90) return sit("persistent_hypo")
         val treated = c.meals.any { it.carbohydrates in 5..30 && it.mealTimeUtc >= c.now - lowMin * MIN - 10 * MIN && it.mealTimeUtc <= c.now - 30 * MIN }
-        if (treated) return "Delayed recovery after hypoglycemia"
-        if (c.night) return "Nocturnal hypoglycemia"
-        if (c.exerciseActive != null) return "Glucose decline during exercise"
-        if (c.exerciseEndedMin in 60..480) return "Delayed post-exercise glucose decline"
-        if (c.stacking) return "Glucose decline due to insulin stacking"
-        if ((c.mealAgeMin ?: Int.MAX_VALUE) <= 240) return "Post-${c.mealWord} hypoglycemia"
-        if (c.correctionBolusAgeMin != null) return "Glucose decline after correction insulin"
-        return "Fasting hypoglycemia"
+        if (treated) return sit("delayed_recovery")
+        if (c.night) return sit("nocturnal_hypo")
+        if (c.exerciseActive != null) return sit("decline_exercise")
+        if (c.exerciseEndedMin in 60..480) return sit("delayed_postex_decline")
+        if (c.stacking) return sit("decline_stacking")
+        if ((c.mealAgeMin ?: Int.MAX_VALUE) <= 240) return sit("hypo_meal", c.afterMeal)
+        if (c.correctionBolusAgeMin != null) return sit("decline_correction")
+        return sit("fasting_hypo")
     }
 
-    private fun afterLow(c: Context): String? {
+    private fun afterLow(c: Context): Msg? {
         val g = c.g!!
         val low = c.lastLow(3 * 60) ?: return null // (start, end) of the latest hypo episode of >= 15 min
         val sinceEndMin = ((c.now - low.second) / MIN).toInt()
-        if (g > c.high) return "Rebound hyperglycemia after hypoglycemia"
-        if (sinceEndMin <= 90 && c.r!! >= RAPID) return "Rapid glucose rise after hypoglycemia treatment"
-        if (sinceEndMin <= 90 && (low.second - low.first) / MIN >= 45) return "Delayed recovery after hypoglycemia"
+        if (g > c.high) return sit("rebound_hyper")
+        if (sinceEndMin <= 90 && c.r!! >= RAPID) return sit("rapid_rise_hypo_treat")
+        if (sinceEndMin <= 90 && (low.second - low.first) / MIN >= 45) return sit("delayed_recovery")
         return null
     }
 
-    private fun overcorrection(c: Context): String? {
+    private fun overcorrection(c: Context): Msg? {
         val g = c.g!!
         val peak = c.window(180).maxOfOrNull { it.valueMgdl } ?: return null
         val manual = c.boluses.any { !it.isSmb && it.timestampUtc >= c.now - 240 * MIN }
         return if (manual && peak >= c.high && g <= 90 && peak - g >= 100 && c.r!! <= -MODERATE)
-            "Rapid glucose drop after hyperglycemia overcorrection" else null
+            sit("overcorrection") else null
     }
 
     // ---- exercise & insulin ---------------------------------------------------------------------------------
 
-    private fun exercise(c: Context): String? {
+    private fun exercise(c: Context): Msg? {
         val r = c.r!!
         if (c.exerciseActive != null) {
-            if (r <= -FLAT) return "Glucose decline during exercise"
-            if (r >= MODERATE && c.intense) return "Glucose rise during intense exercise"
+            if (r <= -FLAT) return sit("decline_exercise")
+            if (r >= MODERATE && c.intense) return sit("rise_intense_ex")
         }
         val ended = c.exerciseEndedMin
-        if (ended in 60..480 && c.exerciseLongEnough && r <= -FLAT && c.change(120) <= -30) return "Delayed post-exercise glucose decline"
+        if (ended in 60..480 && c.exerciseLongEnough && r <= -FLAT && c.change(120) <= -30) return sit("delayed_postex_decline")
         return null
     }
 
-    private fun insulin(c: Context): String? {
+    private fun insulin(c: Context): Msg? {
         val r = c.r!!
-        if (c.stacking && r <= -MODERATE) return "Glucose decline due to insulin stacking"
+        if (c.stacking && r <= -MODERATE) return sit("decline_stacking")
         val age = c.correctionBolusAgeMin ?: return null
-        if (age in 120..360 && c.g!! > c.high && r > -0.3) return "Hyperglycemia despite correction insulin"
-        if (age in 20..240 && (r <= -0.7 || c.change(60) <= -30)) return "Glucose decline after correction insulin"
+        if (age in 120..360 && c.g!! > c.high && r > -0.3) return sit("hyper_despite_corr")
+        if (age in 20..240 && (r <= -0.7 || c.change(60) <= -30)) return sit("decline_correction")
         return null
     }
 
     // ---- meals ----------------------------------------------------------------------------------------------
 
-    private fun meal(c: Context): String? {
+    private fun meal(c: Context): Msg? {
         val age = c.mealAgeMin ?: return null
         val start = c.mealStart!!
         if (age > 360) return null
@@ -162,95 +164,95 @@ object GlucoseSituation {
         val rise = base?.let { g - it }
 
         if (r <= -RAPID) {
-            return if (base != null && peak - base >= 50 && age <= 240) "Post-${c.mealWord} glucose spike followed by a rapid decline"
-            else if (age <= 240) "Rapid glucose decline after ${c.mealArticle}" else null
+            return if (base != null && peak - base >= 50 && age <= 240) sit("spike_decline", c.afterMeal)
+            else if (age <= 240) sit("rapid_decline_meal", c.afterMeal) else null
         }
         // Dipped early, then climbed back: a bolus that peaked before the food did.
         if (base != null && age in 90..300) {
             val early = sinceMeal.filter { it.timestamp <= start + 90 * MIN }
             val trough = early.minOfOrNull { it.valueMgdl }
             if (trough != null && trough <= base - 20 && g >= trough + 20 && r >= FLAT && c.mealCarbs >= MEAL_MIN_CARBS)
-                return "Early glucose decline followed by a delayed rise"
+                return sit("early_decline_late_rise")
         }
         // Rising, and the insulin for it wasn't there on time.
         if (c.mealCarbs >= 20 && age in 20..180 && !c.bolusAtMeal && r >= FLAT && (rise ?: 0) >= 30)
-            return "Glucose rise after missed or delayed bolus"
-        if (age <= 120 && r >= RAPID) return "Rapid glucose rise after ${c.mealArticle}"
-        if (age in 90..360 && r >= FLAT && (rise ?: 0) >= 30 && c.highFat) return "Glucose rise after a high-fat ${c.mealWord}"
-        if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return "Delayed post-${c.mealWord} glucose rise"
-        if (age >= 120 && c.streakMin { it > c.high } >= 120) return "Prolonged post-${c.mealWord} hyperglycemia"
-        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return "Slow glucose recovery after ${c.mealArticle}"
+            return sit("missed_bolus")
+        if (age <= 120 && r >= RAPID) return sit("rapid_rise_meal", c.afterMeal)
+        if (age in 90..360 && r >= FLAT && (rise ?: 0) >= 30 && c.highFat) return sit("rise_highfat")
+        if (age in 90..300 && r >= 0.7 && (rise ?: 0) >= 30) return sit("delayed_rise_meal", c.afterMeal)
+        if (age >= 120 && c.streakMin { it > c.high } >= 120) return sit("prolonged_hyper_meal", c.afterMeal)
+        if (age in 180..360 && g <= c.high && c.minutesAbove(start) >= 120) return sit("slow_recovery_meal", c.afterMeal)
         // Nothing more specific fits yet (e.g. right after eating): still say it is the meal.
-        if (age <= 180 && r >= FLAT) return "Glucose rise after ${c.mealArticle}"
-        if (age <= 240 && r <= -FLAT) return "Glucose decline after ${c.mealArticle}"
+        if (age <= 180 && r >= FLAT) return sit("rise_meal", c.afterMeal)
+        if (age <= 240 && r <= -FLAT) return sit("decline_meal", c.afterMeal)
         return null
     }
 
     // ---- time of day ----------------------------------------------------------------------------------------
 
-    private fun dawn(c: Context): String? {
+    private fun dawn(c: Context): Msg? {
         val local = Instant.ofEpochMilli(c.now).atZone(c.zone)
         val minuteOfDay = local.hour * 60 + local.minute
         if (minuteOfDay !in 210..540 || (c.mealAgeMin ?: Int.MAX_VALUE) < 240) return null
         if (c.boluses.any { it.timestampUtc >= c.now - 120 * MIN }) return null
         val midnight = local.toLocalDate().atStartOfDay(c.zone).toInstant().toEpochMilli()
         val nadir = c.readings.filter { it.timestamp in midnight..(midnight + 5 * 60 * MIN) }.minOfOrNull { it.valueMgdl } ?: return null
-        return if (c.g!! - nadir >= 20 && c.r!! >= 0.2 && c.g > nadir) "Dawn phenomenon" else null
+        return if (c.g!! - nadir >= 20 && c.r!! >= 0.2 && c.g > nadir) sit("dawn") else null
     }
 
-    private fun overnight(c: Context): String? {
+    private fun overnight(c: Context): Msg? {
         if (!c.night || (c.mealAgeMin ?: Int.MAX_VALUE) < 180) return null
         if (c.r!! >= RAPID || c.r <= -RAPID) return null
         val change = c.change(120)
         val win = c.window(120)
         if (win.size < 6) return null
-        if (change >= 30) return "Gradual overnight glucose rise"
-        if (change <= -30) return "Gradual overnight glucose decline"
+        if (change >= 30) return sit("night_rise")
+        if (change <= -30) return sit("night_decline")
         val range = win.maxOf { it.valueMgdl } - win.minOf { it.valueMgdl }
-        return if (range <= 30 && abs(c.r) < FLAT && c.g!! in c.low..c.high) "Stable glucose levels overnight" else null
+        return if (range <= 30 && abs(c.r) < FLAT && c.g!! in c.low..c.high) sit("night_stable") else null
     }
 
-    private fun fastingHigh(c: Context): String? {
+    private fun fastingHigh(c: Context): Msg? {
         if ((c.mealAgeMin ?: Int.MAX_VALUE) < FASTING_AFTER_MIN) return null
         if (c.boluses.any { it.timestampUtc >= c.now - 240 * MIN }) return null
-        return if (c.g!! > FASTING_HIGH && c.streakMin { it > FASTING_HIGH } >= 60) "Fasting hyperglycemia" else null
+        return if (c.g!! > FASTING_HIGH && c.streakMin { it > FASTING_HIGH } >= 60) sit("fasting_hyper") else null
     }
 
-    private fun longHigh(c: Context): String? {
+    private fun longHigh(c: Context): Msg? {
         val above = c.streakMin { it > c.high }
-        if (above >= 360) return "Persistent hyperglycemia"
-        if (above >= 120) return "Prolonged high glucose"
-        if (c.g!! < c.low && c.streakMin { it < c.low } >= 60) return "Prolonged low glucose"
+        if (above >= 360) return sit("persistent_hyper")
+        if (above >= 120) return sit("prolonged_high")
+        if (c.g!! < c.low && c.streakMin { it < c.low } >= 60) return sit("prolonged_low")
         return null
     }
 
     // ---- unexplained movements ------------------------------------------------------------------------------
 
-    private fun stress(c: Context): String? {
+    private fun stress(c: Context): Msg? {
         if ((c.mealAgeMin ?: Int.MAX_VALUE) < 240 || c.exerciseActive != null || c.asleep) return null
         if (c.change(90) < 40 || c.r!! < FLAT) return null
         val hr = c.heartRate
         if (hr.size < 100) return null
         val resting = hr.map { it.bpm }.sorted().let { it[it.size / 5] }
         val recent = hr.filter { it.timestamp >= c.now - 30 * MIN }.map { it.bpm }
-        return if (recent.size >= 10 && recent.average() >= resting + 20) "Glucose rise during stress or illness" else null
+        return if (recent.size >= 10 && recent.average() >= resting + 20) sit("stress") else null
     }
 
-    private fun variability(c: Context): String? {
+    private fun variability(c: Context): Msg? {
         val day = c.window(24 * 60)
         if (day.size < 100) return null
         val episodes = c.episodes(day)
         if (episodes.size >= 3 && episodes.zipWithNext().all { it.first != it.second } && 'L' in episodes && 'H' in episodes)
-            return "Alternating hyperglycemia and hypoglycemia"
+            return sit("alternating")
         val swings = zigzag(c.window(12 * 60).map { it.valueMgdl }, 60)
-        if (swings >= 4) return "Repeated glucose spikes and drops"
+        if (swings >= 4) return sit("spikes_drops")
         val cv = cv(day.map { it.valueMgdl })
-        if (cv >= HIGH_CV && abs(c.r!!) >= MODERATE) return "Rapid glucose fluctuations throughout the day"
+        if (cv >= HIGH_CV && abs(c.r!!) >= MODERATE) return sit("rapid_fluct")
         return null
     }
 
     /** Today's direction at this clock time repeated on most of the previous days. */
-    private fun recurrent(c: Context): String? {
+    private fun recurrent(c: Context): Msg? {
         val r = c.r!!
         if (abs(r) < FLAT || c.history.size < 288) return null
         val now = c.change(60)
@@ -267,24 +269,24 @@ object GlucoseSituation {
             if ((rising && delta >= 20) || (!rising && delta <= -20)) same++
         }
         return if (days >= 5 && same >= 0.6 * days)
-            if (rising) "Recurrent glucose rise at a consistent time" else "Recurrent glucose decline at a consistent time"
+            if (rising) sit("recurrent_rise") else sit("recurrent_decline")
         else null
     }
 
     // ---- calm -----------------------------------------------------------------------------------------------
 
-    private fun calm(c: Context): String? {
+    private fun calm(c: Context): Msg? {
         val g = c.g!!
         val win = c.window(60)
         if (win.size < 4 || abs(c.r!!) >= FLAT) return null
         val flat = win.maxOf { it.valueMgdl } - win.minOf { it.valueMgdl } <= 30
         if (flat && g in c.low..c.high && (c.mealAgeMin ?: Int.MAX_VALUE) >= 180) {
-            return if (c.night) "Stable glucose levels overnight" else "Stable glucose levels between meals"
+            return if (c.night) sit("night_stable") else sit("stable_between")
         }
         val three = c.window(180)
         if (three.size >= 20 && three.all { it.valueMgdl in c.low..c.high } && cv(three.map { it.valueMgdl }) < 20 && g in c.low..c.high)
-            return "Stable glucose levels in the ${c.partOfDay}"
-        if (cv(c.window(24 * 60).map { it.valueMgdl }) >= HIGH_CV) return "Unpredictable glucose variability"
+            return sit("stable_part", c.partOfDay)
+        if (cv(c.window(24 * 60).map { it.valueMgdl }) >= HIGH_CV) return sit("unpredictable")
         return null
     }
 
@@ -327,11 +329,12 @@ object GlucoseSituation {
         val stale = latest == null || now - latest.timestamp > MAX_READING_AGE_MIN * MIN
         val meals = input.meals.filter { it.isValid && it.mealTimeUtc <= now }
         val asleep = input.asleepNow
+        /** Reads after "stable glucose": "in the morning", "at night" (a reference to the string). */
         val partOfDay: String = when (Instant.ofEpochMilli(now).atZone(zone).hour) {
-            in 5..11 -> "morning"
-            in 12..16 -> "afternoon"
-            in 17..21 -> "evening"
-            else -> "night"
+            in 5..11 -> ref("sit_in_morning")
+            in 12..16 -> ref("sit_in_afternoon")
+            in 17..21 -> ref("sit_in_evening")
+            else -> ref("sit_in_night")
         }
         val night: Boolean = asleep || Instant.ofEpochMilli(now).atZone(zone).hour.let { it >= 22 || it < 6 }
 
@@ -434,8 +437,8 @@ object GlucoseSituation {
         val mealCarbs: Int = mealChain.sumOf { it.carbohydrates }
         /** The kind of the latest meal in the user's words ("breakfast", "snack"...). */
         val mealWord: String = (mealChain.firstOrNull()?.mealType ?: MealType.SNACK).type.lowercase()
-        /** "breakfast", "lunch", "dinner" or "a snack", as it reads after "after". */
-        val mealArticle: String get() = if (mealWord == "snack") "a snack" else mealWord
+        /** "after breakfast" / "after a snack"... (a reference to the string). */
+        val afterMeal: String get() = ref("sit_after_$mealWord")
         val highFat: Boolean = mealChain.sumOf { it.fats ?: 0 } >= 25 || mealChain.any { it.impactType == ImpactType.LONG }
 
         /** A manual bolus within 30 min before and 20 min after the meal began. */

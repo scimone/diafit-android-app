@@ -134,7 +134,7 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
     val beforeName = previous?.baseName ?: current.baseName
     val nowSecond = remember { LocalTime.now().toSecondOfDay() }
     val scrub = rememberScrubState()
-    val day = remember(Locale.getDefault()) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val day = remember(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
 
     // A switch is always temporary (max 168 h). Only the stretch it was in force is compared; a day or longer shows one day.
     val lengthSeconds = (if (current.durationMinutes > 0) current.durationMinutes * 60 else AapsProfile.SECONDS_PER_DAY)
@@ -225,7 +225,7 @@ private fun DiffContent(current: ProfileSwitch, previous: ProfileSwitch?, target
 /** A temporary target on its own: the same page, with only the target card (and what AAPS was running at the time for the "before" value). */
 @Composable
 private fun TargetOnlyContent(target: TemporaryTarget, context: ProfileSwitch?) {
-    val day = remember(Locale.getDefault()) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val day = remember(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]) { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
     val before = context?.effectiveProfileAt(target.startUtc)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {

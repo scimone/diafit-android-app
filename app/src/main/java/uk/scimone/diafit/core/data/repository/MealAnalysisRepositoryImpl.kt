@@ -113,8 +113,11 @@ class MealAnalysisRepositoryImpl(
     /** Appends the user's notes so the model adjusts quantities (e.g. "I only drank half of the bottle"). */
     private fun buildPrompt(base: String, userNotes: String?): String {
         val notes = userNotes?.trim().orEmpty()
-        if (notes.isEmpty()) return base
-        return base + """
+        // The prompt stays English; only the wording of the free-text answer follows the app language.
+        val language = when (java.util.Locale.getDefault().language) { "de" -> "German"; "it" -> "Italian"; else -> null }
+        val withLanguage = if (language == null) base else base + "\n\nWrite the reasoning and every dish and food name in $language (the JSON keys and enum values stay as specified)."
+        if (notes.isEmpty()) return withLanguage
+        return withLanguage + """
 
 Notes from the person eating (they know what they actually ate; follow them over what the photos suggest, e.g. if they only ate or drank part of something, count only that part and say so in the reasoning):
 $notes

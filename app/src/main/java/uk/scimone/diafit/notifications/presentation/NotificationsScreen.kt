@@ -155,7 +155,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
 private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRemove: () -> Unit) {
     val (icon, tint) = notificationVisual(n)
     val context = LocalContext.current
-    val (title, text) = remember(n.title, n.text, Locale.getDefault()) { renderNotification(context, n.title, n.text) }
+    val (title, text) = remember(n.title, n.text, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]) { renderNotification(context, n.title, n.text) }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),

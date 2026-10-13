@@ -346,7 +346,7 @@ private class FlatEntries(val entries: List<LogsEntryUi>, val rowIndex: IntArray
 /** Details of a device event, with the option to remove it from the logs. */
 @Composable
 private fun DeviceEventDialog(event: PumpEventUi, onDismiss: () -> Unit, onDelete: () -> Unit) {
-    val time = remember(event.timeUtc, java.util.Locale.getDefault()) { formatStamp(event.timeUtc, "EEEdMMMHm") }
+    val time = remember(event.timeUtc, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]) { formatStamp(event.timeUtc, "EEEdMMMHm") }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(event.titleRes?.let { stringResource(it) } ?: event.title) },
