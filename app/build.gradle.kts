@@ -9,6 +9,10 @@ android {
     namespace = "uk.scimone.diafit"
     compileSdk = 37
 
+    lint {
+        error += listOf("MissingTranslation", "ExtraTranslation")
+    }
+
     defaultConfig {
         applicationId = "uk.scimone.diafit"
         minSdk = 28

@@ -50,4 +50,18 @@
     <string name="macro_protein">Protein</string>
     <string name="macro_fat">Fat</string>
     <string name="macro_energy">Energy</string>
+
+    <!-- Common -->
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_close">Close</string>
+    <string name="common_back">Back</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_on">On</string>
+    <string name="common_off">Off</string>
+    <string name="common_ok">OK</string>
+    <string name="common_done">Done</string>
+    <string name="common_none">None</string>
 </resources>

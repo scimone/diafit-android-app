@@ -45,4 +45,20 @@
     <string name="macro_protein">Eiweiß</string>
     <string name="macro_fat">Fett</string>
     <string name="macro_energy">Energie</string>
+
+    <!-- Glossary (de): Time in range = Zeit im Zielbereich; Bolus; Basal; Carbs = Kohlenhydrate (KH); Sensor; Patch-Pumpe; Unterzuckerung / Überzucker -->
+
+    <!-- Common -->
+    <string name="common_save">Speichern</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_edit">Bearbeiten</string>
+    <string name="common_close">Schließen</string>
+    <string name="common_back">Zurück</string>
+    <string name="common_retry">Erneut versuchen</string>
+    <string name="common_on">An</string>
+    <string name="common_off">Aus</string>
+    <string name="common_ok">OK</string>
+    <string name="common_done">Fertig</string>
+    <string name="common_none">Keine</string>
 </resources>

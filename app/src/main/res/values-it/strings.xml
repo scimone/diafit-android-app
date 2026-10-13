@@ -45,4 +45,20 @@
     <string name="macro_protein">Proteine</string>
     <string name="macro_fat">Grassi</string>
     <string name="macro_energy">Energia</string>
+
+    <!-- Glossary (it): Time in range = Tempo nell'intervallo; Bolo; Basale; Carbs = Carboidrati; Sensore; Micro a cerotto; Ipoglicemia / Iperglicemia -->
+
+    <!-- Common -->
+    <string name="common_save">Salva</string>
+    <string name="common_cancel">Annulla</string>
+    <string name="common_delete">Elimina</string>
+    <string name="common_edit">Modifica</string>
+    <string name="common_close">Chiudi</string>
+    <string name="common_back">Indietro</string>
+    <string name="common_retry">Riprova</string>
+    <string name="common_on">Attivo</string>
+    <string name="common_off">Disattivo</string>
+    <string name="common_ok">OK</string>
+    <string name="common_done">Fatto</string>
+    <string name="common_none">Nessuno</string>
 </resources>
