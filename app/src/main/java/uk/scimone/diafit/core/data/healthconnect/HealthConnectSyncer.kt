@@ -358,9 +358,33 @@ class HealthConnectSyncer(
         return rows.size
     }
 
-    private fun exerciseName(type: Int): String =
-        ExerciseSessionRecord.EXERCISE_TYPE_INT_TO_STRING_MAP[type]
-            ?.replace('_', ' ')?.replaceFirstChar { it.uppercase() } ?: "Exercise"
+    // The library's own int->string map is restricted API, so the common types are named here.
+    private fun exerciseName(type: Int): String = when (type) {
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Biking"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "Stationary biking"
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "Hiking"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "Open water swimming"
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
+        ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
+        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength training"
+        ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> "Weightlifting"
+        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
+        ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "Dancing"
+        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> "Elliptical"
+        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> "Rowing machine"
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING -> "Stair climbing"
+        ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> "Skiing"
+        ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> "Football"
+        ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> "Tennis"
+        ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "Badminton"
+        ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> "Basketball"
+        ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "Calisthenics"
+        ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> "Stretching"
+        else -> "Exercise"
+    }
 
     /** Nightscout trend names from mg/dL per minute. */
     private fun directionOf(perMinute: Double) = when {
