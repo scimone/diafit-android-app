@@ -60,6 +60,8 @@ import uk.scimone.diafit.ui.theme.SleepLight
 import uk.scimone.diafit.ui.theme.SleepRem
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
+import uk.scimone.diafit.ui.theme.HighRange
+import uk.scimone.diafit.ui.theme.LowRange
 import uk.scimone.diafit.ui.theme.Bolus
 import uk.scimone.diafit.ui.theme.Basal
 import uk.scimone.diafit.ui.theme.Carbs
@@ -305,9 +307,9 @@ internal val ZONE_ORDER = listOf(GlucoseZone.VERY_LOW, GlucoseZone.LOW, GlucoseZ
 /** Very deep zones get the full colour, the mild ones a lighter tint of it. */
 internal fun zoneFill(zone: GlucoseZone): Color = when (zone) {
     GlucoseZone.VERY_LOW -> BelowRange
-    GlucoseZone.LOW -> BelowRange.copy(alpha = 0.6f)
+    GlucoseZone.LOW -> LowRange
     GlucoseZone.IN_RANGE -> InRange
-    GlucoseZone.HIGH -> AboveRange.copy(alpha = 0.6f)
+    GlucoseZone.HIGH -> HighRange
     GlucoseZone.VERY_HIGH -> AboveRange
 }
 

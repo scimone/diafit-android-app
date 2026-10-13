@@ -78,6 +78,8 @@ import uk.scimone.diafit.stats.domain.StatsPeriod
 import uk.scimone.diafit.stats.domain.StatsWindow
 import uk.scimone.diafit.ui.theme.AboveRange
 import uk.scimone.diafit.ui.theme.BelowRange
+import uk.scimone.diafit.ui.theme.HighRange
+import uk.scimone.diafit.ui.theme.LowRange
 import uk.scimone.diafit.ui.theme.InRange
 import uk.scimone.diafit.ui.theme.SleepAwake
 import uk.scimone.diafit.ui.theme.SleepDeep
@@ -528,8 +530,8 @@ internal fun sleepStageColor(stage: SleepStage): Color = when (stage) {
 private fun GlucoseDayContent(g: uk.scimone.diafit.stats.domain.GlucoseDay) {
     val lowOnly = (g.belowShare - g.veryLowShare).coerceAtLeast(0.0)
     val highOnly = (g.aboveShare - g.veryHighShare).coerceAtLeast(0.0)
-    val lowColor = BelowRange.copy(alpha = 0.6f)
-    val highColor = AboveRange.copy(alpha = 0.6f)
+    val lowColor = LowRange
+    val highColor = HighRange
     SegmentedBar(
         listOf(
             g.veryLowShare.toFloat() to BelowRange,

@@ -91,6 +91,10 @@ internal fun applyPalette(dark: Boolean) { if (darkPalette != dark) darkPalette 
 val InRange: Color get() = if (darkPalette) Color(0xFF2ECC9B) else Color(0xFF14A077)
 val BelowRange: Color get() = if (darkPalette) Color(0xFFEF6C5B) else Color(0xFFDC4A3C)
 val AboveRange: Color get() = if (darkPalette) Color(0xFF9AA5FF) else Color(0xFF5662D8)
+/** The milder zones (low / high) next to very low / very high: a lighter tint of the same hue. Light keeps the 60 % blend over white;
+ *  dark uses opaque lighter tints, because fading toward the dark background made them dull. */
+val LowRange: Color get() = if (darkPalette) Color(0xFFF5A094) else BelowRange.copy(alpha = 0.6f)
+val HighRange: Color get() = if (darkPalette) Color(0xFFBDC5FF) else AboveRange.copy(alpha = 0.6f)
 val Carbs: Color get() = if (darkPalette) Color(0xFFFFD54F) else Color(0xFFF0A30A)
 val Bolus: Color get() = if (darkPalette) Color(0xFF42A5F5) else Color(0xFF2B8CE6)
 val Basal: Color get() = if (darkPalette) Color(0xFF3585E6) else Color(0xFF0F4FA8)  // dark blue for basal insulin everywhere
