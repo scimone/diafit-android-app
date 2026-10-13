@@ -108,6 +108,23 @@ class HealthConnectSyncer(
     }
 
     /**
+     * Light refresh of just the last [LIVE_HEART_RATE_HOURS] hours of heart rate, for the foreground loop
+     * (every few minutes while the app is open). Skips quietly when another import is running.
+     */
+    suspend fun syncRecentHeartRate() {
+        if (!manager.isAvailable || !mutex.tryLock()) return
+        try {
+            if (settings.getSelection(DataType.HEART_RATE) != Connector.HEALTH_CONNECT) return
+            if (!HealthConnectPermissions.activity.all { it in manager.grantedPermissions() }) return
+            val now = Instant.now()
+            runCatching { readHeartRate(now.minus(Duration.ofHours(LIVE_HEART_RATE_HOURS)), now.plusSeconds(60)) }
+                .onFailure { Log.e(TAG, "Live heart-rate refresh failed", it) }
+        } finally {
+            mutex.unlock()
+        }
+    }
+
+    /**
      * Imports blood glucose as CGM readings. Resumes from the newest Health Connect reading already
      * stored; the first time it backfills [BACKFILL_DAYS]. Returns the number of readings stored.
      */
@@ -404,6 +421,8 @@ class HealthConnectSyncer(
         const val BACKFILL_DAYS = 14
         /** Days re-read by every routine import; also catches wearables that upload late. */
         const val RECENT_DAYS = 2
+        /** Window re-read by the foreground heart-rate loop. */
+        const val LIVE_HEART_RATE_HOURS = 3L
         private const val PAGE_SIZE = 5000
         private const val MIN_BPM = 20L
         private const val MAX_BPM = 250L

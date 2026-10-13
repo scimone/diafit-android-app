@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
     private val patternScheduler: uk.scimone.diafit.patterns.data.PatternScheduler by inject()
     /** Link of a tapped push notification, consumed once the UI has opened its page. */
     private val pendingLink = mutableStateOf<String?>(null)
+    private val healthConnectSyncer: uk.scimone.diafit.core.data.healthconnect.HealthConnectSyncer by inject()
     private val healthConnectScheduler: uk.scimone.diafit.core.data.healthconnect.HealthConnectScheduler by inject()
     private val setMealValid: SetMealValidUseCase by inject()
     private val getOpenSitting: GetOpenSittingUseCase by inject()
@@ -120,6 +121,17 @@ class MainActivity : ComponentActivity() {
             if (settingsRepository.isHealthConnectEnabled()) {
                 healthConnectScheduler.schedulePeriodic()
                 healthConnectScheduler.syncNow()
+            }
+        }
+
+        // While the app is visible, refresh heart rate from Health Connect every 3 minutes (the 15 min job is the floor otherwise).
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                if (!settingsRepository.isHealthConnectEnabled()) return@repeatOnLifecycle
+                while (true) {
+                    healthConnectSyncer.syncRecentHeartRate()
+                    kotlinx.coroutines.delay(3 * 60_000L)
+                }
             }
         }
 
