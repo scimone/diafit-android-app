@@ -1210,7 +1210,7 @@
     <string name="pat_sleep_case_bed">bed %1$s · %2$d %% in range after waking</string>
     <string name="pat_sleep_effect">−%1$d points in range</string>
     <string name="pat_sleep_unc">The difference is about %1$s× its likely margin of error (±%2$d points), and it points the same way in the earlier and the later half of the period.</string>
-    <string name="pat_sleep_lim1">Only the hours after waking count, and days with less than 70 % sensor data are left out.</string>
+    <string name="pat_sleep_lim1">Only the hours after waking count, and days with less than 70 %% sensor data are left out.</string>
     <string name="pat_sleep_lim3">Meals, activity and stress differ between days too, so this can\'t show that sleep is the reason.</string>
     <string name="pat_sleep_short_title">Less time in range after short sleep</string>
     <string name="pat_sleep_short_summary">After nights with under %1$s of sleep (%2$d, typically %3$s) you spent %4$s of the rest of the day in range, against %5$s after longer nights (%6$d).</string>
@@ -1229,7 +1229,7 @@
     <string name="pat_sleep_irregular_lim">Your usual bedtime is the median of the period (%1$s); an hour or more earlier or later counts as irregular.</string>
     <string name="pat_label_last_days">Last %1$d days</string>
     <string name="pat_label_days_before">The %1$d days before</string>
-    <string name="pat_trend_lim1">Only days with at least 70 % sensor data count, and today is left out.</string>
+    <string name="pat_trend_lim1">Only days with at least 70 %% sensor data count, and today is left out.</string>
     <string name="pat_trend_lim2">Two weeks is a short stretch: illness, travel, a new sensor or a change of routine can move these numbers.</string>
     <string name="pat_trend_lim3">This compares two periods and can\'t show what caused the difference.</string>
     <string name="pat_trend_tir_up">More time in range lately</string>
@@ -1279,7 +1279,7 @@
     <string name="pat_combo_eve_unc">Counts of nights, not a measured margin: %1$d and %2$d nights were compared, and the difference points the same way in both halves of the period.</string>
     <string name="pat_combo_eve_lim1">Activity of at least %1$d minutes counts, from logged workouts and stretches of raised heart rate or steps.</string>
     <string name="pat_combo_eve_lim2">Evening meals and insulin differ between days too, so this can\'t show that activity is the reason.</string>
-    <string name="pat_combo_eve_lim3">Nights with less than 70 % sensor data are left out.</string>
+    <string name="pat_combo_eve_lim3">Nights with less than 70 %% sensor data are left out.</string>
     <string name="pat_label_night_after_activity">Night after evening activity</string>
     <string name="pat_label_other_nights">Other nights</string>
     <string name="pat_combo_eve_baseline">Nights without evening activity</string>
@@ -1377,7 +1377,7 @@
     <string name="pat_label_night_after_quiet">Night after quieter days</string>
     <string name="pat_ctx_night_eff_up">+%1$d points in range overnight</string>
     <string name="pat_ctx_night_eff_down">−%1$d points in range overnight</string>
-    <string name="pat_ctx_night_lim1">Days with activity ending between 17:00 and 22:00 are left out (they belong to the evening-activity pattern), as are nights with under 70 % sensor data.</string>
+    <string name="pat_ctx_night_lim1">Days with activity ending between 17:00 and 22:00 are left out (they belong to the evening-activity pattern), as are nights with under 70 %% sensor data.</string>
     <string name="pat_ctx_night_lim2">Days without activity data (for example a watch left at home) count as quieter days.</string>
     <string name="pat_ctx_night_lim3">Meals, sleep and routine differ between days too, so this can\'t show that activity is the reason.</string>
     <string name="pat_ctx_night_case">%1$d min active that day · %2$d %% in range 00:00–06:00</string>
@@ -1393,7 +1393,7 @@
     <string name="pat_label_longer_after_day">Longer night after %1$s day</string>
     <string name="pat_ctx_sa_effect">%1$d points lower in range (vs %2$d the other way)</string>
     <string name="pat_ctx_sa_unc">The two gaps differ by %1$d points, about %2$s× the margin of error of that difference (±%3$d points), so this needs more evidence than a single comparison; the larger gap holds in both halves of the period.</string>
-    <string name="pat_ctx_sa_lim1">Four groups of at least %1$d nights each are compared over up to %2$d days; days with under 70 % sensor data after waking are left out.</string>
+    <string name="pat_ctx_sa_lim1">Four groups of at least %1$d nights each are compared over up to %2$d days; days with under 70 %% sensor data after waking are left out.</string>
     <string name="pat_ctx_sa_lim2">An active previous day means at least %1$d minutes of activity (your typical active day); days without activity data count as quieter.</string>
     <string name="pat_ctx_sa_lim3">Meals and routine differ between days too, so this can\'t show that sleep or activity is the reason.</string>
     <string name="pat_ctx_sleep_case_active">%1$d min active the day before · %2$d %% in range after waking</string>

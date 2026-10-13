@@ -465,7 +465,7 @@ private fun Insight(meal: MealEntityUi, response: uk.scimone.diafit.core.domain.
     val peak = response.peak
     val low = response.low
     fun after(t: Long) = eventSpan(t - meal.mealTimeUtc)
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = androidx.compose.ui.platform.LocalResources.current
     val lowBelow = low?.takeIf { it.valueMgdl < target.lowerBound }
     val lowFirst = lowBelow != null && peak != null && lowBelow.timestamp < peak.timestamp
     val rise = when {

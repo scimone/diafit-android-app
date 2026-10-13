@@ -1,7 +1,7 @@
 package uk.scimone.diafit.settings.presentation
 
 import uk.scimone.diafit.core.presentation.formatStamp
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.R
@@ -276,7 +276,7 @@ internal fun ConnectorBackfillPanel(
     missingRanges: suspend (DataType, TimeRange) -> List<TimeRange>,
     onAllowHistory: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context = LocalResources.current
     val types = remember(connector) { DataType.values().filter { it in connector.canBackfill } }
     var open by rememberSaveable(connector.name) { mutableStateOf(false) }
     var chosen by remember(connector) {

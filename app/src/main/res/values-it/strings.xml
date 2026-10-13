@@ -1207,7 +1207,7 @@
     <string name="pat_sleep_case_bed">a letto alle %1$s · %2$d %% nel target dopo il risveglio</string>
     <string name="pat_sleep_effect">−%1$d punti nel target</string>
     <string name="pat_sleep_unc">La differenza è circa %1$s volte il suo probabile margine di errore (±%2$d punti) e va nella stessa direzione sia nella prima sia nella seconda metà del periodo.</string>
-    <string name="pat_sleep_lim1">Contano solo le ore dopo il risveglio; i giorni con meno del 70 % di dati del sensore sono esclusi.</string>
+    <string name="pat_sleep_lim1">Contano solo le ore dopo il risveglio; i giorni con meno del 70 %% di dati del sensore sono esclusi.</string>
     <string name="pat_sleep_lim3">Anche pasti, attività e stress cambiano da un giorno all\'altro, quindi questo non dimostra che il sonno sia la causa.</string>
     <string name="pat_sleep_short_title">Meno tempo nel target dopo un sonno breve</string>
     <string name="pat_sleep_short_summary">Dopo le notti con meno di %1$s di sonno (%2$d, in genere %3$s) sei stato nel target per il %4$s del resto della giornata, contro il %5$s dopo le notti più lunghe (%6$d).</string>
@@ -1226,7 +1226,7 @@
     <string name="pat_sleep_irregular_lim">Il tuo orario abituale è la mediana del periodo (%1$s); un\'ora o più prima o dopo conta come irregolare.</string>
     <string name="pat_label_last_days">Ultimi %1$d giorni</string>
     <string name="pat_label_days_before">I %1$d giorni precedenti</string>
-    <string name="pat_trend_lim1">Contano solo i giorni con almeno il 70 % di dati del sensore; oggi è escluso.</string>
+    <string name="pat_trend_lim1">Contano solo i giorni con almeno il 70 %% di dati del sensore; oggi è escluso.</string>
     <string name="pat_trend_lim2">Due settimane sono un periodo breve: malattia, viaggi, un nuovo sensore o un cambio di routine possono spostare questi numeri.</string>
     <string name="pat_trend_lim3">Questo confronta due periodi e non può mostrare cosa abbia causato la differenza.</string>
     <string name="pat_trend_tir_up">Più tempo nel target di recente</string>
@@ -1276,7 +1276,7 @@
     <string name="pat_combo_eve_unc">Conteggi di notti, non un margine misurato: sono state confrontate %1$d e %2$d notti e la differenza va nella stessa direzione in entrambe le metà del periodo.</string>
     <string name="pat_combo_eve_lim1">Conta l\'attività di almeno %1$d minuti, da allenamenti registrati e tratti con frequenza cardiaca o passi elevati.</string>
     <string name="pat_combo_eve_lim2">Anche pasti serali e insulina cambiano da un giorno all\'altro, quindi questo non dimostra che l\'attività sia la causa.</string>
-    <string name="pat_combo_eve_lim3">Le notti con meno del 70 % di dati del sensore sono escluse.</string>
+    <string name="pat_combo_eve_lim3">Le notti con meno del 70 %% di dati del sensore sono escluse.</string>
     <string name="pat_label_night_after_activity">Notte dopo l\'attività serale</string>
     <string name="pat_label_other_nights">Altre notti</string>
     <string name="pat_combo_eve_baseline">Notti senza attività serale</string>
@@ -1374,7 +1374,7 @@
     <string name="pat_label_night_after_quiet">Notte dopo i giorni più tranquilli</string>
     <string name="pat_ctx_night_eff_up">+%1$d punti nel target di notte</string>
     <string name="pat_ctx_night_eff_down">−%1$d punti nel target di notte</string>
-    <string name="pat_ctx_night_lim1">I giorni con attività terminata tra le 17:00 e le 22:00 sono esclusi (appartengono al modello dell\'attività serale), così come le notti con meno del 70 % di dati del sensore.</string>
+    <string name="pat_ctx_night_lim1">I giorni con attività terminata tra le 17:00 e le 22:00 sono esclusi (appartengono al modello dell\'attività serale), così come le notti con meno del 70 %% di dati del sensore.</string>
     <string name="pat_ctx_night_lim2">I giorni senza dati di attività (ad esempio con l\'orologio lasciato a casa) contano come giorni più tranquilli.</string>
     <string name="pat_ctx_night_lim3">Anche pasti, sonno e routine cambiano da un giorno all\'altro, quindi questo non dimostra che l\'attività sia la causa.</string>
     <string name="pat_ctx_night_case">%1$d min di attività quel giorno · %2$d %% nel target 00:00–06:00</string>
@@ -1390,7 +1390,7 @@
     <string name="pat_label_longer_after_day">Notte più lunga dopo giorno %1$s</string>
     <string name="pat_ctx_sa_effect">%1$d punti in meno nel target (contro %2$d nell\'altro caso)</string>
     <string name="pat_ctx_sa_unc">Le due differenze divergono di %1$d punti, circa %2$s volte il margine di errore di quella divergenza (±%3$d punti), quindi servono più prove di un confronto singolo; la differenza maggiore vale in entrambe le metà del periodo.</string>
-    <string name="pat_ctx_sa_lim1">Si confrontano quattro gruppi di almeno %1$d notti ciascuno su un massimo di %2$d giorni; i giorni con meno del 70 % di dati del sensore dopo il risveglio sono esclusi.</string>
+    <string name="pat_ctx_sa_lim1">Si confrontano quattro gruppi di almeno %1$d notti ciascuno su un massimo di %2$d giorni; i giorni con meno del 70 %% di dati del sensore dopo il risveglio sono esclusi.</string>
     <string name="pat_ctx_sa_lim2">Un giorno precedente attivo significa almeno %1$d minuti di attività (la tua giornata attiva tipica); i giorni senza dati di attività contano come più tranquilli.</string>
     <string name="pat_ctx_sa_lim3">Anche pasti e routine cambiano da un giorno all\'altro, quindi questo non dimostra che il sonno o l\'attività siano la causa.</string>
     <string name="pat_ctx_sleep_case_active">%1$d min di attività il giorno prima · %2$d %% nel target dopo il risveglio</string>
