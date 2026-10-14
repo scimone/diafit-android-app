@@ -102,81 +102,67 @@ fun DailyRecapScreen(epochDay: Long?, onBack: () -> Unit) {
     }
 }
 
-/** Settings of the recap: on/off first, then when, what the AI is and how it is told to write. */
+/** Settings of the recap (a page of the settings): on/off first, then when, what the AI is and how it is told to write. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DailyRecapSettingsScreen(onBack: () -> Unit) {
+fun DailyRecapSettingsContent() {
     val viewModel: DailyRecapViewModel = koinViewModel()
     val config by viewModel.config.collectAsState()
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.refreshConnections() }
     var pickingTime by remember { androidx.compose.runtime.mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.recap_title)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
-            )
+    SettingsCard(null) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.recap_switch_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.recap_switch_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = config.enabled, onCheckedChange = viewModel::setEnabled)
         }
-    ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            SettingsCard(null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.recap_switch_title), style = MaterialTheme.typography.titleSmall)
-                        Text(stringResource(R.string.recap_switch_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Switch(checked = config.enabled, onCheckedChange = viewModel::setEnabled)
+    }
+    if (config.enabled) {
+        SettingsCard(stringResource(R.string.recap_time_title)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pickingTime = true }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.recap_time_label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Text("%02d:%02d".format(config.hour, config.minute), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            Note(stringResource(R.string.recap_time_hint))
+        }
+        SettingsCard(stringResource(R.string.recap_model_title)) {
+            when {
+                !state.aiEnabled -> Note(stringResource(R.string.recap_ai_off))
+                state.connections.isEmpty() -> Note(stringResource(R.string.recap_no_connection))
+                else -> {
+                    ConnectionPicker(state.connections, config.connectionId ?: state.connections.first().id, viewModel::setConnection)
+                    ModelPicker(
+                        model = config.model, models = state.models, isLoading = state.isLoadingModels,
+                        error = state.modelsError?.let { UiText.Raw(it) },
+                        onModelChanged = viewModel::setModel, onLoadModels = viewModel::loadModels
+                    )
+                    Note(stringResource(R.string.recap_model_hint))
                 }
             }
-            if (config.enabled) {
-                SettingsCard(stringResource(R.string.recap_time_title)) {
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pickingTime = true }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.recap_time_label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Text("%02d:%02d".format(config.hour, config.minute), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Note(stringResource(R.string.recap_time_hint))
+        }
+        SettingsCard(stringResource(R.string.recap_prompt_title)) {
+            var text by remember(config.prompt) { androidx.compose.runtime.mutableStateOf(config.prompt.ifBlank { RecapLlm.DEFAULT_PROMPT.trim() }) }
+            Note(stringResource(R.string.recap_prompt_hint))
+            OutlinedTextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                    // Storing "" keeps following the built-in prompt, including future improvements to it.
+                    viewModel.setPrompt(if (it.trim() == RecapLlm.DEFAULT_PROMPT.trim()) "" else it)
+                },
+                minLines = 8, maxLines = 18, textStyle = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth()
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { text = RecapLlm.DEFAULT_PROMPT.trim(); viewModel.setPrompt("") }, enabled = config.prompt.isNotBlank()) {
+                    Text(stringResource(R.string.ai_reset_prompt))
                 }
-                SettingsCard(stringResource(R.string.recap_model_title)) {
-                    when {
-                        !state.aiEnabled -> Note(stringResource(R.string.recap_ai_off))
-                        state.connections.isEmpty() -> Note(stringResource(R.string.recap_no_connection))
-                        else -> {
-                            ConnectionPicker(state.connections, config.connectionId ?: state.connections.first().id, viewModel::setConnection)
-                            ModelPicker(
-                                model = config.model, models = state.models, isLoading = state.isLoadingModels,
-                                error = state.modelsError?.let { UiText.Raw(it) },
-                                onModelChanged = viewModel::setModel, onLoadModels = viewModel::loadModels
-                            )
-                            Note(stringResource(R.string.recap_model_hint))
-                        }
-                    }
-                }
-                SettingsCard(stringResource(R.string.recap_prompt_title)) {
-                    var text by remember(config.prompt) { androidx.compose.runtime.mutableStateOf(config.prompt.ifBlank { RecapLlm.DEFAULT_PROMPT.trim() }) }
-                    Note(stringResource(R.string.recap_prompt_hint))
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = {
-                            text = it
-                            // Storing "" keeps following the built-in prompt, including future improvements to it.
-                            viewModel.setPrompt(if (it.trim() == RecapLlm.DEFAULT_PROMPT.trim()) "" else it)
-                        },
-                        minLines = 8, maxLines = 18, textStyle = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = { text = RecapLlm.DEFAULT_PROMPT.trim(); viewModel.setPrompt("") }, enabled = config.prompt.isNotBlank()) {
-                            Text(stringResource(R.string.ai_reset_prompt))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Note(stringResource(if (config.prompt.isBlank()) R.string.ai_prompt_builtin else R.string.ai_prompt_custom))
-                    }
-                }
+                Spacer(Modifier.width(12.dp))
+                Note(stringResource(if (config.prompt.isBlank()) R.string.ai_prompt_builtin else R.string.ai_prompt_custom))
             }
         }
     }

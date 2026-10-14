@@ -42,6 +42,10 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
     override suspend fun doWork(): Result {
         return try {
             val now = System.currentTimeMillis()
+            if (!warnStore.alertsEnabled.value) {
+                dao.deleteOlderThan(now - 30L * 24 * 3_600_000)
+                return Result.success()
+            }
             val status = statusStore.status.value
             val inputs = inputsSource.load(USER_ID, now)
             val ages = deviceAges(

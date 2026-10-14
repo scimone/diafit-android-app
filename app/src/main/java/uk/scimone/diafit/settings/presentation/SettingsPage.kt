@@ -9,6 +9,8 @@ enum class SettingsPage(@StringRes val titleRes: Int) {
     DATA_SOURCES(R.string.settings_page_data_sources),
     BACKEND(R.string.settings_page_backend),
     AI(R.string.settings_page_ai),
+    /** Optional LLM morning recap (see DailyRecapFeature); opened from the menu and the AI page. */
+    DAILY_RECAP(R.string.recap_title),
     /** Opened from the AI page; not a menu row of its own. */
     AI_LOG(R.string.settings_page_ai_log),
     MEAL_ESTIMATION(R.string.settings_page_meal_estimation),

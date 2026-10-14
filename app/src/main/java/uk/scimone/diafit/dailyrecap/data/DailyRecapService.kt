@@ -44,14 +44,16 @@ class DailyRecapService(
             fun point(p: Pair<String, String>) = RecapPoint(p.first, timeOn(date, p.second, zone))
             val recap = DailyRecap(
                 epochDay = date.toEpochDay(), generatedAtUtc = now, partialDay = input.partialDayUntil != null,
-                headline = text.headline, mood = text.mood,
+                headline = text.headline, summary = text.summary, mood = text.mood,
                 wentWell = text.wentWell.map(::point), wentWrong = text.wentWrong.map(::point), doToday = text.doToday,
                 visual = visual
             )
             store.save(recap)
+            // A regenerated recap replaces its earlier bell entry (the key is unique per day).
+            notifications.deleteByKey("recap-${recap.epochDay}")
             notifications.insert(
                 uk.scimone.diafit.core.domain.model.AppNotificationEntity(
-                    timestampUtc = now, title = recap.headline, text = recapLines(recap).joinToString("\n"),
+                    timestampUtc = now, title = recap.headline, text = recap.notificationText(),
                     dedupeKey = "recap-${recap.epochDay}", link = recapLink(recap.epochDay)
                 )
             )

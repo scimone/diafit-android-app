@@ -13,6 +13,15 @@ class DeviceWarnStore(context: Context) {
     private val _thresholds = MutableStateFlow(read())
     val thresholds: StateFlow<WarnThresholds> = _thresholds
 
+    private val _alertsEnabled = MutableStateFlow(prefs.getBoolean("alerts_enabled", true))
+    /** Whether expiry alerts are raised at all (bell and push). */
+    val alertsEnabled: StateFlow<Boolean> = _alertsEnabled
+
+    fun setAlertsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("alerts_enabled", enabled).apply()
+        _alertsEnabled.value = enabled
+    }
+
     fun set(kind: DeviceKind, levels: WarnLevels) {
         val k = if (kind == DeviceKind.PATCH) DeviceKind.SITE else kind
         prefs.edit().putInt("${k.name}_initial", levels.initial).putInt("${k.name}_urgent", levels.urgent).apply()

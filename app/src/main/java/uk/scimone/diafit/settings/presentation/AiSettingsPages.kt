@@ -95,6 +95,16 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
         NavRow(stringResource(R.string.settings_page_meal_estimation), state.mealConnection?.let { "${it.name} · ${state.mealEstimation.model}" } ?: stringResource(R.string.ai_no_connection_yet)) {
             onOpenPage(SettingsPage.MEAL_ESTIMATION)
         }
+        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+            val recap: uk.scimone.diafit.dailyrecap.data.DailyRecapStore = org.koin.compose.koinInject()
+            val recapConfig by recap.config.collectAsState()
+            HorizontalDivider()
+            NavRow(
+                stringResource(R.string.recap_title),
+                if (!recapConfig.enabled) stringResource(R.string.common_off)
+                else stringResource(R.string.recap_used_for_on, "%02d:%02d".format(recapConfig.hour, recapConfig.minute))
+            ) { onOpenPage(SettingsPage.DAILY_RECAP) }
+        }
     }
 
     SettingsSection(title = stringResource(R.string.ai_usage), icon = Icons.Filled.Timeline) {

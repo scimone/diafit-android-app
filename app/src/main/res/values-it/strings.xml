@@ -241,7 +241,7 @@
     <string name="settings_notif_blocked">Bloccate: gli avvisi di scadenza e sui pattern restano muti. La campanella nell\'app si riempie comunque.</string>
     <string name="settings_notif_sends_title">Cosa invia Diafit</string>
     <string name="settings_notif_sends_hint">Android permette di impostare suono, vibrazione e importanza per ogni tipo.</string>
-    <string name="settings_channel_expiry_desc">Sensore, pod o sito e batteria: 24 h / 10 h e 1 h prima della scadenza.</string>
+    <string name="settings_channel_expiry_desc">Avvisa prima che finiscano: %1$s.</string>
     <string name="settings_channel_patterns">Pattern glicemici</string>
     <string name="settings_channel_patterns_desc">Un pattern nuovo o cambiato che merita attenzione.</string>
     <string name="settings_channel_sync">Stato sincronizzazione</string>
@@ -1870,4 +1870,6 @@
     <string name="recap_push_sub">Mostra il riepilogo anche come notifica push. Nella campanella compare sempre.</string>
     <string name="meal_estimation_on_title">Stima i pasti con l\'IA</string>
     <string name="meal_estimation_on_sub">Se disattivato, le foto non vengono mai inviate all\'IA e i pulsanti di stima sono nascosti quando aggiungi un pasto.</string>
+    <string name="settings_channel_sound">Suono e vibrazione</string>
+    <string name="recap_used_for_on">Ogni mattina alle %1$s</string>
 </resources>

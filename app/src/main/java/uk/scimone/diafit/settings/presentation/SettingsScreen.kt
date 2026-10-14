@@ -122,13 +122,14 @@ fun SettingsPageScreen(
             when (page) {
                 SettingsPage.CONNECTED_APPS -> ConnectedAppsPage(state, viewModel)
                 SettingsPage.BACKEND -> BackendPage()
+                SettingsPage.DAILY_RECAP -> uk.scimone.diafit.dailyrecap.presentation.DailyRecapSettingsContent()
                 SettingsPage.DATA_SOURCES -> DataSourcesPage(state, viewModel)
                 SettingsPage.AI -> AiPage(state, viewModel, onOpenPage)
                 SettingsPage.AI_LOG -> AiLogPage()
                 SettingsPage.MEAL_ESTIMATION -> MealEstimationPage(state, viewModel, onOpenPage)
                 SettingsPage.FOOD_DB -> FoodDatabasePage(state, viewModel)
                 SettingsPage.DISPLAY -> DisplayPage(state, viewModel)
-                SettingsPage.NOTIFICATIONS -> NotificationsPage(resumeTick)
+                SettingsPage.NOTIFICATIONS -> NotificationsPage(resumeTick, state.aiEnabled)
                 SettingsPage.PERMISSIONS -> PermissionsPage(state, resumeTick, onRequestIgnoreBatteryOptimizations) { runCatching { viewModel.healthConnectSettingsIntent() } }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -315,7 +316,10 @@ private fun BackendPage() {
 }
 
 @Composable
-private fun NotificationsPage(resumeTick: Int) {
+private fun NotificationsPage(resumeTick: Int, aiEnabled: Boolean) {
+    val warnStore: uk.scimone.diafit.core.data.nightscout.DeviceWarnStore = org.koin.compose.koinInject()
+    val warn by warnStore.thresholds.collectAsState()
+    val expiryOn by warnStore.alertsEnabled.collectAsState()
     val context = LocalContext.current
     val granted = remember(resumeTick) { notificationsAllowed(context) }
     SettingsSection(title = stringResource(R.string.settings_notif_allowed_title), icon = Icons.Filled.Notifications) {
@@ -332,16 +336,40 @@ private fun NotificationsPage(resumeTick: Int) {
             stringResource(R.string.settings_notif_sends_hint),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ChannelRow(context, "DEVICE_EXPIRY_CHANNEL", stringResource(R.string.expiry_channel_name), stringResource(R.string.settings_channel_expiry_desc))
+        ToggleChannelRow(context, "DEVICE_EXPIRY_CHANNEL", stringResource(R.string.expiry_channel_name), expiryDescription(warn), expiryOn, warnStore::setAlertsEnabled)
         HorizontalDivider()
         ChannelRow(context, "GLUCOSE_PATTERNS_CHANNEL", stringResource(R.string.settings_channel_patterns), stringResource(R.string.settings_channel_patterns_desc))
         HorizontalDivider()
         ChannelRow(context, "GLUCOSE_SYNC_CHANNEL", stringResource(R.string.settings_channel_sync), stringResource(R.string.settings_channel_sync_desc))
-        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED && aiEnabled) {
             HorizontalDivider()
             uk.scimone.diafit.dailyrecap.presentation.DailyRecapPushToggle()
-            ChannelRow(context, "DAILY_RECAP_CHANNEL", stringResource(R.string.recap_channel_name), stringResource(R.string.recap_channel_desc))
         }
+    }
+}
+
+/** "Sensor 24 h / 1 h · Site 10 h / 1 h · Insulin 20 U / 5 U ...": the warning times as currently set in the device settings. */
+@Composable
+private fun expiryDescription(warn: uk.scimone.diafit.core.domain.model.WarnThresholds): String {
+    val parts = uk.scimone.diafit.core.domain.model.DeviceKind.configurable.map { kind ->
+        val lv = warn.of(kind)
+        val unit = if (kind == uk.scimone.diafit.core.domain.model.DeviceKind.INSULIN) "U" else "h"
+        "${stringResource(kind.labelRes)} ${lv.initial} $unit / ${lv.urgent} $unit"
+    }
+    return stringResource(R.string.settings_channel_expiry_desc, parts.joinToString(" · "))
+}
+
+/** A switch for whether the notification is sent at all; tapping the text opens the Android channel settings (sound, vibration). */
+@Composable
+internal fun ToggleChannelRow(context: Context, channelId: String, title: String, description: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { openChannelSettings(context, channelId) }.padding(vertical = 10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.settings_channel_sound), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = onChecked)
     }
 }
 

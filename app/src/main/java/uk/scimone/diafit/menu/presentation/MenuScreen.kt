@@ -100,7 +100,6 @@ fun MenuScreen(
     onOpenTreatmentPlan: () -> Unit,
     onOpenPatterns: () -> Unit,
     onOpenDataEditor: () -> Unit,
-    onOpenDailyRecap: () -> Unit,
     onOpenSettings: (SettingsPage) -> Unit
 ) {
     val settings: SettingsViewModel = koinViewModel()
@@ -139,13 +138,13 @@ fun MenuScreen(
 
             MenuGroup(stringResource(R.string.menu_group_therapy)) {
                 MenuRow(Icons.AutoMirrored.Filled.ReceiptLong, Basal, stringResource(R.string.menu_treatment_plan), stringResource(R.string.menu_treatment_plan_sub), onOpenTreatmentPlan)
-                if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+                if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED && state.aiEnabled) {
                     val recapStore: uk.scimone.diafit.dailyrecap.data.DailyRecapStore = koinInject()
                     val recapConfig by recapStore.config.collectAsState()
                     MenuRow(
                         Icons.Filled.WbSunny, Warning, stringResource(R.string.recap_title),
                         if (recapConfig.enabled) stringResource(R.string.recap_menu_on) else stringResource(R.string.recap_menu_sub),
-                        onOpenDailyRecap
+                        { onOpenSettings(SettingsPage.DAILY_RECAP) }
                     )
                 }
                 MenuRow(

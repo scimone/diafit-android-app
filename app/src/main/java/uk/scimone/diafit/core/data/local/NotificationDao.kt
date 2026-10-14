@@ -25,6 +25,9 @@ interface NotificationDao {
     @Query("UPDATE AppNotificationEntity SET isDeleted = :deleted WHERE id = :id")
     suspend fun setDeleted(id: Int, deleted: Boolean)
 
+    @Query("DELETE FROM AppNotificationEntity WHERE dedupeKey = :key")
+    suspend fun deleteByKey(key: String)
+
     @Query("DELETE FROM AppNotificationEntity WHERE timestampUtc < :before")
     suspend fun deleteOlderThan(before: Long)
 }

@@ -244,7 +244,7 @@
     <string name="settings_notif_blocked">Blocked, so expiry alerts and pattern alerts are silent. The bell inside the app still fills up.</string>
     <string name="settings_notif_sends_title">What Diafit sends</string>
     <string name="settings_notif_sends_hint">Android lets you set sound, vibration and importance for each kind separately.</string>
-    <string name="settings_channel_expiry_desc">Sensor, pod or site and battery: 24 h / 10 h and 1 h before they run out.</string>
+    <string name="settings_channel_expiry_desc">Warns before they run out: %1$s.</string>
     <string name="settings_channel_patterns">Glucose patterns</string>
     <string name="settings_channel_patterns_desc">A new or changed pattern worth a look.</string>
     <string name="settings_channel_sync">Sync status</string>
@@ -1873,4 +1873,6 @@
     <string name="recap_push_sub">Also show the recap as a push notification. It always appears in the bell.</string>
     <string name="meal_estimation_on_title">Estimate meals with AI</string>
     <string name="meal_estimation_on_sub">When off, photos are never sent to the AI and the estimate buttons are hidden when adding a meal.</string>
+    <string name="settings_channel_sound">Sound and vibration</string>
+    <string name="recap_used_for_on">Every morning at %1$s</string>
 </resources>

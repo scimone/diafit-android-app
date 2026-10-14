@@ -14,6 +14,8 @@ data class DailyRecap(
     /** The day was still running when this was written (a test run, or the phone was off at 07:00). */
     val partialDay: Boolean,
     val headline: String,
+    /** One sentence about the day: the text of the notification. Empty on recaps written before it existed. */
+    val summary: String = "",
     /** "good", "mixed" or "hard": colours the headline. */
     val mood: String,
     val wentWell: List<RecapPoint>,

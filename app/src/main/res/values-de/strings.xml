@@ -241,7 +241,7 @@
     <string name="settings_notif_blocked">Blockiert, daher bleiben Ablauf- und Musterwarnungen stumm. Die Glocke in der App füllt sich trotzdem.</string>
     <string name="settings_notif_sends_title">Was Diafit sendet</string>
     <string name="settings_notif_sends_hint">Android erlaubt es, Ton, Vibration und Wichtigkeit für jede Art einzeln festzulegen.</string>
-    <string name="settings_channel_expiry_desc">Sensor, Pod bzw. Stelle und Batterie: 24 Std. / 10 Std. und 1 Std. vor dem Ablauf.</string>
+    <string name="settings_channel_expiry_desc">Warnt, bevor sie ablaufen: %1$s.</string>
     <string name="settings_channel_patterns">Glukosemuster</string>
     <string name="settings_channel_patterns_desc">Ein neues oder verändertes Muster, das einen Blick wert ist.</string>
     <string name="settings_channel_sync">Sync-Status</string>
@@ -1870,4 +1870,6 @@
     <string name="recap_push_sub">Den Rückblick zusätzlich als Push-Benachrichtigung zeigen. Im Glöckchen erscheint er immer.</string>
     <string name="meal_estimation_on_title">Mahlzeiten mit KI schätzen</string>
     <string name="meal_estimation_on_sub">Wenn aus, werden Fotos nie an die KI gesendet und die Schätzen-Schaltflächen beim Hinzufügen einer Mahlzeit sind ausgeblendet.</string>
+    <string name="settings_channel_sound">Ton und Vibration</string>
+    <string name="recap_used_for_on">Jeden Morgen um %1$s</string>
 </resources>

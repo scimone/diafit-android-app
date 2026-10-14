@@ -23,6 +23,7 @@ import uk.scimone.diafit.settings.domain.model.AiConnection
 /** What the model wrote, before it is joined with the chart data. Times are "HH:mm" or "". */
 data class RecapText(
     val headline: String,
+    val summary: String,
     val mood: String,
     val wentWell: List<Pair<String, String>>,
     val wentWrong: List<Pair<String, String>>,
@@ -86,6 +87,7 @@ class RecapLlm(private val api: OpenAiApi, private val llmLog: LlmLogDao) {
             require(headline.isNotEmpty()) { "AI response had no headline." }
             return RecapText(
                 headline = headline,
+                summary = str("summary"),
                 mood = str("mood").lowercase().takeIf { it in setOf("good", "mixed", "hard") } ?: "mixed",
                 wentWell = points("went_well").take(2),
                 wentWrong = points("went_wrong").take(2),
@@ -112,7 +114,8 @@ HOW TO READ THE DATA
 - Some fields can be missing (no sensor data, no activity tracker). Never mention missing data unless it is the main story, and never invent numbers.
 
 WRITE (about yesterday, the whole day)
-- headline: at most 45 characters, a plain verdict on the day, no emoji.
+- headline: the notification title, as short as possible (at most 28 characters), a plain verdict on the day, no emoji.
+- summary: one single sentence (at most 110 characters) about the day, the most important thing about it, for the notification text; it must stand on its own and not repeat the headline word for word.
 - mood: "good" (mostly in range, no severe lows), "mixed", or "hard" (severe or repeated lows, or long highs).
 - went_well: 0 to 2 items, the genuinely good things (a stable night, a meal handled well, recovery after a high, more steps than usual). Skip it rather than flatter.
 - went_wrong: 0 to 2 items (none at all on a good day: a single mild, short excursion of under about 30 minutes is not worth listing). Lows come before highs. Say what happened and, where the data shows it, the likely context (the meal, the workout, the hour); say "probably" when it is an inference.
@@ -144,6 +147,7 @@ Respond only with JSON matching the provided schema.
             put("type", "object")
             put("properties", buildJsonObject {
                 put("headline", buildJsonObject { put("type", "string") })
+                put("summary", buildJsonObject { put("type", "string") })
                 put("mood", buildJsonObject {
                     put("type", "string")
                     put("enum", JsonArray(listOf("good", "mixed", "hard").map(::JsonPrimitive)))
@@ -152,7 +156,7 @@ Respond only with JSON matching the provided schema.
                 put("went_wrong", list(point()))
                 put("do_today", list(buildJsonObject { put("type", "string") }))
             })
-            put("required", JsonArray(listOf("headline", "mood", "went_well", "went_wrong", "do_today").map(::JsonPrimitive)))
+            put("required", JsonArray(listOf("headline", "summary", "mood", "went_well", "went_wrong", "do_today").map(::JsonPrimitive)))
             put("additionalProperties", false)
         }
     }
