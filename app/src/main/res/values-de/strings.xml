@@ -1872,4 +1872,8 @@
     <string name="meal_estimation_on_sub">Wenn aus, werden Fotos nie an die KI gesendet und die Schätzen-Schaltflächen beim Hinzufügen einer Mahlzeit sind ausgeblendet.</string>
     <string name="settings_channel_sound">Ton und Vibration</string>
     <string name="recap_used_for_on">Jeden Morgen um %1$s</string>
+    <string name="ai_pill">KI</string>
+    <string name="ai_possible_title">Was KI für dich tun kann</string>
+    <string name="ai_possible_meal">Fotografiere eine Mahlzeit und lass Kohlenhydrate, Eiweiß und Fett schätzen.</string>
+    <string name="ai_possible_recap">Jeden Morgen ein kurzer Rückblick auf gestern: was gut lief, was nicht und was du heute versuchen kannst.</string>
 </resources>

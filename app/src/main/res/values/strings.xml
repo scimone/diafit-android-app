@@ -1875,4 +1875,8 @@
     <string name="meal_estimation_on_sub">When off, photos are never sent to the AI and the estimate buttons are hidden when adding a meal.</string>
     <string name="settings_channel_sound">Sound and vibration</string>
     <string name="recap_used_for_on">Every morning at %1$s</string>
+    <string name="ai_pill">AI</string>
+    <string name="ai_possible_title">What AI can do for you</string>
+    <string name="ai_possible_meal">Photograph a meal and get its carbs, protein and fat estimated.</string>
+    <string name="ai_possible_recap">A short look back at yesterday every morning: what went well, what didn\'t and what to try today.</string>
 </resources>

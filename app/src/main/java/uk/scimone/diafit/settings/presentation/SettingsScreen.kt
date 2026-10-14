@@ -359,33 +359,28 @@ private fun expiryDescription(warn: uk.scimone.diafit.core.domain.model.WarnThre
     return stringResource(R.string.settings_channel_expiry_desc, parts.joinToString(" · "))
 }
 
-/** A switch for whether the notification is sent at all; tapping the text opens the Android channel settings (sound, vibration). */
+/**
+ * One row of the Notifications page: title and description, and below them the same "Sound and vibration" link into the
+ * Android channel settings for every notification; a switch on the right when the notification can be turned off.
+ */
 @Composable
-internal fun ToggleChannelRow(context: Context, channelId: String, title: String, description: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+internal fun ToggleChannelRow(context: Context, channelId: String, title: String, description: String, checked: Boolean?, onChecked: (Boolean) -> Unit = {}) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { openChannelSettings(context, channelId) }.padding(vertical = 10.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.settings_channel_sound), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_channel_sound), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
-        Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onChecked)
+        if (checked != null) {
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = checked, onCheckedChange = onChecked)
+        }
     }
 }
 
 @Composable
-private fun ChannelRow(context: Context, channelId: String, title: String, description: String) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { openChannelSettings(context, channelId) }.padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp).size(18.dp))
-    }
-}
+private fun ChannelRow(context: Context, channelId: String, title: String, description: String) =
+    ToggleChannelRow(context, channelId, title, description, checked = null)
 
 @Composable
 private fun PermissionsPage(state: SettingsState, resumeTick: Int, onRequestIgnoreBatteryOptimizations: () -> Unit, healthConnectIntent: () -> Result<Intent>) {

@@ -1872,4 +1872,8 @@
     <string name="meal_estimation_on_sub">Se disattivato, le foto non vengono mai inviate all\'IA e i pulsanti di stima sono nascosti quando aggiungi un pasto.</string>
     <string name="settings_channel_sound">Suono e vibrazione</string>
     <string name="recap_used_for_on">Ogni mattina alle %1$s</string>
+    <string name="ai_pill">IA</string>
+    <string name="ai_possible_title">Cosa può fare l\'IA per te</string>
+    <string name="ai_possible_meal">Fotografa un pasto e ottieni una stima di carboidrati, proteine e grassi.</string>
+    <string name="ai_possible_recap">Ogni mattina un breve sguardo a ieri: cosa è andato bene, cosa no e cosa provare oggi.</string>
 </resources>

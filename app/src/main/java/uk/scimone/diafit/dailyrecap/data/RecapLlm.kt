@@ -87,7 +87,7 @@ class RecapLlm(private val api: OpenAiApi, private val llmLog: LlmLogDao) {
             require(headline.isNotEmpty()) { "AI response had no headline." }
             return RecapText(
                 headline = headline,
-                summary = str("summary"),
+                summary = shorten(str("summary"), SUMMARY_MAX),
                 mood = str("mood").lowercase().takeIf { it in setOf("good", "mixed", "hard") } ?: "mixed",
                 wentWell = points("went_well").take(2),
                 wentWrong = points("went_wrong").take(2),
@@ -96,6 +96,14 @@ class RecapLlm(private val api: OpenAiApi, private val llmLog: LlmLogDao) {
         }
 
         private const val TAG = "DailyRecap"
+        private const val SUMMARY_MAX = 60
+
+        /** Cuts [text] at a word boundary within [max] characters (the notification shows one line of it). */
+        internal fun shorten(text: String, max: Int): String {
+            if (text.length <= max) return text
+            val cut = text.take(max - 1).substringBeforeLast(' ', text.take(max - 1)).trimEnd(',', ';', ':', '-', ' ')
+            return "$cut…"
+        }
 
         /** The user's [custom] prompt, or the built-in one, plus the output language. The reply's JSON schema stays fixed. */
         fun buildSystemPrompt(language: String?, custom: String = ""): String {
@@ -115,7 +123,7 @@ HOW TO READ THE DATA
 
 WRITE (about yesterday, the whole day)
 - headline: the notification title, as short as possible (at most 28 characters), a plain verdict on the day, no emoji.
-- summary: one single sentence (at most 110 characters) about the day, the most important thing about it, for the notification text; it must stand on its own and not repeat the headline word for word.
+- summary: one single short sentence (at most 55 characters: it must fit on one line of a phone notification) about the day, the most important thing about it, for the notification text; it must stand on its own and not repeat the headline word for word.
 - mood: "good" (mostly in range, no severe lows), "mixed", or "hard" (severe or repeated lows, or long highs).
 - went_well: 0 to 2 items, the genuinely good things (a stable night, a meal handled well, recovery after a high, more steps than usual). Skip it rather than flatter.
 - went_wrong: 0 to 2 items (none at all on a good day: a single mild, short excursion of under about 30 minutes is not worth listing). Lows come before highs. Say what happened and, where the data shows it, the likely context (the meal, the workout, the hour); say "probably" when it is an inference.

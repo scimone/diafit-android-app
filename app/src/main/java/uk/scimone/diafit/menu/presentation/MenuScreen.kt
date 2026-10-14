@@ -144,7 +144,7 @@ fun MenuScreen(
                     MenuRow(
                         Icons.Filled.WbSunny, Warning, stringResource(R.string.recap_title),
                         if (recapConfig.enabled) stringResource(R.string.recap_menu_on) else stringResource(R.string.recap_menu_sub),
-                        { onOpenSettings(SettingsPage.DAILY_RECAP) }
+                        { onOpenSettings(SettingsPage.DAILY_RECAP) }, aiPill = true
                     )
                 }
                 MenuRow(
@@ -166,12 +166,6 @@ fun MenuScreen(
                     { onOpenSettings(SettingsPage.DATA_SOURCES) }
                 )
                 MenuRow(
-                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.AI.titleRes),
-                    if (!state.aiEnabled) stringResource(R.string.common_off) else if (state.aiConnections.isEmpty()) stringResource(R.string.menu_ai_no_connection)
-                    else pluralStringResource(R.plurals.menu_ai_connections, state.aiConnections.size, state.aiConnections.size),
-                    { onOpenSettings(SettingsPage.AI) }
-                )
-                MenuRow(
                     Icons.Filled.EditNote, MaterialTheme.colorScheme.secondary, stringResource(R.string.menu_data_editor),
                     stringResource(R.string.menu_data_editor_sub),
                     onOpenDataEditor
@@ -183,6 +177,12 @@ fun MenuScreen(
                         { onOpenSettings(SettingsPage.BACKEND) }
                     )
                 }
+                MenuRow(
+                    Icons.Filled.AutoAwesome, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.AI.titleRes),
+                    if (!state.aiEnabled) stringResource(R.string.common_off) else if (state.aiConnections.isEmpty()) stringResource(R.string.menu_ai_no_connection)
+                    else pluralStringResource(R.plurals.menu_ai_connections, state.aiConnections.size, state.aiConnections.size),
+                    { onOpenSettings(SettingsPage.AI) }
+                )
             }
 
             MenuGroup(stringResource(R.string.menu_group_meal_logging)) {
@@ -190,7 +190,7 @@ fun MenuScreen(
                     MenuRow(
                         Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.MEAL_ESTIMATION.titleRes),
                         if (!state.mealEstimationEnabled) stringResource(R.string.common_off) else state.mealConnection?.let { stringResource(R.string.menu_meal_estimation_set, it.name, state.mealEstimation.model) } ?: stringResource(R.string.menu_meal_estimation_none),
-                        { onOpenSettings(SettingsPage.MEAL_ESTIMATION) }
+                        { onOpenSettings(SettingsPage.MEAL_ESTIMATION) }, aiPill = true
                     )
                 }
                 MenuRow(
@@ -402,7 +402,8 @@ private fun MenuRow(
     subtitle: String,
     onClick: () -> Unit,
     badge: Boolean = false,
-    subtitleColor: Color? = null
+    subtitleColor: Color? = null,
+    aiPill: Boolean = false
 ) {
     Row(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -413,7 +414,17 @@ private fun MenuRow(
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                if (aiPill) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.ai_pill), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 7.dp, vertical = 1.dp)
+                    )
+                }
+            }
             Text(
                 subtitle, style = MaterialTheme.typography.bodySmall,
                 color = subtitleColor ?: MaterialTheme.colorScheme.onSurfaceVariant,

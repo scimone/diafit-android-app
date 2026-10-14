@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -66,7 +68,17 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
             Switch(checked = state.aiEnabled, onCheckedChange = viewModel::onAiEnabledChanged)
         }
     }
-    if (!state.aiEnabled) return
+    if (!state.aiEnabled) {
+        // Off: show what switching it on would make possible.
+        SettingsSection(title = stringResource(R.string.ai_possible_title), icon = Icons.Filled.AutoAwesome) {
+            PossibleFeature(Icons.Filled.Psychology, stringResource(R.string.settings_page_meal_estimation), stringResource(R.string.ai_possible_meal))
+            if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+                Spacer(Modifier.height(12.dp))
+                PossibleFeature(Icons.Filled.WbSunny, stringResource(R.string.recap_title), stringResource(R.string.ai_possible_recap))
+            }
+        }
+        return
+    }
 
     SettingsSection(title = stringResource(R.string.ai_connections_title), icon = Icons.Filled.Hub) {
         Text(
@@ -102,7 +114,10 @@ internal fun AiPage(state: SettingsState, viewModel: SettingsViewModel, onOpenPa
             NavRow(
                 stringResource(R.string.recap_title),
                 if (!recapConfig.enabled) stringResource(R.string.common_off)
-                else stringResource(R.string.recap_used_for_on, "%02d:%02d".format(recapConfig.hour, recapConfig.minute))
+                else {
+                    val connection = state.aiConnections.firstOrNull { it.id == recapConfig.connectionId } ?: state.aiConnections.firstOrNull()
+                    connection?.let { "${it.name} · ${recapConfig.model.ifBlank { state.mealEstimation.model }}" } ?: stringResource(R.string.ai_no_connection_yet)
+                }
             ) { onOpenPage(SettingsPage.DAILY_RECAP) }
         }
     }
@@ -411,6 +426,19 @@ private fun LogText(label: String, text: String) {
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState()).padding(10.dp)
             )
+        }
+    }
+}
+
+/** One thing AI can do for the person, shown while AI is switched off. */
+@Composable
+private fun PossibleFeature(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
