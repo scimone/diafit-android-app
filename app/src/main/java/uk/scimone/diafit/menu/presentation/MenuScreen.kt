@@ -190,7 +190,7 @@ fun MenuScreen(
                 if (state.aiEnabled) {
                     MenuRow(
                         Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.MEAL_ESTIMATION.titleRes),
-                        state.mealConnection?.let { stringResource(R.string.menu_meal_estimation_set, it.name, state.mealEstimation.model) } ?: stringResource(R.string.menu_meal_estimation_none),
+                        if (!state.mealEstimationEnabled) stringResource(R.string.common_off) else state.mealConnection?.let { stringResource(R.string.menu_meal_estimation_set, it.name, state.mealEstimation.model) } ?: stringResource(R.string.menu_meal_estimation_none),
                         { onOpenSettings(SettingsPage.MEAL_ESTIMATION) }
                     )
                 }

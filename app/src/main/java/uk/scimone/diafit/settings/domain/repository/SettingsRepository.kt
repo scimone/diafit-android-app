@@ -44,6 +44,9 @@ interface SettingsRepository {
 
     /** AI features (meal photo estimates) switched on. Off = only barcode / saved product / manual entry. */
     suspend fun isAiEnabled(): Boolean
+    /** Meal photo estimation on top of the master AI switch; off = photos are never sent and no estimate is offered. */
+    suspend fun isMealEstimationEnabled(): Boolean
+    suspend fun setMealEstimationEnabled(enabled: Boolean)
     suspend fun setAiEnabled(enabled: Boolean)
 
     /** What the user is called in the menu; empty = not set. */

@@ -21,17 +21,11 @@ data class DailyRecapUiState(
     val isLoadingModels: Boolean = false,
     val modelsError: String? = null,
     /** Which stored recap is shown (index into the newest-first list). */
-    val selected: Int = 0,
-    val generatingFor: LocalDate? = null,
-    val error: String? = null,
-    /** The JSON the model would be shown, once the user asked to see it. */
-    val dataPreview: String? = null,
-    val isLoadingPreview: Boolean = false
+    val selected: Int = 0
 )
 
 class DailyRecapViewModel(
     private val store: DailyRecapStore,
-    private val service: DailyRecapService,
     private val scheduler: DailyRecapScheduler,
     private val settings: SettingsRepository,
     private val mealAnalysis: MealAnalysisRepository
@@ -58,6 +52,12 @@ class DailyRecapViewModel(
         if (enabled) scheduler.scheduleNext() else scheduler.cancel()
     }
 
+    /** Debug: run once at [epochMs] instead of the usual time. */
+    fun runOnceAt(epochMs: Long) {
+        store.update { it.copy(nextRunOverrideUtc = epochMs) }
+        scheduler.reschedule()
+    }
+
     fun setConnection(id: String) {
         store.update { it.copy(connectionId = id) }
         _state.update { it.copy(models = emptyList(), modelsError = null) }
@@ -76,29 +76,14 @@ class DailyRecapViewModel(
         }
     }
 
-    /** Writes the recap of [date] now (yesterday's, or today's so far as a test) and shows it; no push. */
-    fun generate(date: LocalDate, notify: Boolean = false) {
-        if (_state.value.generatingFor != null) return
-        _state.update { it.copy(generatingFor = date, error = null) }
-        viewModelScope.launch {
-            val result = service.generate(date, notify)
-            _state.update { st ->
-                st.copy(
-                    generatingFor = null,
-                    error = result.exceptionOrNull()?.message ?: result.exceptionOrNull()?.javaClass?.simpleName,
-                    selected = if (result.isSuccess) 0 else st.selected
-                )
-            }
-        }
+    fun setPush(push: Boolean) = store.update { it.copy(push = push) }
+
+    /** The time of day the recap is written and sent; applies from the next run. */
+    fun setTime(hour: Int, minute: Int) {
+        store.update { it.copy(hour = hour, minute = minute, nextRunOverrideUtc = null) }
+        if (store.config.value.enabled) scheduler.reschedule()
     }
 
-    fun showData(date: LocalDate) {
-        _state.update { it.copy(isLoadingPreview = true, dataPreview = null) }
-        viewModelScope.launch {
-            val text = runCatching { service.inputJson(service.previewInput(date)) }.getOrElse { it.message ?: "Could not read the data." }
-            _state.update { it.copy(dataPreview = text, isLoadingPreview = false) }
-        }
-    }
-
-    fun hideData() = _state.update { it.copy(dataPreview = null) }
+    /** Blank restores the built-in prompt. */
+    fun setPrompt(prompt: String) = store.update { it.copy(prompt = prompt) }
 }

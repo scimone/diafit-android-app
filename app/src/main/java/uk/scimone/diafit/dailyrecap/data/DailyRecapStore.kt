@@ -6,8 +6,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import uk.scimone.diafit.dailyrecap.domain.DailyRecap
 
-/** The user's choices for the recap; it is off until switched on. [connectionId] null = the first AI connection. */
-data class DailyRecapConfig(val enabled: Boolean = false, val connectionId: String? = null, val model: String = "")
+/**
+ * The user's choices for the recap. [connectionId] null = the first AI connection; [prompt] blank = the built-in one.
+ * [push] = also push it to the phone (it always lands in the bell). [nextRunOverrideUtc] makes the next run happen at
+ * that moment instead of the usual time, once.
+ */
+data class DailyRecapConfig(
+    val enabled: Boolean = true,
+    val connectionId: String? = null,
+    val model: String = "",
+    val prompt: String = "",
+    val push: Boolean = true,
+    val hour: Int = 7,
+    val minute: Int = 0,
+    val nextRunOverrideUtc: Long? = null
+)
 
 /** Settings and the last two weeks of recaps, in plain preferences (a recap is a few KB of JSON). */
 class DailyRecapStore(context: Context) {
@@ -23,7 +36,9 @@ class DailyRecapStore(context: Context) {
 
     fun update(change: (DailyRecapConfig) -> DailyRecapConfig) {
         val next = change(_config.value)
-        prefs.edit().putBoolean(ENABLED, next.enabled).putString(CONNECTION, next.connectionId).putString(MODEL, next.model).apply()
+        prefs.edit().putBoolean(ENABLED, next.enabled).putString(CONNECTION, next.connectionId).putString(MODEL, next.model)
+            .putString(PROMPT, next.prompt).putBoolean(PUSH, next.push).putInt(HOUR, next.hour).putInt(MINUTE, next.minute)
+            .putLong(OVERRIDE, next.nextRunOverrideUtc ?: 0L).apply()
         _config.value = next
     }
 
@@ -36,7 +51,11 @@ class DailyRecapStore(context: Context) {
     }
 
     private fun readConfig() = DailyRecapConfig(
-        enabled = prefs.getBoolean(ENABLED, false),
+        enabled = prefs.getBoolean(ENABLED, true),
+        prompt = prefs.getString(PROMPT, "").orEmpty(),
+        push = prefs.getBoolean(PUSH, true),
+        hour = prefs.getInt(HOUR, 7), minute = prefs.getInt(MINUTE, 0),
+        nextRunOverrideUtc = prefs.getLong(OVERRIDE, 0L).takeIf { it > 0 },
         connectionId = prefs.getString(CONNECTION, null),
         model = prefs.getString(MODEL, "").orEmpty()
     )
@@ -49,6 +68,11 @@ class DailyRecapStore(context: Context) {
         const val ENABLED = "enabled"
         const val CONNECTION = "connection_id"
         const val MODEL = "model"
+        const val PROMPT = "prompt"
+        const val PUSH = "push"
+        const val HOUR = "hour"
+        const val MINUTE = "minute"
+        const val OVERRIDE = "override_utc"
         const val RECAPS = "recaps"
         const val KEEP = 14
     }

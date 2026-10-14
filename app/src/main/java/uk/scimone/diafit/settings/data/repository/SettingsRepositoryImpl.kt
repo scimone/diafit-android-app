@@ -188,6 +188,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun isAiEnabled(): Boolean = prefs.getBoolean("ai_enabled", true)
 
+    override suspend fun isMealEstimationEnabled(): Boolean = prefs.getBoolean("meal_estimation_enabled", true)
+
+    override suspend fun setMealEstimationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("meal_estimation_enabled", enabled).apply()
+    }
+
     override suspend fun setAiEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("ai_enabled", enabled).apply()
     }

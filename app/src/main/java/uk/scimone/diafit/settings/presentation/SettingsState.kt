@@ -29,6 +29,7 @@ data class SettingsState(
     val isLoadingAiModels: Boolean = false,
     val aiModelsError: UiText? = null,
     val aiEnabled: Boolean = true,
+    val mealEstimationEnabled: Boolean = true,
     val userName: String = "",
     val usdaKey: String = "",
     val usdaCheck: NightscoutCheckState = NightscoutCheckState.Idle,

@@ -1848,8 +1848,8 @@
     <string name="recap_previous">Voriger Rückblick</string>
     <string name="recap_next">Nächster Rückblick</string>
     <string name="recap_settings_title">Einstellungen</string>
-    <string name="recap_switch_title">Morgenrückblick um 07:00</string>
-    <string name="recap_switch_sub">Eine KI schreibt ihn aus einer Zusammenfassung des Vortags: Glukose, Mahlzeiten (Name und Kohlenhydrate), Insulin und Aktivität. Fotos und Notizen werden nie gesendet.</string>
+    <string name="recap_switch_title">Tagesrückblick</string>
+    <string name="recap_switch_sub">Jeden Morgen blickt eine KI auf den ganzen gestrigen Tag zurück: was gut lief, was nicht und was du heute versuchen kannst. Er erscheint in deinen Benachrichtigungen.</string>
     <string name="recap_ai_off">KI ist im Menü ausgeschaltet. Schalte sie ein, um den Rückblick zu erhalten.</string>
     <string name="recap_no_connection">Richte zuerst eine KI-Verbindung ein (Menü → KI).</string>
     <string name="recap_model_hint">Jedes Chat-Modell funktioniert; ein kleines, günstiges reicht.</string>
@@ -1860,4 +1860,14 @@
     <string name="recap_show_data">Zeigen, was die KI sieht</string>
     <string name="recap_hide_data">Ausblenden</string>
     <string name="recap_data_caption">Die Daten von gestern genau so, wie sie gesendet werden, sonst nichts.</string>
+    <string name="recap_time_title">Wann</string>
+    <string name="recap_time_label">Erstellt und gesendet um</string>
+    <string name="recap_time_hint">Der Rückblick auf den Vortag wird jeden Morgen zu dieser Zeit berechnet.</string>
+    <string name="recap_model_title">KI-Modell</string>
+    <string name="recap_prompt_title">Prompt</string>
+    <string name="recap_prompt_hint">Wie die KI den Rückblick schreiben soll. Die Daten, die sie bekommt (Glukose, Mahlzeiten, Insulin, Aktivität; nie Fotos oder Notizen), und das Format der Antwort sind fest.</string>
+    <string name="recap_push_title">Push für den Tagesrückblick</string>
+    <string name="recap_push_sub">Den Rückblick zusätzlich als Push-Benachrichtigung zeigen. Im Glöckchen erscheint er immer.</string>
+    <string name="meal_estimation_on_title">Mahlzeiten mit KI schätzen</string>
+    <string name="meal_estimation_on_sub">Wenn aus, werden Fotos nie an die KI gesendet und die Schätzen-Schaltflächen beim Hinzufügen einer Mahlzeit sind ausgeblendet.</string>
 </resources>

@@ -161,6 +161,7 @@ class SettingsViewModel(
                 mealEstimation = settingsRepository.getMealEstimationSettings(),
                 usdaKey = settingsRepository.getUsdaApiKey(),
                 aiEnabled = settingsRepository.isAiEnabled(),
+                mealEstimationEnabled = settingsRepository.isMealEstimationEnabled(),
                 userName = settingsRepository.getUserName(),
                 isBatteryOptimizationIgnored = batteryIgnored,
                 isLoading = false
@@ -310,6 +311,11 @@ class SettingsViewModel(
     fun onAiEnabledChanged(enabled: Boolean) {
         _state.value = _state.value.copy(aiEnabled = enabled)
         viewModelScope.launch { settingsRepository.setAiEnabled(enabled) }
+    }
+
+    fun onMealEstimationEnabledChanged(enabled: Boolean) {
+        _state.value = _state.value.copy(mealEstimationEnabled = enabled)
+        viewModelScope.launch { settingsRepository.setMealEstimationEnabled(enabled) }
     }
 
     fun onUserNameChanged(name: String) {

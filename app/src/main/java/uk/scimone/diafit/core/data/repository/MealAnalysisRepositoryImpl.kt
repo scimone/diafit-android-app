@@ -49,6 +49,9 @@ class MealAnalysisRepositoryImpl(
                 if (!settings.isAiEnabled()) {
                     return@withContext Result.failure(IllegalStateException("AI is switched off in the menu."))
                 }
+                if (!settings.isMealEstimationEnabled()) {
+                    return@withContext Result.failure(IllegalStateException("Meal estimation is switched off in the menu."))
+                }
                 val mealSettings = settings.getMealEstimationSettings()
                 val connections = settings.getAiConnections()
                 val connection = connections.firstOrNull { it.id == mealSettings.connectionId } ?: connections.firstOrNull()

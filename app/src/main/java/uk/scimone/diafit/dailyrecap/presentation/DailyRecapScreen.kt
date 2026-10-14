@@ -3,6 +3,13 @@ package uk.scimone.diafit.dailyrecap.presentation
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import uk.scimone.diafit.dailyrecap.data.RecapLlm
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,15 +72,45 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-/** The morning recap: the latest ones with their chart, and below them the switch, the AI choice and a way to try it. */
+/** The recap of one morning (opened from the bell), with arrows to the earlier ones kept for two weeks. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DailyRecapScreen(onBack: () -> Unit) {
+fun DailyRecapScreen(epochDay: Long?, onBack: () -> Unit) {
     val viewModel: DailyRecapViewModel = koinViewModel()
-    val config by viewModel.config.collectAsState()
     val recaps by viewModel.recaps.collectAsState()
     val state by viewModel.state.collectAsState()
+    // Start on the recap that was tapped, else the newest.
+    val start = remember(epochDay, recaps.size) { epochDay?.let { d -> recaps.indexOfFirst { it.epochDay == d } }?.takeIf { it >= 0 } ?: 0 }
+    var picked by remember(epochDay) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    val index = (picked ?: start).coerceIn(0, (recaps.size - 1).coerceAtLeast(0))
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.recap_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back)) } }
+            )
+        }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
+            if (recaps.isEmpty()) EmptyCard() else RecapCard(
+                recap = recaps[index],
+                hasOlder = index < recaps.size - 1, hasNewer = index > 0,
+                onOlder = { picked = index + 1 }, onNewer = { picked = index - 1 }
+            )
+        }
+    }
+}
+
+/** Settings of the recap: on/off first, then when, what the AI is and how it is told to write. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DailyRecapSettingsScreen(onBack: () -> Unit) {
+    val viewModel: DailyRecapViewModel = koinViewModel()
+    val config by viewModel.config.collectAsState()
+    val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.refreshConnections() }
+    var pickingTime by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -83,17 +121,10 @@ fun DailyRecapScreen(onBack: () -> Unit) {
         }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val index = state.selected.coerceIn(0, (recaps.size - 1).coerceAtLeast(0))
-            if (recaps.isEmpty()) EmptyCard() else RecapCard(
-                recap = recaps[index],
-                hasOlder = index < recaps.size - 1, hasNewer = index > 0,
-                onOlder = { viewModel.select(index + 1) }, onNewer = { viewModel.select(index - 1) }
-            )
-
-            SettingsCard(stringResource(R.string.recap_settings_title)) {
+            SettingsCard(null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.recap_switch_title), style = MaterialTheme.typography.titleSmall)
@@ -102,51 +133,62 @@ fun DailyRecapScreen(onBack: () -> Unit) {
                     Spacer(Modifier.width(12.dp))
                     Switch(checked = config.enabled, onCheckedChange = viewModel::setEnabled)
                 }
-                when {
-                    !state.aiEnabled -> Note(stringResource(R.string.recap_ai_off))
-                    state.connections.isEmpty() -> Note(stringResource(R.string.recap_no_connection))
-                    else -> {
-                        ConnectionPicker(state.connections, config.connectionId ?: state.connections.first().id, viewModel::setConnection)
-                        ModelPicker(
-                            model = config.model, models = state.models, isLoading = state.isLoadingModels,
-                            error = state.modelsError?.let { UiText.Raw(it) },
-                            onModelChanged = viewModel::setModel, onLoadModels = viewModel::loadModels
-                        )
-                        Text(stringResource(R.string.recap_model_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
             }
-
-            SettingsCard(stringResource(R.string.recap_try_title)) {
-                val today = LocalDate.now()
-                val busy = state.generatingFor != null
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { viewModel.generate(today.minusDays(1)) }, enabled = !busy && state.aiEnabled) {
-                        Text(stringResource(R.string.recap_try_yesterday))
+            if (config.enabled) {
+                SettingsCard(stringResource(R.string.recap_time_title)) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pickingTime = true }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.recap_time_label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        Text("%02d:%02d".format(config.hour, config.minute), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     }
-                    OutlinedButton(onClick = { viewModel.generate(today) }, enabled = !busy && state.aiEnabled) {
-                        Text(stringResource(R.string.recap_try_today))
+                    Note(stringResource(R.string.recap_time_hint))
+                }
+                SettingsCard(stringResource(R.string.recap_model_title)) {
+                    when {
+                        !state.aiEnabled -> Note(stringResource(R.string.recap_ai_off))
+                        state.connections.isEmpty() -> Note(stringResource(R.string.recap_no_connection))
+                        else -> {
+                            ConnectionPicker(state.connections, config.connectionId ?: state.connections.first().id, viewModel::setConnection)
+                            ModelPicker(
+                                model = config.model, models = state.models, isLoading = state.isLoadingModels,
+                                error = state.modelsError?.let { UiText.Raw(it) },
+                                onModelChanged = viewModel::setModel, onLoadModels = viewModel::loadModels
+                            )
+                            Note(stringResource(R.string.recap_model_hint))
+                        }
                     }
                 }
-                if (busy) Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.recap_writing), style = MaterialTheme.typography.bodySmall)
-                }
-                state.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-
-                TextButton(onClick = { if (state.dataPreview == null) viewModel.showData(today.minusDays(1)) else viewModel.hideData() }) {
-                    Text(stringResource(if (state.dataPreview == null) R.string.recap_show_data else R.string.recap_hide_data))
-                }
-                if (state.isLoadingPreview) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                state.dataPreview?.let { json ->
-                    Text(stringResource(R.string.recap_data_caption), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SelectionContainer {
-                        Text(json, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp)
+                SettingsCard(stringResource(R.string.recap_prompt_title)) {
+                    var text by remember(config.prompt) { androidx.compose.runtime.mutableStateOf(config.prompt.ifBlank { RecapLlm.DEFAULT_PROMPT.trim() }) }
+                    Note(stringResource(R.string.recap_prompt_hint))
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+                            // Storing "" keeps following the built-in prompt, including future improvements to it.
+                            viewModel.setPrompt(if (it.trim() == RecapLlm.DEFAULT_PROMPT.trim()) "" else it)
+                        },
+                        minLines = 8, maxLines = 18, textStyle = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = { text = RecapLlm.DEFAULT_PROMPT.trim(); viewModel.setPrompt("") }, enabled = config.prompt.isNotBlank()) {
+                            Text(stringResource(R.string.ai_reset_prompt))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Note(stringResource(if (config.prompt.isBlank()) R.string.ai_prompt_builtin else R.string.ai_prompt_custom))
                     }
                 }
             }
         }
+    }
+
+    if (pickingTime) {
+        val picker = rememberTimePickerState(config.hour, config.minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { pickingTime = false },
+            confirmButton = { TextButton(onClick = { viewModel.setTime(picker.hour, picker.minute); pickingTime = false }) { Text(stringResource(R.string.common_save)) } },
+            dismissButton = { TextButton(onClick = { pickingTime = false }) { Text(stringResource(R.string.common_cancel)) } },
+            text = { TimePicker(state = picker) }
+        )
     }
 }
 
@@ -190,7 +232,7 @@ private fun RecapCard(recap: DailyRecap, hasOlder: Boolean, hasNewer: Boolean, o
             recap.doToday.forEach { Line("→", it) }
         }
         Text(
-            stringResource(R.string.recap_generated_at, writtenAt) + if (recap.partialDay) " · " + stringResource(R.string.recap_partial) else "",
+            stringResource(R.string.recap_generated_at, writtenAt),
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -220,10 +262,10 @@ private fun Note(text: String) {
 }
 
 @Composable
-private fun SettingsCard(title: String, content: @Composable () -> Unit) {
+private fun SettingsCard(title: String?, content: @Composable () -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            title?.let { Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
             content()
         }
     }

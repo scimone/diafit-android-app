@@ -6,7 +6,6 @@ import kotlinx.coroutines.withContext
 import uk.scimone.diafit.dailyrecap.domain.DailyRecap
 import uk.scimone.diafit.dailyrecap.domain.RecapAggregator
 import uk.scimone.diafit.dailyrecap.domain.RecapPoint
-import uk.scimone.diafit.dailyrecap.domain.RecapInput
 import uk.scimone.diafit.settings.domain.model.DEFAULT_AI_MODEL
 import uk.scimone.diafit.settings.domain.repository.SettingsRepository
 import java.time.LocalDate
@@ -20,15 +19,11 @@ class DailyRecapService(
     private val llm: RecapLlm,
     private val store: DailyRecapStore,
     private val settings: SettingsRepository,
-    private val notifier: RecapNotifier
+    private val notifier: RecapNotifier,
+    private val notifications: uk.scimone.diafit.core.data.local.NotificationDao
 ) {
-    /** The exact text the model is shown for [date], so the page can reveal what is sent. */
-    suspend fun previewInput(date: LocalDate): RecapInput = withContext(Dispatchers.IO) { loader.load(date, USER_ID).first }
-
-    suspend fun inputJson(input: RecapInput) = llm.inputJson(input)
-
-    /** Generates the recap of [date] and stores it; [notify] pushes it to the phone as well. */
-    suspend fun generate(date: LocalDate, notify: Boolean, zone: ZoneId = ZoneId.systemDefault()): Result<DailyRecap> = withContext(Dispatchers.IO) {
+    /** Generates the full recap of [date], stores it, adds it to the bell and pushes it unless push is switched off. */
+    suspend fun generate(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Result<DailyRecap> = withContext(Dispatchers.IO) {
         try {
             if (!settings.isAiEnabled()) return@withContext Result.failure(IllegalStateException("AI is switched off in the menu."))
             val config = store.config.value
@@ -44,7 +39,7 @@ class DailyRecapService(
                 return@withContext Result.failure(IllegalStateException("There is no data for $date."))
             }
             val language = when (Locale.getDefault().language) { "de" -> "German"; "it" -> "Italian"; else -> null }
-            val text = llm.write(connection, model, input, language).getOrElse { return@withContext Result.failure(it) }
+            val text = llm.write(connection, model, input, language, config.prompt).getOrElse { return@withContext Result.failure(it) }
 
             fun point(p: Pair<String, String>) = RecapPoint(p.first, timeOn(date, p.second, zone))
             val recap = DailyRecap(
@@ -54,7 +49,13 @@ class DailyRecapService(
                 visual = visual
             )
             store.save(recap)
-            if (notify) notifier.push(recap)
+            notifications.insert(
+                uk.scimone.diafit.core.domain.model.AppNotificationEntity(
+                    timestampUtc = now, title = recap.headline, text = recapLines(recap).joinToString("\n"),
+                    dedupeKey = "recap-${recap.epochDay}", link = recapLink(recap.epochDay)
+                )
+            )
+            if (config.push) notifier.push(recap)
             Result.success(recap)
         } catch (e: Exception) {
             Log.e(TAG, "Recap for $date failed", e)

@@ -337,6 +337,11 @@ private fun NotificationsPage(resumeTick: Int) {
         ChannelRow(context, "GLUCOSE_PATTERNS_CHANNEL", stringResource(R.string.settings_channel_patterns), stringResource(R.string.settings_channel_patterns_desc))
         HorizontalDivider()
         ChannelRow(context, "GLUCOSE_SYNC_CHANNEL", stringResource(R.string.settings_channel_sync), stringResource(R.string.settings_channel_sync_desc))
+        if (uk.scimone.diafit.dailyrecap.DailyRecapFeature.ENABLED) {
+            HorizontalDivider()
+            uk.scimone.diafit.dailyrecap.presentation.DailyRecapPushToggle()
+            ChannelRow(context, "DAILY_RECAP_CHANNEL", stringResource(R.string.recap_channel_name), stringResource(R.string.recap_channel_desc))
+        }
     }
 }
 

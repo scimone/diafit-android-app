@@ -197,6 +197,18 @@ internal fun MealEstimationPage(state: SettingsState, viewModel: SettingsViewMod
     }
     val meal = state.mealEstimation
 
+    SettingsSection(title = stringResource(R.string.settings_page_meal_estimation), icon = Icons.Filled.Psychology) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.meal_estimation_on_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.meal_estimation_on_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = state.mealEstimationEnabled, onCheckedChange = viewModel::onMealEstimationEnabledChanged)
+        }
+    }
+    if (!state.mealEstimationEnabled) return
+
     SettingsSection(title = stringResource(R.string.ai_meal_conn_title), icon = Icons.Filled.Hub) {
         if (state.aiConnections.isEmpty()) {
             Text(stringResource(R.string.ai_add_connection_first), style = MaterialTheme.typography.bodyMedium)

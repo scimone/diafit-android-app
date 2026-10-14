@@ -13,10 +13,10 @@ import uk.scimone.diafit.dailyrecap.presentation.DailyRecapViewModel
 
 val dailyRecapModule = module {
     single { DailyRecapStore(androidContext()) }
-    single { DailyRecapScheduler(androidContext()) }
+    single { DailyRecapScheduler(androidContext(), get()) }
     single { RecapNotifier(androidContext()) }
     single { RecapLlm(get(), get()) }
     single { RecapDataLoader(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    single { DailyRecapService(get(), get(), get(), get(), get()) }
-    viewModel { DailyRecapViewModel(get(), get(), get(), get(), get()) }
+    single { DailyRecapService(get(), get(), get(), get(), get(), get()) }
+    viewModel { DailyRecapViewModel(get(), get(), get(), get()) }
 }

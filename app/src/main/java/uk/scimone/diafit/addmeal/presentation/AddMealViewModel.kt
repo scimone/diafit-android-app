@@ -90,11 +90,11 @@ class AddMealViewModel(
     private var sittingTitleAtStart: String? = null
 
     private val _aiEnabled = MutableStateFlow(true)
-    /** False when the user switched AI off in the menu: no photo estimates are offered. */
+    /** False when the user switched AI or meal estimation off in the menu: no photo estimates are offered. */
     val aiEnabled = _aiEnabled.asStateFlow()
 
     private fun reset() {
-        viewModelScope.launch { _aiEnabled.value = settingsRepository.isAiEnabled() }
+        viewModelScope.launch { _aiEnabled.value = settingsRepository.isAiEnabled() && settingsRepository.isMealEstimationEnabled() }
         editing = null
         targetSitting = null
         sittingTitleAtStart = null

@@ -1851,8 +1851,8 @@
     <string name="recap_previous">Previous recap</string>
     <string name="recap_next">Next recap</string>
     <string name="recap_settings_title">Settings</string>
-    <string name="recap_switch_title">Morning recap at 07:00</string>
-    <string name="recap_switch_sub">An AI writes it from a summary of yesterday: glucose, meals (name and carbs), insulin and activity. Photos and notes are never sent.</string>
+    <string name="recap_switch_title">Daily recap</string>
+    <string name="recap_switch_sub">Every morning an AI looks back at the whole of yesterday: what went well, what didn\'t and what to try today. It lands in your notifications.</string>
     <string name="recap_ai_off">AI is switched off in the menu. Switch it on to get the recap.</string>
     <string name="recap_no_connection">Add an AI connection first (Menu → AI).</string>
     <string name="recap_model_hint">Any chat model works; a small, cheap one is enough.</string>
@@ -1863,4 +1863,14 @@
     <string name="recap_show_data">Show what the AI sees</string>
     <string name="recap_hide_data">Hide</string>
     <string name="recap_data_caption">Yesterday\'s data exactly as sent, nothing else.</string>
+    <string name="recap_time_title">When</string>
+    <string name="recap_time_label">Written and sent at</string>
+    <string name="recap_time_hint">The recap of the previous day is computed at this time every morning.</string>
+    <string name="recap_model_title">AI model</string>
+    <string name="recap_prompt_title">Prompt</string>
+    <string name="recap_prompt_hint">How the AI is told to write the recap. The data it gets (glucose, meals, insulin, activity; never photos or notes) and the shape of its answer are fixed.</string>
+    <string name="recap_push_title">Daily recap push</string>
+    <string name="recap_push_sub">Also show the recap as a push notification. It always appears in the bell.</string>
+    <string name="meal_estimation_on_title">Estimate meals with AI</string>
+    <string name="meal_estimation_on_sub">When off, photos are never sent to the AI and the estimate buttons are hidden when adding a meal.</string>
 </resources>

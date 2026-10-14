@@ -1848,8 +1848,8 @@
     <string name="recap_previous">Riepilogo precedente</string>
     <string name="recap_next">Riepilogo successivo</string>
     <string name="recap_settings_title">Impostazioni</string>
-    <string name="recap_switch_title">Riepilogo del mattino alle 07:00</string>
-    <string name="recap_switch_sub">Lo scrive un\'IA da un riassunto di ieri: glicemia, pasti (nome e carboidrati), insulina e attività. Foto e note non vengono mai inviate.</string>
+    <string name="recap_switch_title">Riepilogo giornaliero</string>
+    <string name="recap_switch_sub">Ogni mattina un\'IA ripercorre tutta la giornata di ieri: cosa è andato bene, cosa no e cosa provare oggi. Arriva tra le tue notifiche.</string>
     <string name="recap_ai_off">L\'IA è disattivata nel menu. Attivala per ricevere il riepilogo.</string>
     <string name="recap_no_connection">Aggiungi prima una connessione IA (Menu → IA).</string>
     <string name="recap_model_hint">Va bene qualsiasi modello di chat; ne basta uno piccolo ed economico.</string>
@@ -1860,4 +1860,14 @@
     <string name="recap_show_data">Mostra cosa vede l\'IA</string>
     <string name="recap_hide_data">Nascondi</string>
     <string name="recap_data_caption">I dati di ieri esattamente come inviati, nient\'altro.</string>
+    <string name="recap_time_title">Quando</string>
+    <string name="recap_time_label">Scritto e inviato alle</string>
+    <string name="recap_time_hint">Il riepilogo del giorno precedente viene calcolato a quest\'ora ogni mattina.</string>
+    <string name="recap_model_title">Modello IA</string>
+    <string name="recap_prompt_title">Prompt</string>
+    <string name="recap_prompt_hint">Come l\'IA deve scrivere il riepilogo. I dati che riceve (glicemia, pasti, insulina, attività; mai foto o note) e la forma della risposta sono fissi.</string>
+    <string name="recap_push_title">Push del riepilogo giornaliero</string>
+    <string name="recap_push_sub">Mostra il riepilogo anche come notifica push. Nella campanella compare sempre.</string>
+    <string name="meal_estimation_on_title">Stima i pasti con l\'IA</string>
+    <string name="meal_estimation_on_sub">Se disattivato, le foto non vengono mai inviate all\'IA e i pulsanti di stima sono nascosti quando aggiungi un pasto.</string>
 </resources>
