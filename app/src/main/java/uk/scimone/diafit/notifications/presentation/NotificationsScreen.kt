@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
+import uk.scimone.diafit.patterns.domain.StoredPattern
 import uk.scimone.diafit.patterns.presentation.PatternCardView
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
@@ -113,18 +114,17 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (patterns.isNotEmpty()) {
-                    item(key = "patterns-header") {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.patterns_title), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.common_see_all)) }
-                        }
-                    }
-                    items(patterns, key = { "pattern-" + it.card.id }) { PatternCardView(it, onClick = { onOpenPattern(it.card.id) }) }
-                } else item(key = "patterns-link") {
+                item(key = "patterns-link") {
                     TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.notifications_see_all_patterns)) }
                 }
-                items(items, key = { it.id }) { n ->
+                // Patterns and notifications interleaved, newest first.
+                val feed = (items.map { it.timestampUtc to it } + patterns.map { it.shownAtUtc to it }).sortedByDescending { it.first }.map { it.second }
+                items(feed, key = { if (it is AppNotificationEntity) it.id else "pattern-" + (it as StoredPattern).card.id }) { entry ->
+                    if (entry is StoredPattern) {
+                        PatternCardView(entry, onClick = { onOpenPattern(entry.card.id) }, modifier = Modifier.animateItem())
+                        return@items
+                    }
+                    val n = entry as AppNotificationEntity
                     // Swipe either way, or tap the ✕, to remove.
                     val dismissState = rememberSwipeToDismissBoxState()
                     LaunchedEffect(dismissState.currentValue) {

@@ -15,6 +15,9 @@ import uk.scimone.diafit.core.data.local.NotificationDao
 import uk.scimone.diafit.core.domain.model.AppNotificationEntity
 import uk.scimone.diafit.notifications.data.AppNotifier
 
+/** When a pattern appeared in (or last came back to) the bell: its push time, else when it was first seen. */
+val StoredPattern.shownAtUtc: Long get() = notifiedAtUtc ?: firstSeenUtc
+
 class NotificationsViewModel(
     private val dao: NotificationDao,
     private val notifier: AppNotifier,
@@ -23,7 +26,7 @@ class NotificationsViewModel(
     /** Every current pattern (not resolved or dismissed) stays in the bell, opened or not; only unopened ones count toward the badge. */
     val patterns: StateFlow<List<StoredPattern>> =
         patternStore.observeAll().map { all -> all.filter { it.state != PatternState.RESOLVED && it.state != PatternState.DISMISSED }
-                .sortedWith(compareByDescending<StoredPattern> { it.isUnreviewed }.thenByDescending { it.card.priority }) }
+                .sortedByDescending { it.shownAtUtc } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val recent: StateFlow<List<AppNotificationEntity>> =
