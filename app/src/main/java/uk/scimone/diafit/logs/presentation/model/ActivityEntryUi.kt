@@ -14,7 +14,9 @@ data class SleepEntryUi(
     val asleepMs: Long,
     /** Time per stage, in [SleepStage] order; only stages that occurred. */
     val stageMs: Map<SleepStage, Long>,
-    val hasStages: Boolean
+    val hasStages: Boolean,
+    /** The stages in time order, for the night's timeline. */
+    val spans: List<uk.scimone.diafit.stats.domain.SleepSpan> = emptyList()
 ) : LogsEntryUi {
     override val kind: LogsEntryKind get() = LogsEntryKind.SLEEP
     val endUtc: Long get() = timeUtc
@@ -44,7 +46,8 @@ fun SleepSession.toUi(): SleepEntryUi {
         startUtc = startUtc,
         asleepMs = asleepMs,
         stageMs = perStage,
-        hasStages = hasStages
+        hasStages = hasStages,
+        spans = stages.sortedBy { it.startUtc }.map { uk.scimone.diafit.stats.domain.SleepSpan(it.startUtc, it.endUtc, it.sleepStage) }
     )
 }
 

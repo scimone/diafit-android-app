@@ -481,7 +481,7 @@ private fun sleepRange(night: SleepNight): String? {
 }
 
 @Composable
-private fun SleepStages(night: SleepNight) {
+internal fun SleepStages(night: SleepNight) {
     if (night.hasStages && night.spans.isNotEmpty()) {
         // One lane per stage on the night's own time line, so the shape of the night (deep early, REM late) stays visible.
         val from = night.spans.minOf { it.startUtc }
