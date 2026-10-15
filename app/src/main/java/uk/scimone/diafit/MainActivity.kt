@@ -350,8 +350,7 @@ class MainActivity : ComponentActivity() {
                                 is Overlay.Notifications -> uk.scimone.diafit.notifications.presentation.NotificationsScreen(
                                     onBack = { overlays.remove(overlay) },
                                     onOpen = { link -> overlays.remove(overlay); openLink(link) },
-                                    onOpenPattern = { id -> overlays.remove(overlay); overlays.add(Overlay.PatternDetail(id)) },
-                                    onOpenAllPatterns = { overlays.remove(overlay); overlays.add(Overlay.Patterns) }
+                                    onOpenPattern = { id -> overlays.remove(overlay); overlays.add(Overlay.PatternDetail(id)) }
                                 )
                                 is Overlay.Patterns -> uk.scimone.diafit.patterns.presentation.PatternsScreen(
                                     onBack = { overlays.remove(overlay) },

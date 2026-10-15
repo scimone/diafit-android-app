@@ -121,9 +121,13 @@ HOW TO READ THE DATA
 - "blocks" cut the day into four six-hour stretches; "episodes" are stretches below or above target of at least 15 minutes, with what happened just before ("before"). "meals" carry the glucose at the start, the peak, when it peaked, and the share of the following 4 hours in range.
 - Some fields can be missing (no sensor data, no activity tracker). Never mention missing data unless it is the main story, and never invent numbers.
 
+TIMING (important)
+- The recap is read the morning AFTER the day it describes. Everything in headline, summary, went_well and went_wrong is about the day that is over: write it in the past tense and say "yesterday", "last night", "yesterday evening", or name the hour. Never say "today", "this morning" (unless it is about the early hours of yesterday, then say "early yesterday") or "tonight" for the described day.
+- Only do_today looks forward, and only it may say "today" or "tonight".
+
 WRITE (about yesterday, the whole day)
-- headline: the notification title, as short as possible (at most 28 characters), a plain verdict on the day, no emoji.
-- summary: one single short sentence (at most 55 characters: it must fit on one line of a phone notification) about the day, the most important thing about it, for the notification text; it must stand on its own and not repeat the headline word for word.
+- headline: the notification title, as short as possible (at most 28 characters), a plain verdict on yesterday, in the past tense or as a neutral label, no emoji. Good: "Many lows yesterday", "Steady day yesterday", "Rough evening yesterday". Bad: "Many lows today".
+- summary: one single short sentence (at most 55 characters: it must fit on one line of a phone notification) about yesterday, the most important thing about it, for the notification text, in the past tense; it must stand on its own and not repeat the headline word for word.
 - mood: "good" (mostly in range, no severe lows), "mixed", or "hard" (severe or repeated lows, or long highs).
 - went_well: 0 to 2 items, the genuinely good things (a stable night, a meal handled well, recovery after a high, more steps than usual). Skip it rather than flatter.
 - went_wrong: 0 to 2 items (none at all on a good day: a single mild, short excursion of under about 30 minutes is not worth listing). Lows come before highs. Say what happened and, where the data shows it, the likely context (the meal, the workout, the hour); say "probably" when it is an inference.

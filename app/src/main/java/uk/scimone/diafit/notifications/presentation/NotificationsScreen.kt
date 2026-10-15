@@ -75,7 +75,7 @@ import java.util.Locale
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onOpenPattern: (id: String) -> Unit, onOpenAllPatterns: () -> Unit) {
+fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onOpenPattern: (id: String) -> Unit) {
     val viewModel: NotificationsViewModel = koinViewModel()
     val items by viewModel.recent.collectAsState()
     val patterns by viewModel.patterns.collectAsState()
@@ -107,7 +107,6 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.notifications_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.notifications_see_all_patterns)) }
                 }
             }
         } else {
@@ -116,9 +115,6 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                item(key = "patterns-link") {
-                    TextButton(onClick = onOpenAllPatterns) { Text(stringResource(R.string.notifications_see_all_patterns)) }
-                }
                 // Patterns and notifications interleaved, newest first.
                 val feed = (items.map { it.timestampUtc to it } + patterns.map { it.shownAtUtc to it }).sortedByDescending { it.first }.map { it.second }
                 items(feed, key = { if (it is AppNotificationEntity) it.id else "pattern-" + (it as StoredPattern).card.id }) { entry ->

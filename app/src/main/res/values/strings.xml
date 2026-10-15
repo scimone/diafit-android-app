@@ -130,7 +130,6 @@
     <string name="notifications_kind_pattern">Pattern</string>
     <string name="notifications_kind_recap">Daily recap</string>
     <string name="notifications_kind_device">Device alert</string>
-    <string name="notifications_see_all_patterns">See all patterns</string>
     <string name="patterns_title">Patterns</string>
 
     <!-- Menu -->
