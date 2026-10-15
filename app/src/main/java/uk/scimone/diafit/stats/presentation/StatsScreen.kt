@@ -481,7 +481,7 @@ private fun sleepRange(night: SleepNight): String? {
 }
 
 @Composable
-internal fun SleepStages(night: SleepNight) {
+internal fun SleepStages(night: SleepNight, showLabels: Boolean = true) {
     if (night.hasStages && night.spans.isNotEmpty()) {
         // One lane per stage on the night's own time line, so the shape of the night (deep early, REM late) stays visible.
         val from = night.spans.minOf { it.startUtc }
@@ -496,7 +496,7 @@ internal fun SleepStages(night: SleepNight) {
             rows.forEach { (label, stage, ms) ->
                 val spans = night.spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage == SleepStage.SLEEPING) }
                 Row(Modifier.height(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium.copy(lineHeight = 14.sp), color = ms.second)
+                    if (showLabels) Text(label, Modifier.width(44.dp), style = MaterialTheme.typography.labelMedium.copy(lineHeight = 14.sp), color = ms.second)
                     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     androidx.compose.foundation.Canvas(Modifier.weight(1f).height(14.dp)) {
                         drawRect(track)
@@ -506,7 +506,7 @@ internal fun SleepStages(night: SleepNight) {
                             drawRect(ms.second, androidx.compose.ui.geometry.Offset(x0, 0f), androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(1.5f), size.height))
                         }
                     }
-                    Text(
+                    if (showLabels) Text(
                         formatDurationHM(ms.first / 3_600_000.0), Modifier.width(60.dp),
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, color = ms.second
                     )

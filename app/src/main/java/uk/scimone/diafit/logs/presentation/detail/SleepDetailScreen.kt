@@ -68,8 +68,28 @@ fun SleepDetailScreen(entry: SleepEntryUi, onBack: () -> Unit) {
                         deepMs = ms(SleepStage.DEEP), remMs = ms(SleepStage.REM),
                         lightMs = ms(SleepStage.LIGHT) + ms(SleepStage.SLEEPING), awakeMs = ms(SleepStage.AWAKE),
                         bedMinutes = 0, wakeMinutes = 0, startUtc = entry.startUtc, endUtc = entry.endUtc, spans = entry.spans
-                    )
+                    ),
+                    showLabels = false
                 )
+                val stages = listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).filter { (entry.stageMs[it] ?: 0L) > 0L }
+                val total = stages.sumOf { entry.stageMs[it] ?: 0L }.coerceAtLeast(1L)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    stages.forEach { stage ->
+                        val d = entry.stageMs[stage] ?: 0L
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(12.dp).background(stage.stageColor(), CircleShape))
+                            Spacer(Modifier.width(10.dp))
+                            Text(stage.label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                            Text(formatDuration(d), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "  ${Math.round(d * 100f / total)}%",
+                                Modifier.width(52.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }
