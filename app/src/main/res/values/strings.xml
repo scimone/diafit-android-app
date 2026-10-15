@@ -800,6 +800,7 @@
     <string name="stats_m_sleep_schedule">Sleep schedule</string>
     <string name="stats_m_resting_hr">Resting heart rate</string>
     <string name="stats_m_hrv">Heart rate variability</string>
+    <string name="stats_m_calories_eaten">Calories consumed</string>
     <string name="stats_m_calories">Calories burned</string>
     <string name="stats_m_active_calories">Active calories</string>
     <string name="stats_m_active_time">Active time</string>

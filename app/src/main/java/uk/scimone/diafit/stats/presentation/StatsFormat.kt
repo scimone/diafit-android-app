@@ -51,6 +51,7 @@ fun StatsMetric.accent(): Color = when (this) {
     StatsMetric.CARBS -> Carbs
     StatsMetric.PROTEIN -> ProteinColor
     StatsMetric.FAT -> FatColor
+    StatsMetric.MEAL_CALORIES -> Carbs
     StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES, StatsMetric.STEPS, StatsMetric.ACTIVITY,
     StatsMetric.HEART_RATE, StatsMetric.RESTING_HEART_RATE, StatsMetric.HEART_RATE_VARIABILITY -> Activity
     StatsMetric.SLEEP, StatsMetric.SLEEP_SCHEDULE -> SleepLight
@@ -88,7 +89,7 @@ fun StatsMetric.format(value: Double): Formatted = when (this) {
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP -> Formatted(formatDurationHM(value), "")
     StatsMetric.SLEEP_SCHEDULE -> Formatted(formatClock(SleepNight.axisToClock(value.roundToInt())), "")
     StatsMetric.ACTIVITY -> if (value >= 60) Formatted(formatDurationHM(value / 60), "") else Formatted(value.roundToInt().toString(), "min")
-    StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES -> Formatted(grouped(value), "kcal")
+    StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES, StatsMetric.MEAL_CALORIES -> Formatted(grouped(value), "kcal")
     StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Formatted(value.roundToInt().toString(), "g")
     StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_COVERAGE ->
         Formatted(value.roundToInt().toString(), "%")
@@ -117,7 +118,7 @@ fun StatsMetric.icon(): ImageVector = when (this) {
     StatsMetric.GLUCOSE_COVERAGE -> Icons.Filled.Sensors
     StatsMetric.GLUCOSE_A1C -> Icons.Filled.Science
     StatsMetric.BOLUS, StatsMetric.BASAL -> Icons.Filled.Vaccines
-    StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT -> Icons.Filled.Restaurant
+    StatsMetric.CARBS, StatsMetric.PROTEIN, StatsMetric.FAT, StatsMetric.MEAL_CALORIES -> Icons.Filled.Restaurant
     StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES -> Icons.Filled.LocalFireDepartment
     StatsMetric.STEPS -> Icons.AutoMirrored.Filled.DirectionsWalk
     StatsMetric.ACTIVITY -> Icons.Filled.FitnessCenter
@@ -141,7 +142,7 @@ fun StatsMetric.subtitle(): String = when (this) {
 /** The y axis labels of a metric's chart. */
 fun StatsMetric.axisLabel(v: Double): String = when (this) {
     StatsMetric.GLUCOSE_IN_RANGE, StatsMetric.GLUCOSE_BELOW, StatsMetric.GLUCOSE_ABOVE, StatsMetric.GLUCOSE_CV, StatsMetric.GLUCOSE_COVERAGE -> "${v.roundToInt()}%"
-    StatsMetric.STEPS, StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES ->
+    StatsMetric.STEPS, StatsMetric.CALORIES, StatsMetric.ACTIVE_CALORIES, StatsMetric.MEAL_CALORIES ->
         if (v >= 1000) "${(v / 1000).let { if (it % 1.0 == 0.0) it.roundToInt().toString() else "%.1f".format(it) }}k" else v.roundToInt().toString()
     StatsMetric.SLEEP, StatsMetric.DEEP_SLEEP, StatsMetric.REM_SLEEP, StatsMetric.LIGHT_SLEEP ->
         "${if (v % 1.0 == 0.0) v.roundToInt().toString() else "%.1f".format(v)}h"

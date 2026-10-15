@@ -26,6 +26,7 @@ enum class StatsMetric(
     CARBS(R.string.macro_carbs, additive = true),
     PROTEIN(R.string.macro_protein, additive = true),
     FAT(R.string.macro_fat, additive = true),
+    MEAL_CALORIES(R.string.stats_m_calories_eaten, additive = true),
     BOLUS(R.string.datatype_bolus, additive = true),
     BASAL(R.string.datatype_basal, additive = true),
     SLEEP(R.string.datatype_sleep),
@@ -58,6 +59,7 @@ enum class StatsMetric(
             CARBS -> day.carbs
             PROTEIN -> day.protein?.takeIf { it > 0 }
             FAT -> day.fat?.takeIf { it > 0 }
+            MEAL_CALORIES -> day.mealKcal?.takeIf { it > 0 }
             CALORIES -> day.totalKcal
             ACTIVE_CALORIES -> day.activeKcal
             STEPS -> day.steps?.toDouble()

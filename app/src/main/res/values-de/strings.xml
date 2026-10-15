@@ -797,6 +797,7 @@
     <string name="stats_m_sleep_schedule">Schlafzeiten</string>
     <string name="stats_m_resting_hr">Ruheherzfrequenz</string>
     <string name="stats_m_hrv">Herzfrequenzvariabilität</string>
+    <string name="stats_m_calories_eaten">Aufgenommene Kalorien</string>
     <string name="stats_m_calories">Verbrannte Kalorien</string>
     <string name="stats_m_active_calories">Aktive Kalorien</string>
     <string name="stats_m_active_time">Aktive Zeit</string>

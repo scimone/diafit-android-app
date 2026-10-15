@@ -797,6 +797,7 @@
     <string name="stats_m_sleep_schedule">Orari del sonno</string>
     <string name="stats_m_resting_hr">Frequenza cardiaca a riposo</string>
     <string name="stats_m_hrv">Variabilità della frequenza cardiaca</string>
+    <string name="stats_m_calories_eaten">Calorie assunte</string>
     <string name="stats_m_calories">Calorie bruciate</string>
     <string name="stats_m_active_calories">Calorie attive</string>
     <string name="stats_m_active_time">Tempo attivo</string>
