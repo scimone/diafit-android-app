@@ -59,7 +59,8 @@ enum class StatsMetric(
             CARBS -> day.carbs
             PROTEIN -> day.protein?.takeIf { it > 0 }
             FAT -> day.fat?.takeIf { it > 0 }
-            MEAL_CALORIES -> day.mealKcal?.takeIf { it > 0 }
+            // Without logged protein and fat the energy would be carbs only: treat the day as missing.
+            MEAL_CALORIES -> day.mealKcal?.takeIf { (day.protein ?: 0.0) > 0 && (day.fat ?: 0.0) > 0 }
             CALORIES -> day.totalKcal
             ACTIVE_CALORIES -> day.activeKcal
             STEPS -> day.steps?.toDouble()
