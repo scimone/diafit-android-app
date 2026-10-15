@@ -127,6 +127,9 @@
     <!-- Notifications page -->
     <string name="notifications_removed">Notification removed</string>
     <string name="notifications_empty">No notifications yet</string>
+    <string name="notifications_kind_pattern">Pattern</string>
+    <string name="notifications_kind_recap">Daily recap</string>
+    <string name="notifications_kind_device">Device alert</string>
     <string name="notifications_see_all_patterns">See all patterns</string>
     <string name="patterns_title">Patterns</string>
 

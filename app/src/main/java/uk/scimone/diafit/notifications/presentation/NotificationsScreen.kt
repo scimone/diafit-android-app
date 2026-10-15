@@ -68,6 +68,8 @@ import uk.scimone.diafit.core.presentation.formatStamp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import uk.scimone.diafit.ui.theme.Device
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.ui.unit.sp
 import java.util.Locale
 
 /** Recent notifications; everything counts as read once this page is left (so the bell's dot clears). */
@@ -121,7 +123,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (link: String?) -> Unit, onO
                 val feed = (items.map { it.timestampUtc to it } + patterns.map { it.shownAtUtc to it }).sortedByDescending { it.first }.map { it.second }
                 items(feed, key = { if (it is AppNotificationEntity) it.id else "pattern-" + (it as StoredPattern).card.id }) { entry ->
                     if (entry is StoredPattern) {
-                        PatternCardView(entry, onClick = { onOpenPattern(entry.card.id) }, modifier = Modifier.animateItem())
+                        PatternCardView(entry, onClick = { onOpenPattern(entry.card.id) }, showKind = true, modifier = Modifier.animateItem())
                         return@items
                     }
                     val n = entry as AppNotificationEntity
@@ -165,6 +167,10 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
         Row(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlyphTile(tint) { icon() }
             Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(if (n.dedupeKey.startsWith("recap-")) R.string.notifications_kind_recap else R.string.notifications_kind_device).uppercase(),
+                    style = MaterialTheme.typography.labelSmall, color = tint, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp
+                )
                 Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -187,13 +193,18 @@ private fun NotificationCard(n: AppNotificationEntity, onClick: () -> Unit, onRe
 private fun notificationVisual(n: AppNotificationEntity): Pair<@Composable () -> Unit, Color> {
     val kind = n.dedupeKey.substringBefore('-')
     // Device alerts keep the neutral device colour, like the device events in the Logs.
-    val tint = if (DeviceKind.entries.any { it.name == kind }) Device else MaterialTheme.colorScheme.primary
+    val tint = when {
+        kind == "recap" -> MaterialTheme.colorScheme.tertiary
+        DeviceKind.entries.any { it.name == kind } -> Device
+        else -> MaterialTheme.colorScheme.primary
+    }
     val icon: @Composable () -> Unit = {
         when (kind) {
             DeviceKind.SENSOR.name -> Icon(painterResource(R.drawable.ic_sensor), null, tint = tint, modifier = Modifier.size(26.dp))
             DeviceKind.SITE.name, DeviceKind.INSULIN.name, DeviceKind.PATCH.name ->
                 Icon(painterResource(R.drawable.ic_insulin_pump), null, tint = tint, modifier = Modifier.size(26.dp))
             DeviceKind.BATTERY.name -> Icon(Icons.Filled.BatteryAlert, null, tint = tint, modifier = Modifier.size(26.dp))
+            "recap" -> Icon(Icons.Filled.Today, null, tint = tint, modifier = Modifier.size(26.dp))
             else -> Icon(Icons.Filled.Notifications, null, tint = tint, modifier = Modifier.size(26.dp))
         }
     }

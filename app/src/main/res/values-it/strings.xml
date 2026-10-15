@@ -124,6 +124,9 @@
     <!-- Notifications page -->
     <string name="notifications_removed">Notifica rimossa</string>
     <string name="notifications_empty">Ancora nessuna notifica</string>
+    <string name="notifications_kind_pattern">Pattern</string>
+    <string name="notifications_kind_recap">Riepilogo giornaliero</string>
+    <string name="notifications_kind_device">Avviso dispositivo</string>
     <string name="notifications_see_all_patterns">Vedi tutti i pattern</string>
     <string name="patterns_title">Pattern</string>
 

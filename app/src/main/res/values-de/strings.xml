@@ -124,6 +124,9 @@
     <!-- Notifications page -->
     <string name="notifications_removed">Benachrichtigung entfernt</string>
     <string name="notifications_empty">Noch keine Benachrichtigungen</string>
+    <string name="notifications_kind_pattern">Muster</string>
+    <string name="notifications_kind_recap">Tagesrückblick</string>
+    <string name="notifications_kind_device">Geräte-Hinweis</string>
     <string name="notifications_see_all_patterns">Alle Muster ansehen</string>
     <string name="patterns_title">Muster</string>
 

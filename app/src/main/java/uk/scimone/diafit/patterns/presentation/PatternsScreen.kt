@@ -1,5 +1,6 @@
 package uk.scimone.diafit.patterns.presentation
 
+import androidx.compose.ui.unit.sp
 import uk.scimone.diafit.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
@@ -132,7 +133,7 @@ internal fun toneVisuals(tone: PatternTone): Pair<ImageVector, Color> = when (to
 
 /** The compact card: a sketch of the pattern, its short name and one line of numbers. Everything else is on the detail page. */
 @Composable
-internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier: Modifier = Modifier, showKind: Boolean = false) {
     val card = item.card
     val (icon, tint) = cardVisuals(card)
     Surface(
@@ -144,6 +145,10 @@ internal fun PatternCardView(item: StoredPattern, onClick: () -> Unit, modifier:
         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PatternGlyph(card.detector, tint)
             Column(Modifier.weight(1f)) {
+                if (showKind) Text(
+                    stringResource(R.string.notifications_kind_pattern).uppercase(), style = MaterialTheme.typography.labelSmall,
+                    color = tint, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp
+                )
                 Text(card.title.text(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     "${card.category.label} · ${card.effectLabel.text()}",
