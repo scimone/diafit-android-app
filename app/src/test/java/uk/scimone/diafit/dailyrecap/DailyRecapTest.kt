@@ -107,6 +107,12 @@ class DailyRecapTest {
     }
 
     @Test
+    fun `an answer with only a headline is rejected`() {
+        val empty = """{"headline":"Missed insulin","summary":"x","mood":"mixed","went_well":[],"went_wrong":[],"do_today":[]}"""
+        assertTrue(runCatching { RecapLlm.parse(empty) }.isFailure)
+    }
+
+    @Test
     fun `llm answer is parsed from fenced json and trimmed to the limits`() {
         val text = RecapLlm.parse(
             """```json

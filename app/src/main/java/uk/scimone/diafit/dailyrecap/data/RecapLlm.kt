@@ -85,13 +85,18 @@ class RecapLlm(private val api: OpenAiApi, private val llmLog: LlmLogDao) {
             }
             val headline = str("headline")
             require(headline.isNotEmpty()) { "AI response had no headline." }
+            val wentWell = points("went_well").take(2)
+            val wentWrong = points("went_wrong").take(2)
+            val doToday = (obj["do_today"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf(String::isNotEmpty) }.take(3)
+            // Some (mostly small local) models answer with the headline and three empty lists; that would be saved as a blank page.
+            require(wentWell.isNotEmpty() || wentWrong.isNotEmpty() || doToday.isNotEmpty()) { "AI response had a headline but no content." }
             return RecapText(
                 headline = headline,
                 summary = shorten(str("summary"), SUMMARY_MAX),
                 mood = str("mood").lowercase().takeIf { it in setOf("good", "mixed", "hard") } ?: "mixed",
-                wentWell = points("went_well").take(2),
-                wentWrong = points("went_wrong").take(2),
-                doToday = (obj["do_today"] as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull?.trim()?.takeIf(String::isNotEmpty) }.take(3)
+                wentWell = wentWell,
+                wentWrong = wentWrong,
+                doToday = doToday
             )
         }
 
