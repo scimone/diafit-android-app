@@ -7,6 +7,8 @@ package uk.scimone.diafit.core.domain.model
 data class GlucoseDayRow(
     val day: Long,
     val n: Int,
+    /** Distinct 5-minute slots holding at least one reading: coverage that doesn't depend on the sensor's interval. */
+    val slots: Int,
     val sum: Long,
     val sumSq: Long,
     /** Readings below the "very low" limit / below the low limit (incl. very low) / above the high limit (incl. very high) / above "very high". */

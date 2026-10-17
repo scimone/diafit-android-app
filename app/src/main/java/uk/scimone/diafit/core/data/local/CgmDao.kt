@@ -35,7 +35,7 @@ interface CgmDao {
 
     /** One row per local day (see [uk.scimone.diafit.core.data.local.ActivityDao.getDailyHeartRate] for [offsetMs]). */
     @Query(
-        "SELECT (timestamp + :offsetMs) / 86400000 AS day, COUNT(*) AS n, SUM(valueMgdl) AS sum, SUM(valueMgdl * valueMgdl) AS sumSq, " +
+        "SELECT (timestamp + :offsetMs) / 86400000 AS day, COUNT(*) AS n, COUNT(DISTINCT timestamp / 300000) AS slots, SUM(valueMgdl) AS sum, SUM(valueMgdl * valueMgdl) AS sumSq, " +
             "SUM(valueMgdl < :veryLow) AS veryLow, SUM(valueMgdl < :low) AS low, SUM(valueMgdl > :high) AS high, SUM(valueMgdl > :veryHigh) AS veryHigh " +
             "FROM CgmEntity WHERE userId == :userId AND timestamp >= :start AND timestamp < :end GROUP BY day"
     )

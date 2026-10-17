@@ -43,6 +43,8 @@ data class GlucoseDay(
     val aboveShare: Double,
     /** Share 0..1 of the readings the sensor should have delivered (so far, for today). */
     val coverage: Double = 1.0,
+    /** Distinct 5-minute slots of the day that hold a reading (what [coverage] is computed from). */
+    val slotCount: Int = 0,
     /** Shares 0..1 below the very-low / above the very-high limit (they are part of [belowShare] / [aboveShare]). */
     val veryLowShare: Double = 0.0,
     val veryHighShare: Double = 0.0

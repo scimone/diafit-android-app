@@ -55,13 +55,13 @@ class LoadStatsDaysUseCase(
             cgmDao.getDailyGlucose(s, e, off, thresholds.veryLow, thresholds.low, thresholds.high, thresholds.veryHigh, userId)
         }.groupBy { it.day }.mapValues { (_, rows) ->
             GlucoseDay.from(rows.sumOf { it.n }, rows.sumOf { it.sum }, rows.sumOf { it.sumSq }, rows.sumOf { it.low }, rows.sumOf { it.high }, rows.sumOf { it.veryLow }, rows.sumOf { it.veryHigh })
+                ?.copy(slotCount = rows.sumOf { it.slots })
         }
-        // Sensors send a reading every 5 min, or every minute when there are far more than 288 in a day.
+        // Coverage = 5-minute slots with at least one reading / slots elapsed, so 1-min, 5-min and mixed days agree.
         fun GlucoseDay.withCoverage(date: LocalDate): GlucoseDay {
             val dayStart = startOf(date); val dayEnd = startOf(date.plusDays(1))
             val elapsedMin = ((minOf(dayEnd, now) - dayStart) / 60_000.0).coerceAtLeast(1.0)
-            val intervalMin = if (readingCount > 300) 1.0 else 5.0
-            return copy(coverage = (readingCount * intervalMin / elapsedMin).coerceIn(0.0, 1.0))
+            return copy(coverage = (slotCount * 5.0 / elapsedMin).coerceIn(0.0, 1.0))
         }
         val heartRate = segments.flatMap { (s, e, off) -> activityDao.getDailyHeartRate(s, e, off, userId) }
             .groupBy { it.day }.mapValues { (_, rows) -> rows.sumOf { it.avg * it.n } / rows.sumOf { it.n } }
