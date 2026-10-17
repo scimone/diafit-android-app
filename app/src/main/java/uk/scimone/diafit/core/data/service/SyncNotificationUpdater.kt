@@ -142,7 +142,7 @@ class SyncNotificationUpdater(
                     batteryReported = status?.let { it.pumpBatteryPercent != null || it.pumpBatteryVolt != null } == true,
                     pumpType = inputs.pumpType
                 ),
-                status?.reservoirUnits, warnStore.thresholds.value
+                status?.alertableReservoir(now), warnStore.thresholds.value
             )
         } catch (e: Exception) { Log.e(TAG, "Expiry lookup failed", e); return null }
         return items.map { item ->

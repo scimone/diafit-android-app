@@ -18,6 +18,13 @@ data class DeviceStatus(
     val uploaderBatteryPercent: Double? = null,
     val pumpStatus: String? = null
 ) {
+    /**
+     * The reservoir level to alert on: a reading of 0 (a deactivated pod, e.g. while the patch is being changed) or one
+     * older than 30 minutes (the old pod's last value, kept until the new one reports) is not a real "empty".
+     */
+    fun alertableReservoir(nowUtc: Long): Double? =
+        reservoirUnits?.takeIf { it > 0.0 && nowUtc - timestampUtc <= 30 * 60_000L }
+
     val hasPump: Boolean get() = reservoirUnits != null || pumpBatteryPercent != null || pumpBatteryVolt != null
 }
 

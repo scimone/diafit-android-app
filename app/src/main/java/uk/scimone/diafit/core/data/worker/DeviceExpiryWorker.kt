@@ -54,7 +54,7 @@ class DeviceExpiryWorker(context: Context, params: WorkerParameters) : Coroutine
                 pumpType = inputs.pumpType
             )
             val context = applicationContext
-            for (alert in expiryAlerts(ages, warnStore.thresholds.value, status?.reservoirUnits)) {
+            for (alert in expiryAlerts(ages, warnStore.thresholds.value, status?.alertableReservoir(now))) {
                 notifier.raise(
                     channel(context), alert.key, alert.storedTitle, alert.storedText, DEVICES_LINK, now,
                     pushTitle = if (alert.units != null) expiryUnitsTitle(context, alert.units) else expiryTitle(context, alert.kind, alert.leftHours),
