@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.RestaurantMenu
+import uk.scimone.diafit.core.domain.model.isRecipeId
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
@@ -68,10 +70,10 @@ fun ProductPortionCard(
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(if (product.barcode.isRecipeId()) Icons.Filled.RestaurantMenu else Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                SectionLabel(stringResource(R.string.addmeal_product), Modifier.weight(1f))
-                IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
+                SectionLabel(stringResource(if (product.barcode.isRecipeId()) R.string.recipe_label else R.string.addmeal_product), Modifier.weight(1f))
+                if (!product.barcode.isRecipeId()) IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                         if (isFavorite) stringResource(R.string.addmeal_fav_remove) else stringResource(R.string.addmeal_fav_add),
@@ -79,7 +81,7 @@ fun ProductPortionCard(
                     )
                 }
                 TextButton(onClick = onRescan, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
-                    Text(stringResource(R.string.addmeal_scan_another))
+                    Text(stringResource(if (product.barcode.isRecipeId()) R.string.recipe_pick_another else R.string.addmeal_scan_another))
                 }
             }
 

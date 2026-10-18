@@ -31,7 +31,7 @@ data class FoodProduct(
         val f = portionG / 100.0
         return MealComponent(
             name = name,
-            emoji = "📦",
+            emoji = if (barcode.isRecipeId()) "🍲" else "📦",
             basis = listOfNotNull(
                 source,
                 servingG?.let { "serving ${formatGrams(it)}" } ?: "per 100 g",

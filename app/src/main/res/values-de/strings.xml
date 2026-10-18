@@ -1879,4 +1879,59 @@
     <string name="ai_possible_title">Was KI für dich tun kann</string>
     <string name="ai_possible_meal">Fotografiere eine Mahlzeit und lass Kohlenhydrate, Eiweiß und Fett schätzen.</string>
     <string name="ai_possible_recap">Jeden Morgen ein kurzer Rückblick auf gestern: was gut lief, was nicht und was du heute versuchen kannst.</string>
+
+    <!-- Recipes -->
+    <string name="recipes_title">Rezepte</string>
+    <string name="recipes_new">Neues Rezept</string>
+    <string name="recipes_empty_title">Deine Rezepte</string>
+    <string name="recipes_empty_text">Speichere ein Gericht, das du kochst: Füge jede Zutat mit ihrem Gewicht hinzu und trage es später ein, indem du nur angibst, wie viel du gegessen hast.</string>
+    <string name="recipes_delete_title">%1$s löschen?</string>
+    <string name="recipes_delete_text">Mahlzeiten, die du schon aus diesem Rezept eingetragen hast, behalten ihre Werte.</string>
+    <string name="recipe_delete">Löschen</string>
+    <string name="recipe_label">Rezept</string>
+    <string name="recipe_pick_another">Ändern</string>
+    <string name="recipe_tab_foods">Lebensmittel</string>
+    <string name="recipe_tab_recipes">Meine Rezepte</string>
+    <string name="recipe_none_hint">Noch keine Rezepte. Lege eines unter Menü → Rezepte an.</string>
+    <string name="recipe_portion_of">Portion %1$s</string>
+    <string name="recipe_per_100_line">Pro 100 g: %1$d g Kohlenhydrate · %2$d g Eiweiß · %3$d g Fett · %4$d kcal</string>
+    <string name="recipe_edit">Rezept bearbeiten</string>
+    <string name="recipe_new">Neues Rezept</string>
+    <string name="recipe_name_placeholder">Name des Rezepts</string>
+    <string name="recipe_ingredients_label">Zutaten</string>
+    <string name="recipe_raw_weight">%1$s roh</string>
+    <string name="recipe_ingredients_hint">Füge alles hinzu, was ins Gericht kommt, mit Gewicht. Scannen, suchen, für die KI fotografieren oder eintippen.</string>
+    <string name="recipe_add_first">Erste Zutat hinzufügen</string>
+    <string name="recipe_add_ingredient">Zutat hinzufügen</string>
+    <string name="recipe_add_ways">Scannen · Suchen · Foto mit KI · Eintippen</string>
+    <string name="recipe_after_cooking">Nach dem Kochen</string>
+    <string name="recipe_finished_weight">Fertiggewicht (optional)</string>
+    <string name="recipe_finished_help">Die rohen Zutaten wiegen %1$s. Wiege das fertige Gericht, denn Kochen kann das Gewicht verändern.</string>
+    <string name="recipe_portions_label">Portionen (optional)</string>
+    <string name="recipe_portion_each">etwa %1$s pro Portion</string>
+    <string name="recipe_portions_help">Falls das Gericht eine feste Zahl Portionen ergibt</string>
+    <string name="recipe_fewer_portions">Weniger Portionen</string>
+    <string name="recipe_more_portions">Mehr Portionen</string>
+    <string name="recipe_per_100_label">Pro 100 g fertiges Gericht</string>
+    <string name="recipe_whole_dish">Ganzes Gericht: %1$d g Kohlenhydrate · %2$d g Eiweiß · %3$d g Fett · %4$s</string>
+    <string name="recipe_save">Rezept speichern</string>
+    <string name="recipe_discard_text">Deine Änderungen an diesem Rezept gehen verloren.</string>
+    <string name="recipe_untitled">dieses Rezept</string>
+    <string name="recipe_ingredient_title">Zutat hinzufügen</string>
+    <string name="recipe_add_to_recipe">Zum Rezept hinzufügen</string>
+    <string name="recipe_estimating">Zutat wird geschätzt…</string>
+    <string name="recipe_try_another_way">Stattdessen scannen, suchen oder fotografieren</string>
+    <string name="recipe_manual_hint">Nichts gefunden. Gib die Zutat und ihre Inhaltsstoffe ein.</string>
+    <string name="recipe_ingredient_name">Zutat</string>
+    <string name="recipe_manual_nutrients">Nährwerte in dieser Menge</string>
+    <string name="menu_recipes">Rezepte</string>
+    <string name="menu_recipes_sub">Gerichte, die du kochst, nach Gewicht eintragen</string>
+    <plurals name="recipe_ingredients">
+        <item quantity="one">%1$d Zutat</item>
+        <item quantity="other">%1$d Zutaten</item>
+    </plurals>
+    <plurals name="recipe_portions">
+        <item quantity="one">%1$d Portion</item>
+        <item quantity="other">%1$d Portionen</item>
+    </plurals>
 </resources>

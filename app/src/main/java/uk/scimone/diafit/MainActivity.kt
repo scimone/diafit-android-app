@@ -326,7 +326,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen pages (entry detail, editors) stacked above the tabs.
                 overlays.forEach { overlay ->
                     key(overlay) {
-                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings || overlay is Overlay.DataEditor || overlay is Overlay.DailyRecap)) {
+                        BackHandler(enabled = overlay === overlays.lastOrNull() && (overlay is Overlay.MealDetail || overlay is Overlay.DayDetail || overlay is Overlay.Profile || overlay is Overlay.Devices || overlay is Overlay.Notifications || overlay is Overlay.Patterns || overlay is Overlay.PatternDetail || overlay is Overlay.ProfileSwitchDetail || overlay is Overlay.SleepDetail || overlay is Overlay.StatsDetail || overlay is Overlay.Menu || overlay is Overlay.Settings || overlay is Overlay.DataEditor || overlay is Overlay.Recipes || overlay is Overlay.DailyRecap)) {
                             overlays.remove(overlay)
                         }
                         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -368,9 +368,17 @@ class MainActivity : ComponentActivity() {
                                     onOpenTreatmentPlan = { overlays.add(Overlay.Profile) },
                                     onOpenPatterns = { overlays.add(Overlay.Patterns) },
                                     onOpenDataEditor = { overlays.add(Overlay.DataEditor) },
+                                    onOpenRecipes = { overlays.add(Overlay.Recipes) },
                                     onOpenSettings = { overlays.add(Overlay.Settings(it)) }
                                 )
                                 is Overlay.DailyRecap -> uk.scimone.diafit.dailyrecap.presentation.DailyRecapScreen(epochDay = overlay.epochDay, onBack = { overlays.remove(overlay) })
+                                is Overlay.Recipes -> uk.scimone.diafit.recipes.presentation.RecipesScreen(
+                                    onBack = { overlays.remove(overlay) },
+                                    onOpenRecipe = { overlays.add(Overlay.RecipeEditor(it)) }
+                                )
+                                is Overlay.RecipeEditor -> uk.scimone.diafit.recipes.presentation.RecipeEditorScreen(
+                                    userId = userId, recipeId = overlay.recipeId, onClose = { overlays.remove(overlay) }
+                                )
                                 is Overlay.DataEditor -> uk.scimone.diafit.dataeditor.presentation.DataEditorScreen(userId = userId, onBack = { overlays.remove(overlay) })
                                 is Overlay.Settings -> SettingsPageScreen(
                                     page = overlay.page,
@@ -473,6 +481,9 @@ private sealed interface Overlay {
     data object Menu : Overlay
     /** Correct or delete any stored record. */
     data object DataEditor : Overlay
+    /** The user's recipes, and one recipe being created (null) or edited. */
+    data object Recipes : Overlay
+    data class RecipeEditor(val recipeId: Int?) : Overlay
     /** The optional LLM morning recap (see DailyRecapFeature). */
     data class DailyRecap(val epochDay: Long?) : Overlay
     data class Settings(val page: uk.scimone.diafit.settings.presentation.SettingsPage) : Overlay

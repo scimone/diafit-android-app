@@ -84,6 +84,7 @@ fun MealEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val savedProducts by viewModel.savedProductList.collectAsState()
+    val recipes by viewModel.recipeList.collectAsState()
     val aiEnabled by viewModel.aiEnabled.collectAsState()
     val recentSearches by viewModel.recentSearches.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -259,6 +260,7 @@ fun MealEditorScreen(
             onEstimateWithAi = viewModel::estimateWithAi,
             aiEnabled = aiEnabled,
             savedProducts = savedProducts,
+            recipes = recipes,
             onUseSaved = viewModel::useSavedProduct,
             onToggleFavorite = viewModel::toggleSavedFavorite,
             onForgetSaved = viewModel::forgetSavedProduct,
@@ -515,7 +517,7 @@ private fun TotalsCard(
 
 /** The entry's name as the screen title: a small context line over an inline text field. */
 @Composable
-private fun TitleField(overline: String, value: String, placeholder: String, onValueChange: (String) -> Unit) {
+internal fun TitleField(overline: String, value: String, placeholder: String, onValueChange: (String) -> Unit) {
     val style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
     Column {
         Text(overline, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

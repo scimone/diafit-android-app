@@ -1879,4 +1879,59 @@
     <string name="ai_possible_title">Cosa può fare l\'IA per te</string>
     <string name="ai_possible_meal">Fotografa un pasto e ottieni una stima di carboidrati, proteine e grassi.</string>
     <string name="ai_possible_recap">Ogni mattina un breve sguardo a ieri: cosa è andato bene, cosa no e cosa provare oggi.</string>
+
+    <!-- Recipes -->
+    <string name="recipes_title">Ricette</string>
+    <string name="recipes_new">Nuova ricetta</string>
+    <string name="recipes_empty_title">Le tue ricette</string>
+    <string name="recipes_empty_text">Salva un piatto che cucini: aggiungi ogni ingrediente con il suo peso, poi registralo in seguito indicando solo quanto hai mangiato.</string>
+    <string name="recipes_delete_title">Eliminare %1$s?</string>
+    <string name="recipes_delete_text">I pasti già registrati con questa ricetta mantengono i loro valori.</string>
+    <string name="recipe_delete">Elimina</string>
+    <string name="recipe_label">Ricetta</string>
+    <string name="recipe_pick_another">Cambia</string>
+    <string name="recipe_tab_foods">Alimenti</string>
+    <string name="recipe_tab_recipes">Le mie ricette</string>
+    <string name="recipe_none_hint">Ancora nessuna ricetta. Creane una in Menu → Ricette.</string>
+    <string name="recipe_portion_of">porzione %1$s</string>
+    <string name="recipe_per_100_line">Per 100 g: %1$d g carboidrati · %2$d g proteine · %3$d g grassi · %4$d kcal</string>
+    <string name="recipe_edit">Modifica ricetta</string>
+    <string name="recipe_new">Nuova ricetta</string>
+    <string name="recipe_name_placeholder">Nome della ricetta</string>
+    <string name="recipe_ingredients_label">Ingredienti</string>
+    <string name="recipe_raw_weight">%1$s a crudo</string>
+    <string name="recipe_ingredients_hint">Aggiungi tutto ciò che entra nel piatto, con il peso. Scansiona, cerca, fotografa per l\'IA o scrivi.</string>
+    <string name="recipe_add_first">Aggiungi il primo ingrediente</string>
+    <string name="recipe_add_ingredient">Aggiungi ingrediente</string>
+    <string name="recipe_add_ways">Scansiona · cerca · foto con IA · scrivi</string>
+    <string name="recipe_after_cooking">Dopo la cottura</string>
+    <string name="recipe_finished_weight">Peso finale (facoltativo)</string>
+    <string name="recipe_finished_help">Gli ingredienti crudi pesano %1$s. Pesa il piatto finito, perché la cottura può cambiarlo.</string>
+    <string name="recipe_portions_label">Porzioni (facoltativo)</string>
+    <string name="recipe_portion_each">circa %1$s ciascuna</string>
+    <string name="recipe_portions_help">Se il piatto fa un numero fisso di porzioni</string>
+    <string name="recipe_fewer_portions">Meno porzioni</string>
+    <string name="recipe_more_portions">Più porzioni</string>
+    <string name="recipe_per_100_label">Per 100 g di piatto finito</string>
+    <string name="recipe_whole_dish">Piatto intero: %1$d g carboidrati · %2$d g proteine · %3$d g grassi · %4$s</string>
+    <string name="recipe_save">Salva ricetta</string>
+    <string name="recipe_discard_text">Le modifiche a questa ricetta andranno perse.</string>
+    <string name="recipe_untitled">questa ricetta</string>
+    <string name="recipe_ingredient_title">Aggiungi ingrediente</string>
+    <string name="recipe_add_to_recipe">Aggiungi alla ricetta</string>
+    <string name="recipe_estimating">Stima dell\'ingrediente…</string>
+    <string name="recipe_try_another_way">Scansiona, cerca o fotografa invece</string>
+    <string name="recipe_manual_hint">Nessun risultato. Scrivi l\'ingrediente e cosa contiene.</string>
+    <string name="recipe_ingredient_name">Ingrediente</string>
+    <string name="recipe_manual_nutrients">Nutrienti in questa quantità</string>
+    <string name="menu_recipes">Ricette</string>
+    <string name="menu_recipes_sub">Piatti che cucini, da registrare a peso</string>
+    <plurals name="recipe_ingredients">
+        <item quantity="one">%1$d ingrediente</item>
+        <item quantity="other">%1$d ingredienti</item>
+    </plurals>
+    <plurals name="recipe_portions">
+        <item quantity="one">%1$d porzione</item>
+        <item quantity="other">%1$d porzioni</item>
+    </plurals>
 </resources>

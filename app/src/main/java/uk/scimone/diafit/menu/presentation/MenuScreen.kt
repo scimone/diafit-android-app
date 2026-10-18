@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestaurantMenu
+import uk.scimone.diafit.ui.theme.Carbs
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -100,6 +102,7 @@ fun MenuScreen(
     onOpenTreatmentPlan: () -> Unit,
     onOpenPatterns: () -> Unit,
     onOpenDataEditor: () -> Unit,
+    onOpenRecipes: () -> Unit,
     onOpenSettings: (SettingsPage) -> Unit
 ) {
     val settings: SettingsViewModel = koinViewModel()
@@ -186,6 +189,10 @@ fun MenuScreen(
             }
 
             MenuGroup(stringResource(R.string.menu_group_meal_logging)) {
+                MenuRow(
+                    Icons.Filled.RestaurantMenu, Carbs, stringResource(R.string.menu_recipes),
+                    stringResource(R.string.menu_recipes_sub), onOpenRecipes
+                )
                 if (state.aiEnabled) {
                     MenuRow(
                         Icons.Filled.Psychology, MaterialTheme.colorScheme.primary, stringResource(SettingsPage.MEAL_ESTIMATION.titleRes),

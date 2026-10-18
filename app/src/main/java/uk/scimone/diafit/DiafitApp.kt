@@ -41,6 +41,7 @@ class DiafitApp : Application() {
                     coreModule,
                     logsModule,
                     addmealModule,
+                    uk.scimone.diafit.recipes.di.recipesModule,
                     homeModule,
                     historyModule,
                     syncModule,

@@ -129,6 +129,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import uk.scimone.diafit.core.domain.model.SavedProductEntity
+import uk.scimone.diafit.core.domain.model.RecipeEntity
 import uk.scimone.diafit.core.domain.model.formatGrams
 import java.io.File
 import java.util.concurrent.Executors
@@ -164,6 +165,7 @@ fun MealCaptureScreen(
     onEstimateWithAi: () -> Unit,
     aiEnabled: Boolean,
     savedProducts: List<SavedProductEntity>,
+    recipes: List<RecipeEntity>,
     onUseSaved: (SavedProductEntity) -> Unit,
     onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
@@ -217,7 +219,7 @@ fun MealCaptureScreen(
                 onClose = onClose
             )
         }
-        if (phase is CapturePhase.Search) FoodSearchScreen(phase, savedProducts, recentSearches, onSearchQuery, onSubmitSearch, onUseRecentSearch, onClearRecentSearches, onToggleFavorite, onUseSearchResult, onCloseSearch)
+        if (phase is CapturePhase.Search) FoodSearchScreen(phase, savedProducts, recipes, recentSearches, onSearchQuery, onSubmitSearch, onUseRecentSearch, onClearRecentSearches, onToggleFavorite, onUseSearchResult, onCloseSearch)
     }
 }
 
@@ -821,6 +823,7 @@ private fun NoCameraPanel(askedBefore: Boolean, onAllow: () -> Unit, onGallery: 
 private fun FoodSearchScreen(
     phase: CapturePhase.Search,
     saved: List<SavedProductEntity>,
+    recipes: List<RecipeEntity>,
     recents: List<String>,
     onQuery: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -837,6 +840,11 @@ private fun FoodSearchScreen(
     val canSearch = q.length >= 2 && !phase.loading
     val submit = { if (canSearch) { keyboard?.hide(); onSubmit() } }
     val savedByCode = remember(saved) { saved.associateBy { it.barcode } }
+    // "Recipes" lists the user's own dishes (local, filtered as you type); "Foods" searches the databases.
+    var recipesTab by remember { mutableStateOf(false) }
+    val recipeProducts = remember(recipes, q) {
+        recipes.filter { q.isEmpty() || it.name.contains(q, true) }.mapNotNull { it.toProduct()?.let { p -> it to p } }
+    }
     // Saved products that fit the text: free, shown as you type. Bookmarks first.
     val savedMatches = remember(saved, q) {
         saved.filter { q.isEmpty() || it.name.contains(q, true) || it.brand?.contains(q, true) == true }
@@ -871,7 +879,14 @@ private fun FoodSearchScreen(
                 )
             )
         }
-        Button(
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !recipesTab, onClick = { recipesTab = false }, label = { Text(stringResource(R.string.recipe_tab_foods)) }, shape = CircleShape)
+            FilterChip(
+                selected = recipesTab, onClick = { recipesTab = true }, shape = CircleShape,
+                label = { Text(stringResource(R.string.recipe_tab_recipes) + if (recipes.isNotEmpty()) " (${recipes.size})" else "") }
+            )
+        }
+        if (!recipesTab) Button(
             onClick = submit, enabled = canSearch,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(48.dp)
         ) {
@@ -881,6 +896,13 @@ private fun FoodSearchScreen(
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
+                recipesTab -> {
+                    recipeProducts.forEach { (r, p) -> RecipeResultRow(r, p, onClick = { onPick(p) }) }
+                    if (recipeProducts.isEmpty()) Text(
+                        stringResource(if (recipes.isEmpty()) R.string.recipe_none_hint else R.string.cap_no_match),
+                        style = MaterialTheme.typography.bodyMedium, color = OnInkMuted
+                    )
+                }
                 phase.loading -> Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) {
                     CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = Good)
                 }
@@ -924,7 +946,7 @@ private fun FoodSearchScreen(
                     )
                 }
             }
-            if (!phase.loading) Text(
+            if (!phase.loading && !recipesTab) Text(
                 stringResource(R.string.cap_search_footer),
                 style = MaterialTheme.typography.bodySmall, color = OnInkMuted.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)
             )
@@ -933,6 +955,29 @@ private fun FoodSearchScreen(
 }
 
 private val BookmarkGold = Color(0xFFFFC107)
+
+/** A recipe in the picker: name, how many ingredients and the portion it suggests, carbs per 100 g. */
+@Composable
+private fun RecipeResultRow(recipe: RecipeEntity, product: FoodProduct, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(Color(0xFF1E242B)).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("🍲", style = MaterialTheme.typography.titleLarge)
+        Column(Modifier.weight(1f)) {
+            Text(recipe.name, style = MaterialTheme.typography.bodyLarge, color = OnInk, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(
+                    pluralStringResource(R.plurals.recipe_ingredients, recipe.ingredients.size, recipe.ingredients.size),
+                    product.servingG?.let { stringResource(R.string.recipe_portion_of, formatGrams(it)) },
+                    stringResource(R.string.addmeal_carbs_per_100, product.per100.carbsG.roundToInt())
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall, color = OnInkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 
 @Composable
 private fun SectionLabel(text: String, modifier: Modifier = Modifier, tint: Color = OnInkMuted) {

@@ -1882,4 +1882,59 @@
     <string name="ai_possible_title">What AI can do for you</string>
     <string name="ai_possible_meal">Photograph a meal and get its carbs, protein and fat estimated.</string>
     <string name="ai_possible_recap">A short look back at yesterday every morning: what went well, what didn\'t and what to try today.</string>
+
+    <!-- Recipes -->
+    <string name="recipes_title">Recipes</string>
+    <string name="recipes_new">New recipe</string>
+    <string name="recipes_empty_title">Your recipes</string>
+    <string name="recipes_empty_text">Save a dish you cook: add each ingredient with its weight, then log it later by just entering how much you ate.</string>
+    <string name="recipes_delete_title">Delete %1$s?</string>
+    <string name="recipes_delete_text">Meals you already logged from this recipe keep their values.</string>
+    <string name="recipe_delete">Delete</string>
+    <string name="recipe_label">Recipe</string>
+    <string name="recipe_pick_another">Change</string>
+    <string name="recipe_tab_foods">Foods</string>
+    <string name="recipe_tab_recipes">My recipes</string>
+    <string name="recipe_none_hint">No recipes yet. Create one under Menu → Recipes.</string>
+    <string name="recipe_portion_of">portion %1$s</string>
+    <string name="recipe_per_100_line">Per 100 g: %1$d g carbs · %2$d g protein · %3$d g fat · %4$d kcal</string>
+    <string name="recipe_edit">Edit recipe</string>
+    <string name="recipe_new">New recipe</string>
+    <string name="recipe_name_placeholder">Recipe name</string>
+    <string name="recipe_ingredients_label">Ingredients</string>
+    <string name="recipe_raw_weight">%1$s raw</string>
+    <string name="recipe_ingredients_hint">Add everything that goes into the dish, with its weight. Scan it, search it, photograph it for the AI, or type it.</string>
+    <string name="recipe_add_first">Add the first ingredient</string>
+    <string name="recipe_add_ingredient">Add ingredient</string>
+    <string name="recipe_add_ways">Scan · search · photo with AI · type</string>
+    <string name="recipe_after_cooking">After cooking</string>
+    <string name="recipe_finished_weight">Finished weight (optional)</string>
+    <string name="recipe_finished_help">Raw ingredients weigh %1$s. Weigh the finished dish, since cooking can change it.</string>
+    <string name="recipe_portions_label">Portions (optional)</string>
+    <string name="recipe_portion_each">about %1$s each</string>
+    <string name="recipe_portions_help">If the dish makes a set number of portions</string>
+    <string name="recipe_fewer_portions">Fewer portions</string>
+    <string name="recipe_more_portions">More portions</string>
+    <string name="recipe_per_100_label">Per 100 g of finished dish</string>
+    <string name="recipe_whole_dish">Whole dish: %1$d g carbs · %2$d g protein · %3$d g fat · %4$s</string>
+    <string name="recipe_save">Save recipe</string>
+    <string name="recipe_discard_text">Your changes to this recipe will be lost.</string>
+    <string name="recipe_untitled">this recipe</string>
+    <string name="recipe_ingredient_title">Add ingredient</string>
+    <string name="recipe_add_to_recipe">Add to recipe</string>
+    <string name="recipe_estimating">Estimating the ingredient…</string>
+    <string name="recipe_try_another_way">Scan, search or photograph instead</string>
+    <string name="recipe_manual_hint">Nothing found. Type the ingredient and what it contains.</string>
+    <string name="recipe_ingredient_name">Ingredient</string>
+    <string name="recipe_manual_nutrients">Nutrients in this amount</string>
+    <string name="menu_recipes">Recipes</string>
+    <string name="menu_recipes_sub">Dishes you cook, ready to log by weight</string>
+    <plurals name="recipe_ingredients">
+        <item quantity="one">%1$d ingredient</item>
+        <item quantity="other">%1$d ingredients</item>
+    </plurals>
+    <plurals name="recipe_portions">
+        <item quantity="one">%1$d portion</item>
+        <item quantity="other">%1$d portions</item>
+    </plurals>
 </resources>

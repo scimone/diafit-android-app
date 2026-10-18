@@ -26,9 +26,10 @@ import uk.scimone.diafit.core.domain.model.PumpEventEntity
         uk.scimone.diafit.mealactivity.data.MealActivityEntity::class,
         uk.scimone.diafit.mealactivity.data.PersonalActivityModelEntity::class,
         uk.scimone.diafit.mealactivity.data.ActivityPipelineStateEntity::class,
-        uk.scimone.diafit.core.domain.model.LlmRequestLogEntity::class
+        uk.scimone.diafit.core.domain.model.LlmRequestLogEntity::class,
+        uk.scimone.diafit.core.domain.model.RecipeEntity::class
     ],
-    version = 27,
+    version = 28,
     exportSchema = true,
     // Steps to apply auto-migrations:
     // 1. Make entity changes
@@ -52,6 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun savedProductDao(): SavedProductDao
     abstract fun llmLogDao(): LlmLogDao
+    abstract fun recipeDao(): RecipeDao
     /** Read/update/delete queries of the data editor; no tables of its own. */
     abstract fun dataEditorDao(): uk.scimone.diafit.dataeditor.data.DataEditorDao
     abstract fun mealActivityDao(): uk.scimone.diafit.mealactivity.data.MealActivityDao
@@ -67,6 +69,17 @@ abstract class AppDatabase : RoomDatabase() {
                         "`userId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `timeUtc` INTEGER NOT NULL, `value` REAL NOT NULL)"
                 )
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_HealthMetricEntity_type_timeUtc` ON `HealthMetricEntity` (`type`, `timeUtc`)")
+            }
+        }
+
+        /** Recipes: ingredients with weights, finished weight and portions. */
+        val MIGRATION_27_28 = object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `RecipeEntity` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `ingredients` TEXT NOT NULL, " +
+                        "`finishedWeightG` REAL, `servings` INTEGER, `createdUtc` INTEGER NOT NULL, `updatedUtc` INTEGER NOT NULL, `lastUsedUtc` INTEGER, `useCount` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_RecipeEntity_lastUsedUtc` ON `RecipeEntity` (`lastUsedUtc`)")
             }
         }
 

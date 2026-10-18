@@ -32,6 +32,8 @@ import uk.scimone.diafit.core.domain.usecase.SearchFoodByNameUseCase
 import uk.scimone.diafit.core.domain.repository.SavedProductRepository
 import uk.scimone.diafit.core.domain.model.SavedProductEntity
 import uk.scimone.diafit.core.domain.model.toSavedProductOrNull
+import uk.scimone.diafit.core.domain.model.isRecipeId
+import uk.scimone.diafit.core.domain.model.recipeIdOrNull
 import uk.scimone.diafit.core.domain.model.ProductLookup
 import uk.scimone.diafit.core.domain.usecase.SetMealValidUseCase
 import uk.scimone.diafit.core.domain.usecase.UpdateMealUseCase
@@ -60,6 +62,7 @@ class AddMealViewModel(
     private val lookupBarcode: LookupBarcodeUseCase,
     private val searchFoodByName: SearchFoodByNameUseCase,
     private val savedProducts: SavedProductRepository,
+    private val recipes: uk.scimone.diafit.core.domain.repository.RecipeRepository,
     private val getMealSitting: GetMealSittingUseCase,
     private val mealRepository: MealRepository,  // TODO: Use usecase instead of repository
     private val bolusRepository: BolusRepository,
@@ -75,6 +78,10 @@ class AddMealViewModel(
     /** Products saved in earlier meals, latest first, offered after a meal photo. */
     val savedProductList = savedProducts.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<SavedProductEntity>())
+
+    /** The user's recipes (offered next to the food databases when searching). */
+    val recipeList = recipes.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<uk.scimone.diafit.core.domain.model.RecipeEntity>())
 
     /** Products looked up or picked in this session, so saving remembers the database's values, not edited ones. */
     private val scannedProducts = mutableMapOf<String, FoodProduct>()
@@ -373,7 +380,11 @@ class AddMealViewModel(
         _uiState.update { it.copy(capture = null) }
         // Counts as used right away (even if the meal is discarded); saving the meal doesn't count it a second time.
         rememberedOnPick += product.barcode
-        viewModelScope.launch { runCatching { savedProducts.remember(product) } }
+        val recipeId = product.barcode.recipeIdOrNull()
+        // A recipe is not a product to remember; only its use is counted.
+        viewModelScope.launch {
+            runCatching { if (recipeId != null) recipes.markUsed(recipeId) else savedProducts.remember(product) }
+        }
         applyProduct(product)
     }
 
@@ -620,7 +631,7 @@ class AddMealViewModel(
                 unsavedPhotoIds.clear()
                 // Scanned products are remembered so the next meal can pick them without scanning.
                 state.components.mapNotNull { c ->
-                    val code = c.barcode ?: return@mapNotNull null
+                    val code = c.barcode?.takeUnless { it.isRecipeId() } ?: return@mapNotNull null
                     scannedProducts[code] ?: c.toSavedProductOrNull(System.currentTimeMillis())?.toProduct()
                 }.forEach { product ->
                     runCatching {
