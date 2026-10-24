@@ -210,6 +210,8 @@ fun MealCaptureScreen(
                 onEstimateWithAi = onEstimateWithAi,
                 aiEnabled = aiEnabled,
                 savedProducts = savedProducts,
+                recipes = recipes,
+                onPickRecipe = onUseSearchResult,
                 onUseSaved = onUseSaved,
                 onToggleFavorite = onToggleFavorite,
                 onForgetSaved = onForgetSaved,
@@ -235,6 +237,8 @@ private fun PhotoChoiceScreen(
     onEstimateWithAi: () -> Unit,
     aiEnabled: Boolean,
     savedProducts: List<SavedProductEntity>,
+    recipes: List<RecipeEntity>,
+    onPickRecipe: (FoodProduct) -> Unit,
     onUseSaved: (SavedProductEntity) -> Unit,
     onToggleFavorite: (SavedProductEntity) -> Unit,
     onForgetSaved: (String) -> Unit,
@@ -345,6 +349,13 @@ private fun PhotoChoiceScreen(
                             )
                         }
                     }
+                }
+
+                val recipeProducts = remember(recipes) { recipes.mapNotNull { r -> r.toProduct()?.let { r to it } } }
+                ChoiceCard(Icons.Outlined.Inventory2, stringResource(R.string.recipe_tab_recipes), stringResource(R.string.recipe_card_sub)) {
+                    if (recipeProducts.isEmpty()) {
+                        Text(stringResource(R.string.recipe_none_hint), style = MaterialTheme.typography.bodySmall, color = OnInkMuted)
+                    } else recipeProducts.take(6).forEach { (r, p) -> RecipeResultRow(r, p, onClick = { onPickRecipe(p) }) }
                 }
 
                 ChoiceCard(Icons.Outlined.Search, stringResource(R.string.cap_search_card), stringResource(R.string.cap_search_card_sub)) {

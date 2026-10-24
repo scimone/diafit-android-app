@@ -1934,4 +1934,5 @@
         <item quantity="one">%1$d porzione</item>
         <item quantity="other">%1$d porzioni</item>
     </plurals>
+    <string name="recipe_card_sub">Usa un piatto salvato e indica quanto hai mangiato</string>
 </resources>

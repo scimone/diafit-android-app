@@ -1937,4 +1937,5 @@
         <item quantity="one">%1$d portion</item>
         <item quantity="other">%1$d portions</item>
     </plurals>
+    <string name="recipe_card_sub">Use a dish you saved, then enter how much you ate</string>
 </resources>
