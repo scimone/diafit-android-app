@@ -30,8 +30,22 @@ android {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
 
+    signingConfigs {
+        create("release") {
+            // Credentials live in the user-level ~/.gradle/gradle.properties, never in the repo.
+            val storePath = providers.gradleProperty("DIAFIT_RELEASE_STORE_FILE").orNull
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = providers.gradleProperty("DIAFIT_RELEASE_STORE_PASSWORD").get()
+                keyAlias = providers.gradleProperty("DIAFIT_RELEASE_KEY_ALIAS").get()
+                keyPassword = providers.gradleProperty("DIAFIT_RELEASE_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
