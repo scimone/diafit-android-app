@@ -318,6 +318,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setMealEstimationEnabled(enabled) }
     }
 
+    fun completeOnboarding() {
+        viewModelScope.launch { settingsRepository.setOnboardingDone() }
+    }
+
     fun onUserNameChanged(name: String) {
         _state.value = _state.value.copy(userName = name.trim())
         viewModelScope.launch { settingsRepository.setUserName(name) }

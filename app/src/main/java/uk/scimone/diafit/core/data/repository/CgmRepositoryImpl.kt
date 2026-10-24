@@ -10,7 +10,7 @@ class CgmRepositoryImpl(
     private val cgmDao: CgmDao,
 ) : CgmRepository {
 
-    override fun getLatestCgm(userId: Int): Flow<CgmEntity> {
+    override fun getLatestCgm(userId: Int): Flow<CgmEntity?> {
         return cgmDao.getLatestCgm(userId)
     }
 

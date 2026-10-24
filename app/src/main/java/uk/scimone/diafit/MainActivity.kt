@@ -84,6 +84,8 @@ class MainActivity : ComponentActivity() {
     private val fileStorage: FileStorageRepository by inject()
     private val settingsViewModel: SettingsViewModel by viewModel()
     private val homeViewModel: HomeViewModel by viewModel { parametersOf(userId) }
+    private val notificationPermission =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     private val userId = 1 // replace with real user ID from your auth system
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(uk.scimone.diafit.settings.domain.model.AppLanguage.wrap(newBase))
@@ -151,12 +153,14 @@ class MainActivity : ComponentActivity() {
         pendingLink.value = intent?.getStringExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK)
         intent?.removeExtra(uk.scimone.diafit.notifications.data.AppNotifier.EXTRA_LINK) // not again on recreate
 
-        // Android 13+: push notifications (device expiry alerts) need the runtime permission.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
-                .launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        // Android 13+: push notifications (device expiry alerts) need the runtime permission. New installs are
+        // asked during onboarding instead, at a moment where the reason is explained.
+        lifecycleScope.launch {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && settingsRepository.isOnboardingDone() &&
+                ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
 
         lifecycleScope.launch {
@@ -171,6 +175,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DiafitTheme {
+                // null = still reading the setting; false = first run, show the onboarding on top of everything.
+                var onboardingDone by remember { mutableStateOf<Boolean?>(null) }
+                LaunchedEffect(Unit) { onboardingDone = settingsRepository.isOnboardingDone() }
                 var selectedTab by remember { mutableStateOf(0) }
                 var showNewEntrySheet by remember { mutableStateOf(false) }
                 val overlays = remember { mutableStateListOf<Overlay>() }
@@ -263,7 +270,8 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         when (selectedTab) {
-                            0 -> HomeScreen(userId = userId, onAddCourse = addCourse, onOpenMeal = { overlays.add(Overlay.MealDetail(it)) })
+                            0 -> HomeScreen(userId = userId, onAddCourse = addCourse, onOpenMeal = { overlays.add(Overlay.MealDetail(it)) },
+                                onSetupData = { overlays.add(Overlay.Settings(uk.scimone.diafit.settings.presentation.SettingsPage.CONNECTED_APPS)) })
                             1 -> uk.scimone.diafit.stats.presentation.StatsScreen(
                                 userId = userId,
                                 onOpenMetric = { metric, period, offset -> overlays.add(Overlay.StatsDetail(metric, period, offset)) }
@@ -422,6 +430,23 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                    }
+                }
+
+                // First run: the onboarding covers the app until it is finished or skipped.
+                if (onboardingDone != true) {
+                    if (onboardingDone == false) {
+                        uk.scimone.diafit.onboarding.presentation.OnboardingScreen(
+                            onRequestNotifications = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            },
+                            onOpenBatterySettings = { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
+                            onFinished = { onboardingDone = true }
+                        )
+                    } else {
+                        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
                     }
                 }
             }

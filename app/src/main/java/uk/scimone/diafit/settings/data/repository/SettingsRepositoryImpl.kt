@@ -30,6 +30,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     /** First run of the connector model: carry over the old single CGM / bolus source and the Health Connect switch. */
     private fun migrateLegacySources() {
         if (prefs.getBoolean(KEY_MIGRATED, false)) return
+        // A fresh install has nothing to carry over: no connector is on until the user picks one in the onboarding.
+        if (!prefs.contains("cgm_source") && !prefs.contains("health_connect_enabled")) {
+            prefs.edit().putBoolean(KEY_MIGRATED, true).apply()
+            return
+        }
         val cgm = prefs.getString("cgm_source", CgmSource.NIGHTSCOUT.name)
             ?.let { runCatching { CgmSource.valueOf(it) }.getOrNull() } ?: CgmSource.NIGHTSCOUT
         val cgmConnector = when (cgm) {
@@ -186,9 +191,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private fun hostOf(url: String) = url.removePrefix("https://").removePrefix("http://").substringBefore('/').ifBlank { "AI" }
 
-    override suspend fun isAiEnabled(): Boolean = prefs.getBoolean("ai_enabled", true)
+    override suspend fun isAiEnabled(): Boolean = prefs.getBoolean("ai_enabled", false)
 
-    override suspend fun isMealEstimationEnabled(): Boolean = prefs.getBoolean("meal_estimation_enabled", true)
+    override suspend fun isMealEstimationEnabled(): Boolean = prefs.getBoolean("meal_estimation_enabled", true) // only matters while AI itself is on (off by default)
 
     override suspend fun setMealEstimationEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("meal_estimation_enabled", enabled).apply()
@@ -227,6 +232,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun setHealthConnectSummary(summary: String?) {
         prefs.edit().putString("health_connect_summary", summary).apply()
+    }
+
+    override suspend fun isOnboardingDone(): Boolean =
+        prefs.getBoolean("onboarding_done", false) || getEnabledConnectors().isNotEmpty()
+
+    override suspend fun setOnboardingDone() {
+        prefs.edit().putBoolean("onboarding_done", true).apply()
     }
 
     private companion object {

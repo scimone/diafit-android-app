@@ -77,7 +77,7 @@ class HomeViewModel(
         observeActivity()
         observeBasal()
         loadTargetRange()
-        viewModelScope.launch { _state.update { it.copy(basalStyle = settingsRepository.getBasalStyle()) } }
+        viewModelScope.launch { _state.update { it.copy(basalStyle = settingsRepository.getBasalStyle(), cgmSourceSelected = settingsRepository.getSelection(uk.scimone.diafit.settings.domain.model.DataType.CGM) != null) } }
     }
 
     private fun observeLatestCgm() {

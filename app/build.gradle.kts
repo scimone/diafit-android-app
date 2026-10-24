@@ -17,13 +17,13 @@ android {
         applicationId = "uk.scimone.diafit"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_KEY", "\"\"")
-        buildConfigField("String", "BASE_URL", "\"https://gluco.mooo.com\"")
+        buildConfigField("String", "BASE_URL", "\"\"")
     }
 
     ksp {
@@ -44,6 +44,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Optional second install next to the real one, to try a fresh-install flow without touching its data:
+            // ./gradlew installDebug -PdiafitAppIdSuffix=.fresh
+            providers.gradleProperty("diafitAppIdSuffix").orNull?.let { applicationIdSuffix = it }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false

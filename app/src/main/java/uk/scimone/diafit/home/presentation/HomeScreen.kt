@@ -37,6 +37,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import uk.scimone.diafit.home.presentation.components.EventBubble
+import uk.scimone.diafit.home.presentation.components.HomeEmptyState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -119,6 +120,7 @@ fun HomeScreen(
     userId: Int,
     onAddCourse: (mealId: Int) -> Unit = {},
     onOpenMeal: (mealId: Int) -> Unit = {},
+    onSetupData: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(parameters = { parametersOf(userId) })
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -252,6 +254,11 @@ fun HomeScreen(
                     text = stringResource(R.string.home_error, state.error.toString()),
                     color = MaterialTheme.colorScheme.error
                 )
+            }
+
+            // Nothing stored yet (fresh install): guide the user instead of showing empty charts.
+            state.cgmUi == null && state.cgmHistory.isEmpty() && state.mealHistory.isEmpty() && state.bolusHistory.isEmpty() -> {
+                HomeEmptyState(waitingForReading = state.cgmSourceSelected, onSetupData = onSetupData)
             }
 
             else -> {

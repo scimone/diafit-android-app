@@ -138,7 +138,7 @@ fun SettingsPageScreen(
 }
 
 @Composable
-private fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel) {
+internal fun ConnectedAppsPage(state: SettingsState, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     // Health Connect's own dialog; glucose and activity are asked for together.
     val healthConnectPermissions = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {

@@ -67,4 +67,8 @@ interface SettingsRepository {
     /** What the last Health Connect import found, encoded by the importer; null if none ran yet. */
     suspend fun getHealthConnectSummary(): String?
     suspend fun setHealthConnectSummary(summary: String?)
+
+    /** The first-run setup was finished or skipped. Installs that already had a connector count as done. */
+    suspend fun isOnboardingDone(): Boolean
+    suspend fun setOnboardingDone()
 }

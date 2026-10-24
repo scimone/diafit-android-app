@@ -36,7 +36,7 @@ Diafit is an Android app for people with diabetes. It brings glucose, insulin, m
 
 ## 🤖 AI features are optional
 
-Diafit works fully without AI. The AI features are:
+Diafit works fully without AI, and **AI is switched off after installation**. The AI features are:
 
 - **Meal estimation**: estimate nutrients from a meal photo, after you press "Estimate nutrition".
 - **Daily recap**: a short written summary of the previous day.
@@ -45,7 +45,7 @@ How they work:
 
 - They use an **OpenAI-compatible service that you provide** (base URL and API key). Without a connection and key, nothing can be sent.
 - Photos and text are sent **only when you ask for an estimate** (or when the daily recap runs, which only sends a compact numerical summary and no photos).
-- You can turn AI off completely in **Account menu → AI**, and switch meal estimation or the daily recap off separately. Every request is listed in a log on the same page, so you can see exactly what was sent.
+- You turn AI on in **Account menu → AI** (and can switch meal estimation or the daily recap off separately again). Every request is listed in a log on the same page, so you can see exactly what was sent.
 - Estimates can be wrong. Always check the numbers before relying on them.
 
 ## 🔌 Supported data sources
@@ -66,7 +66,7 @@ You choose, per kind of data, which connected app provides it. Connected apps ca
 2. Open it on your phone and allow installing from your browser or file manager when asked.
 3. Releases are all signed with the same key, so later versions update in place and keep your data.
 
-Requires Android 9 or newer (API 28).
+The first launch walks you through a short setup (connect your data, notifications); every step can be skipped. Requires Android 9 or newer (API 28).
 
 ## 🛠️ Build from source
 

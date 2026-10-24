@@ -24,6 +24,7 @@ data class DailyRecapConfig(
 
 /** Settings and the last two weeks of recaps, in plain preferences (a recap is a few KB of JSON). */
 class DailyRecapStore(context: Context) {
+    private val hadAiSetUp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).contains("ai_connections")
     private val prefs = context.getSharedPreferences("daily_recap", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -51,7 +52,8 @@ class DailyRecapStore(context: Context) {
     }
 
     private fun readConfig() = DailyRecapConfig(
-        enabled = prefs.getBoolean(ENABLED, true),
+        // AI is off by default, and so is the recap; installs that already set up an AI connection keep it on.
+        enabled = prefs.getBoolean(ENABLED, hadAiSetUp),
         prompt = prefs.getString(PROMPT, "").orEmpty(),
         push = prefs.getBoolean(PUSH, true),
         hour = prefs.getInt(HOUR, 7), minute = prefs.getInt(MINUTE, 0),

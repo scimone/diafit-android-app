@@ -1935,4 +1935,44 @@
         <item quantity="other">%1$d porzioni</item>
     </plurals>
     <string name="recipe_card_sub">Usa un piatto salvato e indica quanto hai mangiato</string>
+
+    <!-- Onboarding & empty Home -->
+    <string name="onboarding_skip">Salta</string>
+    <string name="onboarding_back">Indietro</string>
+    <string name="onboarding_next">Continua</string>
+    <string name="onboarding_get_started">Iniziamo</string>
+    <string name="onboarding_skip_step">Salta per ora</string>
+    <string name="onboarding_finish">Apri Diafit</string>
+    <string name="onboarding_step">Passo %1$d di %2$d</string>
+    <string name="onboarding_welcome_title">Benvenuto in Diafit</string>
+    <string name="onboarding_welcome_subtitle">Glicemia, insulina, pasti e attività in un unico posto, per vedere cosa muove i tuoi valori.</string>
+    <string name="onboarding_point_timeline_title">Un\'unica linea del tempo</string>
+    <string name="onboarding_point_timeline_body">Glicemia, insulina, carboidrati, attività e sonno sono allineati, così causa ed effetto si vedono subito.</string>
+    <string name="onboarding_point_meals_title">Registra i pasti in fretta</string>
+    <string name="onboarding_point_meals_body">Registra un pasto con una foto, la scansione di un codice a barre, la ricerca di un alimento o le tue ricette.</string>
+    <string name="onboarding_point_patterns_title">Scopri i tuoi schemi</string>
+    <string name="onboarding_point_patterns_body">Diafit cerca situazioni ricorrenti nei tuoi dati e mostra giorni di esempio reali.</string>
+    <string name="onboarding_privacy_title">Privato per progetto</string>
+    <string name="onboarding_privacy_body">I tuoi dati restano su questo telefono. Non c\'è nessun account Diafit, nessun server Diafit e nessun tracciamento.</string>
+    <string name="onboarding_disclaimer">Diafit non è un dispositivo medico e non fornisce indicazioni sul dosaggio.</string>
+    <string name="onboarding_connect_title">Collega i tuoi dati</string>
+    <string name="onboarding_connect_body">Attiva le app che usi già. Diafit le legge su questo telefono; non viene caricato nulla.</string>
+    <string name="onboarding_connect_footer">Non hai ancora un\'app per il sensore? Salta e registra i pasti a mano. Potrai collegare più tardi da Menu account → App collegate.</string>
+    <string name="onboarding_alerts_title">Resta informato</string>
+    <string name="onboarding_alerts_body">Consenti le notifiche, così Diafit ti avvisa prima che un sensore, il sito del microinfusore o l\'insulina si esauriscano.</string>
+    <string name="onboarding_alerts_button">Consenti notifiche</string>
+    <string name="onboarding_alerts_done">Notifiche consentite</string>
+    <string name="onboarding_background_title">Mantieni la sincronizzazione</string>
+    <string name="onboarding_background_body">Alcuni telefoni chiudono le app in background. Escludere Diafit dall\'ottimizzazione della batteria mantiene i valori in arrivo anche di notte.</string>
+    <string name="onboarding_background_button">Impostazioni batteria</string>
+    <string name="onboarding_done_title">Tutto pronto</string>
+    <string name="onboarding_done_body">La schermata Home si riempie appena arrivano i primi valori. Tutto questo si può cambiare in seguito dal menu account (in alto a destra).</string>
+    <string name="onboarding_done_ai_title">L\'IA è facoltativa e disattivata</string>
+    <string name="onboarding_done_ai_body">Le stime dei pasti da foto e il riepilogo giornaliero funzionano solo se attivi l\'IA in Menu account → IA e inserisci la tua chiave API. Le foto vengono inviate solo quando chiedi una stima.</string>
+    <string name="home_empty_title">Portiamo dentro i tuoi dati</string>
+    <string name="home_empty_body">Collega l\'app che fornisce i tuoi valori di glicemia, oppure registra il primo pasto. I grafici appariranno qui.</string>
+    <string name="home_empty_button">Collega i dati</string>
+    <string name="home_waiting_title">In attesa del primo valore</string>
+    <string name="home_waiting_body">Diafit è configurato e mostrerà la glicemia appena arriva il primo valore. Può volerci qualche minuto.</string>
+    <string name="home_waiting_button">Controlla i collegamenti</string>
 </resources>

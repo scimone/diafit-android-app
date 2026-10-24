@@ -30,6 +30,8 @@ data class HomeState(
     val agp: uk.scimone.diafit.patterns.domain.PatternAgp? = null,
     /** AGP was asked for but there is not enough glucose data to build one. */
     val agpUnavailable: Boolean = false,
+    /** A glucose source is selected (decides between "connect your data" and "waiting for the first reading"). */
+    val cgmSourceSelected: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null
 )

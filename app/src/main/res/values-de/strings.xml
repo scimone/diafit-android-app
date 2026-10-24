@@ -1935,4 +1935,44 @@
         <item quantity="other">%1$d Portionen</item>
     </plurals>
     <string name="recipe_card_sub">Ein gespeichertes Gericht verwenden und angeben, wie viel du gegessen hast</string>
+
+    <!-- Onboarding & empty Home -->
+    <string name="onboarding_skip">Überspringen</string>
+    <string name="onboarding_back">Zurück</string>
+    <string name="onboarding_next">Weiter</string>
+    <string name="onboarding_get_started">Los geht\'s</string>
+    <string name="onboarding_skip_step">Vorerst überspringen</string>
+    <string name="onboarding_finish">Diafit öffnen</string>
+    <string name="onboarding_step">Schritt %1$d von %2$d</string>
+    <string name="onboarding_welcome_title">Willkommen bei Diafit</string>
+    <string name="onboarding_welcome_subtitle">Glukose, Insulin, Mahlzeiten und Aktivität an einem Ort, damit du siehst, was deine Werte bewegt.</string>
+    <string name="onboarding_point_timeline_title">Eine gemeinsame Zeitleiste</string>
+    <string name="onboarding_point_timeline_body">Glukose, Insulin, Kohlenhydrate, Aktivität und Schlaf liegen untereinander, so sind Ursache und Wirkung leicht zu erkennen.</string>
+    <string name="onboarding_point_meals_title">Mahlzeiten schnell erfassen</string>
+    <string name="onboarding_point_meals_body">Erfasse eine Mahlzeit per Foto, Barcode-Scan, Lebensmittelsuche oder mit eigenen Rezepten.</string>
+    <string name="onboarding_point_patterns_title">Muster erkennen</string>
+    <string name="onboarding_point_patterns_body">Diafit sucht in deinen eigenen Daten nach Wiederkehrendem und zeigt echte Beispieltage.</string>
+    <string name="onboarding_privacy_title">Privat von Grund auf</string>
+    <string name="onboarding_privacy_body">Deine Daten bleiben auf diesem Handy. Es gibt kein Diafit-Konto, keinen Diafit-Server und kein Tracking.</string>
+    <string name="onboarding_disclaimer">Diafit ist kein Medizinprodukt und gibt keine Dosierungsempfehlungen.</string>
+    <string name="onboarding_connect_title">Daten verbinden</string>
+    <string name="onboarding_connect_body">Schalte die Apps ein, die du schon nutzt. Diafit liest sie auf diesem Handy aus; nichts wird hochgeladen.</string>
+    <string name="onboarding_connect_footer">Noch keine Sensor-App? Überspringe das und erfasse Mahlzeiten von Hand. Später verbinden unter Kontomenü → Verbundene Apps.</string>
+    <string name="onboarding_alerts_title">Bleib informiert</string>
+    <string name="onboarding_alerts_body">Erlaube Benachrichtigungen, damit Diafit dich warnt, bevor ein Sensor, eine Pumpenstelle oder das Insulin abläuft.</string>
+    <string name="onboarding_alerts_button">Benachrichtigungen erlauben</string>
+    <string name="onboarding_alerts_done">Benachrichtigungen erlaubt</string>
+    <string name="onboarding_background_title">Glukose weiter synchronisieren</string>
+    <string name="onboarding_background_body">Manche Handys beenden Apps im Hintergrund. Nimmst du Diafit von der Akkuoptimierung aus, kommen Werte auch über Nacht an.</string>
+    <string name="onboarding_background_button">Akku-Einstellungen</string>
+    <string name="onboarding_done_title">Alles bereit</string>
+    <string name="onboarding_done_body">Die Startseite füllt sich, sobald die ersten Werte ankommen. Alles hier kannst du später im Kontomenü (oben rechts) ändern.</string>
+    <string name="onboarding_done_ai_title">KI ist optional und ausgeschaltet</string>
+    <string name="onboarding_done_ai_body">Mahlzeitenschätzung per Foto und die Tageszusammenfassung funktionieren nur, wenn du KI unter Kontomenü → KI einschaltest und deinen eigenen API-Schlüssel einträgst. Fotos werden nur gesendet, wenn du eine Schätzung anforderst.</string>
+    <string name="home_empty_title">Bringen wir deine Daten rein</string>
+    <string name="home_empty_body">Verbinde die App, die deine Glukosewerte liefert, oder erfasse deine erste Mahlzeit. Deine Diagramme erscheinen dann hier.</string>
+    <string name="home_empty_button">Daten verbinden</string>
+    <string name="home_waiting_title">Warten auf den ersten Wert</string>
+    <string name="home_waiting_body">Diafit ist eingerichtet und zeigt die Glukose an, sobald der erste Wert ankommt. Das kann ein paar Minuten dauern.</string>
+    <string name="home_waiting_button">Verbindungen prüfen</string>
 </resources>

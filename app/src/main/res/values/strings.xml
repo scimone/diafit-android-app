@@ -1938,4 +1938,44 @@
         <item quantity="other">%1$d portions</item>
     </plurals>
     <string name="recipe_card_sub">Use a dish you saved, then enter how much you ate</string>
+
+    <!-- Onboarding & empty Home -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Continue</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_skip_step">Skip for now</string>
+    <string name="onboarding_finish">Open Diafit</string>
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="onboarding_welcome_title">Welcome to Diafit</string>
+    <string name="onboarding_welcome_subtitle">Your glucose, insulin, meals and activity in one place, so you can see what moves your numbers.</string>
+    <string name="onboarding_point_timeline_title">One shared timeline</string>
+    <string name="onboarding_point_timeline_body">Glucose, insulin, carbs, activity and sleep line up, so cause and effect are easy to see.</string>
+    <string name="onboarding_point_meals_title">Quick meal logging</string>
+    <string name="onboarding_point_meals_body">Log a meal with a photo, a barcode scan, a food search or your own recipes.</string>
+    <string name="onboarding_point_patterns_title">Find your patterns</string>
+    <string name="onboarding_point_patterns_body">Diafit looks for recurring things in your own data and shows real example days.</string>
+    <string name="onboarding_privacy_title">Private by design</string>
+    <string name="onboarding_privacy_body">Your data stays on this phone. There is no Diafit account, no Diafit server and no tracking.</string>
+    <string name="onboarding_disclaimer">Diafit is not a medical device and gives no dosing advice.</string>
+    <string name="onboarding_connect_title">Connect your data</string>
+    <string name="onboarding_connect_body">Switch on the apps you already use. Diafit reads from them on this phone; nothing is uploaded.</string>
+    <string name="onboarding_connect_footer">No sensor app yet? Skip this and log meals by hand. You can connect later under Account menu → Connected apps.</string>
+    <string name="onboarding_alerts_title">Stay informed</string>
+    <string name="onboarding_alerts_body">Allow notifications so Diafit can warn you before a sensor, pump site or insulin runs out.</string>
+    <string name="onboarding_alerts_button">Allow notifications</string>
+    <string name="onboarding_alerts_done">Notifications allowed</string>
+    <string name="onboarding_background_title">Keep glucose syncing</string>
+    <string name="onboarding_background_body">Some phones stop apps in the background. Exempting Diafit from battery optimisation keeps readings coming in overnight.</string>
+    <string name="onboarding_background_button">Battery settings</string>
+    <string name="onboarding_done_title">You\'re all set</string>
+    <string name="onboarding_done_body">Home fills up as soon as the first readings arrive. Everything here can be changed later in the account menu (top right).</string>
+    <string name="onboarding_done_ai_title">AI is optional and switched off</string>
+    <string name="onboarding_done_ai_body">Photo-based meal estimates and the daily recap only work if you turn AI on under Account menu → AI and add your own API key. Photos are only sent when you ask for an estimate.</string>
+    <string name="home_empty_title">Let\'s get your data in</string>
+    <string name="home_empty_body">Connect the app that provides your glucose readings, or log your first meal. Your charts appear here.</string>
+    <string name="home_empty_button">Connect data</string>
+    <string name="home_waiting_title">Waiting for your first reading</string>
+    <string name="home_waiting_body">Diafit is set up and will show glucose as soon as the first reading arrives. This can take a few minutes.</string>
+    <string name="home_waiting_button">Check connections</string>
 </resources>
